@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Modo paseo · enlace</title>
+  <style>
+    /* Paleta ApliArte — modo claro/oscuro heredado del resto del directo. */
+    :root {
+      --azul: #005fa9;
+      --marino: #00467b;
+      --carbon: #303030;
+      --borde: #d9d9d9;
+      --fondo: #fdfdfd;
+      --texto: var(--carbon);
+      --texto-suave: #5a5a5a;
+    }
+    [data-tema="oscuro"] {
+      --fondo: var(--carbon);
+      --borde: #4a4a4a;
+      --texto: #fdfdfd;
+      --texto-suave: #bebbb9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--fondo);
+      color: var(--texto);
+      font-family: "Inter", "DejaVu Sans", system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 16px;
+    }
+    h1 {
+      font-family: "Fira Sans Condensed", "Inter", system-ui, sans-serif;
+      font-size: 1.1rem;
+      margin: 0 0 8px;
+    }
+    .panel {
+      max-width: 720px;
+      margin: 0 auto;
+      border: 1px solid var(--borde);
+      padding: 12px;
+      border-radius: 4px;
+    }
+    .estado {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0;
+    }
+    .bolita {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--texto-suave);
+    }
+    .bolita.conectando { background: var(--azul); }
+    .bolita.conectado  { background: #2f9961; }
+    .bolita.error      { background: #c0392b; }
+    label { display: block; font-size: 12px; color: var(--texto-suave); margin-top: 8px; }
+    input[type=text] {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid var(--borde);
+      border-radius: 3px;
+      font: inherit;
+      background: var(--fondo);
+      color: var(--texto);
+    }
+    video, audio { display: block; width: 100%; margin-top: 8px; background: #000; }
+    .nota { font-size: 11px; color: var(--texto-suave); margin-top: 8px; }
+    button {
+      margin-top: 8px;
+      padding: 6px 12px;
+      border: 1px solid var(--borde);
+      border-radius: 3px;
+      background: var(--fondo);
+      color: var(--texto);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <main class="panel">
+    <h1>🚶 Modo paseo · receptor de voz y cámara</h1>
+    <div class="estado">
+      <span id="bolita" class="bolita"></span>
+      <span id="estado">Sin enlace</span>
+    </div>
+
+    <label for="sesion">ID de sesión (mismo que en la app del móvil)</label>
+    <input id="sesion" type="text" maxlength="6" placeholder="p. ej. ABC123" autocomplete="off" />
+    <button id="conectar">Conectar</button>
+
+    <video id="video" autoplay muted playsinline></video>
+    <audio id="audio" autoplay playsinline></audio>
+    <p class="nota">
+      El video llega muteado para evitar eco en el centro. Si quieres oirlo,
+      pulsa el botón de sonido del propio elemento.
+    </p>
+  </main>
+
+  <script>
+    // ─── Estado ──────────────────────────────────────────────────────────
+    const bolita = document.getElementById('bolita');
+    const estadoEl = document.getElementById('estado');
+    const video = document.getElementById('video');
+    const audio = document.getElementById('audio');
+    const inputSesion = document.getElementById('sesion');
+    const boton = document.getElementById('conectar');
+
+    let ws = null;
+    let pc = null;
+    let sesionActiva = '';
+
+    function setEstado(texto, clase) {
+      estadoEl.textContent = texto;
+      bolita.className = 'bolita ' + (clase || '');
+    }
+
+    // Si llegamos con ?session=…, lo metemos en la caja y arrancamos solos.
+    const params = new URLSearchParams(location.search);
+    const sesionInicial = (params.get('session') || '').trim();
+    if (sesionInicial) {
+      inputSesion.value = sesionInicial;
+      // Espera al primer paint para no parpadear.
+      requestAnimationFrame(() => conectar());
+    }
+
+    boton.addEventListener('click', () => {
+      if (ws) desconectar();
+      else conectar();
+    });
+
+    function wsBase() {
+      const u = new URL(location.href);
+      const scheme = u.protocol === 'https:' ? 'wss:' : 'ws:';
+      return scheme + '//' + u.host;
+    }
+
+    function conectar() {
+      const sid = inputSesion.value.trim();
+      if (!sid) {
+        setEstado('Mete un ID de sesión primero', 'error');
+        return;
+      }
+      sesionActiva = sid;
+      setEstado('Enlazando…', 'conectando');
+      boton.textContent = 'Desconectar';
+
+      pc = new RTCPeerConnection({ iceServers: [] });
+      pc.ontrack = (ev) => {
+        const stream = ev.streams[0];
+        if (ev.track.kind === 'video') {
+          video.srcObject = stream;
+        } else if (ev.track.kind === 'audio') {
+          audio.srcObject = stream;
+        }
+      };
+      pc.onicecandidate = (ev) => {
+        if (!ev.candidate) return;
+        enviar({
+          type: 'ice-candidate',
+          candidate: ev.candidate.candidate,
+          sdpMid: ev.candidate.sdpMid,
+          sdpMLineIndex: ev.candidate.sdpMLineIndex,
+        });
+      };
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'connected') setEstado('En directo', 'conectado');
+        else if (pc.connectionState === 'failed') setEstado('Sin señal', 'error');
+        else if (pc.connectionState === 'disconnected') setEstado('Desconectado', 'error');
+      };
+
+      const wsURL = wsBase() + '/ws/walk?session=' + encodeURIComponent(sid);
+      ws = new WebSocket(wsURL);
+
+      ws.addEventListener('message', async (ev) => {
+        let msg;
+        try { msg = JSON.parse(ev.data); } catch { return; }
+        if (msg.type === 'peer-status' && msg.ready) {
+          setEstado('Móvil conectado — esperando oferta…', 'conectando');
+          return;
+        }
+        if (msg.type === 'peer-left') {
+          setEstado('El móvil se desconectó', 'error');
+          return;
+        }
+        try {
+          if (msg.type === 'offer') {
+            await pc.setRemoteDescription({ type: msg.sdpType || 'offer', sdp: msg.sdp });
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            enviar({ type: 'answer', sdp: answer.sdp, sdpType: answer.type });
+            setEstado('En directo', 'conectado');
+          } else if (msg.type === 'ice-candidate') {
+            await pc.addIceCandidate({
+              candidate: msg.candidate,
+              sdpMid: msg.sdpMid,
+              sdpMLineIndex: msg.sdpMLineIndex,
+            });
+          } else if (msg.type === 'answer') {
+            // El receptor no espera answer; si llega, es un par cruzado. Ignorar.
+          }
+        } catch (err) {
+          setEstado('Error: ' + err.message, 'error');
+          console.error('walk signaling:', err);
+        }
+      });
+
+      ws.addEventListener('close', () => {
+        setEstado('Signaling cerrado', 'error');
+      });
+      ws.addEventListener('error', () => {
+        setEstado('No se pudo conectar al signaling', 'error');
+      });
+    }
+
+    function enviar(obj) {
+      if (!ws || ws.readyState !== 1) return;
+      ws.send(JSON.stringify({ ...obj, sessionId: sesionActiva }));
+    }
+
+    function desconectar() {
+      try { ws && ws.close(); } catch (_) {}
+      try { pc && pc.close(); } catch (_) {}
+      ws = null; pc = null;
+      video.srcObject = null;
+      audio.srcObject = null;
+      sesionActiva = '';
+      boton.textContent = 'Conectar';
+      setEstado('Sin enlace');
+    }
+  </script>
+</body>
+</html>

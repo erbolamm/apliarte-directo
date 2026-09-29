@@ -1,0 +1,47 @@
+# Variables de entorno y secretos locales
+.env
+.env.*
+config.local.json*
+
+# Dependencias Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Persistencia y datos locales generados en ejecución
+data/config.json
+data/twitch-auth.json
+data/camara.json
+data/layers.json
+data/categoria.json
+data/*.json
+medios/*
+!medios/.gitkeep
+!data/.gitkeep
+!data/*.example
+
+# Datos del proxy Caddy
+caddy_data/
+caddy_config/
+
+# Logs y volcados del sistema
+*.log
+logs/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Cobertura y temporales
+.coverage/
+.nyc_output/
+.atl/
+
+# 3D office build output (bundle is copied to public/)
+oficina-3d/dist/
+
+# Runtime state never committed (panel password, locks, corrupt backups)
+vps-overlay/data/
+data/.lock
+data/*.corrupt

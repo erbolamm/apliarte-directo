@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "descripcion": "Configuración editable de escenas del directo (fase del stream) cruzadas con categoría de actividad. No es la colección nativa de OBS: es la fuente que consumen los overlays HTML de OBS/webhtml/ vía /api/categoria y, cuando exista, /api/escena.",
+  "categorias_validas": ["arte", "musica", "apps", "andando", "charlando"],
+  "notas_categorias": {
+    "apps": "Nombre actual en directo/src/categorias.js. Pendiente de renombrar a 'desarrollo-de-software' junto con el resto del sistema (ver co--directo--tema-compartido-overlays-obs-webhtml, decisión de Javier 2026-09-15, aún no ejecutada).",
+    "andando": "Categoría del modo paseo motivador: verde claro #00e676 y verde intenso #00c853, fondo oscuro #0a3d1c (Javier, 2026-09-19).",
+    "charlando": "Categoría de tertulia / Just Chatting: ámbar #e8955e y canela #b46734, fondo oscuro #1c1208 (Javier, 2026-09-25)."
+  },
+  "escenas": {
+    "inicio": {
+      "titulo": "Inicio",
+      "descripcion": "Pantalla de arranque del directo, antes de empezar.",
+      "obs_escena_aproximada": ["UniversoErBola", "08-pantalla-inicio"],
+      "html_overlay": "08-pantalla-inicio.html",
+      "confianza_mapeo": "media, sin confirmar con Javier",
+      "por_categoria": {
+        "arte": { "primario": "#f5cba7", "secundario": "#3e2723", "oscuro": "#0f0c29" },
+        "musica": { "primario": "#ff1493", "secundario": "#e91e63", "oscuro": "#260519" },
+        "apps": { "primario": "#5ecef5", "secundario": "#00467b", "oscuro": "#030a16" },
+        "andando": { "primario": "#00e676", "secundario": "#00c853", "oscuro": "#0a3d1c" },
+        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" }
+      }
+    },
+    "trabajando": {
+      "titulo": "Trabajando",
+      "descripcion": "Vista de desarrollo o pantalla compartida.",
+      "obs_escena_aproximada": ["Solo_Calca"],
+      "html_overlay": "02-marco-tv.html",
+      "confianza_mapeo": "baja, sin confirmar con Javier — 'Solo_Calca' es la escena más cercana pero podría ser solo para CalcaApp",
+      "por_categoria": {
+        "arte": { "primario": "#f5cba7", "secundario": "#3e2723", "oscuro": "#0f0c29" },
+        "musica": { "primario": "#ff1493", "secundario": "#e91e63", "oscuro": "#260519" },
+        "apps": { "primario": "#5ecef5", "secundario": "#00467b", "oscuro": "#030a16" },
+        "andando": { "primario": "#00e676", "secundario": "#00c853", "oscuro": "#0a3d1c" },
+        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" }
+      }
+    },
+    "hablando": {
+      "titulo": "Hablando",
+      "descripcion": "Cámara y chat, sin pantalla compartida.",
+      "obs_escena_aproximada": ["CON_CAMARA", "chatEscena"],
+      "html_overlay": ["03-marco-cam.html", "04-marco-chat.html"],
+      "confianza_mapeo": "media, sin confirmar con Javier",
+      "por_categoria": {
+        "arte": { "primario": "#f5cba7", "secundario": "#3e2723", "oscuro": "#0f0c29" },
+        "musica": { "primario": "#ff1493", "secundario": "#e91e63", "oscuro": "#260519" },
+        "apps": { "primario": "#5ecef5", "secundario": "#00467b", "oscuro": "#030a16" },
+        "andando": { "primario": "#00e676", "secundario": "#00c853", "oscuro": "#0a3d1c" },
+        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" }
+      }
+    },
+    "espera": {
+      "titulo": "Espera",
+      "descripcion": "Pausa o modo espera (BRB).",
+      "obs_escena_aproximada": ["ModoEspera", "PAUSA"],
+      "html_overlay": "06-pantalla-pausa.html",
+      "confianza_mapeo": "media, sin confirmar con Javier",
+      "por_categoria": {
+        "arte": { "primario": "#f5cba7", "secundario": "#3e2723", "oscuro": "#0f0c29" },
+        "musica": { "primario": "#ff1493", "secundario": "#e91e63", "oscuro": "#260519" },
+        "apps": { "primario": "#5ecef5", "secundario": "#00467b", "oscuro": "#030a16" },
+        "andando": { "primario": "#00e676", "secundario": "#00c853", "oscuro": "#0a3d1c" },
+        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" }
+      }
+    },
+    "final": {
+      "titulo": "Final",
+      "descripcion": "Cierre del streaming.",
+      "obs_escena_aproximada": null,
+      "html_overlay": null,
+      "confianza_mapeo": "nula — no existe escena de OBS ni HTML propio todavía; hace falta que Javier decida si se crea uno nuevo antes de dar esta entrada por cerrada",
+      "por_categoria": {
+        "arte": { "primario": "#f5cba7", "secundario": "#3e2723", "oscuro": "#0f0c29" },
+        "musica": { "primario": "#ff1493", "secundario": "#e91e63", "oscuro": "#260519" },
+        "apps": { "primario": "#5ecef5", "secundario": "#00467b", "oscuro": "#030a16" },
+        "andando": { "primario": "#00e676", "secundario": "#00c853", "oscuro": "#0a3d1c" },
+        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" }
+      }
+    }
+  }
+}

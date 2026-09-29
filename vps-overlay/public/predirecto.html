@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Antes del directo · ApliArte</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color-scheme: light; --bg:#f6f8fb; --panel:#fff; --ink:#172437; --line:#ccd5df; --accent:#005fa9; --alert:#ae321e; }
+    :root[data-theme="dark"] { color-scheme: dark; --bg:#111923; --panel:#1c2936; --ink:#eef4fa; --line:#526374; --accent:#8dc9ff; --alert:#ff9c88; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); }
+    main { max-width:720px; margin:24px auto; padding:8px; }
+    header, .timer, .item, .actions { display:flex; align-items:center; gap:8px; padding:8px; }
+    header { justify-content:space-between; }
+    h1 { font-size:1.5rem; margin:0; }
+    h2 { font-size:1.1rem; margin:16px 8px 8px; }
+    .timer { background:var(--panel); border:1px solid var(--line); justify-content:center; flex-direction:column; }
+    #countdown { font-size:clamp(3rem, 15vw, 6rem); font-variant-numeric:tabular-nums; font-weight:750; line-height:1; }
+    :root[data-urgent="true"] .timer { border-color:var(--alert); color:var(--alert); }
+    :root[data-urgent="true"] #countdown { animation:pulse 1s ease-in-out infinite alternate; }
+    @keyframes pulse { to { opacity:.55; } }
+    .item { background:var(--panel); border:1px solid var(--line); margin:8px 0; cursor:pointer; min-height:60px; }
+    .item input { width:22px; height:22px; accent-color:var(--accent); flex:none; }
+    .item strong { display:block; }
+    .item small { display:block; line-height:1.45; }
+    button { background:var(--panel); color:var(--ink); border:1px solid var(--line); padding:8px; cursor:pointer; font:inherit; }
+    button:focus-visible, input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+    .icon { font-size:1.4rem; width:42px; height:42px; position:relative; }
+    .icon::after { content:attr(data-tip); position:absolute; top:calc(100% + 8px); right:0; padding:8px; font-size:.8rem; white-space:nowrap; background:var(--ink); color:var(--bg); opacity:0; visibility:hidden; transition:opacity .1s 3s, visibility 0s 3s; z-index:2; }
+    .icon:hover::after, .icon:focus-visible::after { opacity:1; visibility:visible; }
+    .actions { justify-content:space-between; flex-wrap:wrap; }
+    p { margin:8px; }
+    @media (prefers-reduced-motion:reduce) { :root[data-urgent="true"] #countdown { animation:none; } }
+  </style>
+</head>
+<body>
+<main>
+  <header><h1>Antes del directo</h1><button class="icon" id="theme" type="button" aria-label="Cambiar tema" data-tip="Cambiar entre modo claro y oscuro">☾</button></header>
+  <section class="timer" role="timer" aria-label="Tiempo restante"><div id="countdown">10:00</div><strong id="timer-status">Quedan diez minutos</strong></section>
+  <h2>Comprobaciones guiadas</h2>
+  <label class="item"><input type="checkbox" data-index="0"><span><strong>Teaser o clip de entrada</strong><small>Abre el archivo y confirma que está listo para lanzar.</small></span></label>
+  <label class="item"><input type="checkbox" data-index="1"><span><strong>Publicaciones en redes</strong><small>Comprueba que están publicadas en X, Telegram y Discord.</small></span></label>
+  <label class="item"><input type="checkbox" data-index="2"><span><strong>Enlaces del directo</strong><small>Abre los enlaces en Twitch, YouTube y Kick y confirma que están activos.</small></span></label>
+  <label class="item"><input type="checkbox" data-index="3"><span><strong>OBS y emisión</strong><small>Verifica la clave RTMP en OBS y el estado del codificador. No escribas la clave aquí.</small></span></label>
+  <label class="item"><input type="checkbox" data-index="4"><span><strong>Micrófono y retorno</strong><small>Haz una prueba breve de voz y escucha el retorno de audio.</small></span></label>
+  <div class="actions"><strong id="progress">0 de 5 comprobaciones</strong><button id="reset" type="button">Reiniciar cuenta y lista</button></div>
+  <p>Esta lista se guarda solo en este navegador. No comprueba automáticamente OBS ni las plataformas.</p>
+</main>
+<script>
+  const KEY = 'directo_predirecto_v1';
+  const DURATION = 10 * 60 * 1000;
+  const checks = [...document.querySelectorAll('input[data-index]')];
+  const timer = document.getElementById('countdown');
+  const status = document.getElementById('timer-status');
+  const progress = document.getElementById('progress');
+  const root = document.documentElement;
+  let state = { endAt: Date.now() + DURATION, checks: Array(5).fill(false), theme: 'light' };
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (_) { /* Private mode or denied storage. */ }
+  }
+  function render() {
+    const remaining = Math.max(0, Math.ceil((state.endAt - Date.now()) / 1000));
+    timer.textContent = `${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`;
+    status.textContent = remaining === 0 ? 'Se agotó el tiempo: revisa lo pendiente' : remaining < 120 ? '¡Quedan menos de dos minutos!' : 'Cuenta atrás de diez minutos';
+    root.dataset.urgent = String(remaining < 120);
+    root.dataset.theme = state.theme;
+    document.getElementById('theme').textContent = state.theme === 'light' ? '☾' : '☀';
+    checks.forEach((check, i) => { check.checked = state.checks[i]; });
+    progress.textContent = `${state.checks.filter(Boolean).length} de 5 comprobaciones`;
+  }
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (saved && Number.isFinite(saved.endAt) && Array.isArray(saved.checks) && saved.checks.length === 5) {
+      state = { endAt: saved.endAt, checks: saved.checks.map(Boolean), theme: saved.theme === 'dark' ? 'dark' : 'light' };
+    } else save();
+  } catch (_) { /* Continue in memory when storage is unavailable. */ }
+  checks.forEach((check, i) => check.addEventListener('change', () => { state.checks[i] = check.checked; save(); render(); }));
+  document.getElementById('reset').addEventListener('click', () => { state.endAt = Date.now() + DURATION; state.checks = Array(5).fill(false); save(); render(); });
+  document.getElementById('theme').addEventListener('click', () => { state.theme = state.theme === 'light' ? 'dark' : 'light'; save(); render(); });
+  render();
+  setInterval(render, 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel de Directo (Local) · ErBolamm</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23005fa9%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2246%22%20font-size%3D%2232%22%20font-family%3D%22system-ui%2C%20-apple-system%2C%20sans-serif%22%20font-weight%3D%22bold%22%20text-anchor%3D%22middle%22%20fill%3D%22%235ecef5%22%3E%E2%96%B6%3C/text%3E%3C/svg%3E">
+<script>
+  (function() {
+    try {
+      var theme = localStorage.getItem("erbolamm-panel-theme") ||
+        (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.dataset.theme = theme;
+    } catch (_) {}
+  })();
+</script>
+<style>
+  :root {
+    --bg: #18181b; --panel: #27272a; --borde: #3f3f46; --texto: #f4f4f5;
+    --suave: #a1a1aa; --acento: #3b82f6; --acento-claro: #60a5fa;
+    --ok: #22c55e; --error: #ef4444; --code-bg: #18181b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.5rem clamp(1rem, 4vw, 2.5rem) 3rem;
+    background: var(--bg); color: var(--texto);
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+  }
+  header { max-width: 1000px; margin: 0 auto 1.5rem; }
+  .header-top {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem;
+  }
+  h1 { margin: 0; font-size: 1.5rem; font-weight: 800; }
+  .header-botones { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  .top-cockpit-box { max-width: 1000px; margin: 0 auto 1.25rem; }
+  .btn-cockpit-link {
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    background: linear-gradient(135deg, #1d4ed8, #7e22ce); color: #fff;
+    font-weight: 700; font-size: 1.15rem; padding: 1rem 1.4rem;
+    border-radius: 12px; text-decoration: none;
+    box-shadow: 0 4px 18px rgba(37, 99, 235, 0.4);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn-cockpit-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(37, 99, 235, 0.55);
+  }
+  .categoria {
+    max-width: 1000px; margin: 0 auto 1.25rem; background: var(--panel);
+    border: 1px solid var(--borde); border-radius: 12px; padding: 1.2rem 1.4rem;
+  }
+  .categoria h2 { margin: 0 0 0.35rem; font-size: 1.15rem; font-weight: 700; }
+  .categoria .nota { margin: 0 0 0.9rem; color: var(--suave); font-size: 0.88rem; line-height: 1.45; }
+  .categoria .nota code { background: var(--code-bg); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85rem; }
+  .cat-btn {
+    font: inherit; font-weight: 600; cursor: pointer; padding: 0.6rem 1.2rem;
+    border-radius: 8px; border: 1px solid var(--borde); background: #3f3f46;
+    color: var(--texto); text-decoration: none; display: inline-flex;
+    align-items: center; gap: 0.4rem; transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .cat-btn:hover { background: #52525b; border-color: var(--acento-claro); }
+  .cat-btn:disabled { opacity: 0.5; cursor: default; }
+  .categoria-estado { margin: 0.8rem 0 0; font-size: 0.86rem; color: var(--suave); }
+  .categoria-estado[data-error="si"] { color: #f97316; }
+  .destinos-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+  .destino-fila {
+    display: flex; align-items: center; gap: 0.8rem; padding: 0.65rem 0.8rem;
+    background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px; flex-wrap: wrap;
+  }
+  .destino-nombre { font-weight: 700; min-width: 14rem; word-break: break-all; }
+  .destino-motivo { color: var(--suave); font-size: 0.84rem; flex: 1 1 auto; }
+  .destino-vacio { color: var(--suave); font-size: 0.88rem; font-style: italic; padding: 0.5rem 0; }
+  .destino-boton {
+    font: inherit; font-weight: 600; cursor: pointer; padding: 0.4rem 0.9rem;
+    border-radius: 6px; border: 1px solid var(--borde); background: #3f3f46;
+    color: var(--texto); margin-left: auto;
+  }
+  .destino-boton:hover { background: #52525b; border-color: var(--acento-claro); }
+  .pastilla {
+    font-size: 0.76rem; font-weight: 700; padding: 0.2rem 0.6rem;
+    border-radius: 999px; border: 1px solid transparent; color: #fff;
+  }
+  .pastilla-reenviando { background: var(--ok); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <h1>Panel de Directo (Local)</h1>
+    <div class="header-botones">
+      <a class="cat-btn" href="http://127.0.0.1:8790/" target="_blank" rel="noopener">🎛️ Centro de directo</a>
+      <a class="cat-btn" href="http://127.0.0.1:8790/tts-multiplataforma.html" target="_blank" rel="noopener">🔊 Escuchar el chat</a>
+    </div>
+  </div>
+</header>
+
+<div class="top-cockpit-box" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+  <a href="/admin" target="_blank" rel="noopener" class="btn-cockpit-link">
+    📱 Abrir Cockpit Móvil ↗
+  </a>
+</div>
+
+<!-- 1. Cierre de Directo y Exportación a YouTube (SCR-20260925-skew.png) -->
+<section class="categoria" id="categoria-cierre" aria-labelledby="t-cierre-directo" style="border: 2px solid #9146ff; background: rgba(145, 70, 255, 0.08);">
+  <h2 id="t-cierre-directo" style="color: #bf94ff;">🎬 Cierre de Directo y Exportación a YouTube</h2>
+  <p class="nota">Finaliza la retransmisión emitiendo el vídeo oficial de cierre (<code>fin-de-directo.mp4</code>) y obtén el enlace directo al VOD en Twitch para exportarlo a YouTube con 1 clic.</p>
+  
+  <div style="display:flex;gap:0.8rem;flex-wrap:wrap;margin:1rem 0;">
+    <button type="button" class="cat-btn" id="btn-cerrar-con-video" style="background:#9146ff;color:#fff;font-weight:bold;padding:0.6rem 1.2rem;border-radius:0.5rem;cursor:pointer;">
+      🛑 Finalizar Directo con Vídeo de Cierre
+    </button>
+    <button type="button" class="cat-btn" id="btn-consultar-vod" style="padding:0.6rem 1.2rem;border-radius:0.5rem;cursor:pointer;">
+      🔄 Buscar Último VOD de Twitch
+    </button>
+  </div>
+
+  <div id="cierre-vod-resultado" style="margin-top:0.8rem;padding:0.8rem;background:rgba(0,0,0,0.25);border-radius:0.5rem;display:none;">
+    <p style="margin:0 0 0.5rem 0;font-weight:bold;font-size:1.05rem;" id="vod-titulo">Cargando datos del directo…</p>
+    <p style="margin:0 0 0.8rem 0;font-size:0.9rem;opacity:0.85;" id="vod-detalles"></p>
+    <div style="display:flex;gap:0.8rem;flex-wrap:wrap;">
+      <a id="btn-exportar-youtube" href="https://dashboard.twitch.tv/u/apliarte/content/video-producer" target="_blank" rel="noopener" class="cat-btn" style="background:#ff0000;color:#fff;text-decoration:none;font-weight:bold;display:inline-flex;align-items:center;gap:0.4rem;padding:0.5rem 1rem;border-radius:0.4rem;">
+        ▶️ Exportar a YouTube en Gestor Twitch ↗
+      </a>
+      <a id="btn-ver-vod" href="#" target="_blank" rel="noopener" class="cat-btn" style="background:#6441a5;color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;padding:0.5rem 1rem;border-radius:0.4rem;">
+        🟣 Ver VOD en Twitch ↗
+      </a>
+      <button type="button" class="cat-btn" id="btn-copiar-vod-link" style="padding:0.5rem 1rem;border-radius:0.4rem;cursor:pointer;">
+        📋 Copiar Enlace VOD
+      </button>
+    </div>
+  </div>
+
+  <p class="categoria-estado" id="cierre-estado" role="status">Listo para gestionar el cierre.</p>
+</section>
+
+<!-- 2. Vídeos manuales (SCR-20260925-skkz.png) -->
+<section class="categoria" aria-labelledby="t-videos">
+  <h2 id="t-videos">Vídeos manuales</h2>
+  <p class="nota">Elige un vídeo de <code>directo/medios/videos/</code> y emítelo a todos los destinos ahora mismo, esté OBS conectado o no — para fin de directo, anuncios, lo que sea. Mientras esté activo, OBS no lo interrumpe: se detiene al agotar la duración o manualmente.</p>
+
+  <div class="video-opciones-barra" style="display:flex;gap:1.2rem;align-items:center;flex-wrap:wrap;margin-bottom:0.8rem;padding:0.6rem 0.8rem;background:rgba(255,255,255,0.04);border:1px solid var(--borde);border-radius:0.5rem;">
+    <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-weight:600;">
+      <input type="checkbox" id="check-video-duracion"> ⏱️ Limitar duración
+    </label>
+    <div id="video-duracion-selector" style="display:none;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+      <select id="video-duracion-segundos" style="padding:0.35rem 0.6rem;border-radius:0.4rem;border:1px solid var(--borde);background:var(--bg);color:var(--texto);font:inherit;">
+        <option value="30" selected>30 segundos</option>
+        <option value="60">1 minuto</option>
+        <option value="300">5 minutos</option>
+        <option value="900">15 minutos</option>
+        <option value="1800">30 minutos (media hora)</option>
+        <option value="custom">Personalizado...</option>
+      </select>
+      <input type="number" id="video-duracion-custom" min="1" max="14400" placeholder="seg" style="display:none;width:5rem;padding:0.35rem 0.5rem;border-radius:0.4rem;border:1px solid var(--borde);background:var(--bg);color:var(--texto);font:inherit;">
+    </div>
+  </div>
+
+  <ul class="destinos-lista" id="videos-lista"></ul>
+  <p class="categoria-estado" id="videos-estado" role="status">Consultando…</p>
+</section>
+
+<script>
+(function() {
+  const URL_BASE_DIRECTO = 'http://127.0.0.1:8790';
+
+  // ── 1. Cierre y VOD ────────────────────────────────────────────────────────
+  const btnCerrarConVideo = document.getElementById('btn-cerrar-con-video');
+  const btnConsultarVod = document.getElementById('btn-consultar-vod');
+  const cierreVodResultado = document.getElementById('cierre-vod-resultado');
+  const vodTitulo = document.getElementById('vod-titulo');
+  const vodDetalles = document.getElementById('vod-detalles');
+  const btnExportarYoutube = document.getElementById('btn-exportar-youtube');
+  const btnVerVod = document.getElementById('btn-ver-vod');
+  const btnCopiarVodLink = document.getElementById('btn-copiar-vod-link');
+  const cierreEstado = document.getElementById('cierre-estado');
+
+  let ultimoVodUrl = '';
+
+  async function cargarUltimoVod() {
+    if (!cierreEstado) return;
+    cierreEstado.textContent = 'Consultando último VOD en Twitch…';
+    try {
+      const r = await fetch(`${URL_BASE_DIRECTO}/api/twitch/ultimo-vod`);
+      const d = await r.json();
+      if (d.encontrado) {
+        if (cierreVodResultado) cierreVodResultado.style.display = 'block';
+        if (vodTitulo) vodTitulo.textContent = `📹 ${d.titulo}`;
+        if (vodDetalles) vodDetalles.textContent = `ID: ${d.id} · Duración: ${d.duracionTexto} · Publicado: ${new Date(d.publicadoAt).toLocaleTimeString()}`;
+        if (btnVerVod) btnVerVod.href = d.url;
+        if (btnExportarYoutube) btnExportarYoutube.href = d.gestorUrl;
+        ultimoVodUrl = d.url;
+        cierreEstado.textContent = 'VOD localizado. Haz clic en "Exportar a YouTube" para ir al Gestor de Contenido de Twitch.';
+      } else {
+        if (cierreVodResultado) cierreVodResultado.style.display = 'block';
+        if (vodTitulo) vodTitulo.textContent = 'No se encontró VOD reciente en Twitch todavía';
+        if (vodDetalles) vodDetalles.textContent = 'Twitch puede tardar unos segundos en procesar el archivo del directo tras cortarlo.';
+        if (btnVerVod) btnVerVod.href = d.archivoUrl || 'https://twitch.tv/apliarte/videos';
+        if (btnExportarYoutube) btnExportarYoutube.href = d.gestorUrl || 'https://dashboard.twitch.tv/u/apliarte/content/video-producer';
+        ultimoVodUrl = d.archivoUrl || '';
+        cierreEstado.textContent = 'Puedes abrir el Gestor de Vídeos para revisar si ya aparece.';
+      }
+    } catch (err) {
+      cierreEstado.textContent = `Error al consultar VOD: ${err.message}`;
+    }
+  }
+
+  if (btnConsultarVod) btnConsultarVod.addEventListener('click', cargarUltimoVod);
+
+  if (btnCerrarConVideo) {
+    btnCerrarConVideo.addEventListener('click', async () => {
+      if (!confirm('¿Emitir el vídeo fin-de-directo.mp4 en la antena de Twitch y cerrar la emisión?')) return;
+      btnCerrarConVideo.disabled = true;
+      cierreEstado.textContent = 'Iniciando emisión de fin-de-directo.mp4 en la antena de Twitch…';
+      try {
+        const r = await fetch(`${URL_BASE_DIRECTO}/api/videos/fin-de-directo.mp4/reproducir`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        cierreEstado.textContent = 'Vídeo de cierre emitiéndose en antena. Buscando enlace del directo…';
+        setTimeout(cargarUltimoVod, 3000);
+      } catch (err) {
+        cierreEstado.textContent = `Error al emitir vídeo de cierre: ${err.message}`;
+      } finally {
+        btnCerrarConVideo.disabled = false;
+      }
+    });
+  }
+
+  if (btnCopiarVodLink) {
+    btnCopiarVodLink.addEventListener('click', () => {
+      if (!ultimoVodUrl) return;
+      navigator.clipboard.writeText(ultimoVodUrl).then(() => {
+        const txt = btnCopiarVodLink.textContent;
+        btnCopiarVodLink.textContent = '✅ ¡Copiado!';
+        setTimeout(() => { btnCopiarVodLink.textContent = txt; }, 2000);
+      });
+    });
+  }
+
+  // ── 2. Vídeos Manuales ─────────────────────────────────────────────────────
+  function pintarVideos(datos) {
+    const lista = document.getElementById('videos-lista');
+    lista.innerHTML = '';
+    if (!datos.archivos?.length) {
+      const li = document.createElement('li');
+      li.className = 'destino-vacio';
+      li.textContent = 'No hay vídeos en directo/medios/videos/.';
+      lista.append(li);
+      return;
+    }
+    for (const v of datos.archivos) {
+      const li = document.createElement('li');
+      li.className = 'destino-fila';
+
+      const nombre = document.createElement('span');
+      nombre.className = 'destino-nombre';
+      nombre.textContent = v.archivo;
+      li.append(nombre);
+
+      const tamano = document.createElement('span');
+      tamano.className = 'destino-motivo';
+      tamano.textContent = `${v.tamanoMB} MB`;
+      li.append(tamano);
+
+      if (datos.reproduciendo === v.archivo) {
+        const pastilla = document.createElement('span');
+        pastilla.className = 'pastilla pastilla-reenviando';
+        pastilla.textContent = 'reproduciendo';
+        li.append(pastilla);
+      }
+
+      const boton = document.createElement('button');
+      boton.type = 'button';
+      boton.className = 'destino-boton';
+      boton.textContent = datos.reproduciendo === v.archivo ? 'Detener' : 'Reproducir';
+      boton.addEventListener('click', () => {
+        boton.disabled = true;
+        let opciones = undefined;
+        if (datos.reproduciendo !== v.archivo) {
+          const checkDur = document.getElementById('check-video-duracion');
+          const selDur = document.getElementById('video-duracion-segundos');
+          const customDur = document.getElementById('video-duracion-custom');
+          let duracion = null;
+          if (checkDur?.checked) {
+            const val = selDur?.value;
+            duracion = val === 'custom' ? (parseInt(customDur?.value, 10) || 30) : parseInt(val, 10);
+          }
+          opciones = { duracion };
+        }
+
+        const accion = datos.reproduciendo === v.archivo
+          ? fetch(`${URL_BASE_DIRECTO}/api/videos/detener`, { method: 'POST' })
+          : fetch(`${URL_BASE_DIRECTO}/api/videos/${encodeURIComponent(v.archivo)}/reproducir`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: opciones ? JSON.stringify(opciones) : undefined,
+            });
+        accion.then(consultarVideos).catch(() => {}).finally(() => { boton.disabled = false; });
+      });
+      li.append(boton);
+      lista.append(li);
+    }
+  }
+
+  const checkDurEl = document.getElementById('check-video-duracion');
+  const durSelectorEl = document.getElementById('video-duracion-selector');
+  const durSelectEl = document.getElementById('video-duracion-segundos');
+  const durCustomEl = document.getElementById('video-duracion-custom');
+
+  if (checkDurEl && durSelectorEl) {
+    checkDurEl.addEventListener('change', () => {
+      durSelectorEl.style.display = checkDurEl.checked ? 'inline-flex' : 'none';
+    });
+  }
+  if (durSelectEl && durCustomEl) {
+    durSelectEl.addEventListener('change', () => {
+      durCustomEl.style.display = durSelectEl.value === 'custom' ? 'inline-block' : 'none';
+    });
+  }
+
+  async function consultarVideos() {
+    const estado = document.getElementById('videos-estado');
+    try {
+      const r = await fetch(`${URL_BASE_DIRECTO}/api/videos`, { cache: 'no-store' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const datos = await r.json();
+      pintarVideos(datos);
+      estado.dataset.error = 'no';
+      estado.textContent = datos.reproduciendo
+        ? `Reproduciendo ahora: ${datos.reproduciendo}`
+        : `${datos.archivos.length} vídeo(s) en la librería`;
+    } catch {
+      estado.dataset.error = 'si';
+      estado.textContent = 'Sin conexión con el centro de restream (¿está arrancado npm start en directo/?)';
+    }
+  }
+
+  consultarVideos();
+  setInterval(consultarVideos, 5000);
+})();
+</script>
+</body>
+</html>

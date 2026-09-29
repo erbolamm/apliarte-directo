@@ -1,0 +1,24 @@
+{
+  "name": "apliarte-directo",
+  "version": "1.0.0",
+  "description": "Suite soberana de emisión y overlays 3D interactivos para streaming con Docker",
+  "main": "server.js",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "centro": "node src/server.js",
+    "test": "node scripts/run-tests.mjs test/*.test.js temas/test/*.test.js",
+    "directo": "node scripts/directo.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "express": "5.2.1",
+    "node-media-server": "4.4.3",
+    "socket.io": "4.8.3"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "id": "musica",
+  "aliasExterno": "musica",
+  "nombre": "Música en directo",
+  "descripcion": "Paleta de rosa fuerte y rosa intenso para directos centrados en música, sesiones en directo y mezclas.",
+  "paleta": {
+    "fondo": "#260519",
+    "primario": "#ff1493",
+    "secundario": "#e91e63",
+    "borde": "#ff66b3",
+    "texto": "#fde7f1",
+    "acento": "#ffd1e3"
+  },
+  "fuentes": {
+    "principal": "'Inter', 'Helvetica Neue', Arial, sans-serif",
+    "mono": "'JetBrains Mono', 'Menlo', monospace"
+  },
+  "marco": {
+    "estilo": "cristal-color",
+    "radio": "14px",
+    "grosorBorde": "2px",
+    "sombra": "0 12px 36px rgba(255, 20, 147, 0.35)"
+  },
+  "intro": {
+    "titulo": "Música en directo",
+    "subtitulo": "Sesión abierta · mezclas, improvisación y peticiones del chat",
+    "duracionSeg": 600
+  },
+  "textos": {
+    "pausa": "Volvemos en un momento con más música",
+    "comenzamos": "Empezamos en breve con la sesión musical",
+    "alertaSeguidor": "Gracias por unirte a la sesión musical"
+  }
+}

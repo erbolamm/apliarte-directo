@@ -1,0 +1,82 @@
+services:
+  overlay:
+    build: .
+    container_name: apliarte-directos
+    restart: unless-stopped
+    ports:
+      - "${OVERLAY_PORT:-7979}:7979"
+    environment:
+      - PORT=7979
+      - PANEL_PASS=${PANEL_PASS}
+      # Comma-separated public IPs treated like Tailscale (e.g. the home OBS machine)
+      - TRUSTED_CLIENT_IPS=${TRUSTED_CLIENT_IPS:-}
+      - VDO_CAM_ROOM=${VDO_CAM_ROOM:-erbolammapliarte}
+      - VDO_CAM_STREAM=${VDO_CAM_STREAM:-ja_cam_directo}
+      - VDO_CAM_PASS=${VDO_CAM_PASS:-}
+      - WHIP_CONTROL_URL=http://whip:3000
+    volumes:
+      - ./server.js:/app/server.js
+      - ./public:/app/public
+      - ./data:/app/data
+      - ./medios:/app/medios
+    networks:
+      - directo-network
+
+  # Streamer WHIP — Chromium headless + Puppeteer → VDO.ninja mixer → Twitch WHIP
+  # ~300-500 MB RAM (vs 2+ GB del streamer anterior con Xvfb+FFmpeg)
+  whip:
+    build: ./whip
+    container_name: apliarte-whip
+    restart: unless-stopped
+    environment:
+      - TWITCH_STREAM_KEY=${TWITCH_STREAM_KEY}
+      - VDO_ROOM=${VDO_ROOM:-}
+      - VDO_PASS=${VDO_PASS:-}
+      - CONTROL_PORT=3000
+      - AUTO_START=${AUTO_START:-false}
+    volumes:
+      - ./data:/app/data:ro
+    # shm aumentado para Chromium WebRTC (mucho menos que el streamer anterior)
+    shm_size: '512mb'
+    networks:
+      - directo-network
+
+  # Streamer LEGACY — Chromium+Xvfb+FFmpeg (mantenido como fallback, no eliminar aún)
+  streamer:
+    build: ./streamer
+    container_name: apliarte-streamer
+    restart: "no"
+    profiles: ["legacy"]
+    depends_on:
+      - overlay
+    environment:
+      - TWITCH_STREAM_KEY=${TWITCH_STREAM_KEY}
+    shm_size: '2gb'
+    networks:
+      - directo-network
+
+  # Proxy Caddy con SSL automático (opcional para despliegues independientes en VPS)
+  caddy:
+    image: caddy:2-alpine
+    container_name: apliarte-caddy
+    restart: unless-stopped
+    profiles: ["ssl"]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - directo-network
+
+networks:
+  directo-network:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

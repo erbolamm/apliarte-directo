@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Escuchar Twitch, Kick, YouTube y VPS · TTS multiplataforma</title>
+<style>
+  :root{ --bg:#141414; --panel:#1c1c1c; --borde:#333; --texto:#fdfdfd; --suave:#9a9a9a; --acento:#5ecef5; --ok:#00c853; --error:#e5484d; --twitch:#9147ff; --kick:#53fc18; --youtube:#ff0033; --vps:#ffaa00; }
+  *{box-sizing:border-box}
+  body{margin:0;padding:1rem clamp(1rem,4vw,2rem) 2rem;background:var(--bg);color:var(--texto);font-family:"Inter",system-ui,sans-serif}
+  h1{font-size:1.2rem;margin:0 0 .2rem}
+  p.leyenda{margin:0 0 1rem;color:var(--suave);font-size:.85rem;max-width:70ch}
+  .tarjeta{background:var(--panel);border:1px solid var(--borde);border-radius:.7rem;padding:.9rem 1.1rem;margin-bottom:1rem;max-width:720px}
+  .fila{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.6rem}
+  .fila:last-child{margin-bottom:0}
+  label{font-size:.82rem;color:var(--suave)}
+  input[type="text"], input[type="url"], input[type="password"], select{
+    font:inherit;background:transparent;border:1px solid var(--borde);border-radius:.4rem;
+    color:var(--texto);padding:.4rem .6rem;min-width:8rem;
+  }
+  input[type="range"]{accent-color:var(--acento)}
+  button{
+    font:inherit;font-weight:700;cursor:pointer;padding:.5rem 1rem;border-radius:.5rem;
+    border:2px solid var(--borde);background:transparent;color:var(--texto);
+  }
+  button:hover{border-color:var(--acento)}
+  button:disabled{opacity:.5;cursor:default}
+  button.primario{background:var(--acento);border-color:var(--acento);color:#00232b}
+  .pastilla{font-size:.78rem;font-weight:700;padding:.15rem .55rem;border-radius:999px;border:1px solid var(--borde);color:var(--texto)}
+  .pastilla-ok{background:var(--ok);border-color:var(--ok);color:#fff}
+  .pastilla-error{background:var(--error);border-color:var(--error);color:#fff}
+  .pastilla-parado{background:transparent;color:var(--suave)}
+  .pastilla-plataforma-twitch{background:var(--twitch);border-color:var(--twitch);color:#fff}
+  .pastilla-plataforma-kick{background:var(--kick);border-color:var(--kick);color:#1a1a1a}
+  .pastilla-plataforma-youtube{background:var(--youtube);border-color:var(--youtube);color:#fff}
+  .pastilla-plataforma-vps{background:var(--vps);border-color:var(--vps);color:#1a1a1a}
+  .campo-fuente{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+  .campo-fuente label{display:flex;flex-direction:column;gap:.2rem}
+  .campo-fuente label > span{font-size:.78rem;color:var(--suave)}
+  .detalles-fuente{font-size:.82rem;color:var(--suave);max-width:60ch;margin-top:.4rem}
+  #registro{
+    max-width:720px;height:260px;overflow-y:auto;background:#0d0d0d;border:1px solid var(--borde);
+    border-radius:.5rem;padding:.6rem .8rem;font-size:.85rem;line-height:1.5;
+  }
+  #registro p{margin:0 0 .3rem}
+  #registro .usuario{font-weight:700}
+  #registro .usuario-twitch{color:var(--twitch)}
+  #registro .usuario-kick{color:var(--kick)}
+  #registro .usuario-youtube{color:var(--youtube)}
+  #registro .usuario-vps{color:var(--vps)}
+  #registro .plataforma{font-size:.72rem;color:var(--suave);margin-right:.3rem;text-transform:uppercase;letter-spacing:.04em}
+  #registro .omitido{color:var(--suave);font-style:italic}
+  .chip-ignorado{
+    display:inline-flex;align-items:center;gap:.4rem;background:#262626;border:1px solid var(--borde);
+    border-radius:999px;padding:.2rem .65rem .2rem .75rem;font-size:.82rem;color:var(--texto);
+  }
+  .chip-ignorado .btn-quitar{
+    border:none;background:transparent;color:var(--suave);cursor:pointer;font-size:1rem;padding:0 .2rem;
+    line-height:1;display:flex;align-items:center;justify-content:center;font-weight:bold;
+  }
+  .chip-ignorado .btn-quitar:hover{color:var(--error)}
+</style>
+</head>
+<body>
+  <h1>🔊 Escuchar Twitch, Kick, YouTube y VPS</h1>
+  <p class="leyenda">Lee en voz alta el chat de cualquier plataforma usando la voz del propio navegador. Solo lectura,
+  sin conectar tu cuenta: no hace falta clave ni login. Nada se envía al chat desde aquí.
+  <strong>Estado (2026-09-19):</strong> Twitch IRC verificado y funcional; Kick/YouTube/VPS quedan con interfaz lista
+  pendiente de los datos reales (cluster Pusher, clave de YouTube, endpoint de chat del VPS).</p>
+
+  <div class="tarjeta">
+    <div class="fila">
+      <label for="fuente">Fuente</label>
+      <select id="fuente" aria-label="Fuente de chat"></select>
+      <button id="btn-activar" class="primario" type="button">🔊 Activar voz y escuchar</button>
+      <button id="btn-parar" type="button" disabled>Detener</button>
+      <span class="pastilla pastilla-parado" id="estado">Detenido</span>
+      <span class="pastilla pastilla-parado" id="estado-background" role="status">Apoyo en segundo plano detenido</span>
+      <span class="pastilla" id="estado-fuente" hidden></span>
+    </div>
+    <div id="campos-fuente" class="campo-fuente"></div>
+    <p class="detalles-fuente" id="detalles-fuente"></p>
+  </div>
+
+  <div class="tarjeta">
+    <div class="fila">
+      <label for="voz">Voz</label>
+      <select id="voz"><option value="">Automática</option></select>
+      <label for="velocidad">Velocidad</label>
+      <input type="range" id="velocidad" min="0.5" max="2" step="0.1" value="1">
+    </div>
+    <div class="fila">
+      <label><input type="checkbox" id="omitir-comandos" checked> Omitir comandos (!like, !so...)</label>
+      <label><input type="checkbox" id="omitir-emojis" checked> No leer emojis en voz alta</label>
+      <label><input type="checkbox" id="omitir-enlaces" checked> No leer enlaces (di "enlace" en su lugar)</label>
+      <label><input type="checkbox" id="prefijo-plataforma" checked> Prefijar plataforma en voz</label>
+    </div>
+    <div class="fila">
+      <label><input type="checkbox" id="sonido-aviso" checked> 🔔 Sonido al llegar un mensaje</label>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <div class="fila">
+      <label><strong>Filtro de palabras prohibidas</strong></label>
+      <span class="pastilla pastilla-parado" id="filtro-estado">Sin lista</span>
+      <button id="btn-limpiar-filtro" type="button">Limpiar lista</button>
+    </div>
+    <div class="fila">
+      <label>Modo:</label>
+      <label><input type="radio" name="filtro-modo" id="filtro-modo-censurar" value="censurar" checked> Censurar (reemplazar por ***)</label>
+      <label><input type="radio" name="filtro-modo" id="filtro-modo-silenciar" value="silenciar"> Silenciar (no leer el mensaje)</label>
+    </div>
+    <div class="fila">
+      <label for="filtro-lista" style="align-self:flex-start;">Lista negra (una por línea, # para comentarios):</label>
+      <textarea id="filtro-lista" rows="6" style="flex:1;min-width:18rem;font-family:ui-monospace,monospace;font-size:.85rem;padding:.5rem .7rem;border-radius:.4rem;border:1px solid var(--borde);background:transparent;color:var(--texto);" aria-label="Lista de palabras prohibidas"></textarea>
+    </div>
+    <p class="detalles-fuente">Case-insensitive, ignora tildes y leetspeak básico (0→o, 1→i, 3→e, 4→a, 5→s, 7→t). No censura dentro de otra palabra (p. ej. "mala" no matchea "amalgama"). Se guarda en este navegador.</p>
+  </div>
+
+  <div class="tarjeta">
+    <div class="fila">
+      <label><strong>👤 Usuarios silenciados en TTS (bots y lista negra)</strong></label>
+      <span class="pastilla pastilla-ok" id="usuarios-ignorados-contador">0 usuarios</span>
+      <button id="btn-restablecer-ignorados" type="button" title="Restaura la lista estándar de bots">Restablecer bots</button>
+      <button id="btn-vaciar-ignorados" type="button" title="Elimina todos para que todo el mundo se escuche">Vaciar lista</button>
+    </div>
+    <div class="fila">
+      <input type="text" id="nuevo-usuario-ignorado" placeholder="Añadir a lista negra (ej: pepitoelpapas, streamelements)…" aria-label="Usuario a silenciar" style="flex:1;min-width:14rem;">
+      <button id="btn-agregar-ignorado" class="primario" type="button">Silenciar usuario</button>
+    </div>
+    <div class="fila" style="margin-top:.4rem;">
+      <label style="align-self:flex-start;">Silenciados activos (haz clic en <strong>×</strong> para eliminar de la lista y permitir su voz):</label>
+    </div>
+    <div id="chips-ignorados" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;"></div>
+    <details style="font-size:.82rem;color:var(--suave);margin-top:.3rem;">
+      <summary style="cursor:pointer;margin-bottom:.4rem;">Editar manualmente como texto plano</summary>
+      <textarea id="usuarios-ignorados-lista" rows="4" style="width:100%;font-family:ui-monospace,monospace;font-size:.85rem;padding:.5rem .7rem;border-radius:.4rem;border:1px solid var(--borde);background:transparent;color:var(--texto);" aria-label="Lista de usuarios ignorados"></textarea>
+    </details>
+    <p class="detalles-fuente" style="margin:.4rem 0 0;">Los usuarios de esta lista se muestran en el registro pero NO suenan en TTS. Puedes quitar a cualquiera (como StreamElements o pepitoelpapas) pulsando su <strong>×</strong> para que vuelva a sonar.</p>
+  </div>
+
+  <div id="registro"></div>
+  <audio id="audio-aviso" src="/sonidos/aviso-mensaje.mp3" preload="auto"></audio>
+
+<script type="module">
+  import { crearTtsBackground } from './js/tts-background.js';
+  import { FUENTES } from './js/tts-fuentes.js';
+  import { filtrarMensaje, parsearLista, serializarLista, MODOS } from './js/filtro-palabras.js';
+
+  // ── Estado de la UI ─────────────────────────────────────────────────────
+  const $ = (id) => document.getElementById(id);
+  const elFuente = $('fuente');
+  const elCampos = $('campos-fuente');
+  const elDetalles = $('detalles-fuente');
+  const elEstado = $('estado');
+  const elEstadoFuente = $('estado-fuente');
+  const elVoz = $('voz');
+  const elVelocidad = $('velocidad');
+  const elOmitirComandos = $('omitir-comandos');
+  const elOmitirEmojis = $('omitir-emojis');
+  const elOmitirEnlaces = $('omitir-enlaces');
+  const elPrefijoPlataforma = $('prefijo-plataforma');
+  const elSonidoAviso = $('sonido-aviso');
+  const elAudioAviso = $('audio-aviso');
+  const elBtnActivar = $('btn-activar');
+  const elBtnParar = $('btn-parar');
+  const elRegistro = $('registro');
+  const elFiltroLista = $('filtro-lista');
+  const elFiltroEstado = $('filtro-estado');
+  const elBtnLimpiarFiltro = $('btn-limpiar-filtro');
+  const elFiltroModoCensurar = $('filtro-modo-censurar');
+  const elFiltroModoSilenciar = $('filtro-modo-silenciar');
+  const elUsuariosIgnoradosLista = $('usuarios-ignorados-lista');
+  const elUsuariosIgnoradosContador = $('usuarios-ignorados-contador');
+  const elBtnRestablecerIgnorados = $('btn-restablecer-ignorados');
+  const elNuevoUsuarioIgnorado = $('nuevo-usuario-ignorado');
+  const elBtnAgregarIgnorado = $('btn-agregar-ignorado');
+
+  const elChipsIgnorados = $('chips-ignorados');
+  const elBtnVaciarIgnorados = $('btn-vaciar-ignorados');
+
+  const CLAVE_LOCAL_IGNORADOS = 'directo_tts_usuarios_ignorados_v1';
+  const CLAVE_LOCAL_OMITIR_CMD = 'directo_tts_omitir_comandos_v1';
+  const guardadoOmitirCmd = localStorage.getItem(CLAVE_LOCAL_OMITIR_CMD);
+  if (guardadoOmitirCmd !== null) {
+    elOmitirComandos.checked = guardadoOmitirCmd === 'true';
+  }
+  elOmitirComandos.addEventListener('change', () => {
+    try { localStorage.setItem(CLAVE_LOCAL_OMITIR_CMD, elOmitirComandos.checked); } catch (_) {}
+  });
+  const BOTS_PREDETERMINADOS = [
+    'streamelements', 'nightbot', 'streamlabs', 'streamlabsbot',
+    'botrix', 'wizebot', 'moobot', 'pepitoelpapas',
+    'soundalerts', 'kofistreambot', 'pretzelrocks', 'fossabot'
+  ];
+  const usuariosIgnorados = new Set(BOTS_PREDETERMINADOS);
+
+  function cargarUsuariosIgnoradosGuardados() {
+    let cargadosLocal = false;
+    try {
+      const guardados = localStorage.getItem(CLAVE_LOCAL_IGNORADOS);
+      if (guardados) {
+        const arr = JSON.parse(guardados);
+        if (Array.isArray(arr)) {
+          usuariosIgnorados.clear();
+          for (const u of arr) if (typeof u === 'string' && u.trim()) usuariosIgnorados.add(u.trim().toLowerCase());
+          cargadosLocal = true;
+        }
+      }
+    } catch (_) {}
+    fetch('/api/panel/usuarios-ignorados')
+      .then(r => r.ok ? r.json() : null)
+      .then(datos => {
+        if (datos && Array.isArray(datos.usuarios) && !cargadosLocal) {
+          for (const u of datos.usuarios) {
+            if (typeof u === 'string' && u.trim()) {
+              usuariosIgnorados.add(u.trim().toLowerCase());
+            }
+          }
+          guardarUsuariosIgnorados(false);
+        }
+        pintarUsuariosIgnorados();
+      })
+      .catch(() => {});
+    pintarUsuariosIgnorados();
+  }
+
+  function guardarUsuariosIgnorados(notificarServidor = true) {
+    const arr = [...usuariosIgnorados].sort();
+    try {
+      localStorage.setItem(CLAVE_LOCAL_IGNORADOS, JSON.stringify(arr));
+      if (notificarServidor) {
+        fetch('/api/panel/usuarios-ignorados', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accion: 'reemplazar', usuarios: arr }),
+        }).catch(() => {});
+      }
+    } catch (_) {}
+    pintarUsuariosIgnorados();
+  }
+
+  function pintarUsuariosIgnorados() {
+    const arr = [...usuariosIgnorados].sort();
+    elUsuariosIgnoradosLista.value = arr.join('\n');
+    elUsuariosIgnoradosContador.textContent = `${arr.length} usuario${arr.length === 1 ? '' : 's'}`;
+    elChipsIgnorados.replaceChildren();
+    if (arr.length === 0) {
+      const span = document.createElement('span');
+      span.className = 'detalles-fuente';
+      span.style.fontStyle = 'italic';
+      span.textContent = 'Ningún usuario silenciado. Todo el mundo se escucha en TTS.';
+      elChipsIgnorados.append(span);
+      return;
+    }
+    for (const u of arr) {
+      const chip = document.createElement('span');
+      chip.className = 'chip-ignorado';
+      const txt = document.createElement('span');
+      txt.textContent = u;
+      const btnQuitar = document.createElement('button');
+      btnQuitar.type = 'button';
+      btnQuitar.className = 'btn-quitar';
+      btnQuitar.textContent = '×';
+      btnQuitar.title = `Eliminar ${u} de la lista negra (permitir su voz en TTS)`;
+      btnQuitar.setAttribute('aria-label', `Eliminar ${u} de la lista negra`);
+      btnQuitar.addEventListener('click', () => {
+        usuariosIgnorados.delete(u);
+        guardarUsuariosIgnorados(true);
+        pintarAviso(`🔊 Usuario "${u}" eliminado de la lista negra: ahora se escuchará en TTS.`);
+      });
+      chip.append(txt, btnQuitar);
+      elChipsIgnorados.append(chip);
+    }
+  }
+
+  cargarUsuariosIgnoradosGuardados();
+
+  let fuenteActiva = null;
+  let activo = false;
+  const cola = [];
+  const background = crearTtsBackground({
+    bombear: procesarCola,
+    estado: texto => { $('estado-background').textContent = texto; },
+    aviso: pintarAviso,
+  });
+  window.addEventListener('pagehide', () => elBtnParar.click());
+  document.addEventListener('visibilitychange', () => background.tick());
+  const vozPorUsuario = new Map();
+  const LIMITE_COLA = 100;
+  const LIMITE_REGISTRO = 200;
+
+  // ── Voces del navegador ─────────────────────────────────────────────────
+  function cargarVoces() {
+    const voces = speechSynthesis.getVoices();
+    const actuales = new Set([...elVoz.options].map(o => o.value));
+    for (const v of voces) {
+      const id = `${v.name}|${v.lang}`;
+      if (actuales.has(id)) continue;
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = `${v.name} (${v.lang})`;
+      elVoz.append(opt);
+    }
+  }
+  speechSynthesis.onvoiceschanged = cargarVoces;
+  cargarVoces();
+
+  // ── Registro visual ─────────────────────────────────────────────────────
+  // Construye el DOM con createElement + textContent para no inyectar HTML
+  // del chat (un usuario podría mandar "<img src=x onerror=alert(1)>").
+  function pintarChat(mensaje, claseExtra) {
+    const p = document.createElement('p');
+    if (claseExtra) p.className = claseExtra;
+    const eti = document.createElement('span');
+    eti.className = 'plataforma';
+    eti.textContent = `[${ETIQUETA_PLATAFORMA[mensaje.plataforma] || mensaje.plataforma}]`;
+    const usu = document.createElement('span');
+    usu.className = `usuario usuario-${mensaje.plataforma}`;
+    usu.textContent = mensaje.usuario;
+    const txt = document.createTextNode(`: ${mensaje.texto}`);
+    p.append(eti, usu, txt);
+    elRegistro.append(p);
+  }
+
+  function pintarAviso(texto, claseExtra) {
+    const p = document.createElement('p');
+    if (claseExtra) p.className = claseExtra;
+    const em = document.createElement('em');
+    em.textContent = texto;
+    p.append(em);
+    elRegistro.append(p);
+  }
+
+  function pintarOmitido(mensaje) {
+    const p = document.createElement('p');
+    p.className = 'omitido';
+    const eti = document.createElement('span');
+    eti.className = 'plataforma';
+    eti.textContent = `[${ETIQUETA_PLATAFORMA[mensaje.plataforma] || mensaje.plataforma}]`;
+    p.append(`${eti.textContent} ${mensaje.usuario}: ${mensaje.texto} (omitido)`);
+    elRegistro.append(p);
+  }
+
+  function recortarRegistro() {
+    elRegistro.scrollTop = elRegistro.scrollHeight;
+    while (elRegistro.childElementCount > LIMITE_REGISTRO) elRegistro.firstElementChild.remove();
+  }
+
+  function pintarEstado(texto, clase) {
+    elEstado.textContent = texto;
+    elEstado.className = `pastilla pastilla-${clase}`;
+  }
+
+  function pintarEstadoFuente(estado) {
+    if (!estado) { elEstadoFuente.hidden = true; return; }
+    elEstadoFuente.hidden = false;
+    elEstadoFuente.textContent = `${estado.fuente}: ${estado.estado}`;
+    elEstadoFuente.className = `pastilla pastilla-${estado.estado === 'conectado' ? 'ok' : estado.estado === 'error' ? 'error' : 'parado'}`;
+  }
+
+  // ── Cola de TTS ─────────────────────────────────────────────────────────
+  function encolar(mensaje) {
+    if (cola.length >= LIMITE_COLA) cola.shift();
+    cola.push(mensaje);
+    procesarCola();
+  }
+
+  const NOMBRES_FEMENINOS = ['mónica','monica','paulina','marisol','isabela','flo','sandy','shelley','grandma','lucía','lucia','elvira','conchita','esperanza','penélope','penelope'];
+  const NOMBRES_MASCULINOS = ['jorge','diego','eddy','reed','rocko','grandpa','juan','pablo','enrique','carlos','miguel','fred'];
+
+  function vozParaPreferencia(pref) {
+    if (!pref) return null;
+    const candidatas = speechSynthesis.getVoices()
+      .filter(v => v.lang.toLowerCase().startsWith(pref.lang.toLowerCase()));
+    if (candidatas.length === 0) return null;
+    const esFemenino = (v) => NOMBRES_FEMENINOS.some(n => v.name.toLowerCase().includes(n));
+    const esMasculino = (v) => NOMBRES_MASCULINOS.some(n => v.name.toLowerCase().includes(n));
+    if (pref.slot === 1) return candidatas.find(esFemenino) || candidatas[0];
+    return candidatas.find(esMasculino) || candidatas[Math.min(1, candidatas.length - 1)];
+  }
+
+  const RE_SPEAK = /^!speak\s+-config\s+([a-z]{2}(?:-[a-z]{2,4})?)\s+([12])\b/i;
+
+  function procesarCola() {
+    if (!activo || background.ocupado || cola.length === 0) return;
+    const mensaje = cola.shift();
+    const texto = mensaje.texto;
+    const u = new SpeechSynthesisUtterance(texto);
+    u.rate = Number(elVelocidad.value) || 1;
+
+    const usuario = (mensaje.usuario || '').toLowerCase();
+    const pref = usuario ? vozPorUsuario.get(usuario) : null;
+    const vozPreferida = vozParaPreferencia(pref);
+    if (vozPreferida) {
+      u.voice = vozPreferida;
+      u.lang = vozPreferida.lang;
+    } else {
+      const vozElegida = elVoz.value;
+      if (vozElegida) {
+        const [nombre, lang] = vozElegida.split('|');
+        const voz = speechSynthesis.getVoices().find(v => v.name === nombre && v.lang === lang);
+        if (voz) u.voice = voz;
+      }
+    }
+    if (pref) {
+      u.pitch = (pref.slot === 2) ? 0.85 : 1.15;
+    }
+    background.hablar(u);
+  }
+
+  // ── Limpieza de texto para voz ──────────────────────────────────────────
+  const RE_EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{2190}-\u{21FF}️]/gu;
+  const RE_URL = /\bhttps?:\/\/\S+/gi;
+
+  function limpiarParaVoz(texto) {
+    let limpio = texto;
+    if (elOmitirEnlaces.checked) limpio = limpio.replace(RE_URL, 'enlace');
+    if (elOmitirEmojis.checked) limpio = limpio.replace(RE_EMOJI, '');
+    return limpio.replace(/\s+/g, ' ').trim();
+  }
+
+  const ETIQUETA_PLATAFORMA = { twitch: 'Twitch', kick: 'Kick', youtube: 'YouTube', vps: 'VPS' };
+
+  function prefijoPara(mensaje) {
+    if (!elPrefijoPlataforma.checked) return '';
+    const etiqueta = ETIQUETA_PLATAFORMA[mensaje.plataforma] || mensaje.plataforma;
+    return `${etiqueta}: `;
+  }
+
+  // ── Selección de fuente y campos dinámicos ──────────────────────────────
+  function cargarCatalogoFuentes() {
+    elFuente.replaceChildren();
+    for (const [id, info] of Object.entries(FUENTES)) {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = info.etiqueta;
+      elFuente.append(opt);
+    }
+    const ultima = localStorage.getItem('ttsMultiplataformaFuente') || 'twitch-irc';
+    if (FUENTES[ultima]) elFuente.value = ultima;
+    pintarCamposFuente();
+  }
+
+  const CLAVE_CONFIG = 'ttsMultiplataformaConfig';
+  function cargarConfig() {
+    try { return JSON.parse(localStorage.getItem(CLAVE_CONFIG) || '{}'); }
+    catch { return {}; }
+  }
+  function guardarConfig(cfg) {
+    try { localStorage.setItem(CLAVE_CONFIG, JSON.stringify(cfg)); } catch {}
+  }
+
+  function pintarCamposFuente() {
+    const id = elFuente.value;
+    const info = FUENTES[id];
+    elCampos.replaceChildren();
+    const cfg = cargarConfig();
+    const valoresGuardados = cfg[id] || {};
+    const valores = { ...info.defaults, ...valoresGuardados };
+
+    for (const campo of info.campos) {
+      const label = document.createElement('label');
+      const span = document.createElement('span');
+      span.textContent = campo;
+      const input = document.createElement('input');
+      input.type = (campo.includes('Key') || campo.includes('key')) ? 'password' : 'text';
+      input.id = `campo-${campo}`;
+      input.value = valores[campo] ?? '';
+      input.dataset.campo = campo;
+      label.append(span, input);
+      elCampos.append(label);
+    }
+
+    elDetalles.textContent = info.detalles || '';
+  }
+
+      elFuente.addEventListener('change', () => {
+        localStorage.setItem('ttsMultiplataformaFuente', elFuente.value);
+        pintarCamposFuente();
+      });
+      elCampos.addEventListener('input', () => {
+        const id = elFuente.value;
+        const info = FUENTES[id];
+        const cfg = cargarConfig();
+        cfg[id] = cfg[id] || {};
+        for (const campo of info.campos) {
+          const el = document.getElementById(`campo-${campo}`);
+          if (el) cfg[id][campo] = el.value;
+        }
+        guardarConfig(cfg);
+      });
+
+      // ── Filtro de palabras prohibidas ───────────────────────────────────────
+      const CLAVE_FILTRO_LISTA = 'ttsFiltroPalabrasLista';
+      const CLAVE_FILTRO_MODO = 'ttsFiltroPalabrasModo';
+
+      function cargarFiltroLista() {
+        try {
+          const bruto = localStorage.getItem(CLAVE_FILTRO_LISTA);
+          if (bruto === null) return '';
+          return bruto;
+        } catch { return ''; }
+      }
+      function cargarFiltroModo() {
+        try {
+          const m = localStorage.getItem(CLAVE_FILTRO_MODO);
+          return m === MODOS.SILENCIAR ? MODOS.SILENCIAR : MODOS.CENSURAR;
+        } catch { return MODOS.CENSURAR; }
+      }
+      function pintarPastillaFiltro() {
+        const palabras = parsearLista(elFiltroLista.value);
+        if (palabras.length === 0) {
+          elFiltroEstado.textContent = 'Sin lista';
+          elFiltroEstado.className = 'pastilla pastilla-parado';
+        } else {
+          elFiltroEstado.textContent = `${palabras.length} palabra${palabras.length === 1 ? '' : 's'}`;
+          elFiltroEstado.className = 'pastilla pastilla-ok';
+        }
+      }
+
+      elFiltroLista.value = cargarFiltroLista();
+      const modoInicial = cargarFiltroModo();
+      if (modoInicial === MODOS.SILENCIAR) {
+        elFiltroModoSilenciar.checked = true;
+      } else {
+        elFiltroModoCensurar.checked = true;
+      }
+      pintarPastillaFiltro();
+
+      elFiltroLista.addEventListener('input', () => {
+        try { localStorage.setItem(CLAVE_FILTRO_LISTA, elFiltroLista.value); } catch {}
+        pintarPastillaFiltro();
+      });
+      elFiltroModoCensurar.addEventListener('change', () => {
+        try { localStorage.setItem(CLAVE_FILTRO_MODO, MODOS.CENSURAR); } catch {}
+      });
+      elFiltroModoSilenciar.addEventListener('change', () => {
+        try { localStorage.setItem(CLAVE_FILTRO_MODO, MODOS.SILENCIAR); } catch {}
+      });
+      elBtnLimpiarFiltro.addEventListener('click', () => {
+        if (!elFiltroLista.value.trim()) return;
+        if (!confirm('¿Vaciar la lista de palabras prohibidas?')) return;
+        elFiltroLista.value = '';
+        try { localStorage.setItem(CLAVE_FILTRO_LISTA, ''); } catch {}
+        pintarPastillaFiltro();
+      });
+
+      /**
+       * Aplica el filtro de palabras prohibidas al texto de un mensaje.
+       * Devuelve { texto, filtrado, hallazgos } donde:
+       *  - filtrado = false si el mensaje debe silenciarse (modo silenciar + match).
+       *  - texto es el texto final (censurado si hubo match, original si no).
+       *  - hallazgos es la lista de prohibidas detectadas (para el registro).
+       */
+      function aplicarFiltro(texto) {
+        const palabras = parsearLista(elFiltroLista.value);
+        if (palabras.length === 0) return { texto, filtrado: false, hallazgos: [] };
+        const modo = elFiltroModoSilenciar.checked ? MODOS.SILENCIAR : MODOS.CENSURAR;
+        const r = filtrarMensaje(texto, palabras, { modo });
+        return { texto: r.texto, filtrado: !r.apto, hallazgos: r.hallazgos };
+      }
+
+  function leerOpcionesActuales() {
+    const id = elFuente.value;
+    const info = FUENTES[id];
+    const cfg = cargarConfig();
+    const valores = { ...info.defaults, ...(cfg[id] || {}) };
+    return valores;
+  }
+
+  // ── Activación y parada ─────────────────────────────────────────────────
+  function activar() {
+    if (activo) return;
+    const id = elFuente.value;
+    const info = FUENTES[id];
+    const opciones = leerOpcionesActuales();
+    try {
+      fuenteActiva = new info.clase(opciones);
+    } catch (e) {
+      pintarEstado(`Error: ${e.message}`, 'error');
+      pintarAviso(`⚠️ No se pudo crear la fuente: ${e.message}`);
+      return;
+    }
+    const fuenteSesion = fuenteActiva;
+    fuenteActiva.onEstado(estado => {
+      if (fuenteActiva === fuenteSesion) pintarEstadoFuente(estado);
+    });
+    fuenteActiva.onMensaje(mensaje => {
+      if (fuenteActiva === fuenteSesion) manejarMensaje(mensaje);
+    });
+
+    try {
+      fuenteActiva.conectar();
+    } catch (e) {
+      pintarEstado(`Error al conectar: ${e.message}`, 'error');
+      pintarAviso(`⚠️ ${e.message}`);
+      try { fuenteActiva.desconectar(); } catch (_) {}
+      fuenteActiva = null;
+      return;
+    }
+
+    activo = true;
+    background.iniciar();
+    elBtnActivar.disabled = true;
+    elBtnParar.disabled = false;
+    elFuente.disabled = true;
+    speechSynthesis.speak(new SpeechSynthesisUtterance('')); // desbloqueo de audio
+    pintarEstado(`Activando ${info.etiqueta}…`, 'parado');
+    pintarAviso(`Activada la fuente ${info.etiqueta}.`);
+  }
+
+  function parar() {
+    activo = false;
+    if (fuenteActiva) {
+      try { fuenteActiva.desconectar(); } catch (_) {}
+      fuenteActiva = null;
+    }
+    background.detener();
+    cola.length = 0;
+
+    elBtnActivar.disabled = false;
+    elBtnParar.disabled = true;
+    elFuente.disabled = false;
+    pintarEstado('Detenido', 'parado');
+    pintarEstadoFuente(null);
+  }
+
+  function manejarMensaje(mensaje) {
+    if (!activo) return;
+    const etiqueta = ETIQUETA_PLATAFORMA[mensaje.plataforma] || mensaje.plataforma;
+
+    // Registrar visualmente (DOM seguro, sin innerHTML) SIEMPRE, incluso
+    // si el filtro lo va a silenciar: el usuario debe ver qué entró.
+    pintarChat(mensaje);
+    recortarRegistro();
+
+    // ── Filtro de usuarios silenciados / bots ─────────────────────────────
+    const uNorm = (mensaje.usuario || '').toLowerCase();
+    if (usuariosIgnorados.has(uNorm)) {
+      pintarAviso(`🔇 Omitido TTS de ${mensaje.usuario} (usuario silenciado en lista negra)`);
+      return;
+    }
+
+    // ── Filtro de palabras prohibidas ─────────────────────────────────────
+    // Se aplica ANTES del comando `!speak -config` y de omitir-comandos:
+    // si alguien intenta configurar la voz con palabras prohibidas, el
+    // filtro también actúa.
+    const filtro = aplicarFiltro(mensaje.texto);
+    if (filtro.filtrado) {
+      const lista = filtro.hallazgos.join(', ');
+      pintarAviso(`🚫 Bloqueado por filtro (${lista}): no se lee por voz.`);
+      return;
+    }
+    if (filtro.hallazgos.length > 0) {
+      pintarAviso(`✂️ Censurado por filtro (${filtro.hallazgos.join(', ')}).`);
+      mensaje.texto = filtro.texto;
+    }
+
+    // Procesar y encolar (si no es un comando de configuración)
+    const matchSpeak = mensaje.texto.match(RE_SPEAK);
+    if (matchSpeak) {
+      vozPorUsuario.set(mensaje.usuario.toLowerCase(), { lang: matchSpeak[1], slot: Number(matchSpeak[2]) });
+      pintarAviso(`🎙️ ${mensaje.usuario} eligió voz ${matchSpeak[1]} #${matchSpeak[2]}`);
+      return;
+    }
+
+    const esComando = /^[!/.]\S+/.test(mensaje.texto.trim());
+    if (esComando && elOmitirComandos.checked) {
+      pintarOmitido(mensaje);
+      return;
+    }
+
+    if (elSonidoAviso.checked) {
+      elAudioAviso.currentTime = 0;
+      elAudioAviso.play().catch(() => {});
+    }
+    const textoParaVoz = `${prefijoPara(mensaje)}${mensaje.usuario} dice: ${limpiarParaVoz(mensaje.texto)}`;
+    encolar({ texto: textoParaVoz, usuario: mensaje.usuario, plataforma: mensaje.plataforma });
+  }
+
+  elBtnActivar.addEventListener('click', activar);
+  elBtnParar.addEventListener('click', parar);
+
+  // ── Eventos de usuarios silenciados ────────────────────────────────────
+  function agregarIgnoradoDesdeInput() {
+    const u = (elNuevoUsuarioIgnorado.value || '').trim().toLowerCase();
+    if (!u) return;
+    usuariosIgnorados.add(u);
+    elNuevoUsuarioIgnorado.value = '';
+    guardarUsuariosIgnorados(true);
+  }
+  elBtnAgregarIgnorado.addEventListener('click', agregarIgnoradoDesdeInput);
+  elNuevoUsuarioIgnorado.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); agregarIgnoradoDesdeInput(); }
+  });
+  elBtnRestablecerIgnorados.addEventListener('click', () => {
+    for (const b of BOTS_PREDETERMINADOS) usuariosIgnorados.add(b);
+    guardarUsuariosIgnorados(true);
+    pintarAviso('🤖 Lista de bots predeterminada restablecida.');
+  });
+  elBtnVaciarIgnorados.addEventListener('click', () => {
+    usuariosIgnorados.clear();
+    guardarUsuariosIgnorados(true);
+    pintarAviso('🔊 Lista negra vaciada: ahora todos los usuarios y bots se escucharán en TTS.');
+  });
+  elUsuariosIgnoradosLista.addEventListener('change', () => {
+    const lineas = elUsuariosIgnoradosLista.value
+      .split('\n')
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean);
+    usuariosIgnorados.clear();
+    for (const l of lineas) usuariosIgnorados.add(l);
+    guardarUsuariosIgnorados(true);
+  });
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === CLAVE_LOCAL_IGNORADOS && e.newValue) {
+      try {
+        const arr = JSON.parse(e.newValue);
+        if (Array.isArray(arr)) {
+          usuariosIgnorados.clear();
+          for (const u of arr) if (typeof u === 'string' && u.trim()) usuariosIgnorados.add(u.trim().toLowerCase());
+          pintarUsuariosIgnorados();
+          pintarAviso('🔄 Lista de usuarios silenciados actualizada desde otra pestaña.');
+        }
+      } catch (_) {}
+    }
+  });
+
+  cargarCatalogoFuentes();
+</script>
+</body>
+</html>

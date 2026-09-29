@@ -1,0 +1,12 @@
+{
+  "name": "apliarte-whip",
+  "version": "1.0.0",
+  "description": "VDO.ninja WHIP publisher para Twitch via Puppeteer headless",
+  "main": "start-whip.js",
+  "scripts": {
+    "start": "node start-whip.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "22.8.2"
+  }
+}

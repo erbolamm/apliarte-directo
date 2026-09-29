@@ -1,0 +1,124 @@
+/* tema-overlay.css — estilos comunes para overlays de OBS por categoría
+ *
+ * Este módulo NO se incluye directamente en los HTML servidos por OBS:
+ * OBS carga cada overlay como un archivo local independiente. En su lugar,
+ * cada overlay declara sus variables en `:root` con valores de fallback
+ * (los mismos que este módulo define como "neutros") y luego `tema-overlay.js`
+ * sobreescribe esas variables en función de la categoría activa.
+ *
+ * El demo de `directo/temas/demo/` sí incluye este CSS, porque se sirve
+ * desde el mismo directorio y puede enlazarlo con <link>.
+ *
+ * Tokens definidos (todos overridables por aplicarTema()):
+ *   --color-primary        color de acento principal (texto sobre fondo, brillos)
+ *   --color-secondary      color secundario (degradados, bordes gruesos)
+ *   --color-dark           color de fondo
+ *   --color-border         color de borde de marcos
+ *   --color-text           color de texto principal sobre fondo
+ *   --color-accent         color de acento suave (badges, chips)
+ *   --font-primary         familia principal
+ *   --font-mono            familia monoespaciada (código, contadores)
+ *   --marco-estilo         "solido" | "cristal" | "cristal-color"
+ *   --marco-radio          radio de los marcos (p. ej. 10px)
+ *   --marco-grosor         grosor de borde (p. ej. 2px)
+ *   --marco-sombra         box-shadow de los marcos
+ */
+
+:root {
+  --color-primary: #5bc0f8;
+  --color-secondary: #00467b;
+  --color-dark: #030a16;
+  --color-border: #1d4ed8;
+  --color-text: #e0f4fb;
+  --color-accent: #9bdcf7;
+
+  --font-primary: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Menlo', monospace;
+
+  --marco-estilo: solido;
+  --marco-radio: 10px;
+  --marco-grosor: 2px;
+  --marco-sombra: 0 8px 24px rgba(94, 206, 245, 0.28);
+}
+
+/* Reset mínimo y tipografía base, alineada con los HTML originales de OBS. */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-primary);
+  color: var(--color-text);
+  background-color: var(--color-dark);
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+}
+
+/* Clases reutilizables para que cualquier overlay (incluido el demo) comparta
+ * la misma forma de marco, chip y tipografía sin redefinir CSS. */
+
+.tema-marco {
+  border: var(--marco-grosor) solid var(--color-border);
+  border-radius: var(--marco-radio);
+  box-shadow: var(--marco-sombra);
+  background: color-mix(in srgb, var(--color-secondary) 18%, transparent);
+}
+
+.tema-marco[data-estilo="cristal"],
+.tema-marco[data-estilo="cristal-color"] {
+  backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--color-dark) 65%, transparent);
+}
+
+.tema-marco[data-estilo="cristal-color"] {
+  border-color: var(--color-primary);
+}
+
+.tema-marco[data-estilo="solido"] {
+  background: var(--color-dark);
+}
+
+.tema-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  color: var(--color-text);
+  font-family: var(--font-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.tema-titulo {
+  font-family: var(--font-primary);
+  color: var(--color-primary);
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.tema-codigo {
+  font-family: var(--font-mono);
+  color: var(--color-accent);
+  font-size: 0.85rem;
+}
+
+/* Botón estándar del kit, alineado con la regla de iconos 28×28 / 32×32
+ * de AGENTS.md §3.2. Esta capa queda a disposición del demo y de cualquier
+ * overlay que decida reusar este módulo. */
+.tema-boton-icono {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-dark) 80%, transparent);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.tema-boton-icono:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}

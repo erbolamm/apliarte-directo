@@ -1,0 +1,682 @@
+/* Interface tokens map one-to-one to ingredientes/marca/APLIARTE_BRAND_KIT.md. */
+.real-office {--paper:#fdfdfd;--app-bg:var(--paper);--panel:var(--surface);--panel-2:var(--subtle);--text:var(--ink);--nav:var(--blue);--accent:var(--blue);--accent-2:var(--cyan);--badge:var(--warm);--warm:var(--brown);color:var(--ink);font:16px/1.5 Inter,'DejaVu Sans',system-ui,sans-serif;min-width:0;}
+html[data-theme="dark"] .real-office {--paper:#fdfdfd;--app-bg:#303030;--panel:#00467b;--nav:#00467b;--accent:#5ecef5;}
+.real-office h1,.real-office h2,.real-office h3 {font-family:'Fira Sans Condensed',system-ui,sans-serif;}
+.real-office .office-roster {display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px;padding:6px 12px 14px;}
+.real-office .roster-person {display:inline-flex;align-items:center;justify-content:center;min-height:42px;min-width:42px;padding:3px;border-radius:50%;border:2px solid;background:var(--panel);cursor:pointer;transition:transform .15s ease,box-shadow .15s ease;}
+.real-office .roster-person:hover {transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.18);}
+.real-office .roster-avatar {flex-shrink:0;border-radius:50%;background:var(--panel-2);overflow:hidden;}
+.real-office .roster-person small {display:none;}
+.real-office .office-data-strip {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:0 12px 8px;font-size:14px;}
+.real-office .office-live-note {padding:0 12px 12px;font-size:12px;color:var(--text-soft);margin:0;}
+.real-office .camera-tools {z-index:5;font-size:14px;}.real-office .camera-tools label {font-size:14px;}
+.real-office .camera-tools button {font-size:14px;min-height:32px;min-width:32px;padding:4px 6px;}.real-office .camera-tools b {font-size:14px;}
+.real-office .volume-viewport {touch-action:none;overflow:hidden;cursor:grab;overscroll-behavior:contain;}
+.real-office button.person-upright {min-height:0;border:0;box-shadow:none;transition:none;}
+.real-office button.person-upright:hover {transform:rotateX(-90deg);box-shadow:none;}
+.real-office .scene-still *, .real-office.scene-still * {animation:none!important;}
+.real-office .scene-still .foot-shadow,.real-office .scene-still .solid-shadow,.real-office .scene-still .monitor,.real-office .scene-still .documents,.real-office .scene-still .foundation,.real-office .scene-still .glass .solid-shadow,.real-office .scene-still .fan-rotor i,.real-office .scene-still .fan-light,.real-office .scene-still .charHit:hover .charBody,.real-office .scene-still .charBody-selected {box-shadow:none!important;filter:none!important;}
+.real-office.scene-paused * {animation-play-state:paused!important;}
+.real-office.scene-paused .foot-shadow,.real-office.scene-paused .solid-shadow,.real-office.scene-paused .monitor,.real-office.scene-paused .documents,.real-office.scene-paused .foundation,.real-office.scene-paused .glass .solid-shadow,.real-office.scene-paused .fan-rotor i,.real-office.scene-paused .fan-light,.real-office.scene-paused .charHit:hover .charBody,.real-office.scene-paused .charBody-selected {box-shadow:none!important;filter:none!important;}
+.real-office .fan-rotor {animation:fan-turn 3s linear 3;}
+.real-office .a-bob,.real-office .a-breathe,.real-office .a-legA,.real-office .a-legB,.real-office .a-armA,.real-office .a-armB,.real-office .a-typeA,.real-office .a-typeB,.real-office .a-blink,.real-office .a-wave,.real-office .a-float,.real-office .a-flicker,.real-office .a-zzz,.real-office .a-ring,.real-office .a-dash,.real-office .a-bob-fast {animation-iteration-count:3;}
+.real-office .office-brief-dialog {width:min(94vw,650px);max-height:90dvh;margin:auto;padding:0;border:1px solid var(--cyan);border-radius:16px;background:var(--panel);color:var(--text);overflow:auto;box-shadow:0 22px 80px #0004;}
+.real-office .office-brief-dialog::backdrop {background:rgba(48,48,48,.52);}
+.real-office .office-brief-content {padding:18px;}.real-office .brief-heading {display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.real-office .brief-heading-actions {display:flex;align-items:center;gap:8px;}
+.real-office .brief-coffee-btn {display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--panel-2,#2a2a2a);color:var(--text,#eee);border:1px solid var(--border,#444);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s ease-in-out;}
+.real-office .brief-coffee-btn:hover:not(:disabled) {background:var(--warm,#e07a5f);color:#fff;border-color:var(--warm,#e07a5f);transform:translateY(-1px);}
+.real-office .brief-coffee-btn:disabled {opacity:0.5;cursor:not-allowed;}
+.real-office .brief-desk-actions {display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 4px;}
+.real-office .brief-desk-btn {position:relative;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;background:var(--panel-2,#2a2a2a);color:var(--text,#eee);border:1px solid var(--border,#444);border-radius:8px;font-size:16px;line-height:1;cursor:pointer;transition:all .15s ease-in-out;}
+.real-office .brief-desk-btn:hover:not(:disabled),.real-office .brief-desk-btn.active {background:var(--warm,#e07a5f);color:#fff;border-color:var(--warm,#e07a5f);transform:translateY(-1px);}
+.real-office .brief-desk-btn:focus-visible {outline:2px solid var(--cyan,#005fa9);outline-offset:2px;}
+.real-office .brief-desk-btn:disabled {opacity:0.5;cursor:not-allowed;}
+.real-office .brief-desk-btn::after {content:attr(data-tip);position:absolute;top:calc(100% + 6px);left:0;z-index:20;width:max-content;max-width:220px;padding:6px 8px;border:1px solid var(--border,#444);border-radius:6px;background:var(--text,#1c1c1c);color:var(--panel,#fff);font-size:12px;font-weight:500;line-height:1.35;text-align:left;white-space:normal;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .12s ease 0s,visibility 0s linear .12s;}
+.real-office .brief-desk-btn:hover::after,.real-office .brief-desk-btn:focus-visible::after {opacity:1;visibility:visible;transition:opacity .12s ease 1s,visibility 0s linear 1s;}
+.real-office .brief-desk-btn.tip-open::after {opacity:1;visibility:visible;transition:none;}
+.real-office .brief-desk-busy {font-size:12px;color:var(--muted,#888);}
+.real-office .brief-desk-form {display:flex;gap:8px;margin:6px 0;}
+.real-office .brief-desk-form input {flex:1;min-width:0;}
+.real-office .brief-desk-reply {margin:6px 0;padding:8px;border:1px solid var(--border,#444);border-left:3px solid var(--warm,#e07a5f);border-radius:8px;background:var(--panel-2,#2a2a2a);font-size:13px;line-height:1.4;white-space:pre-wrap;}
+@media (prefers-reduced-motion: reduce) {.real-office .brief-desk-btn,.real-office .brief-desk-btn:hover:not(:disabled) {transform:none;transition:none;}}
+@keyframes bubble-ephemeral {
+  0% { opacity: 0; }
+  6% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.real-office .activity-bubble {animation: bubble-ephemeral 5s ease-out forwards; pointer-events: none;}
+.real-office .activity-bubble-speech {animation: bubble-ephemeral 5s ease-out forwards; pointer-events: none;}
+.real-office .activity-bubble-speech rect {transition:width .2s ease,x .2s ease;filter:drop-shadow(0 3px 8px rgba(0,0,0,0.25));}
+.real-office .activity-bubble-speech text {font-family:Inter,system-ui,sans-serif;letter-spacing:-0.01em;user-select:none;}
+.real-office .person-bubble-svg-3d {position:absolute;left:50%;bottom:0;width:300px;height:120px;transform:translateX(-50%);overflow:visible;pointer-events:none;z-index:40;}
+.real-office .person-upright.has-speech .person-name {opacity:0;pointer-events:none;transition:opacity .15s ease;}
+.real-office .brief-heading h2 {margin:0;font-size:22px;}.real-office .brief-heading p {font-size:14px;margin:4px 0 12px;}
+.real-office .brief-agent-label,.real-office .brief-fields label {display:grid;gap:5px;font-size:14px;font-weight:600;}
+.real-office .brief-agent-label select {font-size:16px;font-weight:700;}.real-office .brief-role,.real-office .brief-state {font-size:14px;line-height:1.5;}
+.real-office .brief-visit {padding:10px 12px;background:var(--panel-2);border-radius:10px;font-size:14px;font-weight:700;}
+.real-office .brief-visit small {display:block;font-size:12px;font-weight:400;color:var(--text-soft);}
+.real-office .brief-fields {display:grid;gap:12px;padding:0;border:0;margin:12px 0;min-width:0;}.real-office .brief-grid {display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.real-office .brief-fields input,.real-office .brief-fields textarea,.real-office .brief-fields select,.real-office .brief-agent-label select {width:100%;min-width:0;background:var(--panel);color:var(--text);border:1px solid var(--border);padding:9px 10px;border-radius:8px;font:inherit;font-weight:400;}
+.real-office .brief-fields textarea {resize:vertical;}.real-office .brief-note {font-size:12px;line-height:1.5;color:var(--text-soft);}
+.real-office .brief-preview {display:grid;gap:10px;padding:12px;border:1px solid var(--cyan);border-radius:12px;margin:12px 0;font-size:14px;}
+.real-office .brief-preview h3 {margin:0;font-size:18px;}.real-office .brief-preview code {font:12px 'JetBrains Mono',monospace;overflow-wrap:anywhere;}
+.real-office .brief-preview pre {font:12px/1.6 'JetBrains Mono',monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;background:var(--panel-2);padding:10px;}
+.real-office .brief-confirm-actions {display:flex;flex-wrap:wrap;gap:8px;}.real-office .brief-success {padding:12px;border:1px solid var(--cyan);border-radius:10px;font-size:14px;}
+.real-office .brief-error {padding:8px;border-left:3px solid var(--warm);font-size:14px;}
+.real-office .task-ficha {max-width:760px;margin:0 auto;padding:24px 20px;box-sizing:border-box;}
+.real-office .task-ficha-heading {display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;}
+.real-office .task-ficha-heading > div:first-child {flex:1 1 auto;min-width:0;}
+.real-office .task-ficha-heading h2 {margin:0;font-size:20px;min-width:0;overflow-wrap:break-word;word-break:break-word;text-wrap:balance;}
+.real-office .task-ficha-heading button {flex-shrink:0;}
+@media (max-width:640px) {
+  .real-office .task-ficha-heading {flex-direction:column;align-items:stretch;}
+  .real-office .task-ficha-heading > div:first-child {width:100%;}
+  .real-office .task-ficha-head-actions {width:100%;justify-content:flex-end;flex-wrap:wrap;}
+}
+.real-office .task-ficha-original {padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--panel-2);margin-bottom:16px;max-height:45vh;overflow:auto;}
+.real-office .task-ficha-original h1,.real-office .task-ficha-original h2,.real-office .task-ficha-original h3 {margin:14px 0 6px;}
+.real-office .task-ficha-original p,.real-office .task-ficha-original li {font-size:14px;line-height:1.6;overflow-wrap:anywhere;}
+.real-office .task-ficha-original blockquote {margin:6px 0;padding-left:10px;border-left:3px solid var(--cyan);color:var(--text-soft);}
+.real-office .task-ficha-checklist {margin:12px 0;padding:12px;border:1px solid var(--cyan);border-radius:10px;}
+.real-office .task-ficha-checklist h3 {margin:0 0 8px;font-size:15px;}
+.real-office .task-ficha-checklist label {display:flex;gap:8px;align-items:flex-start;font-size:14px;margin:6px 0;}
+.real-office .task-ficha-form {display:grid;gap:12px;margin-top:12px;}
+.real-office .task-ficha-form label {display:grid;gap:5px;font-size:14px;font-weight:600;}
+.real-office .task-ficha-form select,.real-office .task-ficha-form textarea {width:100%;background:var(--panel);color:var(--text);border:1px solid var(--border);padding:9px 10px;border-radius:8px;font:inherit;font-weight:400;}
+.real-office .task-ficha-form textarea {resize:vertical;}
+.real-office .task-ficha-actions {display:flex;flex-wrap:wrap;gap:8px;}
+.real-office .task-ficha-note {font-size:12px;color:var(--text-soft);margin:2px 0 0;}
+.real-office .task-ficha-status {font-size:14px;margin:10px 0 0;}
+.real-office .task-ficha-error {padding:8px;border-left:3px solid var(--warm);}
+.real-office .buscar-page {max-width:900px;margin:0 auto;padding:22px 18px 40px;}
+.real-office .buscar-heading {display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px;}
+.real-office .buscar-heading h1 {margin:0;font-size:22px;flex:1;min-width:0;}
+.real-office .buscar-page label {display:block;font-size:14px;font-weight:600;margin-bottom:5px;}
+.real-office .buscar-page input[type="search"] {width:100%;background:var(--panel);color:var(--text);border:1px solid var(--border);padding:10px 12px;border-radius:8px;font:inherit;}
+.real-office .buscar-hint {font-size:13px;color:var(--text-soft);margin:10px 0;}
+.real-office .buscar-status {font-size:14px;margin:10px 0;}
+.real-office .buscar-results {display:grid;gap:12px;margin:14px 0;}
+.real-office .buscar-result {padding:14px;border:1px solid var(--cyan);border-radius:12px;background:var(--panel);}
+.real-office .buscar-result h2 {margin:0 0 4px;font-size:17px;}
+.real-office .buscar-result small {display:block;color:var(--text-soft);overflow-wrap:anywhere;margin-bottom:10px;}
+.real-office .buscar-result-actions {display:flex;flex-wrap:wrap;gap:8px;}
+.real-office .buscar-result pre {margin-top:10px;font:12px/1.6 'JetBrains Mono',monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:55vh;overflow:auto;background:var(--panel-2);padding:10px;border-radius:8px;}
+.real-office .buscar-nav {display:flex;gap:10px;margin-top:6px;}
+.office-tools {margin-top:12px;border:1px solid var(--light);border-radius:var(--radius-md);background:var(--surface);}
+.office-tools>summary {padding:12px 16px;cursor:pointer;font:600 16px Inter,'DejaVu Sans',system-ui,sans-serif;}
+@media (max-width:600px) {.real-office .camera-actions {gap:4px;}.real-office .camera-tools label {min-width:100px;}.real-office .office-brief-content {padding:14px;}.real-office .brief-grid {grid-template-columns:1fr;}.real-office .brief-confirm-actions button {width:100%;}}
+
+/* Two actual sprite sides — CSS 3D legacy only (not SVG diorama). */
+.real-office .person-sprite {position:relative;width:54px;height:84px;transform-style:preserve-3d;}
+.real-office .person-sprite svg {position:absolute;inset:0;backface-visibility:hidden;}
+.real-office .sprite-rear {transform:rotateY(180deg);}
+.real-office .working-north .sprite-front {transform:rotateY(180deg);}
+.real-office .working-north .sprite-rear {transform:translateZ(.2px);}
+@keyframes charJump {
+  0% { transform: translateY(0); }
+  35% { transform: translateY(-40px); }
+  65% { transform: translateY(-48px); }
+  85% { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}
+.real-office .person-anchor.jumping .person-sprite,
+.real-office .person-anchor.jumping .person-upright,
+.real-office .person-upright.jumping .person-sprite {
+  animation: charJump 0.85s cubic-bezier(0.25, 1, 0.5, 1) !important;
+}
+.real-office .monitor {border:0;background:transparent;box-shadow:none;transform-style:preserve-3d;}
+/* Monitor 3D rules: only for CSS 3D legacy (div.monitor), NEVER for SVG diorama rects */
+.real-office div.monitor > .monitor-screen,
+.real-office div.monitor > .monitor-back {position:absolute;inset:0;border:4px solid var(--screen-dark);border-radius:3px;backface-visibility:hidden;}
+.real-office div.monitor > .monitor-screen {background:#005fa9;color:#8fd5fa;font:8px monospace;}
+.real-office div.monitor > .monitor-back {transform:rotateY(180deg);background:repeating-linear-gradient(0deg,#303030 0 3px,#4e6a72 3px 5px);}
+.real-office rect.monitor-back,
+.real-office rect.monitor-screen {position:static!important;transform:none!important;border:none!important;background:none!important;}
+.real-office .gesture-help {display:none;}
+.real-office .is-dragging {cursor:grabbing;}.real-office .is-dragging .world {transition:none;}
+.real-office .volume-viewport:focus-visible {outline:3px solid var(--glow);outline-offset:-3px;}
+/* Dim individual faces, never a preserve-3d ancestor (filter/opacity flatten it). */
+.real-office .world {--scene-dim:0;--nav:#005fa9;--accent:#005fa9;--accent-2:#5ecef5;--accent-glow:#8fd5fa;}
+html[data-theme="dark"] .real-office .world {--scene-dim:.38;}
+.real-office .face.top {background-image:linear-gradient(rgba(0,0,0,var(--scene-dim)),rgba(0,0,0,var(--scene-dim))),linear-gradient(125deg,#fff3,transparent);}
+.real-office .face.front {background-image:linear-gradient(rgba(0,0,0,var(--scene-dim)),rgba(0,0,0,var(--scene-dim))),linear-gradient(#0002,#0004);}
+.real-office .face.rear,.real-office .face.left,.real-office .face.right {background-image:linear-gradient(rgba(0,0,0,var(--scene-dim)),rgba(0,0,0,var(--scene-dim)));}
+.real-office .glass>.face {background-image:linear-gradient(115deg,transparent 30%,rgba(253,253,253,.4) 32%,transparent 35%,rgba(143,213,250,.16) 75%);}
+.real-office .room-floor::after {content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 0%,rgba(0,0,0,var(--scene-dim)) 80%);}
+.real-office .room-floor strong,.real-office .room-floor>span {z-index:1;}
+.real-office .fan-anchor,
+.real-office circle.fan-light {display:none;}
+.real-office .fan-rod {display:none;}
+html[data-theme="dark"] .real-office .fan-anchor {display:block;}
+html[data-theme="dark"] .real-office circle.fan-light {display:block;}
+.real-office .fan-light {position:absolute;left:-16px;top:-16px;width:32px;height:32px;border-radius:50%;transform:translateZ(-4px);background:#fdfdfd;border:3px solid var(--screen-dark);}
+/* 3 box-shadows encadenadas (12px/36px/60px) fundidas en una sola con el
+   mayor blur todavía notable (28px). Mismo glow visual, ~3× menos coste
+   en el repintado por frame del ventilador girando. */
+html[data-theme="dark"] .real-office .fan-light {background:#fdfdfd;box-shadow:0 0 12px #fdfdfd,0 0 28px #8fd5faaa,0 0 48px #e8955e44;}
+html[data-theme="dark"] .real-office .fan-shadow {width:210px;height:210px;left:-105px;top:-105px;background:radial-gradient(ellipse,rgba(253,253,253,.32),rgba(232,149,94,.12) 45%,transparent 70%);}
+
+html[data-theme="dark"] .real-office .fan-rotor b {background:#fdfdfd;border-color:#e8955e;}
+.real-office .task-ficha-head-actions {display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.real-office .task-ficha-head-actions button {min-width:34px;min-height:34px;padding:0 8px;border:1px solid var(--border);border-radius:6px;background:var(--panel-2);cursor:pointer;font-size:14px;color:var(--text, var(--ink));}
+.real-office .task-ficha-head-actions button:hover:not(:disabled) {border-color:rgba(94,206,245,0.55);background:var(--subtle);color:var(--accent);}
+.real-office .speech-rate-badge {display:inline-flex;align-items:center;justify-content:center;min-width:32px;font-size:12px;font-weight:700;color:var(--accent);user-select:none;}
+.real-office .task-ficha-heading small {display:block;color:var(--text-soft);margin-top:4px;font-size:12px;}
+.real-office .task-ficha-manage {padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);grid-template-columns:repeat(3,minmax(0,1fr));}
+.real-office .task-ficha-manage-reason,.real-office .task-ficha-manage .task-ficha-note,.real-office .task-ficha-manage button {grid-column:1/-1;}
+
+/* Markdown mejorado y sin asteriscos en la vista de tareas */
+.real-office .task-ficha-original {line-height:1.55;font-size:14px;color:var(--text, var(--ink));margin:12px 0;}
+.real-office .task-ficha-original h1 {font-size:18px;margin:16px 0 8px;color:var(--accent);}
+.real-office .task-ficha-original h2 {font-size:16px;margin:14px 0 6px;color:var(--text, var(--ink));border-bottom:1px solid var(--border);padding-bottom:4px;}
+.real-office .task-ficha-original h3 {font-size:14px;margin:12px 0 4px;font-weight:700;}
+.real-office .task-ficha-original p {margin:8px 0;}
+.real-office .task-ficha-original ul {padding-left:22px;margin:8px 0;}
+.real-office .task-ficha-original li {margin:4px 0;}
+.real-office .inline-code {background:var(--panel-2, rgba(0,0,0,0.06));padding:2px 5px;border-radius:4px;font-family:monospace;font-size:12.5px;}
+.real-office .task-code-block {background:var(--panel-2);border:1px solid var(--border);padding:10px;border-radius:8px;overflow-x:auto;font-family:monospace;font-size:13px;margin:10px 0;}
+.real-office .task-checklist {list-style:none;padding-left:4px;margin:10px 0;}
+.real-office .task-check-item {display:flex;align-items:flex-start;gap:8px;margin:6px 0;}
+.real-office .task-check-item input[type="checkbox"] {margin-top:3px;}
+.real-office .task-check-item.is-checked {color:var(--text-soft);text-decoration:line-through;}
+.real-office .task-divider {border:none;border-top:1px solid var(--border);margin:16px 0;}
+.real-office .task-link {color:var(--accent);text-decoration:underline;}
+
+/* Modo Lectura Asistida (Dislexia / Dictador): Resaltado de párrafo y palabra */
+.real-office .speech-block-active {
+  background: rgba(94, 206, 245, 0.12) !important;
+  border-left: 4px solid var(--accent) !important;
+  padding: 6px 10px !important;
+  border-radius: 4px 8px 8px 4px !important;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.real-office .speech-word-active {
+  background: rgba(255, 225, 80, 0.5) !important;
+  color: inherit !important;
+  padding: 1px 3px !important;
+  border-radius: 3px !important;
+  box-shadow: 0 0 4px rgba(255, 210, 0, 0.3) !important;
+  font-weight: 700 !important;
+  transition: background 0.1s ease;
+}
+html[data-theme="dark"] .real-office .speech-block-active {
+  background: rgba(94, 206, 245, 0.18) !important;
+  border-left-color: var(--cyan) !important;
+}
+html[data-theme="dark"] .real-office .speech-word-active {
+  background: rgba(255, 215, 60, 0.45) !important;
+  color: #fff !important;
+  box-shadow: 0 0 6px rgba(255, 215, 60, 0.4) !important;
+}
+
+/* Tarjeta de Personalidad y Habilidad en TaskForm */
+.task-skill-card {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--surface, var(--panel));
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: var(--radius-md, 8px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--shadow-sm);
+}
+.task-skill-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.task-skill-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.task-skill-card-head strong {
+  display: block;
+  font-size: 13.5px;
+  line-height: 1.2;
+}
+.task-skill-card-head small {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 12px;
+}
+.task-skill-personality,
+.task-skill-example {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--text, var(--ink));
+}
+.task-skill-source {
+  font-size: 11px;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+
+/* Sección de Archivos e Imágenes Adjuntas */
+.task-attachments-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px dashed var(--border, rgba(0, 0, 0, 0.15));
+  background: var(--surface-subtle, rgba(0, 0, 0, 0.02));
+  margin: 4px 0 10px;
+}
+.task-attachments-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+}
+.task-attachments-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.task-attach-btn {
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  border-radius: 6px !important;
+  cursor: pointer;
+  background: var(--accent, #005fa9) !important;
+  color: #fff !important;
+  border: none !important;
+  font-weight: 600;
+}
+.task-attach-btn.secondary {
+  background: transparent !important;
+  color: var(--text, #333) !important;
+  border: 1px solid var(--border, #ccc) !important;
+}
+.task-attach-btn:hover {
+  opacity: 0.9;
+}
+.task-manual-path-bar {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.task-manual-path-bar input {
+  flex: 1;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #ccc);
+}
+.task-manual-path-bar button {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.task-attachments-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.task-attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+  border-radius: 6px;
+  font-size: 12px;
+}
+.task-attachment-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.task-attachment-name {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.task-attachment-name strong {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.task-attachment-name small {
+  color: var(--text-soft, #666);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.task-attachment-remove {
+  background: transparent !important;
+  border: none !important;
+  color: #c00 !important;
+  cursor: pointer;
+  padding: 2px 6px !important;
+  font-size: 14px !important;
+  font-weight: 700;
+  border-radius: 4px;
+}
+.task-attachment-remove:hover {
+  background: rgba(200, 0, 0, 0.1) !important;
+}
+
+.task-inline-image-wrapper {
+  display: block;
+  margin: 10px 0;
+}
+.task-inline-img {
+  max-width: 100%;
+  max-height: 280px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.05);
+  display: block;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.task-inline-img:hover {
+  transform: scale(1.015);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.brief-fields.task-drag-over {
+  outline: 2px dashed var(--primary, #0070f3);
+  outline-offset: 4px;
+  background: rgba(0, 112, 243, 0.04);
+  border-radius: 8px;
+}
+
+@media (max-width:520px){.real-office .task-ficha{padding:12px;}.real-office .task-ficha-manage{grid-template-columns:1fr;}.real-office .task-ficha-manage-reason,.real-office .task-ficha-manage .task-ficha-note,.real-office .task-ficha-manage button{grid-column:auto;}}
+
+/* Banner de comandos Twitch en vivo para la audiencia del directo */
+.real-office .live-chat-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 13px;
+  color: var(--text, #303030);
+  background: rgba(0, 95, 169, 0.05);
+  border: 1px solid rgba(0, 95, 169, 0.2);
+  border-radius: 8px;
+  padding: 6px 12px;
+  flex: 1 1 auto;
+}
+
+.real-office .live-chat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  background: #e53935;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  box-shadow: 0 1px 3px rgba(229, 57, 53, 0.4);
+}
+
+.real-office .live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: inline-block;
+  animation: live-pulse-dot 1.4s infinite ease-in-out;
+}
+
+@keyframes live-pulse-dot {
+  0% { transform: scale(0.8); opacity: 0.7; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.8); opacity: 0.7; }
+}
+
+.real-office .live-chat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+}
+
+.real-office .live-chat-item strong {
+  color: var(--accent, #005fa9);
+  font-weight: 700;
+}
+
+.real-office .live-chat-item code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b46734;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="dark"] .real-office .live-chat-banner {
+  background: rgba(94, 206, 245, 0.07);
+  border-color: rgba(94, 206, 245, 0.25);
+  color: #fdfdfd;
+}
+
+html[data-theme="dark"] .real-office .live-chat-item code {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffb88c;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.real-office .live-chat-sep {
+  color: var(--border-soft, #a6a6a6);
+  opacity: 0.6;
+}
+
+.real-office .live-chat-subhint {
+  color: var(--text-soft, #6f6f6f);
+  font-size: 11px;
+  margin-left: auto;
+  opacity: 0.85;
+}
+
+/* Transiciones cinemáticas suaves para zoom y foco de cámara */
+.real-office .volume-viewport:not(.is-dragging) .world-anchor {
+  transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.real-office .volume-viewport:not(.is-dragging) .world {
+  transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.real-office .volume-viewport:not(.is-dragging) .diorama-anchor {
+  transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.real-office .volume-viewport:not(.is-dragging) .diorama-stage {
+  transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ─── Diana / Meta 3D para el Mini-Juego !juego / !carrera ─── */
+.real-office .game-target-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.real-office .game-target-glow {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(94, 206, 245, 0.45) 0%, rgba(0, 95, 169, 0.2) 60%, transparent 80%);
+  animation: gameGlowPulse 1.6s infinite alternate ease-in-out;
+}
+
+.real-office .game-target-ring {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2.5px dashed #5ecef5;
+  box-shadow: 0 0 14px rgba(94, 206, 245, 0.6);
+  animation: gameRingSpin 8s linear infinite;
+}
+
+.real-office .game-target-ring.inner {
+  width: 38px;
+  height: 38px;
+  border: 2px solid #005fa9;
+  animation: gameRingSpinRev 4s linear infinite;
+}
+
+.real-office .game-target-trophy {
+  position: absolute;
+  font-size: 34px;
+  line-height: 1;
+  transform: translateY(-32px);
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45));
+  animation: gameTrophyBob 1.2s infinite alternate ease-in-out;
+  transform-origin: center bottom;
+}
+
+.real-office .game-target-countdown {
+  position: absolute;
+  transform: translateY(22px);
+  background: rgba(0, 95, 169, 0.88);
+  border: 1px solid #5ecef5;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fdfdfd;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  animation: gameCountdownPulse 0.9s infinite alternate ease-in-out;
+}
+
+.real-office .game-target-marker.won .game-target-trophy {
+  animation: gameWinBurst 0.6s infinite alternate ease-in-out;
+  font-size: 40px;
+}
+
+.real-office .game-target-svg circle.target-ring-svg {
+  animation: gameRingSpin 6s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes gameGlowPulse {
+  0% { transform: scale(0.85); opacity: 0.5; }
+  100% { transform: scale(1.25); opacity: 0.9; }
+}
+
+@keyframes gameRingSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes gameRingSpinRev {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes gameTrophyBob {
+  0% { transform: translateY(-30px) scale(0.95); }
+  100% { transform: translateY(-44px) scale(1.1); }
+}
+
+@keyframes gameCountdownPulse {
+  0% { transform: translateY(22px) scale(0.9); }
+  100% { transform: translateY(22px) scale(1.12); }
+}
+
+@keyframes gameWinBurst {
+  0% { transform: translateY(-34px) scale(1) rotate(-8deg); }
+  100% { transform: translateY(-48px) scale(1.25) rotate(8deg); }
+}
+
+
+
+
+
+/* ─── Game hub: frozen office during the !juego poster ─────────────── */
+/* Filter sits on the root, never on the preserve-3d world, to keep the 3D context. */
+.real-office {
+  transition: filter .9s ease;
+}
+
+body.hub-frozen .real-office {
+  filter: saturate(.35) brightness(.82);
+}
+
+body.hub-frozen .real-office .world *,
+body.hub-frozen .real-office .world *::before,
+body.hub-frozen .real-office .world *::after {
+  animation-play-state: paused !important;
+}
+
+/* ─── !traidor: chalk outline on the meeting-room floor ────────────── */
+.traidor-chalk {
+  position: absolute;
+  width: 132px;
+  height: 92px;
+  margin-left: -66px;
+  margin-top: -46px;
+  pointer-events: none;
+  transform: translateZ(1px);
+  opacity: 0;
+  transition: opacity .8s ease;
+}
+
+.traidor-chalk.visible {
+  opacity: 1;
+}
+
+.traidor-chalk svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.traidor-chalk .chalk-line {
+  fill: none;
+  stroke: rgba(255, 255, 255, .92);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 9 2 4 2;
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, .6));
+}
+
+.traidor-chalk .chalk-tape {
+  fill: none;
+  stroke: #facc15;
+  stroke-width: 2;
+  stroke-dasharray: 10 6;
+  opacity: .75;
+}
+
+/* !damas board (3D view): squares laid on the floor with chess-style labels */
+.real-office .damas-board{position:absolute;display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:repeat(8,1fr);box-shadow:0 0 0 40px #efe9df;pointer-events:none;}
+.real-office .damas-square{display:block;}
+.real-office .damas-label{position:absolute;font:800 26px/1 Inter,system-ui,sans-serif;color:#111;transform:translate(-50%,-50%);}
+.real-office .damas-col{top:-20px;}
+.real-office .damas-row{left:-20px;}

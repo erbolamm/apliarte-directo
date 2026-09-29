@@ -1,0 +1,4 @@
+# Run the existing stack's overlay process without root on a VPS.
+services:
+  overlay:
+    user: "1000:1000"

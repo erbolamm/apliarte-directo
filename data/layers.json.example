@@ -1,0 +1,19 @@
+{
+  "layers": [
+    {
+      "id": "reloj",
+      "visible": true,
+      "nombre": "Reloj Digital"
+    },
+    {
+      "id": "chat",
+      "visible": true,
+      "nombre": "Chat en Directo"
+    },
+    {
+      "id": "diorama",
+      "visible": true,
+      "nombre": "Oficina 3D"
+    }
+  ]
+}

@@ -1,0 +1,3560 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Oficina ErBolamm · Directo Interactivo</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23005fa9%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2248%22%20font-size%3D%2242%22%20font-family%3D%22system-ui%2C%20-apple-system%2C%20sans-serif%22%20font-weight%3D%22bold%22%20text-anchor%3D%22middle%22%20fill%3D%22%235ecef5%22%3E%E2%8C%82%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/office-3d.css?v=b9609ca652">
+  <style>
+    :root {
+      --color-primary: #005fa9;
+      --color-secondary: #00467b;
+      --color-dark: #030a16;
+
+      --hud-bg: rgba(15, 23, 42, 0.82);
+      --hud-border: rgba(255, 255, 255, 0.12);
+      --hud-text: #f8fafc;
+      --hud-muted: #94a3b8;
+      --hud-accent: #38bdf8;
+      --hud-live: #ef4444;
+      --hud-chip-bg: rgba(255, 255, 255, 0.07);
+      --hud-code-bg: rgba(0, 0, 0, 0.45);
+    }
+
+    html[data-theme="light"] {
+      --hud-bg: rgba(248, 250, 252, 0.9);
+      --hud-border: rgba(15, 23, 42, 0.12);
+      --hud-text: #0f172a;
+      --hud-muted: #64748b;
+      --hud-chip-bg: rgba(0, 0, 0, 0.05);
+      --hud-code-bg: rgba(0, 0, 0, 0.08);
+    }
+
+    html[data-theme="light"] .hud-title {
+      color: #0f172a;
+    }
+
+    html[data-theme="light"] .hud-cmd-desc {
+      color: #334155;
+    }
+
+    html[data-theme="light"] .hud-btn-toggle:hover {
+      color: #0f172a;
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    html[data-theme="light"] .palette-btn {
+      color: #1e293b;
+      background: rgba(0, 0, 0, 0.06);
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    html[data-theme="light"] .palette-btn:hover,
+    html[data-theme="light"] .palette-btn.active {
+      background: var(--hud-accent);
+      border-color: var(--hud-accent);
+      color: #0f172a;
+    }
+
+    html[data-theme="light"] .btn-toggle-bg {
+      color: #1e293b;
+      background: rgba(0, 0, 0, 0.06);
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    html[data-theme="light"] .btn-toggle-bg:hover {
+      background: rgba(0, 0, 0, 0.12);
+    }
+
+    html[data-theme="light"] .hud-avatar-chip {
+      background: rgba(0, 0, 0, 0.04);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    html[data-theme="light"] .hud-command-item {
+      background: rgba(0, 0, 0, 0.03);
+      border-color: rgba(0, 0, 0, 0.06);
+    }
+
+    html[data-theme="light"] .hud-cmd-syntax code {
+      color: #0284c7;
+    }
+
+    html[data-theme="light"] #bg {
+      background: linear-gradient(-45deg, #e2e8f0, #cbd5e1, #bae6fd, #e2e8f0);
+    }
+
+    html[data-theme="light"] .vignette {
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(226, 232, 240, 0.6) 100%);
+    }
+
+    html[data-theme="light"] .grid-overlay {
+      background-image:
+        linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: var(--hud-text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Fondos Temáticos Dinámicos SVG (Ultra-ligeros con GPU Compositor) ─── */
+    #bg {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      background: var(--color-dark, #030a16);
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+      transition: background 1.5s ease-in-out;
+    }
+
+    body.transparent-bg #bg {
+      display: none !important;
+    }
+
+    .fondo-tematico {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1.5s ease-in-out;
+      will-change: opacity;
+    }
+
+    .fondo-tematico.activa {
+      opacity: 1;
+    }
+
+    .fondo-tematico svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Pausa automática de capas inactivas para ahorrar 100% de CPU/GPU */
+    .fondo-tematico:not(.activa) * {
+      animation-play-state: paused !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .fondo-tematico * {
+        animation: none !important;
+      }
+    }
+
+    /* ── Animaciones temáticas ultra-lentas ── */
+    @keyframes scrollSkyline {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-1920px); }
+    }
+    @keyframes pulseFarola {
+      0%, 100% { opacity: 0.15; }
+      50%      { opacity: 0.35; }
+    }
+    @keyframes floatCode {
+      0%   { transform: translateY(0); }
+      100% { transform: translateY(-700px); }
+    }
+    @keyframes floatBrush {
+      0%   { transform: translate(0, 0) rotate(0deg); }
+      50%  { transform: translate(35px, -20px) rotate(2.5deg); }
+      100% { transform: translate(0, 0) rotate(0deg); }
+    }
+    @keyframes waveShift {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-960px); }
+    }
+    @keyframes eqBar1 {
+      0%, 100% { transform: scaleY(0.6); }
+      50%      { transform: scaleY(1.15); }
+    }
+    @keyframes eqBar2 {
+      0%, 100% { transform: scaleY(1.05); }
+      50%      { transform: scaleY(0.55); }
+    }
+    @keyframes eqBar3 {
+      0%, 100% { transform: scaleY(0.75); }
+      50%      { transform: scaleY(1.25); }
+    }
+    @keyframes riseVapor {
+      0%   { transform: translateY(0) scaleX(1); opacity: 0; }
+      30%  { opacity: 0.25; }
+      80%  { opacity: 0.15; }
+      100% { transform: translateY(-250px) scaleX(1.3); opacity: 0; }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.15; }
+      50%      { opacity: 0.28; }
+    }
+
+    .grid-overlay {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    .vignette {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(3, 10, 22, 0.72) 100%);
+    }
+
+    /* ─── Contenedor del Plano 3D ───────────────────────────────────────── */
+    #office-3d {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      z-index: 10;
+    }
+
+    #office-3d > .real-office {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #office-3d .office-volume {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #office-3d .volume-viewport {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    #office-3d .office-roster {
+      display: none;
+    }
+
+    /* Desplazamiento hacia arriba y a la izquierda para despejar el HUD y la cámara */
+    #office-3d .world-anchor,
+    #office-3d .diorama-anchor {
+      left: 41% !important;
+      top: 37% !important;
+    }
+
+    /* ─── HUD Flotante de Comandos y Control de Temas ──────────────────── */
+    .directo-hud {
+      position: fixed;
+      top: 54px;
+      bottom: auto;
+      right: 20px;
+      margin: 0;
+      height: fit-content;
+      max-height: 520px;
+      display: flex;
+      flex-direction: column;
+      max-width: 370px;
+      width: calc(100vw - 40px);
+      background: var(--hud-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--hud-border);
+      border-radius: 12px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+
+    /* ─── Modo OBS (?transparente=1): sin controles, fila de avatares ─── */
+    .obs-avatar-strip {
+      display: none;
+    }
+
+    body.obs-overlay .obs-avatar-strip {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 6px;
+      max-height: calc(100vh - 20px);
+      background: var(--hud-bg);
+      border: 1px solid var(--hud-border);
+      border-radius: 10px;
+      z-index: 1000;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    body.obs-overlay .obs-avatar-strip .hud-avatar-chip {
+      min-width: 190px;
+      padding: 4px 8px;
+      font-size: 1.36rem;
+    }
+
+    body.obs-overlay .obs-avatar-strip .hud-avatar-owner {
+      font-size: 1.24rem;
+    }
+
+    body.obs-overlay .obs-avatar-strip .hud-avatar-dot {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Topic of the stream, set by Javier with !contexto */
+    .obs-context {
+      display: none;
+    }
+
+    body.obs-overlay .obs-context:not(:empty) {
+      display: block;
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      right: 230px;
+      padding: 8px 14px;
+      background: var(--hud-bg);
+      border: 1px solid var(--hud-border);
+      border-radius: 10px;
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    body.obs-overlay #office-3d .camera-tools {
+      display: none;
+    }
+
+    /* Shift the plano down and right by the context banner height so they never overlap */
+    body.obs-overlay {
+      --obs-bar-offset: 66px;
+    }
+
+    body.obs-overlay #office-3d .world-anchor {
+      left: calc(41% + var(--obs-bar-offset)) !important;
+      top: calc(37% + var(--obs-bar-offset)) !important;
+    }
+
+    /* 2D diorama (1280x860 stage) fitted for the 1920x1080 OBS canvas:
+       x 10-1450 (camera starts at 1460), y 76-1044 (below the context banner). */
+    body.obs-overlay #office-3d .diorama-anchor {
+      left: 730px !important;
+      top: 560px !important;
+    }
+
+    body.obs-overlay #office-3d .diorama-stage {
+      transform: scale(1.125) !important;
+    }
+
+    body.obs-overlay #directo-hud {
+      display: none;
+    }
+
+    /* ─── Contenedor de Cámara IRL y Monigote Javier ────────────────── */
+    .camera-container {
+      position: fixed;
+      right: 20px;
+      bottom: 50px;
+      width: 440px;
+      height: 248px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 850;
+      border-radius: 16px;
+      overflow: hidden;
+      background: transparent !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .camera-container.hidden {
+      display: none !important;
+    }
+
+    .ja-avatar-cam-box {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 70%, #020617 100%);
+      pointer-events: auto;
+      overflow: hidden;
+    }
+
+    .ja-cam-header {
+      position: absolute;
+      top: 10px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 5;
+    }
+
+    .ja-cam-badge {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    .ja-cam-name {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 0.02em;
+    }
+
+    .ja-cam-avatar-svg {
+      overflow: visible;
+      filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
+      margin-bottom: -10px;
+    }
+
+    .camera-container iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      border: none;
+      background: transparent !important;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .directo-hud.collapsed .hud-body {
+      display: none;
+    }
+
+    .hud-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid transparent;
+    }
+
+    .directo-hud:not(.collapsed) .hud-header {
+      border-bottom-color: var(--hud-border);
+    }
+
+    .hud-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hud-live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      border-radius: 999px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: #fca5a5;
+    }
+
+    .hud-live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--hud-live);
+      box-shadow: 0 0 6px var(--hud-live);
+      animation: pulse-live 1.8s infinite;
+    }
+
+    @keyframes pulse-live {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.85); }
+    }
+
+    .hud-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .hud-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hud-sms-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #38bdf8;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      background: rgba(56, 189, 248, 0.12);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+    }
+
+    .hud-sms-badge.pulse {
+      animation: smsPulse 1s ease;
+    }
+
+    @keyframes smsPulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+      50% { transform: scale(1.15); box-shadow: 0 0 10px 3px rgba(56, 189, 248, 0.5); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+    }
+
+    .hud-btn-info {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #38bdf8;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      background: rgba(56, 189, 248, 0.12);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .hud-btn-info:hover {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: #38bdf8;
+    }
+
+    .hud-btn-toggle {
+      background: transparent;
+      border: none;
+      color: var(--hud-muted);
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 0.95rem;
+      border-radius: 4px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hud-btn-toggle:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .hud-body {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: calc(86vh - 55px);
+      overflow-y: auto;
+    }
+
+    .hud-section-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--hud-muted);
+      margin-bottom: 6px;
+    }
+
+    /* Selector de Fondo y Temas */
+    .hud-theme-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: var(--hud-chip-bg);
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .hud-theme-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .hud-theme-label {
+      font-size: 0.72rem;
+      color: var(--hud-muted);
+    }
+
+    .hud-palette-chips {
+      display: flex;
+      gap: 4px;
+    }
+
+    .palette-btn {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      padding: 3px 7px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+      transition: all 0.15s ease;
+    }
+
+    .palette-btn:hover, .palette-btn.active {
+      border-color: var(--hud-accent);
+      background: var(--hud-accent);
+      color: #0f172a;
+    }
+
+    .btn-toggle-bg {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 0.65rem;
+      cursor: pointer;
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-toggle-bg:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .hud-command-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .hud-command-item {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      font-size: 0.78rem;
+      background: var(--hud-chip-bg);
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .hud-cmd-syntax {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hud-cmd-syntax code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      background: var(--hud-code-bg);
+      color: #38bdf8;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .hud-cmd-desc {
+      color: #cbd5e1;
+      font-size: 0.74rem;
+      line-height: 1.25;
+    }
+
+    .hud-avatars-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+    }
+
+    .hud-avatar-chip {
+      display: flex;
+      flex-direction: column;
+      padding: 5px 6px;
+      background: var(--hud-chip-bg);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      font-size: 0.68rem;
+      gap: 2px;
+    }
+
+    .hud-avatar-header {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 600;
+    }
+
+    .hud-avatar-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .hud-avatar-owner {
+      font-size: 0.62rem;
+      color: #38bdf8;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .hud-avatar-owner.libre {
+      color: var(--hud-muted);
+      font-style: italic;
+    }
+
+    .hud-status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.65rem;
+      color: var(--hud-muted);
+      padding-top: 6px;
+      border-top: 1px solid var(--hud-border);
+    }
+
+    .hud-status-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      margin-right: 4px;
+    }
+
+    /* Modal Pantalla Completa de Comandos (!info) */
+    .modal-info-backdrop {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      background: rgba(3, 10, 22, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+      transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.25s;
+    }
+
+    .modal-info-backdrop.visible {
+      opacity: 1;
+      pointer-events: auto;
+      visibility: visible;
+    }
+
+    .modal-info-card {
+      background: rgba(11, 19, 38, 0.96);
+      border: 2px solid rgba(56, 189, 248, 0.6);
+      border-radius: 24px;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.95), 0 0 80px rgba(56, 189, 248, 0.3);
+      padding: 28px 36px;
+      width: calc(100vw - 48px);
+      height: calc(100vh - 48px);
+      max-width: 1750px;
+      max-height: 940px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      transform: scale(0.95);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-sizing: border-box;
+    }
+
+    .modal-info-backdrop.visible .modal-info-card {
+      transform: scale(1);
+    }
+
+    .modal-info-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid rgba(56, 189, 248, 0.25);
+      padding-bottom: 14px;
+      flex-shrink: 0;
+    }
+
+    .modal-info-title-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .modal-info-badge {
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      background: rgba(56, 189, 248, 0.22);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.6);
+      padding: 5px 12px;
+      border-radius: 8px;
+    }
+
+    .modal-info-title {
+      margin: 0;
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+    }
+
+    .modal-info-timer {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #f8fafc;
+      background: rgba(239, 68, 68, 0.28);
+      border: 1.5px solid rgba(239, 68, 68, 0.65);
+      padding: 6px 18px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
+    }
+
+    .modal-info-timer strong {
+      color: #fca5a5;
+      font-size: 1.35rem;
+      min-width: 32px;
+      text-align: right;
+    }
+
+    .modal-info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding: 4px 6px 4px 0;
+    }
+
+    .modal-cmd-item {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      background: rgba(30, 41, 59, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 14px;
+      padding: 12px 16px;
+      transition: all 0.2s ease;
+    }
+
+    .modal-cmd-item:hover {
+      border-color: rgba(56, 189, 248, 0.5);
+      background: rgba(30, 41, 59, 0.95);
+      transform: translateY(-2px);
+    }
+
+    .modal-cmd-item code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 1.02rem;
+      font-weight: 800;
+      color: #38bdf8;
+      background: rgba(15, 23, 42, 0.85);
+      padding: 3px 10px;
+      border-radius: 6px;
+      display: inline-block;
+      width: fit-content;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .modal-cmd-item span {
+      font-size: 0.86rem;
+      color: #e2e8f0;
+      line-height: 1.35;
+    }
+
+    .modal-info-footer {
+      border-top: 2px solid rgba(56, 189, 248, 0.25);
+      padding-top: 10px;
+      font-size: 0.88rem;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 1100px) {
+      .modal-info-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 700px) {
+      .modal-info-grid {
+        grid-template-columns: 1fr;
+      }
+      .modal-info-card {
+        padding: 16px;
+        width: calc(100vw - 20px);
+        height: calc(100vh - 20px);
+      }
+      .modal-info-title {
+        font-size: 1.15rem;
+      }
+    }
+
+    @media (max-width: 640px) {
+      #office-3d .world-anchor,
+      #office-3d .diorama-anchor {
+        left: 50% !important;
+        top: 49% !important;
+      }
+      .directo-hud {
+        top: auto;
+        bottom: 12px;
+        right: 12px;
+        left: 12px;
+        margin: 0;
+        height: auto;
+        max-height: 80vh;
+        width: auto;
+        max-width: none;
+        transform: none;
+      }
+      .hud-avatars-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* ─── Banner Notificador del Mini-Juego !juego ───────────────────── */
+    .game-banner {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-120%);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 24px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 2px solid #5ecef5;
+      border-radius: 999px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(94, 206, 245, 0.35);
+      z-index: 2000;
+      pointer-events: none;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+      opacity: 0;
+    }
+
+    .game-banner.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .game-banner.winner {
+      border-color: #ffd700;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65), 0 0 28px rgba(255, 215, 0, 0.45);
+    }
+
+    .game-banner-icon {
+      font-size: 28px;
+      line-height: 1;
+      animation: gameTrophyBob 1.2s infinite alternate ease-in-out;
+    }
+
+    .game-banner-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #f8fafc;
+      letter-spacing: 0.02em;
+    }
+
+    .game-banner.winner .game-banner-title {
+      color: #ffd700;
+    }
+
+    .game-banner-sub {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+
+    .game-banner-timer {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #5ecef5;
+      padding: 2px 10px;
+      background: rgba(94, 206, 245, 0.15);
+      border-radius: 999px;
+      border: 1px solid rgba(94, 206, 245, 0.4);
+    }
+
+    /* ─── Enfoque cinematográfico y aumento de bocadillos en !traidor ─── */
+    #office-3d.modo-traidor .diorama-stage {
+      transform: scale(2.05) !important;
+      transform-origin: 62% 22% !important;
+      transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    #office-3d.modo-traidor .activity-bubble-speech {
+      animation: bubble-ephemeral 7s ease-out forwards !important;
+    }
+    /* Agent names and owners clutter the meeting room during the game. */
+    #office-3d.modo-traidor .person-name,
+    #office-3d.modo-traidor g[transform="translate(0, -50)"][pointer-events="none"] {
+      display: none !important;
+    }
+    /* Only the shadow: scaling an SVG rect or its text detaches the text from its box. */
+    #office-3d.modo-traidor .activity-bubble-speech rect {
+      filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.85)) !important;
+    }
+
+    /* ─── Game hub poster (!juego) and !traidor screens ───────────────── */
+    .hub-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 2100;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.9s ease;
+    }
+
+    .hub-overlay.visible {
+      opacity: 1;
+    }
+
+    .hub-overlay.compact {
+      align-items: flex-start;
+      padding-top: 24px;
+    }
+
+    .hub-card {
+      width: min(640px, 100%);
+      padding: 24px;
+      background: rgba(15, 23, 42, 0.94);
+      border: 2px solid #5ecef5;
+      border-radius: 16px;
+      color: #f8fafc;
+      text-align: center;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+    }
+
+    .hub-overlay.compact .hub-card {
+      width: min(520px, 100%);
+      padding: 12px 16px;
+    }
+
+    .hub-card.traidor {
+      border-color: #ef4444;
+    }
+
+    .hub-title {
+      margin: 0;
+      font-size: clamp(1.6rem, 4vw, 2.6rem);
+      font-weight: 900;
+      letter-spacing: 0.02em;
+    }
+
+    .hub-overlay.compact .hub-title {
+      font-size: 1.2rem;
+    }
+
+    .hub-sub {
+      margin: 8px 0 0;
+      color: #94a3b8;
+      font-size: 1rem;
+    }
+
+    .hub-timer {
+      margin: 12px auto 0;
+      font-size: clamp(2.4rem, 7vw, 4rem);
+      font-weight: 900;
+      color: #5ecef5;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hub-card.traidor .hub-timer {
+      color: #fca5a5;
+    }
+
+    .hub-overlay.compact .hub-timer {
+      margin-top: 4px;
+      font-size: 1.6rem;
+    }
+
+    .hub-options {
+      display: grid;
+      gap: 8px;
+      margin: 16px 0 0;
+      padding: 0;
+      list-style: none;
+      text-align: left;
+    }
+
+    .hub-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      font-size: clamp(1rem, 2.6vw, 1.4rem);
+      font-weight: 700;
+    }
+
+    .hub-option.expelled {
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.18);
+    }
+
+    .hub-option code {
+      color: #5ecef5;
+    }
+
+    .hub-votes {
+      min-width: 40px;
+      text-align: right;
+      color: #facc15;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hub-quorum {
+      margin: 12px 0 0;
+      font-size: 0.95rem;
+      color: #94a3b8;
+    }
+
+    .hub-quorum.ok {
+      color: #4ade80;
+    }
+
+    .hub-expel {
+      font-size: 4rem;
+      line-height: 1;
+      margin-top: 12px;
+      animation: hubExpel 2.4s ease-in forwards;
+    }
+
+    @keyframes hubExpel {
+      0% { transform: translateX(0) rotate(0); opacity: 1; }
+      60% { transform: translateX(0) rotate(-12deg); opacity: 1; }
+      100% { transform: translateX(120vw) rotate(540deg); opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hub-expel { animation: none; }
+    }
+  </style>
+</head>
+<body id="page-body">
+  <!-- Fondo animado temático por categoría. Ocultable para OBS con ?transparente=1 o toggle -->
+  <div id="bg" class="animated-bg">
+    <!-- 1. ANDANDO (IRL / Calle / Modo paseo) -->
+    <div class="fondo-tematico" id="fondo-andando">
+      <svg viewBox="0 0 1920 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0a3d1c" stop-opacity="0.8"/>
+            <stop offset="100%" stop-color="#031208" stop-opacity="0.95"/>
+          </linearGradient>
+          <pattern id="streetGrid" width="60" height="60" patternUnits="userSpaceOnUse">
+            <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#00c853" stroke-width="0.5" opacity="0.08"/>
+          </pattern>
+        </defs>
+        <rect width="1920" height="1080" fill="url(#skyGrad)"/>
+        <rect width="1920" height="1080" fill="url(#streetGrid)"/>
+        <!-- Siluetas urbanas en movimiento horizontal (2 copias en loop continuo) -->
+        <g style="animation: scrollSkyline 90s linear infinite;">
+          <!-- Bloque A (0 a 1920) -->
+          <g fill="#00e676" opacity="0.12">
+            <rect x="50" y="680" width="120" height="400" rx="4"/>
+            <rect x="200" y="600" width="180" height="480" rx="4"/>
+            <rect x="420" y="730" width="90" height="350" rx="4"/>
+            <rect x="550" y="550" width="220" height="530" rx="4"/>
+            <rect x="810" y="650" width="150" height="430" rx="4"/>
+            <rect x="1000" y="590" width="170" height="490" rx="4"/>
+            <rect x="1210" y="710" width="110" height="370" rx="4"/>
+            <rect x="1360" y="520" width="240" height="560" rx="4"/>
+            <rect x="1640" y="640" width="140" height="440" rx="4"/>
+            <rect x="1810" y="690" width="100" height="390" rx="4"/>
+          </g>
+          <line x1="0" y1="920" x2="1920" y2="920" stroke="#00c853" stroke-width="2" opacity="0.25"/>
+          <g fill="#00e676" style="animation: pulseFarola 6s ease-in-out infinite;">
+            <circle cx="180" cy="850" r="16" opacity="0.3"/>
+            <circle cx="530" cy="850" r="16" opacity="0.3"/>
+            <circle cx="980" cy="850" r="16" opacity="0.3"/>
+            <circle cx="1340" cy="850" r="16" opacity="0.3"/>
+            <circle cx="1790" cy="850" r="16" opacity="0.3"/>
+          </g>
+          <!-- Bloque B (1920 a 3840, idéntico para loop perfecto) -->
+          <g transform="translate(1920, 0)">
+            <g fill="#00e676" opacity="0.12">
+              <rect x="50" y="680" width="120" height="400" rx="4"/>
+              <rect x="200" y="600" width="180" height="480" rx="4"/>
+              <rect x="420" y="730" width="90" height="350" rx="4"/>
+              <rect x="550" y="550" width="220" height="530" rx="4"/>
+              <rect x="810" y="650" width="150" height="430" rx="4"/>
+              <rect x="1000" y="590" width="170" height="490" rx="4"/>
+              <rect x="1210" y="710" width="110" height="370" rx="4"/>
+              <rect x="1360" y="520" width="240" height="560" rx="4"/>
+              <rect x="1640" y="640" width="140" height="440" rx="4"/>
+              <rect x="1810" y="690" width="100" height="390" rx="4"/>
+            </g>
+            <line x1="0" y1="920" x2="1920" y2="920" stroke="#00c853" stroke-width="2" opacity="0.25"/>
+            <g fill="#00e676" style="animation: pulseFarola 6s ease-in-out infinite;">
+              <circle cx="180" cy="850" r="16" opacity="0.3"/>
+              <circle cx="530" cy="850" r="16" opacity="0.3"/>
+              <circle cx="980" cy="850" r="16" opacity="0.3"/>
+              <circle cx="1340" cy="850" r="16" opacity="0.3"/>
+              <circle cx="1790" cy="850" r="16" opacity="0.3"/>
+            </g>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <!-- 2. APPS (Código / ApliArte) -->
+    <div class="fondo-tematico" id="fondo-apps">
+      <svg viewBox="0 0 1920 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="codeGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#030a16" stop-opacity="0.85"/>
+            <stop offset="100%" stop-color="#001830" stop-opacity="0.95"/>
+          </linearGradient>
+        </defs>
+        <rect width="1920" height="1080" fill="url(#codeGrad)"/>
+        <!-- Bloques abstractos de código flotando hacia arriba -->
+        <g style="animation: floatCode 65s linear infinite;">
+          <!-- Columna Izquierda -->
+          <g fill="#5ecef5" opacity="0.14">
+            <rect x="120" y="300" width="80" height="12" rx="3"/>
+            <rect x="220" y="300" width="140" height="12" rx="3"/>
+            <rect x="160" y="330" width="220" height="12" rx="3"/>
+            <rect x="200" y="360" width="90" height="12" rx="3"/>
+            <rect x="310" y="360" width="130" height="12" rx="3"/>
+            <rect x="160" y="390" width="160" height="12" rx="3"/>
+            <rect x="120" y="420" width="40" height="12" rx="3"/>
+
+            <rect x="120" y="580" width="110" height="12" rx="3"/>
+            <rect x="160" y="610" width="190" height="12" rx="3"/>
+            <rect x="160" y="640" width="130" height="12" rx="3"/>
+            <rect x="120" y="670" width="50" height="12" rx="3"/>
+
+            <rect x="120" y="850" width="90" height="12" rx="3"/>
+            <rect x="160" y="880" width="240" height="12" rx="3"/>
+            <rect x="200" y="910" width="110" height="12" rx="3"/>
+            <rect x="160" y="940" width="170" height="12" rx="3"/>
+            <rect x="120" y="970" width="60" height="12" rx="3"/>
+
+            <!-- Repetición para loop sin cortes -->
+            <rect x="120" y="1050" width="80" height="12" rx="3"/>
+            <rect x="220" y="1050" width="140" height="12" rx="3"/>
+            <rect x="160" y="1080" width="220" height="12" rx="3"/>
+            <rect x="200" y="1110" width="90" height="12" rx="3"/>
+            <rect x="310" y="1110" width="130" height="12" rx="3"/>
+            <rect x="160" y="1140" width="160" height="12" rx="3"/>
+            <rect x="120" y="1170" width="40" height="12" rx="3"/>
+          </g>
+          <!-- Columna Derecha -->
+          <g fill="#00467b" opacity="0.22">
+            <rect x="1450" y="240" width="130" height="12" rx="3"/>
+            <rect x="1500" y="270" width="260" height="12" rx="3"/>
+            <rect x="1540" y="300" width="140" height="12" rx="3"/>
+            <rect x="1500" y="330" width="190" height="12" rx="3"/>
+            <rect x="1450" y="360" width="60" height="12" rx="3"/>
+
+            <rect x="1450" y="520" width="100" height="12" rx="3"/>
+            <rect x="1500" y="550" width="220" height="12" rx="3"/>
+            <rect x="1500" y="580" width="150" height="12" rx="3"/>
+            <rect x="1450" y="610" width="70" height="12" rx="3"/>
+
+            <rect x="1450" y="780" width="120" height="12" rx="3"/>
+            <rect x="1500" y="810" width="240" height="12" rx="3"/>
+            <rect x="1540" y="840" width="110" height="12" rx="3"/>
+            <rect x="1450" y="870" width="50" height="12" rx="3"/>
+
+            <!-- Repetición para loop -->
+            <rect x="1450" y="990" width="130" height="12" rx="3"/>
+            <rect x="1500" y="1020" width="260" height="12" rx="3"/>
+            <rect x="1540" y="1050" width="140" height="12" rx="3"/>
+            <rect x="1500" y="1080" width="190" height="12" rx="3"/>
+            <rect x="1450" y="1110" width="60" height="12" rx="3"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <!-- 3. ARTE (Dibujo / Calca) -->
+    <div class="fondo-tematico" id="fondo-arte">
+      <svg viewBox="0 0 1920 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="artGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1a0f0b" stop-opacity="0.85"/>
+            <stop offset="100%" stop-color="#2d1710" stop-opacity="0.95"/>
+          </linearGradient>
+        </defs>
+        <rect width="1920" height="1080" fill="url(#artGrad)"/>
+        <!-- Trazos orgánicos y manchas de pincel flotando -->
+        <g style="animation: floatBrush 80s ease-in-out infinite;">
+          <path d="M-100 350 C 300 200, 600 550, 1050 380 S 1650 200, 2050 420" fill="none" stroke="#f5cba7" stroke-width="28" stroke-linecap="round" opacity="0.12"/>
+          <path d="M-50 680 C 400 820, 850 500, 1300 750 S 1850 650, 2050 800" fill="none" stroke="#f5cba7" stroke-width="16" stroke-linecap="round" opacity="0.09"/>
+          <ellipse cx="400" cy="380" rx="220" ry="140" fill="#3e2723" opacity="0.25"/>
+          <ellipse cx="1550" cy="720" rx="260" ry="160" fill="#3e2723" opacity="0.2"/>
+          <ellipse cx="980" cy="540" rx="180" ry="110" fill="#f5cba7" opacity="0.08"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- 4. MÚSICA (Producción musical) -->
+    <div class="fondo-tematico" id="fondo-musica">
+      <svg viewBox="0 0 1920 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="musicGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#260519" stop-opacity="0.85"/>
+            <stop offset="100%" stop-color="#14020c" stop-opacity="0.95"/>
+          </linearGradient>
+        </defs>
+        <rect width="1920" height="1080" fill="url(#musicGrad)"/>
+        <!-- Onda armónica desplazándose -->
+        <g style="animation: waveShift 50s linear infinite;">
+          <path d="M0 550 Q 240 450, 480 550 T 960 550 T 1440 550 T 1920 550 T 2400 550 T 2880 550" fill="none" stroke="#ff1493" stroke-width="4" opacity="0.18"/>
+          <path d="M0 620 Q 240 700, 480 620 T 960 620 T 1440 620 T 1920 620 T 2400 620 T 2880 620" fill="none" stroke="#e91e63" stroke-width="2.5" opacity="0.12"/>
+        </g>
+        <!-- Barras de ecualizador con escala vertical simulada -->
+        <g transform="translate(680, 880)" fill="#ff1493" opacity="0.2">
+          <rect x="0" y="-120" width="24" height="120" rx="3" style="transform-origin: 12px 0px; animation: eqBar1 12s ease-in-out infinite;"/>
+          <rect x="40" y="-160" width="24" height="160" rx="3" style="transform-origin: 52px 0px; animation: eqBar2 9s ease-in-out infinite;"/>
+          <rect x="80" y="-90" width="24" height="90" rx="3" style="transform-origin: 92px 0px; animation: eqBar3 14s ease-in-out infinite;"/>
+          <rect x="120" y="-200" width="24" height="200" rx="3" style="transform-origin: 132px 0px; animation: eqBar1 11s ease-in-out infinite;"/>
+          <rect x="160" y="-140" width="24" height="140" rx="3" style="transform-origin: 172px 0px; animation: eqBar3 8s ease-in-out infinite;"/>
+          <rect x="200" y="-180" width="24" height="180" rx="3" style="transform-origin: 212px 0px; animation: eqBar2 13s ease-in-out infinite;"/>
+          <rect x="240" y="-110" width="24" height="110" rx="3" style="transform-origin: 252px 0px; animation: eqBar1 10s ease-in-out infinite;"/>
+          <rect x="280" y="-70" width="24" height="70" rx="3" style="transform-origin: 292px 0px; animation: eqBar3 15s ease-in-out infinite;"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- 5. CHARLANDO (Just Chatting / Tertulia / Café) -->
+    <div class="fondo-tematico" id="fondo-charlando">
+      <svg viewBox="0 0 1920 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="talkGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1c1208" stop-opacity="0.85"/>
+            <stop offset="100%" stop-color="#0f0904" stop-opacity="0.95"/>
+          </linearGradient>
+          <radialGradient id="lampGlow" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0%" stop-color="#e8955e" stop-opacity="0.25"/>
+            <stop offset="70%" stop-color="#b46734" stop-opacity="0.08"/>
+            <stop offset="100%" stop-color="#1c1208" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect width="1920" height="1080" fill="url(#talkGrad)"/>
+        <!-- Halo cálido de lámpara -->
+        <circle cx="280" cy="380" r="320" fill="url(#lampGlow)" style="animation: pulseGlow 14s ease-in-out infinite;"/>
+        <!-- Contorno sutil de lámpara de estudio -->
+        <g stroke="#b46734" stroke-width="3" fill="none" opacity="0.2">
+          <path d="M 220 540 L 280 340 L 340 380 L 260 540"/>
+          <path d="M 280 340 L 320 280"/>
+          <path d="M 290 270 C 330 250, 370 290, 340 320 Z" fill="#e8955e" fill-opacity="0.15"/>
+        </g>
+        <!-- Volutas tenues de vapor ascendente -->
+        <g fill="none" stroke="#e8955e" stroke-width="4" stroke-linecap="round">
+          <path d="M 1600 780 Q 1630 700, 1590 620 T 1620 480" style="animation: riseVapor 35s ease-in-out infinite;"/>
+          <path d="M 1640 820 Q 1610 740, 1650 660 T 1630 520" style="animation: riseVapor 42s ease-in-out -15s infinite;"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="grid-overlay"></div>
+    <div class="vignette"></div>
+  </div>
+
+  <!-- Fila de avatares libres/adoptados, solo visible en modo OBS -->
+  <div id="obs-avatar-strip" class="obs-avatar-strip" aria-label="Avatares libres y adoptados"></div>
+  <div id="obs-context" class="obs-context" role="status" aria-label="Contexto del directo"></div>
+
+  <!-- Contenedor principal para la Oficina 3D -->
+  <main id="office-3d" data-fill="1" aria-label="Oficina 3D interactiva"></main>
+
+  <!-- Banner Notificador del Mini-Juego !juego / !carrera -->
+  <div id="game-banner" class="game-banner" aria-hidden="true">
+    <div class="game-banner-icon">🏁</div>
+    <div class="game-banner-content">
+      <div class="game-banner-title" id="game-banner-title">!TROFEO</div>
+      <div class="game-banner-sub" id="game-banner-sub">Objetivo marcado en el mapa 🏆. ¡Mueve tu avatar con WASD!</div>
+    </div>
+    <div class="game-banner-timer" id="game-banner-timer">5s</div>
+  </div>
+
+  <!-- Game hub poster (!juego) and !traidor phase screens -->
+  <div id="hub-overlay" class="hub-overlay" aria-hidden="true">
+    <div class="hub-card" id="hub-card">
+      <h2 class="hub-title" id="hub-title">🎮 ¿A QUÉ JUGAMOS?</h2>
+      <p class="hub-sub" id="hub-sub">Escribe el número en el chat</p>
+      <div class="hub-timer" id="hub-timer">60s</div>
+      <ul class="hub-options" id="hub-options"></ul>
+      <p class="hub-quorum" id="hub-quorum"></p>
+      <div class="hub-expel" id="hub-expel" hidden></div>
+    </div>
+  </div>
+
+  <!-- Modal Pantalla Completa de Comandos (!info) con cuenta atrás de 5s -->
+  <div id="modal-info" class="modal-info-backdrop" aria-hidden="true">
+    <div class="modal-info-card">
+      <div class="modal-info-header">
+        <div class="modal-info-title-group">
+          <span class="modal-info-badge">OFICINA EN DIRECTO</span>
+          <h2 class="modal-info-title">Guía de Comandos de Twitch</h2>
+        </div>
+        <div class="modal-info-timer">
+          ⏱️ Se cierra en <strong id="modal-info-countdown">5s</strong>
+        </div>
+      </div>
+      <div class="modal-info-grid">
+        <div class="modal-cmd-item">
+          <code>!&lt;agente&gt;</code>
+          <span>Adopta tu propio avatar (ej: <code>!ge</code>, <code>!cl</code>, <code>!pi</code>, <code>!co</code>...).</span>
+        </div>
+        <div class="modal-cmd-item">
+          <code>(chat normal)</code>
+          <span>Si tienes avatar adoptado, ¡tu muñeco habla en 3D lo que escribes!</span>
+        </div>
+        <div class="modal-cmd-item">
+          <code>!w · !a · !s · !d</code>
+          <span>Mueve tu avatar por la oficina (o en ráfagas: <code>!aaaaa</code>, <code>!w 3</code>).</span>
+        </div>
+        <div class="modal-cmd-item">
+          <code>!salta · !r</code>
+          <span>Da un salto (<code>!salta</code>) o regresa a tu puesto asignado (<code>!r</code>).</span>
+        </div>
+        <div class="modal-cmd-item">
+          <code>!beso [agente]</code>
+          <span>Encuentro en el centro de la oficina y beso en zoom.</span>
+        </div>
+        <div class="modal-cmd-item">
+          <code>!bronca</code>
+          <span>Un agente va al centro y le echa una bronca al Tito en zoom.</span>
+        </div>
+        <div class="modal-cmd-item">
+          <code>!trabajar</code>
+          <span>Llamada al centro y vuelta inmediata a los puestos a picar código.</span>
+        </div>
+        <div class="modal-cmd-item">
+          <code>!cafe [agente]</code>
+          <span>El agente prepara café en la cafetera y se lo lleva a Javier.</span>
+        </div>
+        <div class="modal-cmd-item">
+          <code>!sms &lt;mensaje&gt;</code>
+          <span>Deja una nota privada en el buzón local de Javier.</span>
+        </div>
+        <div class="modal-cmd-item">
+          <code>!fiesta</code>
+          <span>¡Música y fiesta general de baile en la oficina!</span>
+        </div>
+        <div class="modal-cmd-item">
+          <code>!tema &lt;color&gt;</code>
+          <span>Cambia la paleta de fondo (<code>apps</code>, <code>musica</code>, <code>arte</code>, <code>andando</code>).</span>
+        </div>
+        <div class="modal-cmd-item">
+          <code>!claro · !oscuro</code>
+          <span>Cambia el diorama 3D entre Modo Día (☀️) y Modo Noche (🌙).</span>
+        </div>
+        <div class="modal-cmd-item">
+          <code>!juego · !trofeo · !traidor</code>
+          <span>Javier abre la votación con !juego: 1 = !trofeo (carrera a la copa 🏆), 2 = !traidor (misterio 🔪). Mínimo 3 espectadores con avatar.</span>
+        </div>
+      </div>
+      <div class="modal-info-footer">
+        <span>💡 Escribe <code>!info</code> en el chat de Twitch para ver esta guía en pantalla.</span>
+        <span>⏱️ Enfriamiento anti-spam: 1 minuto entre llamadas.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUD flotante con la guía de comandos y avatares -->
+  <aside class="directo-hud" id="directo-hud" aria-label="Comandos de Twitch en directo">
+    <div class="hud-header" id="hud-header" title="Pulsar para plegar/desplegar">
+      <div class="hud-title-group">
+        <span class="hud-live-badge">
+          <span class="hud-live-dot" aria-hidden="true"></span>
+          TWITCH
+        </span>
+        <span class="hud-title">Oficina en Directo</span>
+      </div>
+      <div class="hud-header-actions">
+        <button type="button" class="hud-btn-info" id="btn-show-info" title="Mostrar guía de comandos (!info)">ℹ️ !info</button>
+        <span class="hud-sms-badge" id="hud-sms-badge" title="Mensajes privados recibidos en directo">📩 SMS: <span id="hud-sms-count">0</span></span>
+        <button type="button" class="hud-btn-toggle" id="hud-btn-toggle" aria-label="Plegar panel">−</button>
+      </div>
+    </div>
+
+    <div class="hud-body">
+      <!-- Selector de Fondo y Paleta en vivo -->
+      <div class="hud-theme-box">
+        <div class="hud-theme-row">
+          <span class="hud-theme-label">Fondo OBS:</span>
+          <button type="button" id="btn-toggle-transparency" class="btn-toggle-bg">
+            Modo: <span id="label-bg-mode">Animado</span>
+          </button>
+        </div>
+        <div class="hud-theme-row">
+          <span class="hud-theme-label">Ambiente 3D:</span>
+          <button type="button" id="btn-toggle-theme-mode" class="btn-toggle-bg" title="Alternar entre modo claro y oscuro">
+            <span id="label-theme-mode">🌙 Oscuro</span>
+          </button>
+        </div>
+        <div class="hud-theme-row">
+          <span class="hud-theme-label">Cámara IRL:</span>
+          <button type="button" id="btn-toggle-cam" class="btn-toggle-bg" title="Mostrar/ocultar cámara IRL (!cam)">
+            <span id="label-cam-mode">📹 Visible</span>
+          </button>
+        </div>
+        <div class="hud-theme-row" id="row-palettes">
+          <span class="hud-theme-label">Paleta actual:</span>
+          <div class="hud-palette-chips">
+            <button type="button" class="palette-btn" data-cat="apps" title="Azul ApliArte">Apps</button>
+            <button type="button" class="palette-btn" data-cat="musica" title="Rosa Música">Música</button>
+            <button type="button" class="palette-btn" data-cat="arte" title="Tierra Calca">Arte</button>
+            <button type="button" class="palette-btn" data-cat="andando" title="Verde Paseo">Andando</button>
+            <button type="button" class="palette-btn" data-cat="charlando" title="Cálido Tertulia">Charlando</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="hud-section-title">Avatares Disponibles</div>
+        <div class="hud-avatars-grid" id="hud-avatars-grid">
+          <!-- Renderizado dinámico -->
+        </div>
+      </div>
+
+      <div class="hud-status-bar">
+        <span><span class="hud-status-dot"></span><span id="hud-connection-status">Conectado a Twitch</span></span>
+        <span>Canal: #apliarte</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Contenedor de Cámara IRL embebida (iPhone 15 Plus / VDO.Ninja) y Monigote Javier -->
+  <div id="camera-container" class="camera-container" aria-label="Cámara en directo">
+    <div id="ja-avatar-cam-box" class="ja-avatar-cam-box">
+      <div class="ja-cam-header">
+        <span class="ja-cam-badge">🔴 EN DIRECTO</span>
+        <span class="ja-cam-name">Javier Mateo</span>
+      </div>
+      <svg class="ja-cam-avatar-svg" viewBox="-45 -95 90 95" width="220" height="232" aria-hidden="true">
+        <!-- Cuerpo / Torso -->
+        <g id="ja-torso-group">
+          <!-- Camisa #f4f7fb -->
+          <rect x="-20" y="-48" width="40" height="48" rx="14" fill="#f4f7fb" stroke="#2f2620" stroke-width="2"/>
+          <!-- Cuello -->
+          <path d="M-8,-48 l8,8 l8,-8" fill="none" stroke="#2f2620" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M0,-40 v35" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="2 6"/>
+          <!-- Tirantes rojos #d9534f -->
+          <rect x="-14" y="-48" width="5" height="48" fill="#d9534f" stroke="#2f2620" stroke-width="1.4"/>
+          <rect x="9" y="-48" width="5" height="48" fill="#d9534f" stroke="#2f2620" stroke-width="1.4"/>
+          <rect x="-15" y="-22" width="7" height="3" rx="1" fill="#94a3b8" stroke="#2f2620" stroke-width="0.8"/>
+          <rect x="8" y="-22" width="7" height="3" rx="1" fill="#94a3b8" stroke="#2f2620" stroke-width="0.8"/>
+          <!-- Badge #005fa9 -->
+          <rect x="-16" y="-34" width="8" height="9" rx="2" fill="#005fa9" stroke="#2f2620" stroke-width="1.2"/>
+          <rect x="-14" y="-32" width="4" height="2" fill="#ffffff" opacity="0.9"/>
+          <rect x="-14" y="-28" width="4" height="1.5" fill="#ffffff" opacity="0.6"/>
+        </g>
+        <!-- Cabeza y rostro (bobs during speech) -->
+        <g id="ja-head-group" style="transition: transform 0.08s ease-out; transform-origin: 0px -64px;">
+          <!-- Piel #f3c79c -->
+          <ellipse cx="0" cy="-64" rx="17.5" ry="16.5" fill="#f3c79c" stroke="#2f2620" stroke-width="2"/>
+          <!-- Mejillas sonrosadas -->
+          <ellipse cx="-12" cy="-60" rx="3.6" ry="2.2" fill="#e91916" opacity="0.25"/>
+          <ellipse cx="12" cy="-60" rx="3.6" ry="2.2" fill="#e91916" opacity="0.25"/>
+          <!-- Pelo #4a3527 -->
+          <path d="M-17,-70 q2,-14 17,-13.5 q15,-0.5 17,13.5 q-6,-7 -17,-6.5 q-11,-0.5 -17,6.5 z" fill="#4a3527" stroke="#2f2620" stroke-width="1.8" stroke-linejoin="round"/>
+          <!-- Barba #5b4130 -->
+          <path d="M-15,-62 q1,15 15,15.5 q14,-0.5 15,-15.5 q-4,6 -15,6 q-11,0 -15,-6 z" fill="#5b4130" stroke="#2f2620" stroke-width="1.6"/>
+          <!-- Cejas -->
+          <path d="M-12,-73.5 q5,-2 10,0" stroke="#4a3527" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          <path d="M2,-73.5 q5,-2 10,0" stroke="#4a3527" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          <!-- Ojos -->
+          <ellipse cx="-6.2" cy="-66" rx="3.2" ry="3.9" fill="#2f2620"/>
+          <ellipse cx="6.2" cy="-66" rx="3.2" ry="3.9" fill="#2f2620"/>
+          <circle cx="-7.3" cy="-67.6" r="1.15" fill="#fff"/>
+          <circle cx="5.1" cy="-67.6" r="1.15" fill="#fff"/>
+          <!-- Gafas -->
+          <g stroke="#2f2620" stroke-width="1.6" fill="none">
+            <rect x="-13" y="-71.5" width="13" height="10" rx="3"/>
+            <rect x="0" y="-71.5" width="13" height="10" rx="3"/>
+            <path d="M-13,-68 l-4,-1.5"/>
+            <path d="M13,-68 l4,-1.5"/>
+          </g>
+          <!-- Bocas reactivas -->
+          <path id="ja-mouth-closed" d="M-4.2,-57.4 q4.2,4.4 8.4,0" stroke="#2b201a" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <g id="ja-mouth-open" style="display:none;">
+            <path d="M-4.5,-58 q4.5,8 9,0 q-4.5,2 -9,0 z" fill="#3a0b0b" stroke="#2b201a" stroke-width="1.6"/>
+            <path d="M-2.5,-53.5 q2.5,2.5 5,0 z" fill="#e11d48"/>
+            <path d="M-3,-57.8 h6" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <iframe id="camera-iframe"
+      src=""
+      allow="autoplay; camera; microphone"
+      allowtransparency="true"
+      loading="eager"
+      title="Cámara en Directo"></iframe>
+  </div>
+
+  <!-- Script bundle de la oficina 3D -->
+  <script src="/office-3d.js?v=a646a9b998"></script>
+
+  <!-- Lógica interactiva: Paleta de colores, Twitch IRC, adopción y fondo transparente -->
+  <script type="module">
+    import { parsearComandoChat, parsearIrcTwitch, AGENTES_OFICINA, filtrarMensajeDuranteVotacion } from '/js/tts-fuentes.js?v=20260926-2040';
+
+    const PALETAS = {
+      apps: { primario: '#5ecef5', secundario: '#00467b', oscuro: '#030a16' },
+      musica: { primario: '#ff1493', secundario: '#e91e63', oscuro: '#260519' },
+      arte: { primario: '#f5cba7', secundario: '#3e2723', oscuro: '#1a0f0b' },
+      andando: { primario: '#00e676', secundario: '#00c853', oscuro: '#0a3d1c' },
+      charlando: { primario: '#e8955e', secundario: '#b46734', oscuro: '#1c1208' },
+    };
+
+    const AGENTS_INFO = [
+      { id: 'ja', name: 'Javier', color: '#e91916' },
+      { id: 'ge', name: 'Gemini', color: '#1a73e8' },
+      { id: 'cl', name: 'Claude', color: '#d97706' },
+      { id: 'pi', name: 'Pi', color: '#0d9488' },
+      { id: 'co', name: 'Codex', color: '#10b981' },
+      { id: 'om', name: 'Ollama', color: '#8b5cf6' },
+      { id: 'gr', name: 'Groq', color: '#f97316' },
+      { id: 'op', name: 'OpenAI', color: '#06b6d4' },
+      { id: 'ex', name: 'Externo', color: '#ec4899' },
+      { id: 'be', name: 'Vigía', color: '#64748b' },
+    ];
+
+    const bodyEl = document.getElementById('page-body');
+    const hud = document.getElementById('directo-hud');
+    const hudHeader = document.getElementById('hud-header');
+    const hudBtnToggle = document.getElementById('hud-btn-toggle');
+    const hudAvatarsGrid = document.getElementById('hud-avatars-grid');
+    const obsAvatarStrip = document.getElementById('obs-avatar-strip');
+    const obsContext = document.getElementById('obs-context');
+    const CLAVE_CONTEXTO_DIRECTO = 'erbolamm-directo-contexto';
+    function fijarContextoDirecto(texto) {
+      const limpio = String(texto || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+      if (obsContext) obsContext.textContent = limpio;
+      try {
+        if (limpio) localStorage.setItem(CLAVE_CONTEXTO_DIRECTO, limpio);
+        else localStorage.removeItem(CLAVE_CONTEXTO_DIRECTO);
+      } catch (_) {}
+    }
+    try { fijarContextoDirecto(localStorage.getItem(CLAVE_CONTEXTO_DIRECTO)); } catch (_) {}
+    const hudConnectionStatus = document.getElementById('hud-connection-status');
+    const btnToggleBg = document.getElementById('btn-toggle-transparency');
+    const labelBgMode = document.getElementById('label-bg-mode');
+    const rowPalettes = document.getElementById('row-palettes');
+    const paletteButtons = document.querySelectorAll('.palette-btn');
+
+    // ─── Gestión de Fondo Transparente para OBS ──────────────────────
+    const params = new URLSearchParams(window.location.search);
+    const initialTransparent = params.get('transparente') === '1' || params.get('transparent') === '1' || params.get('fondo') === '0';
+    let isTransparent = initialTransparent || localStorage.getItem('erbolamm-directo-transparent') === '1';
+
+    function setTransparency(transparent) {
+      isTransparent = transparent;
+      bodyEl.classList.toggle('transparent-bg', isTransparent);
+      labelBgMode.textContent = isTransparent ? 'Transparente (OBS)' : 'Animado';
+      rowPalettes.style.display = isTransparent ? 'none' : 'flex';
+      try { localStorage.setItem('erbolamm-directo-transparent', isTransparent ? '1' : '0'); } catch (_) {}
+    }
+    setTransparency(isTransparent);
+    // OBS mode comes only from the URL: the saved toggle must not hide controls in the normal view.
+    bodyEl.classList.toggle('obs-overlay', initialTransparent);
+
+    btnToggleBg.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setTransparency(!isTransparent);
+    });
+
+    // ─── Gestión de Modo Claro / Oscuro (!claro, !oscuro) ───────────
+    const btnToggleThemeMode = document.getElementById('btn-toggle-theme-mode');
+    const labelThemeMode = document.getElementById('label-theme-mode');
+
+    const CATEGORIA_API = window.location.protocol === 'https:' || window.location.port === '8790'
+      ? '/api/categoria'
+      : (window.location.hostname === 'directo.apliarte.com' ? 'https://directo.apliarte.com/api/categoria' : 'http://127.0.0.1:8790/api/categoria');
+
+    const initialThemeParam = (params.get('modo') || params.get('theme') || '').toLowerCase();
+    let temaModoActual = (initialThemeParam === 'claro' || initialThemeParam === 'light' || initialThemeParam === 'dia')
+      ? 'light'
+      : (localStorage.getItem('erbolamm-directo-theme-mode') || 'dark');
+
+    function cambiarModoTema(modo, anunciar = false, sincronizar = true) {
+      const normalizado = (modo === 'light' || modo === 'claro' || modo === 'dia' || modo === 'día') ? 'light' : 'dark';
+      temaModoActual = normalizado;
+      document.documentElement.dataset.theme = normalizado;
+      document.documentElement.setAttribute('data-theme', normalizado);
+      if (labelThemeMode) {
+        labelThemeMode.textContent = normalizado === 'light' ? '☀️ Claro' : '🌙 Oscuro';
+      }
+      try { localStorage.setItem('erbolamm-directo-theme-mode', normalizado); } catch (_) {}
+
+      if (sincronizar) {
+        fetch(CATEGORIA_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ modo: normalizado }),
+        }).catch(() => {});
+      }
+
+      if (anunciar && window.Oficina3D?.runtime) {
+        const texto = normalizado === 'light'
+          ? '¡Ambiente cambiado a Modo Claro ☀️!'
+          : '¡Ambiente cambiado a Modo Oscuro 🌙!';
+        window.Oficina3D.runtime.say('ja', texto, performance.now());
+        window.Oficina3D.focusAgent?.('ja', 5000);
+      }
+    }
+    cambiarModoTema(temaModoActual, false, false);
+
+    if (btnToggleThemeMode) {
+      btnToggleThemeMode.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const siguiente = temaModoActual === 'light' ? 'dark' : 'light';
+        cambiarModoTema(siguiente, true, true);
+      });
+    }
+
+    // ─── Paleta Dinámica de Colores ──────────────────────────────────
+    let categoriaActual = 'apps';
+
+    function aplicarPaleta(cat) {
+      const p = PALETAS[cat];
+      if (!p) return;
+      categoriaActual = cat;
+      const rootStyle = document.documentElement.style;
+      rootStyle.setProperty('--color-primary', p.primario);
+      rootStyle.setProperty('--color-secondary', p.secundario);
+      rootStyle.setProperty('--color-dark', p.oscuro);
+
+      paletteButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.cat === cat);
+      });
+
+      document.querySelectorAll('.fondo-tematico').forEach(el => {
+        el.classList.toggle('activa', el.id === `fondo-${cat}`);
+      });
+    }
+    aplicarPaleta(categoriaActual);
+
+    async function cambiarCategoria(cat) {
+      if (!PALETAS[cat]) return;
+      aplicarPaleta(cat);
+      // Persistir en backend si está disponible
+      try {
+        await fetch(CATEGORIA_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ categoria: cat }),
+        });
+      } catch (_) {}
+    }
+
+    paletteButtons.forEach(btn => {
+      btn.addEventListener('click', () => cambiarCategoria(btn.dataset.cat));
+    });
+
+    // Polling de /api/categoria para sincronizarse con OBS u otros paneles
+    async function syncCategoria() {
+      try {
+        const res = await fetch(CATEGORIA_API, { cache: 'no-store' });
+        if (res && res.ok) {
+          const data = await res.json();
+          if (data.categoria && data.categoria !== categoriaActual) {
+            aplicarPaleta(data.categoria);
+          }
+          if (data.modo && data.modo !== temaModoActual) {
+            cambiarModoTema(data.modo, false, false);
+          }
+        }
+      } catch (_) {}
+    }
+    syncCategoria();
+    setInterval(syncCategoria, 4000);
+
+    // ─── Contador de SMS privados recibidos ──────────────────────────
+    const hudSmsBadge = document.getElementById('hud-sms-badge');
+    const hudSmsCount = document.getElementById('hud-sms-count');
+    let totalSmsCount = 0;
+
+    async function syncSmsCount() {
+      try {
+        const res = await fetch('/api/directo/sms?_t=' + Date.now(), { cache: 'no-store' });
+        if (res && res.ok) {
+          const data = await res.json();
+          const nuevoTotal = data.total ?? (Array.isArray(data.mensajes) ? data.mensajes.length : 0);
+          if (hudSmsCount) hudSmsCount.textContent = String(nuevoTotal);
+          if (nuevoTotal > totalSmsCount && hudSmsBadge) {
+            hudSmsBadge.classList.remove('pulse');
+            void hudSmsBadge.offsetWidth;
+            hudSmsBadge.classList.add('pulse');
+          }
+          totalSmsCount = nuevoTotal;
+        }
+      } catch (_) {}
+    }
+    syncSmsCount();
+    setInterval(syncSmsCount, 3000);
+
+    // ─── Toggle Colapsar/Expandir HUD ────────────────────────────────
+    let isCollapsed = false;
+    function setCollapsed(collapsed) {
+      isCollapsed = collapsed;
+      hud.classList.toggle('collapsed', isCollapsed);
+      hudBtnToggle.textContent = isCollapsed ? '+' : '−';
+      hudBtnToggle.setAttribute('aria-label', isCollapsed ? 'Desplegar panel' : 'Plegar panel');
+      try { localStorage.setItem('erbolamm-directo-hud-collapsed', isCollapsed ? '1' : '0'); } catch (_) {}
+    }
+
+    if (localStorage.getItem('erbolamm-directo-hud-collapsed') === '1') {
+      setCollapsed(true);
+    }
+
+    hudHeader.addEventListener('click', (e) => {
+      if (e.target !== hudBtnToggle && hudBtnToggle.contains(e.target)) return;
+      setCollapsed(!isCollapsed);
+    });
+    hudBtnToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setCollapsed(!isCollapsed);
+    });
+
+    // ─── Modal Pantalla Completa de Guía de Comandos (!info) con cuenta atrás y cooldown ──
+    const modalInfo = document.getElementById('modal-info');
+    const modalInfoCountdown = document.getElementById('modal-info-countdown');
+    const btnShowInfo = document.getElementById('btn-show-info');
+    let infoTimer = null;
+    let infoSecondsLeft = 0;
+    let ultimoInfoTimestamp = 0;
+    const COOLDOWN_INFO_MS = 60000; // 1 minuto de enfriamiento anti-spam
+
+    function intentarMostrarModalInfo(segundos = 5, esManual = false) {
+      const ahora = Date.now();
+      const tiempoTranscurrido = ahora - ultimoInfoTimestamp;
+      if (!esManual && tiempoTranscurrido < COOLDOWN_INFO_MS) {
+        const segundosRestantes = Math.ceil((COOLDOWN_INFO_MS - tiempoTranscurrido) / 1000);
+        return { ok: false, segundosRestantes };
+      }
+
+      ultimoInfoTimestamp = ahora;
+      mostrarModalInfo(segundos);
+      return { ok: true };
+    }
+
+    function mostrarModalInfo(segundos = 5) {
+      if (!modalInfo) return;
+      infoSecondsLeft = segundos;
+      if (modalInfoCountdown) modalInfoCountdown.textContent = `${infoSecondsLeft}s`;
+      modalInfo.classList.add('visible');
+
+      if (infoTimer) {
+        clearInterval(infoTimer);
+      }
+      infoTimer = setInterval(() => {
+        infoSecondsLeft--;
+        if (modalInfoCountdown) modalInfoCountdown.textContent = `${infoSecondsLeft}s`;
+        if (infoSecondsLeft <= 0) {
+          clearInterval(infoTimer);
+          infoTimer = null;
+          modalInfo.classList.remove('visible');
+        }
+      }, 1000);
+    }
+
+    if (btnShowInfo) {
+      btnShowInfo.addEventListener('click', (e) => {
+        e.stopPropagation();
+        intentarMostrarModalInfo(5, true);
+      });
+    }
+
+    if (modalInfo) {
+      modalInfo.addEventListener('click', (e) => {
+        if (e.target === modalInfo) {
+          if (infoTimer) { clearInterval(infoTimer); infoTimer = null; }
+          modalInfo.classList.remove('visible');
+        }
+      });
+    }
+
+    // ─── Renderizado de Avatares en el HUD ────────────────────────────
+    // Adoptions persist in this page's localStorage so an OBS cache refresh or a
+    // server restart does not wipe viewers' avatars (seen live on 2026-09-26).
+    // Timers of a mixed WASD route still walking, per avatar, so !r or a new
+    // move can cancel the remaining steps.
+    const rutasPendientes = new Map();
+    function cancelarRutaPendiente(agente) {
+      for (const id of rutasPendientes.get(agente) || []) clearTimeout(id);
+      rutasPendientes.delete(agente);
+    }
+    const CLAVE_DUENOS_AVATAR = 'erbolamm-directo-avatar-owners';
+    function cargarDuenosAvatar() {
+      try {
+        const guardado = JSON.parse(localStorage.getItem(CLAVE_DUENOS_AVATAR) || '{}');
+        const limpio = {};
+        if (guardado && typeof guardado === 'object') {
+          for (const [agente, usuario] of Object.entries(guardado)) {
+            if (typeof agente === 'string' && typeof usuario === 'string' && usuario.trim()) {
+              limpio[agente] = usuario;
+            }
+          }
+        }
+        return limpio;
+      } catch (_) {
+        return {};
+      }
+    }
+    function guardarDuenosAvatar(duenos) {
+      try { localStorage.setItem(CLAVE_DUENOS_AVATAR, JSON.stringify(duenos)); } catch (_) {}
+    }
+    const avatarOwners = new Proxy({ ...cargarDuenosAvatar(), ja: 'apliarte' }, {
+      set(destino, agente, usuario) {
+        if (agente !== 'ja' && usuario) {
+          const uLower = String(usuario).toLowerCase();
+          for (const [aId, u] of Object.entries(destino)) {
+            if (aId !== 'ja' && aId !== agente && String(u).toLowerCase() === uLower) {
+              delete destino[aId];
+            }
+          }
+        }
+        destino[agente] = usuario;
+        guardarDuenosAvatar(destino);
+        return true;
+      },
+      deleteProperty(destino, agente) {
+        delete destino[agente];
+        guardarDuenosAvatar(destino);
+        // On the !damas board a released avatar goes back to its desk.
+        if (window.Oficina3D?.isBoard?.()) window.Oficina3D.resetAvatar?.(agente);
+        return true;
+      },
+    });
+    const avatarTiers = { ja: 3 };
+
+    // Avatar controlled by a chat user: Javier drives 'ja', viewers their adopted one.
+    function avatarDeUsuario(user, isJavier) {
+      if (isJavier) return 'ja';
+      const lower = String(user || '').toLowerCase();
+      for (const [aId, u] of Object.entries(avatarOwners)) {
+        if (String(u).toLowerCase() === lower) return aId;
+      }
+      return null;
+    }
+
+    let renderAvatarsScheduled = false;
+    function renderAvatarsGrid(force = false) {
+      if (!force && typeof requestAnimationFrame === 'function') {
+        if (renderAvatarsScheduled) return;
+        renderAvatarsScheduled = true;
+        requestAnimationFrame(() => {
+          renderAvatarsScheduled = false;
+          renderAvatarsGridActual();
+        });
+        return;
+      }
+      renderAvatarsGridActual();
+    }
+
+    function renderAvatarsGridActual() {
+      if (!hudAvatarsGrid) return;
+      hudAvatarsGrid.innerHTML = AGENTS_INFO.map(a => {
+        const owner = avatarOwners[a.id];
+        const tier = avatarTiers[a.id] || 1;
+        const star = tier >= 2 ? ' ⭐' : '';
+        return `
+          <div class="hud-avatar-chip">
+            <div class="hud-avatar-header">
+              <span class="hud-avatar-dot" style="background:${a.color}"></span>
+              <span>!${a.id}</span>
+            </div>
+            <div class="hud-avatar-owner ${owner ? '' : 'libre'}" title="${owner ? `@${owner}${star}` : 'Libre para adoptar'}">
+              ${owner ? `@${owner}${star}` : 'Libre'}
+            </div>
+          </div>
+        `;
+      }).join('');
+      if (obsAvatarStrip) {
+        obsAvatarStrip.innerHTML = AGENTS_INFO.map(a => {
+          const owner = avatarOwners[a.id];
+          const tier = avatarTiers[a.id] || 1;
+          const star = tier >= 2 ? ' ⭐' : '';
+          return `
+            <div class="hud-avatar-chip">
+              <div class="hud-avatar-header">
+                <span class="hud-avatar-dot" style="background:${a.color}"></span>
+                <span>!${a.id}</span>
+              </div>
+              <div class="hud-avatar-owner ${owner ? '' : 'libre'}">${owner ? `@${owner}${star}` : 'Libre'}</div>
+            </div>
+          `;
+        }).join('');
+      }
+      syncAdoptedViewers();
+    }
+
+    function adoptedViewers() {
+      return Object.entries(avatarOwners)
+        .filter(([id, u]) => id !== 'ja' && u && !['apliarte', 'erbolamm'].includes(String(u).toLowerCase()))
+        .map(([, u]) => u);
+    }
+
+    function syncAdoptedViewers() {
+      window.Oficina3D?.runtime?.setAdoptedViewers?.(adoptedViewers());
+    }
+    renderAvatarsGrid(true);
+
+    // Sincronización periódica con /api/directo/comando (dueños, modo cámara y cola de comandos)
+    let ultimoSeqComando = -1;
+    const ultimasAdopcionesLocales = new Map();
+    async function syncServerOwners() {
+      try {
+        const res = await fetch(`/api/directo/comando?desde=${ultimoSeqComando}`, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.duenos) {
+            // El servidor es la fuente de verdad. Solo en el arranque inicial si el servidor está vacío,
+            // se pueden repoblar las adopciones locales previas para !traidor.
+            if (ultimoSeqComando === -1 && Object.keys(data.duenos).length === 0) {
+              for (const [agente, usuario] of Object.entries(avatarOwners)) {
+                if (agente === 'ja' || !usuario) continue;
+                fetch('/api/directo/comando', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ comando: 'adoptar', agente, usuario }),
+                }).catch(() => {});
+              }
+            } else {
+              const ahora = Date.now();
+              for (const aId of Object.keys(avatarOwners)) {
+                if (aId !== 'ja' && !data.duenos[aId] && (ahora - (ultimasAdopcionesLocales.get(aId) || 0) > 4000)) {
+                  delete avatarOwners[aId];
+                }
+              }
+              for (const [agente, usuario] of Object.entries(data.duenos)) {
+                if (agente !== 'ja' && usuario) {
+                  avatarOwners[agente] = usuario;
+                }
+              }
+            }
+            avatarOwners.ja = 'apliarte';
+            renderAvatarsGrid();
+          }
+          if (data.modoCamara && typeof setModoCamara === 'function') {
+            setModoCamara(data.modoCamara);
+          }
+          if (data.seq !== undefined) {
+            if (ultimoSeqComando === -1) {
+              ultimoSeqComando = data.seq; // Primera sincronización: alinear cursor
+            } else if (data.seq > ultimoSeqComando) {
+              ultimoSeqComando = data.seq;
+            }
+          }
+          if (Array.isArray(data.comandos)) {
+            for (const ev of data.comandos) {
+              const cmd = ev.cmd;
+              if (!cmd) continue;
+              if (cmd.comando && cmd.comando !== 'adoptar' && cmd.comando !== 'liberar') {
+                ejecutarComandoLocal(cmd.comando, cmd.usuario || 'ja');
+              }
+              if (cmd.modo && typeof setModoCamara === 'function') {
+                setModoCamara(cmd.modo);
+              }
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    syncServerOwners();
+    setInterval(syncServerOwners, 1500);
+
+    // ─── Voces CVTalk (!speak -config <lang> <slot>) y TTS en Directo ─
+    const userVoiceConfigs = new Map();
+    async function syncVoces() {
+      try {
+        const res = await fetch('/api/panel/voces', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.voces) {
+            for (const [u, v] of Object.entries(data.voces)) {
+              if (u && v) userVoiceConfigs.set(u.toLowerCase(), v);
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    syncVoces();
+    setInterval(syncVoces, 5000);
+
+    // ─── TTS de Audio para Avatares Adoptados en el Directo ─────────
+    const ttsColaAudio = [];
+    let ttsAudioEnReproduccion = false;
+    const MAX_TTS_COLA = 8;
+
+    // Velocidades y cadencia diferenciadas por avatar para dotarles de personalidad sonora
+    const VELOCIDADES_AVATAR = {
+      ja: 1.0,   // Javier (normal)
+      ge: 1.05,  // Gemini (ligero)
+      cl: 1.15,  // Claude (ágil y claro)
+      pi: 1.25,  // Pi (rápido y agudo)
+      co: 0.9,   // Codex (técnico y pausado)
+      om: 0.82,  // Ollama (pesado y grave)
+      gr: 0.88,  // Groq (moderado)
+      op: 1.1,   // OpenAI (vivo)
+      ex: 1.2,   // Externo (rápido)
+      be: 0.95   // Vigía (neutral)
+    };
+
+    function procesarSiguienteTts() {
+      if (ttsAudioEnReproduccion || ttsColaAudio.length === 0) return;
+      const item = ttsColaAudio.shift();
+      ttsAudioEnReproduccion = true;
+
+      // Limpieza de texto: descartar URLs, caracteres de control y emojis para una lectura limpia
+      const textoLimpio = String(item.texto || '')
+        .replace(/https?:\/\/\S+/gi, '')
+        .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+        .replace(/[<>{}\\]/g, ' ')
+        .trim();
+
+      if (!textoLimpio) {
+        ttsAudioEnReproduccion = false;
+        procesarSiguienteTts();
+        return;
+      }
+
+      // Determinar dueño del avatar y su voz personalizada CVTalk
+      const rawDuenio = (item.agente === 'ja' || item.usuario === 'ja' || item.usuario === 'apliarte') ? 'apliarte' : (item.usuario || avatarOwners[item.agente] || null);
+      const pref = rawDuenio ? userVoiceConfigs.get(rawDuenio.toLowerCase()) : null;
+      const lang = pref?.lang || 'es';
+      const slot = pref?.slot || 1;
+
+      const textoAcotado = textoLimpio.slice(0, 140);
+      const url = `/api/tts?tl=${encodeURIComponent(lang)}&q=${encodeURIComponent(textoAcotado)}`;
+
+      let audio = null;
+      let watchdogTimer = null;
+      let terminado = false;
+      const finalizar = () => {
+        if (terminado) return;
+        terminado = true;
+        if (watchdogTimer) { clearTimeout(watchdogTimer); watchdogTimer = null; }
+        if (audio) {
+          audio.onended = null;
+          audio.onerror = null;
+          try { audio.pause(); } catch (_) {}
+          audio.src = '';
+          audio = null;
+        }
+        ttsAudioEnReproduccion = false;
+        setTimeout(procesarSiguienteTts, 150);
+      };
+
+      try {
+        audio = new Audio(url);
+        audio.volume = 0.95;
+        const baseRate = VELOCIDADES_AVATAR[item.agente] || 1.0;
+
+        // Desactivar preservesPitch para que la variación de velocidad altere la frecuencia/tono real (pitch)
+        audio.preservesPitch = false;
+        audio.mozPreservesPitch = false;
+        audio.webkitPreservesPitch = false;
+
+        // Slot 1: Tono agudo / femenino (+14% velocidad con pitch elevado)
+        // Slot 2: Tono grave / masculino (-14% velocidad con pitch profundo)
+        const factorTono = (slot === 2) ? 0.86 : 1.15;
+        audio.playbackRate = Math.max(0.6, Math.min(1.8, baseRate * factorTono));
+
+        audio.onended = finalizar;
+        audio.onerror = () => {
+          console.warn('[TTS] Error al cargar audio de /api/tts para:', item.agente);
+          finalizar();
+        };
+
+        // Timeout preventivo adaptativo: 2.5s base + 60ms por carácter, máx 8s (sin atascos)
+        const watchdogMs = Math.min(8000, Math.max(2500, 1000 + textoAcotado.length * 60));
+        watchdogTimer = setTimeout(finalizar, watchdogMs);
+
+        audio.play().catch((err) => {
+          console.warn('[TTS] Error en audio.play():', err);
+          finalizar();
+        });
+      } catch (_) {
+        finalizar();
+      }
+    }
+
+    let ultimoAudioHablado = { texto: '', agente: '', ts: 0 };
+
+    function hablarAvatar(agente, texto, usuario = null, tier = 1) {
+      if (!texto || !agente) return;
+      const ahora = Date.now();
+      const textoNorm = String(texto).trim().toLowerCase();
+
+      // Deduplicación en cola y recién reproducido (<4s) para el mismo avatar
+      if (ultimoAudioHablado.agente === agente && ultimoAudioHablado.texto === textoNorm && (ahora - ultimoAudioHablado.ts) < 4000) {
+        console.log('[TTS] Audio idéntico reproducido recientemente (<4s), descartando duplicado:', texto);
+        return;
+      }
+
+      if (ttsColaAudio.some(item => item.agente === agente && String(item.texto).trim().toLowerCase() === textoNorm)) {
+        console.log('[TTS] Audio idéntico ya en cola para', agente, ', descartando duplicado');
+        return;
+      }
+
+      // Anti-monopolio por avatar: máximo 2 audios en cola por avatar si es espectador regular
+      const esPrioritario = tier >= 2 || agente === 'ja' || usuario === 'apliarte' || usuario === 'erbolamm';
+      if (!esPrioritario && ttsColaAudio.filter(it => it.agente === agente).length >= 2) {
+        return;
+      }
+
+      // Límite estricto de cola para raids masivos (máx 8 items)
+      if (ttsColaAudio.length >= MAX_TTS_COLA) {
+        if (!esPrioritario) {
+          // Descartar si el nuevo no es prioritario y la cola ya está saturada
+          return;
+        }
+        // Si el nuevo es prioritario, podar el primer mensaje regular no prioritario
+        const idxDescartable = ttsColaAudio.findIndex(it => it.agente !== 'ja' && (it.tier || 1) < 2);
+        if (idxDescartable !== -1) {
+          ttsColaAudio.splice(idxDescartable, 1);
+        } else {
+          // Si todos son prioritarios, descartar el más antiguo que no sea Javier
+          const idxOldest = ttsColaAudio.findIndex(it => it.agente !== 'ja');
+          if (idxOldest !== -1) ttsColaAudio.splice(idxOldest, 1);
+          else ttsColaAudio.shift();
+        }
+      }
+
+      ultimoAudioHablado = { texto: textoNorm, agente, ts: ahora };
+      ttsColaAudio.push({ agente, texto, usuario, tier });
+      procesarSiguienteTts();
+    }
+
+    let ultimoFocoCamara = 0;
+    function safeFocusAgent(agente, duracionMs = 5000, forzar = false) {
+      if (!agente) return;
+      const ahora = Date.now();
+      if (!forzar && (ahora - ultimoFocoCamara) < 3000) {
+        return;
+      }
+      ultimoFocoCamara = ahora;
+      window.Oficina3D?.focusAgent?.(agente, duracionMs);
+    }
+
+    const recientesTextoChat = new Map();
+
+    function normalizarUsuarioChat(u) {
+      if (!u) return 'ja';
+      const s = String(u).trim().toLowerCase();
+      if (s === 'ja' || s === 'apliarte' || s === 'erbolamm') return 'ja';
+      return s;
+    }
+
+    function procesarTextoChat(text, user = 'ja', tags = {}) {
+      if (!text) return;
+      const trimmed = text.trim();
+      if (trimmed.startsWith('/') && !trimmed.startsWith('/me')) return;
+
+      // Deduplicación temporal (4s) normalizando usuario 'ja' / 'apliarte'
+      const canonUser = normalizarUsuarioChat(user);
+      const ahora = Date.now();
+      const dedupKey = `${canonUser}:${trimmed.toLowerCase()}`;
+      const ultimoTs = recientesTextoChat.get(dedupKey);
+      if (ultimoTs && (ahora - ultimoTs) < 4000) {
+        console.log('[procesarTextoChat] Mensaje duplicado ignorado (<4s):', dedupKey);
+        return;
+      }
+      recientesTextoChat.set(dedupKey, ahora);
+
+      // During the traitor game only players (and Javier) are heard, and a
+      // player's number during the vote is sent to the server as their vote.
+      try {
+        const fase = hubServerState?.fase || '';
+        if (fase.startsWith('traidor') || fase === 'muerte_subita') {
+          const jugadores = (hubServerState.duenosVivos || []).map((u) => String(u).toLowerCase());
+          const esJugador = jugadores.includes(String(user).toLowerCase());
+          if (!esJugador && !esJavier(user)) return;
+          if (esJugador && (fase === 'traidor_votacion' || fase === 'muerte_subita')) {
+            const voto = filtrarMensajeDuranteVotacion(trimmed);
+            if (voto) {
+              fetch('/api/directo/juego/voto', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario: user, voto: String(voto) }),
+              }).catch(() => {});
+            }
+          }
+        }
+      } catch (_) {}
+      if (recientesTextoChat.size > 100) {
+        for (const [k, t] of recientesTextoChat.entries()) {
+          if (ahora - t > 8000) recientesTextoChat.delete(k);
+        }
+        if (recientesTextoChat.size > 300) {
+          const claves = Array.from(recientesTextoChat.keys()).slice(0, recientesTextoChat.size - 250);
+          for (const k of claves) recientesTextoChat.delete(k);
+        }
+      }
+          const cmd = parsearComandoChat(text);
+          const office = window.Oficina3D;
+          const isJavier = Boolean(
+            (tags?.badges && String(tags.badges).includes('broadcaster')) ||
+            (user && (user.toLowerCase() === 'apliarte' || user.toLowerCase() === 'erbolamm')) ||
+            user.toLowerCase() === 'apliarte' ||
+            user.toLowerCase() === 'erbolamm' ||
+            user.toLowerCase() === 'ja'
+          );
+
+          const badgesStr = String(tags?.badges || '');
+          const isBroadcaster = isJavier || badgesStr.includes('broadcaster');
+          const isSub = badgesStr.includes('subscriber') || badgesStr.includes('founder');
+          const isVip = badgesStr.includes('vip');
+          const userTier = isBroadcaster ? 3 : (isSub || isVip ? 2 : 1);
+
+          const mSpeak = text.match(/^!speak\s+-config\s+([a-z]{2}(?:-[a-z]{2,4})?)\s+([12])\b/i);
+          if (mSpeak) {
+            const lang = mSpeak[1];
+            const slot = parseInt(mSpeak[2], 10);
+            const userKey = user.toLowerCase();
+            userVoiceConfigs.set(userKey, { lang, slot });
+            if (userKey === 'ja' || userKey === 'apliarte') {
+              userVoiceConfigs.set('ja', { lang, slot });
+              userVoiceConfigs.set('apliarte', { lang, slot });
+            }
+            try {
+              fetch('/api/panel/voces', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accion: 'guardar', usuario: user, voz: { lang, slot } })
+              }).catch(() => {});
+            } catch (_) {}
+            let spk = 'ja';
+            for (const [aId, u] of Object.entries(avatarOwners)) {
+              if (u.toLowerCase() === userKey) { spk = aId; break; }
+            }
+            if (office?.runtime) {
+              office.runtime.say(spk, `🎙️ ¡@${user} configuró su voz a ${lang} (Voz ${slot})!`, performance.now());
+              safeFocusAgent(spk, 5000, true);
+            }
+            hablarAvatar(spk, `Voz configurada`, user, userTier);
+            return;
+          }
+
+          if (manejarChatJuego(text, user, cmd, isJavier)) return;
+
+          // !contexto <texto>: sets the stream topic banner (Javier only); bare !contexto clears it.
+          const mContexto = text.trim().match(/^!contexto(?:\s+(.*))?$/i);
+          if (mContexto) {
+            if (!isJavier) return;
+            fijarContextoDirecto(mContexto[1] || '');
+            return;
+          }
+
+          // !3d / !2d: switch the plano view without buttons (Javier only).
+          const mVista = text.trim().match(/^!(3d|2d)$/i);
+          if (mVista) {
+            if (!isJavier) return;
+            const vista = mVista[1].toLowerCase() === '2d' ? 'diorama' : '3d';
+            window.dispatchEvent(new CustomEvent('erbolamm:set-view', { detail: vista }));
+            if (vista === '3d') window.Oficina3D?.setBoard?.(false);
+            return;
+          }
+
+          // !damas: toggles the 12x8 board over the whole office floor (Javier only).
+          if (/^!damas$/i.test(text.trim())) {
+            if (!isJavier) return;
+            office?.setBoard?.(!office?.isBoard?.());
+            return;
+          }
+
+          // Board squares (!a1 … !l8, chess-style): moves the writer's avatar there.
+          const mCasilla = text.trim().match(/^!([a-l][1-8])$/i);
+          if (mCasilla) {
+            if (!office?.isBoard?.()) return;
+            const avatar = avatarDeUsuario(user, isJavier);
+            if (avatar) {
+              cancelarRutaPendiente(avatar);
+              office?.irACasilla?.(avatar, mCasilla[1].toLowerCase());
+            }
+            return;
+          }
+
+          if (isJavier && text.trim().toLowerCase().startsWith('!cam')) {
+            const arg = text.trim().toLowerCase().split(/\s+/)[1];
+            if (arg === 'off' || arg === 'ocultar' || arg === 'quitar' || arg === 'monigote') {
+              setModoCamara('monigote');
+              office?.runtime?.say('ja', '👤 Modo Monigote activo.', performance.now());
+            } else if (arg === 'on' || arg === 'mostrar' || arg === 'camara') {
+              setModoCamara('camara');
+              office?.runtime?.say('ja', '📹 Cámara IRL visible.', performance.now());
+            } else {
+              const vis = toggleCamara();
+              office?.runtime?.say('ja', vis ? '📹 Cámara IRL visible.' : '👤 Modo Monigote activo.', performance.now());
+            }
+            return;
+          }
+
+          if (cmd) {
+            if (cmd.comando === 'adoptar') {
+              if (cmd.agente === 'ja') {
+                if (isJavier && (cmd.texto || '').trim()) {
+                  if (office?.runtime) {
+                    office.runtime.say('ja', (cmd.texto || '').trim(), performance.now());
+                    office.focusAgent?.('ja', 5000);
+                  }
+                } else if (office?.runtime) {
+                  office.runtime.say('ja', 'Javier es el jefe y su avatar es intocable.', performance.now());
+                  office.focusAgent?.('ja', 5000);
+                }
+              } else if (cmd.agente) {
+                const currentOwner = avatarOwners[cmd.agente];
+                const currentTier = avatarTiers[cmd.agente] || 1;
+                if (currentOwner) {
+                  if (currentOwner.toLowerCase() === user.toLowerCase()) {
+                    if (office?.runtime) {
+                      office.runtime.say(cmd.agente, `¡@${user}, ya soy tu avatar!`, performance.now());
+                      office.focusAgent?.(cmd.agente, 5000);
+                    }
+                  } else if (userTier > currentTier) {
+                    // Suscriptor/VIP o Javier desplaza a un usuario sin suscripción
+                    const prevOwner = currentOwner;
+                    for (const [aId, u] of Object.entries(avatarOwners)) {
+                      if (aId !== 'ja' && u.toLowerCase() === user.toLowerCase()) {
+                        delete avatarOwners[aId];
+                        delete avatarTiers[aId];
+                      }
+                    }
+                    avatarOwners[cmd.agente] = user;
+                    avatarTiers[cmd.agente] = userTier;
+                    ultimasAdopcionesLocales.set(cmd.agente, Date.now());
+                    renderAvatarsGrid();
+                    fetch('/api/directo/comando', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ comando: 'adoptar', agente: cmd.agente, usuario: user }),
+                    }).catch(() => {});
+                    if (office?.runtime) {
+                      const rol = isBroadcaster ? 'Javier' : (isSub ? 'suscriptor' : 'VIP');
+                      const aviso = `⭐ ¡@${user} es ${rol} y adopta a ${cmd.agente}! Lo siento @${prevOwner}, has quedado libre.`;
+                      office.runtime.say(cmd.agente, aviso, performance.now());
+                      office.focusAgent?.(cmd.agente, 6000);
+                    }
+                  } else {
+                    if (office?.runtime) {
+                      const aviso = currentTier >= 2
+                        ? `¡Lo siento @${user}! @${currentOwner} también es suscriptor/VIP y ya me ha adoptado.`
+                        : `¡Lo siento @${user}! Ya me ha adoptado @${currentOwner}.`;
+                      office.runtime.say(cmd.agente, aviso, performance.now());
+                      office.focusAgent?.(cmd.agente, 5000);
+                    }
+                  }
+                } else {
+                  for (const [aId, u] of Object.entries(avatarOwners)) {
+                    if (aId !== 'ja' && u.toLowerCase() === user.toLowerCase()) {
+                      delete avatarOwners[aId];
+                      delete avatarTiers[aId];
+                    }
+                  }
+                  avatarOwners[cmd.agente] = user;
+                  avatarTiers[cmd.agente] = userTier;
+                  ultimasAdopcionesLocales.set(cmd.agente, Date.now());
+                  renderAvatarsGrid();
+                  fetch('/api/directo/comando', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comando: 'adoptar', agente: cmd.agente, usuario: user }),
+                  }).catch(() => {});
+                  if (office?.runtime) {
+                    const badgeTxt = userTier >= 2 ? ' ⭐' : '';
+                    office.runtime.say(cmd.agente, `¡Hola @${user}!${badgeTxt} Ahora eres mi dueño en este directo.`, performance.now());
+                    safeFocusAgent(cmd.agente, 5000, true);
+                    hablarAvatar(cmd.agente, `¡Hola ${user}! Ahora eres mi dueño en este directo.`, user, userTier);
+                  }
+                }
+              }
+            } else if (cmd.comando === 'liberar') {
+              if (isJavier && (cmd.agente === 'todos' || cmd.agente === 'all')) {
+                for (const aId of Object.keys(avatarOwners)) {
+                  if (aId !== 'ja') {
+                    delete avatarOwners[aId];
+                    delete avatarTiers[aId];
+                  }
+                }
+                ultimasAdopcionesLocales.clear();
+                renderAvatarsGrid();
+                if (office?.runtime) {
+                  office.runtime.say('ja', '📢 ¡Todos los avatares han quedado libres para adoptar!', performance.now());
+                  office.focusAgent?.('ja', 5000);
+                }
+              } else if (isJavier && cmd.agente && cmd.agente !== 'ja') {
+                const target = cmd.agente;
+                if (avatarOwners[target]) {
+                  delete avatarOwners[target];
+                  delete avatarTiers[target];
+                  ultimasAdopcionesLocales.delete(target);
+                  renderAvatarsGrid();
+                  if (office?.runtime) {
+                    office.runtime.say(target, '¡He quedado libre! ¿Quién me adopta?', performance.now());
+                    office.focusAgent?.(target, 5000);
+                  }
+                }
+              } else if (isJavier && cmd.usuarioObjetivo) {
+                const targetUser = String(cmd.usuarioObjetivo).toLowerCase();
+                let freedAgent = null;
+                for (const [aId, u] of Object.entries(avatarOwners)) {
+                  if (aId !== 'ja' && u.toLowerCase() === targetUser) {
+                    freedAgent = aId;
+                    delete avatarOwners[aId];
+                    delete avatarTiers[aId];
+                    ultimasAdopcionesLocales.delete(aId);
+                    break;
+                  }
+                }
+                if (freedAgent) {
+                  renderAvatarsGrid();
+                  if (office?.runtime) {
+                    office.runtime.say(freedAgent, '¡He quedado libre! ¿Quién me adopta?', performance.now());
+                    office.focusAgent?.(freedAgent, 5000);
+                  }
+                }
+              } else {
+                let freedAgent = null;
+                for (const [aId, u] of Object.entries(avatarOwners)) {
+                  if (aId !== 'ja' && u.toLowerCase() === user.toLowerCase()) {
+                    freedAgent = aId;
+                    delete avatarOwners[aId];
+                    delete avatarTiers[aId];
+                    ultimasAdopcionesLocales.delete(aId);
+                    break;
+                  }
+                }
+                if (freedAgent) {
+                  renderAvatarsGrid();
+                  if (office?.runtime) {
+                    office.runtime.say(freedAgent, '¡He quedado libre! ¿Quién me adopta?', performance.now());
+                    office.focusAgent?.(freedAgent, 5000);
+                  }
+                }
+              }
+              fetch('/api/directo/comando', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  comando: 'liberar',
+                  agente: cmd.agente,
+                  usuarioObjetivo: cmd.usuarioObjetivo,
+                  usuario: user,
+                }),
+              }).catch(() => {});
+            } else if (cmd.comando === 'cafe') {
+              if (office?.traerCafe) {
+                office.traerCafe(cmd.agente || (isJavier ? 'ja' : null));
+              }
+            } else if (cmd.comando === 'sms') {
+              const smsText = (cmd.texto || '').trim();
+              let speaker = 'ja';
+              const lowerUser = user.toLowerCase();
+              for (const [aId, u] of Object.entries(avatarOwners)) {
+                if (u.toLowerCase() === lowerUser) {
+                  speaker = aId;
+                  break;
+                }
+              }
+
+              if (!smsText) {
+                if (office?.runtime) {
+                  const speech = `📩 @${user}, escribe !sms <tu mensaje> para dejar una nota privada a Javier.`;
+                  office.runtime.say(speaker, speech, performance.now());
+                  office.focusAgent?.(speaker, 5000);
+                }
+              } else {
+                try {
+                  fetch('/api/directo/sms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario: user, texto: smsText }),
+                  }).then(r => r.json()).then(() => {
+                    syncSmsCount();
+                  }).catch(() => {});
+                } catch (_) {}
+
+                if (office?.runtime) {
+                  const speech = speaker === 'ja'
+                    ? `📩 ¡Mensaje privado de @${user} guardado en mi buzón!`
+                    : `📩 ¡He guardado tu mensaje privado para Javier, @${user}!`;
+                  office.runtime.say(speaker, speech, performance.now());
+                  office.focusAgent?.(speaker, 5000);
+                }
+              }
+            } else if (cmd.comando === 'tema') {
+              if (!isJavier) {
+                if (office?.runtime) {
+                  office.runtime.say('ja', `🔒 @${user}, solo Javier puede cambiar el tema del directo.`, performance.now());
+                  office.focusAgent?.('ja', 4000);
+                }
+              } else {
+                const cat = (cmd.texto || '').trim().toLowerCase();
+                if (PALETAS[cat]) {
+                  cambiarCategoria(cat);
+                  if (office?.runtime) {
+                    const cap = cat.charAt(0).toUpperCase() + cat.slice(1);
+                    office.runtime.say('ja', `¡Cambiado tema del directo a ${cap}!`, performance.now());
+                    office.focusAgent?.('ja', 5000);
+                  }
+                } else if (office?.runtime) {
+                  office.runtime.say('ja', 'Temas disponibles: apps, musica, arte, andando, charlando.', performance.now());
+                  office.focusAgent?.('ja', 5000);
+                }
+              }
+            } else if (cmd.comando === 'tema_modo') {
+              if (!isJavier) {
+                if (office?.runtime) {
+                  office.runtime.say('ja', `🔒 @${user}, solo Javier puede cambiar entre modo claro y oscuro.`, performance.now());
+                  office.focusAgent?.('ja', 4000);
+                }
+              } else {
+                cambiarModoTema(cmd.modo, true, true);
+              }
+            } else if (cmd.comando === 'say') {
+              const targetAgent = cmd.agente || 'ja';
+              if (targetAgent === 'ja') {
+                if (!isJavier) {
+                  if (office?.runtime) {
+                    office.runtime.say('ja', `🔒 @${user}, el avatar de Javier es intocable.`, performance.now());
+                    office.focusAgent?.('ja', 4000);
+                  }
+                } else if (office?.runtime) {
+                  office.runtime.say('ja', cmd.texto, performance.now());
+                  safeFocusAgent('ja', 5000, true);
+                  hablarAvatar('ja', cmd.texto, 'ja', 3);
+                }
+              } else {
+                const currentOwner = avatarOwners[targetAgent];
+                if (isJavier || (currentOwner && currentOwner.toLowerCase() === user.toLowerCase())) {
+                  if (office?.runtime) {
+                    office.runtime.say(targetAgent, cmd.texto, performance.now());
+                    safeFocusAgent(targetAgent, 5000, isJavier);
+                    hablarAvatar(targetAgent, cmd.texto, user, userTier);
+                  }
+                } else if (office?.runtime) {
+                  const aviso = currentOwner
+                    ? `🔒 @${user}, ¡${targetAgent} pertenece a @${currentOwner}!`
+                    : `🔒 @${user}, adopta primero a ${targetAgent} con !${targetAgent}.`;
+                  office.runtime.say(targetAgent, aviso, performance.now());
+                  office.focusAgent?.(targetAgent, 4000);
+                }
+              }
+            } else if (cmd.comando === 'cam') {
+              const act = (cmd.accion || '').toLowerCase();
+              if (act === 'off' || act === 'ocultar' || act === 'hide' || act === 'monigote') {
+                setModoCamara('monigote');
+                office?.runtime?.say('ja', '👤 Modo Monigote activo.', performance.now());
+              } else if (act === 'on' || act === 'mostrar' || act === 'show' || act === 'camara') {
+                setModoCamara('camara');
+                office?.runtime?.say('ja', '📹 Cámara IRL visible.', performance.now());
+              } else {
+                const vis = toggleCamara();
+                office?.runtime?.say('ja', vis ? '📹 Cámara IRL visible.' : '👤 Modo Monigote activo.', performance.now());
+              }
+            } else if (cmd.comando === 'mover') {
+              const lowerUser = user.toLowerCase();
+              let caller = avatarDeUsuario(user, isJavier);
+              if (!caller) {
+                if (office?.runtime) {
+                  office.runtime.say('ja', `@${user}, ¡adopta primero un avatar con !co, !cl, !pi, !ge... para moverte con WASD!`, performance.now());
+                }
+              } else {
+                const STEP = 25;
+                const moverTramo = (dir, pasos) => {
+                  let dx = 0, dy = 0, facing = 1, rear = false;
+                  if (dir === 'w') { dy = -STEP * pasos; rear = true; }
+                  else if (dir === 's') { dy = STEP * pasos; rear = false; }
+                  else if (dir === 'a') { dx = -STEP * pasos; facing = -1; rear = false; }
+                  else if (dir === 'd') { dx = STEP * pasos; facing = 1; rear = false; }
+                  office?.moverAvatar?.(caller, dx, dy, facing, rear);
+                };
+                cancelarRutaPendiente(caller);
+                if (Array.isArray(cmd.ruta) && cmd.ruta.length) {
+                  // Mixed route (!wwsaaasdd…): walk it run by run so the path is visible.
+                  let espera = 0;
+                  const pendientes = [];
+                  for (const tramo of cmd.ruta) {
+                    pendientes.push(setTimeout(() => moverTramo(tramo.dir, tramo.pasos), espera));
+                    espera += 180 * tramo.pasos + 220;
+                  }
+                  rutasPendientes.set(caller, pendientes);
+                } else {
+                  moverTramo(cmd.dir, cmd.pasos || 1);
+                }
+              }
+            } else if (cmd.comando === 'salta') {
+              const lowerUser = user.toLowerCase();
+              let caller = avatarDeUsuario(user, isJavier);
+              if (!caller) {
+                if (office?.runtime) {
+                  office.runtime.say('ja', `@${user}, ¡adopta primero un avatar con !co, !cl, !pi, !ge... para saltar!`, performance.now());
+                }
+              } else {
+                office?.saltarAvatar?.(caller);
+              }
+            } else if (cmd.comando === 'reset') {
+              const lowerUser = user.toLowerCase();
+              let caller = avatarDeUsuario(user, isJavier);
+              if (caller) {
+                // Pending route steps would move the avatar again after !r.
+                cancelarRutaPendiente(caller);
+                office?.resetAvatar?.(caller);
+              }
+            } else if (cmd.comando === 'fiesta') {
+              if (!isJavier) {
+                if (office?.runtime) {
+                  office.runtime.say('ja', `🔒 @${user}, solo Javier puede iniciar la fiesta en la oficina.`, performance.now());
+                  office.focusAgent?.('ja', 4000);
+                }
+              } else {
+                office?.runtime?.fiesta(performance.now());
+              }
+            } else if (cmd.comando === 'trabajar') {
+              const lowerUser = user.toLowerCase();
+              let caller = avatarDeUsuario(user, isJavier);
+              if (office?.ejecutarTrabajar) {
+                office.ejecutarTrabajar(caller);
+              } else {
+                office?.runtime?.trabajar(performance.now(), caller);
+              }
+            } else if (cmd.comando === 'bronca') {
+              if (!isJavier) {
+                if (office?.runtime) {
+                  office.runtime.say('ja', `🔒 @${user}, solo Javier puede echar bronca en la oficina.`, performance.now());
+                  office.focusAgent?.('ja', 4000);
+                }
+              } else {
+                if (office?.ejecutarBronca) {
+                  office.ejecutarBronca();
+                } else {
+                  office?.runtime?.bronca(performance.now());
+                }
+              }
+            } else if (cmd.comando === 'beso') {
+              const lowerUser = user.toLowerCase();
+              let caller = avatarDeUsuario(user, isJavier);
+              if (!caller) {
+                if (office?.runtime) {
+                  office.runtime.say('ja', `@${user}, ¡adopta primero un avatar para mandar besos!`, performance.now());
+                }
+              } else {
+                const target = cmd.agente || 'ja';
+                const targetOwner = avatarOwners[target];
+                const targetDisplayName = targetOwner ? `@${targetOwner}` : target;
+                const kissText = `¡Muak! 💋 Un beso para ${targetDisplayName}`;
+                if (office?.ejecutarBeso) {
+                  office.ejecutarBeso(caller, target, kissText);
+                } else {
+                  office?.runtime?.beso(caller, target, performance.now(), kissText);
+                }
+              }
+            } else if (cmd.comando === 'info') {
+              const res = intentarMostrarModalInfo(5, false);
+              if (res.ok) {
+                if (office?.runtime) {
+                  office.runtime.say('ja', '📋 ¡Guía de comandos a pantalla completa (5s)!', performance.now());
+                }
+              } else {
+                if (office?.runtime) {
+                  office.runtime.say('ja', `⏳ Guía en enfriamiento: espera ${res.segundosRestantes}s para volver a pedir !info.`, performance.now());
+                }
+              }
+            } else if (office?.runtime) {
+              office.runtime.applyCommand(cmd, performance.now());
+              if (!office?.isCinematicActive?.()) {
+                const spk = office.runtime.speaker(cmd.agente);
+                safeFocusAgent(spk, 5000, false);
+              }
+            }
+          } else {
+            // Chat normal:
+            // Si el usuario es Javier, habla SIEMPRE por el avatar 'ja'.
+            // Si es otro usuario que tiene avatar adoptado, habla por ese avatar.
+            let userAgent = null;
+            const lowerUser = user.toLowerCase();
+            if (isJavier) {
+              userAgent = 'ja';
+            } else {
+              for (const [aId, u] of Object.entries(avatarOwners)) {
+                if (u.toLowerCase() === lowerUser) {
+                  userAgent = aId;
+                  break;
+                }
+              }
+            }
+            if (userAgent && office?.runtime) {
+              office.runtime.say(userAgent, text, performance.now());
+              if (!office?.isCinematicActive?.()) {
+                safeFocusAgent(userAgent, 5000, false);
+              }
+              hablarAvatar(userAgent, text, user, userTier);
+            }
+          }
+    }
+
+    function ejecutarComandoLocal(comando, usuario = 'ja') {
+      if (!comando) return;
+      procesarTextoChat(comando, usuario, { 'display-name': usuario, badges: 'broadcaster/1' });
+    }
+    window.ejecutarComandoLocal = ejecutarComandoLocal;
+
+// ─── Cliente WebSocket Anónimo a Twitch IRC ───────────────────────
+    function connectTwitchIrc() {
+      let ws = null;
+      try {
+        ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+      } catch (err) {
+        hudConnectionStatus.textContent = 'Error de conexión';
+        return;
+      }
+
+      ws.addEventListener('open', () => {
+        hudConnectionStatus.textContent = 'Conectado a Twitch';
+        ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands\r\n');
+        const nick = `justinfan${Math.floor(10000 + Math.random() * 80000)}`;
+        ws.send(`NICK ${nick}\r\n`);
+        ws.send('JOIN #apliarte\r\n');
+      });
+
+      ws.addEventListener('message', (event) => {
+        const lines = event.data.split('\r\n');
+        for (const line of lines) {
+          if (!line) continue;
+          if (line.startsWith('PING')) {
+            ws.send('PONG :tmi.twitch.tv\r\n');
+            continue;
+          }
+          const parsed = parsearIrcTwitch(line);
+          if (!parsed || parsed.comando !== 'PRIVMSG') continue;
+
+          const text = (parsed.trailing || parsed.texto || '').trim();
+          const user = parsed.tags?.['display-name'] || parsed.usuario || 'alguien';
+          if (!text) continue;
+
+          procesarTextoChat(text, user, parsed.tags);
+        }
+      });
+
+      ws.addEventListener('close', () => {
+        hudConnectionStatus.textContent = 'Reconectando...';
+        setTimeout(connectTwitchIrc, 5000);
+      });
+
+      ws.addEventListener('error', () => {
+        hudConnectionStatus.textContent = 'Error de conexión';
+      });
+    }
+
+    // ─── Control del Mini-Juego !juego / !carrera ─────────────────────
+    const gameBanner = document.getElementById('game-banner');
+    const gameBannerTitle = document.getElementById('game-banner-title');
+    const gameBannerSub = document.getElementById('game-banner-sub');
+    const gameBannerTimer = document.getElementById('game-banner-timer');
+    let gameTimerInterval = null;
+
+    window.addEventListener('erbolamm:game-start', (e) => {
+      const { countdownSec } = e.detail || {};
+      gameBanner.classList.remove('winner');
+      gameBannerTitle.textContent = '🏁 ¡!TROFEO!';
+      gameBannerSub.textContent = 'Objetivo marcado en el mapa 🏆. ¡Mueve tu avatar con WASD!';
+      let rem = countdownSec || 5;
+      gameBannerTimer.textContent = `${rem}s`;
+      gameBanner.classList.add('visible');
+
+      if (gameTimerInterval) clearInterval(gameTimerInterval);
+      gameTimerInterval = setInterval(() => {
+        rem--;
+        if (rem > 0) {
+          gameBannerTimer.textContent = `${rem}s`;
+        } else {
+          gameBannerTimer.textContent = '¡¡YA!!';
+          clearInterval(gameTimerInterval);
+          gameTimerInterval = null;
+        }
+      }, 1000);
+    });
+
+    window.addEventListener('erbolamm:game-go', () => {
+      gameBannerTitle.textContent = '🏆 ¡¡A CORRER!!';
+      gameBannerSub.textContent = '¡El primer avatar en llegar a la copa gana el !trofeo!';
+      gameBannerTimer.textContent = 'CORRE';
+    });
+
+    window.addEventListener('erbolamm:game-won', (e) => {
+      if (gameTimerInterval) { clearInterval(gameTimerInterval); gameTimerInterval = null; }
+      const { winnerId } = e.detail || {};
+      const owner = avatarOwners[winnerId];
+      const agentObj = AGENTS_INFO.find(a => a.id === winnerId);
+      const agentName = agentObj?.name || winnerId;
+      const winnerName = owner ? `@${owner} (${agentName})` : agentName;
+
+      gameBanner.classList.add('winner');
+      gameBannerTitle.textContent = '🏆 ¡¡TENEMOS GANADOR!!';
+      gameBannerSub.textContent = `¡Enhorabuena ${winnerName} por ganar el !trofeo!`;
+      gameBannerTimer.textContent = '👑';
+      gameBanner.classList.add('visible');
+
+      const office = window.Oficina3D;
+      if (office?.runtime) {
+        office.runtime.say(winnerId, `🏆 ¡¡HE GANADO EL !TROFEO!! (${owner ? '@' + owner : agentName})`, performance.now());
+        if (winnerId !== 'ja') {
+          office.runtime.say('ja', `🎉 ¡Enhorabuena a ${winnerName} por la victoria!`, performance.now() + 1200);
+        }
+      }
+      office?.focusAgent?.(winnerId, 8000);
+    });
+
+    window.addEventListener('erbolamm:game-end', () => {
+      if (gameTimerInterval) { clearInterval(gameTimerInterval); gameTimerInterval = null; }
+      gameBanner.classList.remove('visible', 'winner');
+    });
+
+    // ─── Game hub: !juego poster, !trofeo quorum and !traidor screens ──
+    // Public state only (CONTRATO_JUEGOS.md §3): the traitor identity never reaches this page.
+    const GAME_STATE_API = '/api/directo/juego/estado';
+    const HUB_QUORUM = 3;
+    const hubOverlay = document.getElementById('hub-overlay');
+    const hubCard = document.getElementById('hub-card');
+    const hubTitle = document.getElementById('hub-title');
+    const hubSub = document.getElementById('hub-sub');
+    const hubTimer = document.getElementById('hub-timer');
+    const hubOptions = document.getElementById('hub-options');
+    const hubQuorum = document.getElementById('hub-quorum');
+    const hubExpel = document.getElementById('hub-expel');
+    // Mirrors CHALK_CENTER in tareas/oficina-3d/src/office/runtime.ts (meeting-room floor).
+    const CHALK_CENTER = { x: 860, y: 307 };
+    let hubServerState = null;
+
+    const esJavier = (user) => ['apliarte', 'erbolamm'].includes(String(user || '').toLowerCase());
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const agentLabel = (id) => {
+      const owner = avatarOwners[id];
+      const name = AGENTS_INFO.find(a => a.id === id)?.name || id;
+      return owner ? `!${id} · @${owner}` : `!${id} · ${name}`;
+    };
+
+    function hubSay(text) {
+      window.Oficina3D?.runtime?.say('ja', text, performance.now());
+    }
+
+    function lanzarTrofeo() {
+      const office = window.Oficina3D;
+      syncAdoptedViewers();
+      const res = office?.iniciarJuego ? office.iniciarJuego('ja') : office?.runtime?.iniciarJuego?.(performance.now(), 'ja');
+      if (!res || res.ok) return;
+      if (res.reason === 'quorum') hubSay(`👥 !trofeo necesita ${HUB_QUORUM} espectadores con avatar adoptado (faltan ${res.faltan}).`);
+      else if (res.reason === 'cooldown') hubSay(`⏳ Enfriamiento: espera ${res.segundosRestantes}s para el próximo !trofeo.`);
+      else hubSay('¡Ya hay un juego o animación en curso!');
+    }
+
+    /** Game chat commands. Returns true when the line was consumed by the hub. */
+    function manejarChatJuego(text, user, cmd, isJavier = false) {
+      const rt = window.Oficina3D?.runtime;
+      if (!rt || typeof rt.openLobby !== 'function') return false;
+      const raw = text.trim().toLowerCase();
+      const name = (/^!(juegos?|game|trofeo|carrera|traidor)\b/.exec(raw) || [])[1] || (cmd && ['juego', 'trofeo', 'traidor'].includes(cmd.comando) ? cmd.comando : null);
+      const hub = rt.hub;
+      if (hub && hub.fase === 'lobby_votacion') {
+        const num = /^\s*([12])\s*$/.exec(raw)?.[1];
+        const option = num ? Number(num) : name === 'trofeo' || name === 'carrera' ? 1 : name === 'traidor' ? 2 : 0;
+        if (option && hub.source === 'local') {
+          syncAdoptedViewers();
+          if (!rt.castLobbyVote(user, option)) rt.say('ja', `@${user}, adopta un avatar para votar.`, performance.now());
+          return true;
+        }
+        return Boolean(name);
+      }
+      if (!name) return false;
+      const autorJavier = Boolean(isJavier || esJavier(user));
+      if (name === 'juego' || name === 'juegos' || name === 'game') {
+        if (!autorJavier) {
+          rt.say('ja', `🔒 @${user}, solo Javier abre la votación de juegos.`, performance.now());
+          return true;
+        }
+        syncAdoptedViewers();
+        const res = rt.openLobby(performance.now());
+        if (!res.ok) hubSay('¡Ya hay un juego o animación en curso!');
+        return true;
+      }
+      if (name === 'trofeo' || name === 'carrera') {
+        if (!autorJavier) {
+          rt.say('ja', `🔒 @${user}, solo Javier puede iniciar la carrera de trofeo.`, performance.now());
+          return true;
+        }
+        lanzarTrofeo();
+        return true;
+      }
+      if (name === 'traidor') {
+        if (!autorJavier) {
+          rt.say('ja', `🔒 @${user}, solo Javier gestiona los juegos.`, performance.now());
+          return true;
+        }
+        // Javier can start !traidor directly, without a vote (like !trofeo).
+        syncAdoptedViewers();
+        fetch('/api/directo/juego/iniciar-traidor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        }).then(async (r) => {
+          if (!r.ok) {
+            const err = await r.json().catch(() => ({}));
+            hubSay(`🔪 No se pudo iniciar !traidor: ${err.error || 'error ' + r.status}`);
+          }
+        }).catch(() => hubSay('🔪 No se pudo contactar con el servidor para iniciar !traidor.'));
+        return true;
+      }
+      return false;
+    }
+
+    function renderLobby(votes, secs) {
+      const count = adoptedViewers().length;
+      hubCard.classList.remove('traidor');
+      hubOverlay.classList.remove('compact');
+      hubTitle.textContent = '🎮 ¿A QUÉ JUGAMOS?';
+      hubSub.textContent = 'Escribe 1 o 2 en el chat · la oficina está congelada';
+      hubTimer.textContent = `${secs}s`;
+      hubOptions.innerHTML = [
+        ['1', '!trofeo', 'Carrera'],
+        ['2', '!traidor', 'Misterio'],
+      ].map(([n, c, label]) => `<li class="hub-option"><span>${n}. <code>${c}</code> (${label})</span><span class="hub-votes">${Number(votes?.[n]) || 0}</span></li>`).join('');
+      hubQuorum.textContent = `👥 Espectadores con avatar: ${count}/${HUB_QUORUM}`;
+      hubQuorum.classList.toggle('ok', count >= HUB_QUORUM);
+      hubExpel.hidden = true;
+    }
+
+    // Keep the camera on the meeting room while the traitor game runs: every
+    // player stands there, so re-focusing an alive player holds the shot.
+    let ultimoFocoTraidor = 0;
+    function mantenerFocoTraidor(players) {
+      const ahora = Date.now();
+      if (!players.length || ahora - ultimoFocoTraidor < 4500) return;
+      ultimoFocoTraidor = ahora;
+      window.Oficina3D?.focusAgent?.(players[0], 6000);
+    }
+
+    function renderTraidor(hub, secs) {
+      mantenerFocoTraidor(hub.players || []);
+      hubCard.classList.add('traidor');
+      hubQuorum.textContent = '';
+      hubExpel.hidden = true;
+      const players = hub.players || [];
+      const timer = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+      if (hub.fase === 'traidor_votacion' || hub.fase === 'muerte_subita') {
+        hubOverlay.classList.remove('compact');
+        hubTitle.textContent = hub.fase === 'muerte_subita'
+          ? `💀 MUERTE SÚBITA · Ronda ${hub.round}`
+          : `🗳️ ¿QUIÉN ES EL TRAIDOR? · Ronda ${hub.round}`;
+        hubSub.textContent = hub.fase === 'muerte_subita'
+          ? 'Solo quedan 3. Escribe el número del sospechoso en el chat'
+          : 'Escribe el número del sospechoso en el chat';
+        hubTimer.textContent = timer;
+        hubOptions.innerHTML = players.map((id, i) => {
+          const votes = Number(hub.votes?.[String(i + 1)] ?? hub.votes?.[id]) || 0;
+          return `<li class="hub-option"><span>${i + 1}. <code>${escapeHtml(agentLabel(id))}</code></span><span class="hub-votes">${votes}</span></li>`;
+        }).join('');
+        return;
+      }
+      if (hub.fase === 'finalizado') {
+        hubOverlay.classList.remove('compact');
+        const winner = hub.winner;
+        hubTitle.textContent = winner === 'inocentes' ? '🎉 ¡GANAN LOS INOCENTES!' : '😈 ¡GANA EL TRAIDOR!';
+        hubSub.textContent = winner === 'inocentes'
+          ? 'El traidor ha sido descubierto y expulsado de la oficina.'
+          : 'El traidor ha conseguido engañar a todos y domina la oficina.';
+        hubTimer.textContent = secs ? timer : '';
+        hubOptions.innerHTML = '';
+        return;
+      }
+      if (hub.fase === 'traidor_expulsion') {
+        hubOverlay.classList.remove('compact');
+        const id = hub.expelled;
+        hubTitle.textContent = id ? `🚪 ${agentLabel(id)} HA SIDO EXPULSADO` : '🚪 NADIE HA SIDO EXPULSADO';
+        hubSub.textContent = hub.winner === 'inocentes' ? '🎉 ¡Era el traidor! Ganan los inocentes'
+          : hub.winner === 'traidor' ? '😈 ¡Era inocente! Gana el traidor'
+          : id ? '¿Era el traidor…?' : 'Empate o sin votos suficientes';
+        hubTimer.textContent = secs ? timer : '';
+        hubOptions.innerHTML = '';
+        if (id) {
+          hubExpel.hidden = false;
+          const color = AGENTS_INFO.find(a => a.id === id)?.color || '#ef4444';
+          hubExpel.innerHTML = `<span style="color:${color}">●</span> 👋`;
+        }
+        return;
+      }
+      hubOverlay.classList.add('compact');
+      hubOptions.innerHTML = '';
+      if (hub.fase === 'traidor_intro') {
+        hubTitle.textContent = '🔪 ¡HAY UN TRAIDOR EN LA OFICINA!';
+        hubSub.textContent = `Sospechosos: ${players.map(id => '!' + id).join(' · ')}`;
+        hubTimer.textContent = secs ? timer : '';
+      } else {
+        hubTitle.textContent = `🗣️ DEBATE · Ronda ${hub.round}`;
+        hubSub.textContent = 'Habla en el chat: tu avatar lo dirá en la sala de reuniones';
+        hubTimer.textContent = timer;
+        hubOptions.innerHTML = players.map((id, i) => {
+          return `<li class="hub-option"><span>${i + 1}. <code>${escapeHtml(agentLabel(id))}</code></span></li>`;
+        }).join('');
+      }
+    }
+
+    function ensureChalk(show) {
+      const world = document.querySelector('#office-3d .world');
+      let chalk = document.getElementById('traidor-chalk');
+      if (!show) {
+        if (chalk && chalk.classList.contains('visible')) {
+          chalk.classList.remove('visible');
+          setTimeout(() => { if (!window.Oficina3D?.runtime?.isTraitorActive?.()) chalk.remove(); }, 900);
+        }
+        return;
+      }
+      if (!world) return;
+      if (!chalk || chalk.parentElement !== world) {
+        chalk?.remove();
+        chalk = document.createElement('div');
+        chalk.id = 'traidor-chalk';
+        chalk.className = 'traidor-chalk';
+        chalk.setAttribute('aria-label', 'Silueta de tiza en la sala de reuniones');
+        chalk.innerHTML = `<svg viewBox="-66 -46 132 92" aria-hidden="true">
+          <ellipse class="chalk-tape" cx="0" cy="0" rx="64" ry="44" />
+          <path class="chalk-line" d="M-44 -6 C-50 -18 -40 -28 -30 -24 C-24 -22 -22 -14 -24 -8 L-12 -12 L-4 -30 C-2 -36 6 -36 8 -30 L6 -14 L22 -16 L40 -34 C44 -38 50 -34 47 -29 L30 -8 L34 4 L52 16 C56 20 52 26 47 23 L26 12 L14 14 L20 34 C22 40 15 42 12 37 L2 16 L-10 18 L-26 34 C-30 38 -36 34 -33 29 L-20 12 L-28 2 C-36 4 -42 2 -44 -6 Z" />
+        </svg>`;
+        world.appendChild(chalk);
+      }
+      const center = CHALK_CENTER;
+      chalk.style.left = `${center.x}px`;
+      chalk.style.top = `${center.y}px`;
+      requestAnimationFrame(() => chalk.classList.add('visible'));
+    }
+
+    function renderHub() {
+      const rt = window.Oficina3D?.runtime;
+      const hub = rt?.hub || null;
+      bodyEl.classList.toggle('hub-frozen', Boolean(rt?.isFrozen?.()));
+      ensureChalk(Boolean(rt?.isTraitorActive?.()));
+      if (!hub) {
+        if (hubOverlay.classList.contains('visible')) {
+          hubOverlay.classList.remove('visible');
+          hubOverlay.setAttribute('aria-hidden', 'true');
+        }
+        return;
+      }
+      const secs = Math.max(0, Math.ceil((hub.endsAt - performance.now()) / 1000));
+      if (hub.fase === 'lobby_votacion') renderLobby(hub.votes, secs);
+      else renderTraidor(hub, secs);
+      hubOverlay.classList.add('visible');
+      hubOverlay.setAttribute('aria-hidden', 'false');
+    }
+    setInterval(renderHub, 250);
+
+    window.addEventListener('erbolamm:hub-close', (e) => {
+      const { result } = e.detail || {};
+      if (result === 'traidor' && !hubServerState) {
+        hubSay('🔪 Ha ganado !traidor, pero el servidor de juegos no responde: la partida no puede empezar.');
+      } else if (result === 'traidor') {
+        hubSay('🔪 ¡Ha ganado !traidor! Javier prepara la partida…');
+      }
+    });
+
+    async function syncGameState() {
+      try {
+        const res = await fetch(`${GAME_STATE_API}?_t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) { hubServerState = null; return; }
+        const data = await res.json();
+        hubServerState = data;
+        window.Oficina3D?.runtime?.applyGameState?.(data, performance.now());
+
+        const enTraidor = Boolean(data && data.fase && (data.fase.startsWith('traidor_') || data.fase === 'muerte_subita' || data.fase === 'finalizado'));
+        const office3dEl = document.getElementById('office-3d');
+        if (office3dEl) {
+          if (enTraidor) {
+            office3dEl.classList.add('modo-traidor');
+          } else {
+            office3dEl.classList.remove('modo-traidor');
+          }
+        }
+      } catch (_) {
+        hubServerState = null;
+      }
+    }
+    syncGameState();
+    setInterval(syncGameState, 1000);
+
+    // Control de cámara IRL y Monigote Javier
+    const cameraEl = document.getElementById('camera-container');
+    const cameraIframe = document.getElementById('camera-iframe');
+    const btnToggleCam = document.getElementById('btn-toggle-cam');
+    const labelCamMode = document.getElementById('label-cam-mode');
+    let modoCamaraActual = 'monigote';
+    let videoCamaraRecibido = false;
+    let cameraVideoTimer = null;
+
+    function actualizarLabelCam(esCamara) {
+      if (labelCamMode) {
+        labelCamMode.textContent = esCamara ? '📹 Cámara Real' : '👤 Monigote';
+      }
+    }
+
+    function setModoCamara(modo) {
+      const normalizado = (modo === 'camara' || modo === 'on' || modo === true) ? 'camara' : 'monigote';
+      if (normalizado === modoCamaraActual) {
+        return; // Idempotente: si el modo ya coincide, no hacer nada ni recargar
+      }
+      modoCamaraActual = normalizado;
+
+      if (cameraEl) {
+        cameraEl.classList.remove('hidden');
+      }
+
+      if (cameraVideoTimer) {
+        clearTimeout(cameraVideoTimer);
+        cameraVideoTimer = null;
+      }
+
+      if (modoCamaraActual === 'camara') {
+        if (cameraIframe) {
+          // Mantener oculto/transparente hasta que VDO.Ninja confirme que llega vídeo real
+          if (videoCamaraRecibido) {
+            cameraIframe.style.opacity = '1';
+            cameraIframe.style.pointerEvents = 'auto';
+          } else {
+            cameraIframe.style.opacity = '0';
+            cameraIframe.style.pointerEvents = 'none';
+            cameraVideoTimer = setTimeout(() => {
+              if (modoCamaraActual === 'camara' && cameraIframe) {
+                cameraIframe.style.opacity = '1';
+                cameraIframe.style.pointerEvents = 'auto';
+              }
+            }, 3500);
+          }
+        }
+      } else {
+        videoCamaraRecibido = false;
+        if (cameraIframe) {
+          cameraIframe.style.opacity = '0';
+          cameraIframe.style.pointerEvents = 'none';
+        }
+      }
+      actualizarLabelCam(modoCamaraActual === 'camara');
+    }
+    window.setModoCamara = setModoCamara;
+
+    function toggleCamara(visible) {
+      if (visible === true) {
+        setModoCamara('camara');
+        return true;
+      }
+      if (visible === false) {
+        setModoCamara('monigote');
+        return false;
+      }
+      const nuevoModo = modoCamaraActual === 'camara' ? 'monigote' : 'camara';
+      setModoCamara(nuevoModo);
+      return nuevoModo === 'camara';
+    }
+    window.toggleCamara = toggleCamara;
+
+    if (btnToggleCam) {
+      btnToggleCam.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleCamara();
+      });
+    }
+
+    // Inicializar en modo monigote por defecto
+    setModoCamara('monigote');
+
+    // Escuchar eventos de VDO.Ninja (Iframe API) para detectar cuándo hay vídeo real
+    window.addEventListener('message', (event) => {
+      try {
+        let msg = event.data;
+        if (typeof msg === 'string' && (msg.startsWith('{') || msg.startsWith('['))) {
+          try { msg = JSON.parse(msg); } catch (_) {}
+        }
+        if (!msg || typeof msg !== 'object') return;
+        const act = msg.action || msg.event || msg.type;
+        if (act === 'video-started' || act === 'stream-started' || act === 'new-stream' || act === 'playing' || act === 'loaded') {
+          videoCamaraRecibido = true;
+          if (modoCamaraActual === 'camara' && cameraIframe) {
+            if (cameraVideoTimer) { clearTimeout(cameraVideoTimer); cameraVideoTimer = null; }
+            cameraIframe.style.opacity = '1';
+            cameraIframe.style.pointerEvents = 'auto';
+          }
+        } else if (act === 'stream-stopped' || act === 'stream-ended' || act === 'peer-disconnected') {
+          videoCamaraRecibido = false;
+          if (cameraIframe) {
+            cameraIframe.style.opacity = '0';
+            cameraIframe.style.pointerEvents = 'none';
+          }
+        }
+      } catch (_) {}
+    });
+
+    async function initCameraOverlay() {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paramRoom = urlParams.get('room');
+        const paramStream = urlParams.get('stream') || urlParams.get('view');
+        const paramPass = urlParams.get('password');
+        if (paramStream && paramRoom) {
+          const passPart = paramPass ? `&password=${encodeURIComponent(paramPass)}` : '';
+          const targetUrl = `https://vdo.ninja/?view=${encodeURIComponent(paramStream)}&room=${encodeURIComponent(paramRoom)}${passPart}&solo&cleanoutput&transparent&autoplay=1&cover=1&buffer=350&sync=0&videobitrate=1500&codec=h264&api`;
+          if (cameraIframe && cameraIframe.src !== targetUrl) {
+            cameraIframe.src = targetUrl;
+          }
+          return;
+        }
+        const res = await fetch('/api/directo/camara/config', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.viewUrl && cameraIframe && cameraIframe.src !== data.viewUrl) {
+            cameraIframe.src = data.viewUrl;
+          }
+          if (data.modo && data.modo !== modoCamaraActual) {
+            setModoCamara(data.modo);
+          }
+        }
+      } catch (err) {
+        console.warn('Config cámara overlay:', err);
+      }
+    }
+    initCameraOverlay();
+
+    // ─── Animación reactiva de la boca del monigote Javier en el marco ──
+    let jaSpeechAnimInterval = null;
+    let jaSpeechStep = 0;
+    let jaVoiceStopTimeout = null;
+
+    function animarBocaJa(durationSecs) {
+      const headEl = document.getElementById('ja-head-group');
+      const mouthClosed = document.getElementById('ja-mouth-closed');
+      const mouthOpen = document.getElementById('ja-mouth-open');
+      if (!headEl || !mouthClosed || !mouthOpen) return;
+
+      if (!jaSpeechAnimInterval) {
+        jaSpeechAnimInterval = setInterval(() => {
+          jaSpeechStep = (jaSpeechStep + 1) % 2;
+          if (jaSpeechStep === 1) {
+            mouthClosed.style.display = 'none';
+            mouthOpen.style.display = 'block';
+            headEl.style.transform = 'translateY(-2px)';
+          } else {
+            mouthClosed.style.display = 'block';
+            mouthOpen.style.display = 'none';
+            headEl.style.transform = 'translateY(0)';
+          }
+        }, 120);
+      }
+
+      clearTimeout(jaVoiceStopTimeout);
+      const durMs = Math.max(160, (durationSecs || 0.15) * 1000);
+      jaVoiceStopTimeout = setTimeout(() => {
+        if (jaSpeechAnimInterval) {
+          clearInterval(jaSpeechAnimInterval);
+          jaSpeechAnimInterval = null;
+        }
+        mouthClosed.style.display = 'block';
+        mouthOpen.style.display = 'none';
+        headEl.style.transform = 'translateY(0)';
+      }, durMs + 180);
+    }
+
+    // ─── Receptor de Audio en Directo vía WebSocket (Móvil / Panel) ─────
+    let wsOverlay = null;
+    let obsVoiceAudioCtx = null;
+    let obsVoiceGainNode = null;
+    let nextVoicePlayTime = 0;
+    let vozActivaTimer = null;
+
+    function reproducirAudioVozPCM(base64Pcm, sampleRate) {
+      try {
+        if (!obsVoiceAudioCtx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          obsVoiceAudioCtx = new AudioCtx();
+        }
+        if (obsVoiceAudioCtx.state === 'suspended') {
+          obsVoiceAudioCtx.resume();
+        }
+        if (!obsVoiceGainNode) {
+          obsVoiceGainNode = obsVoiceAudioCtx.createGain();
+          obsVoiceGainNode.gain.value = 2.4; // Ganancia aumentada para volumen potente en directo
+          obsVoiceGainNode.connect(obsVoiceAudioCtx.destination);
+        }
+        const binaryStr = atob(base64Pcm);
+        const len = binaryStr.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+        const int16 = new Int16Array(bytes.buffer);
+        const float32 = new Float32Array(int16.length);
+        let sumSq = 0;
+        for (let i = 0; i < int16.length; i++) {
+          const val = int16[i] / (int16[i] < 0 ? 0x8000 : 0x7FFF);
+          float32[i] = val;
+          sumSq += val * val;
+        }
+        const audioBuf = obsVoiceAudioCtx.createBuffer(1, float32.length, sampleRate || 24000);
+        audioBuf.copyToChannel(float32, 0);
+
+        const src = obsVoiceAudioCtx.createBufferSource();
+        src.buffer = audioBuf;
+        src.connect(obsVoiceGainNode);
+
+        const now = obsVoiceAudioCtx.currentTime;
+        // Limitar la cola de audio a un máximo de 500 ms (0.5 s) para evitar acumulación de retardo
+        if (nextVoicePlayTime - now > 0.5 || nextVoicePlayTime < now) {
+          nextVoicePlayTime = now + 0.04;
+        }
+        src.start(nextVoicePlayTime);
+        nextVoicePlayTime += audioBuf.duration;
+
+        // Umbral de volumen RMS: solo animar boca si hay voz real audible (ignora silencio de fondo)
+        const rms = Math.sqrt(sumSq / float32.length);
+        if (rms >= 0.02) {
+          animarBocaJa(audioBuf.duration);
+
+          if (!vozActivaTimer) {
+            window.Oficina3D?.runtime?.say?.('ja', '🎙️ En antena...', performance.now());
+          }
+          clearTimeout(vozActivaTimer);
+          vozActivaTimer = setTimeout(() => {
+            vozActivaTimer = null;
+          }, 1500);
+        }
+      } catch (err) {
+        console.error('Error al reproducir audio de voz:', err);
+      }
+    }
+
+    function conectarWsOverlay() {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host || 'directo.apliarte.com';
+      const wsUrl = `${proto}//${host}/ws`;
+
+      try {
+        wsOverlay = new WebSocket(wsUrl);
+        wsOverlay.onmessage = async (event) => {
+          let raw = event.data;
+          if (raw instanceof Blob) raw = await raw.text();
+          try {
+            const data = JSON.parse(raw);
+            if (data.type === 'voz_pcm' && data.pcm) {
+              reproducirAudioVozPCM(data.pcm, data.sampleRate);
+            }
+            if (data.type === 'micro_start') {
+              if (!vozActivaTimer) {
+                window.Oficina3D?.runtime?.say?.('ja', '🎙️ En antena...', performance.now());
+              }
+            }
+            if (data.type === 'micro_stop') {
+              if (jaSpeechAnimInterval) {
+                clearInterval(jaSpeechAnimInterval);
+                jaSpeechAnimInterval = null;
+                const mouthClosed = document.getElementById('ja-mouth-closed');
+                const mouthOpen = document.getElementById('ja-mouth-open');
+                if (mouthClosed) mouthClosed.style.display = 'block';
+                if (mouthOpen) mouthOpen.style.display = 'none';
+              }
+            }
+            if (data.type === 'comando_chat' && data.comando) {
+              ejecutarComandoLocal(data.comando, data.usuario || 'ja');
+            }
+            if (data.type === 'camara_modo') {
+              setModoCamara(data.modo); // 'camara' | 'monigote'
+            }
+            if (data.type === 'categoria' && data.categoria) {
+              aplicarPaleta(data.categoria);
+              if (data.modo) cambiarModoTema(data.modo, false, false);
+            }
+            if (data.type === 'directo_comando' && data.cmd) {
+              if (data.cmd.modo) setModoCamara(data.cmd.modo);
+            }
+          } catch (_) {}
+        };
+        wsOverlay.onclose = () => {
+          setTimeout(conectarWsOverlay, 3000);
+        };
+        wsOverlay.onerror = () => {
+          try { wsOverlay.close(); } catch (_) {}
+        };
+      } catch (e) {
+        setTimeout(conectarWsOverlay, 5000);
+      }
+    }
+
+    conectarWsOverlay();
+    connectTwitchIrc();
+  </script>
+</body>
+</html>

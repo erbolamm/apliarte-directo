@@ -1,0 +1,34 @@
+{
+  "id": "arte",
+  "aliasExterno": "arte",
+  "nombre": "Arte · CalcaApp",
+  "descripcion": "Paleta 100 % CalcaApp: espacio para dibujar, color carne, marrón oscuro y acento cálido.",
+  "paleta": {
+    "fondo": "#1a0f0b",
+    "primario": "#f5cba7",
+    "secundario": "#3e2723",
+    "borde": "#a1887f",
+    "texto": "#f9ece1",
+    "acento": "#d7b899"
+  },
+  "fuentes": {
+    "principal": "'Calca Round', 'Inter', 'Helvetica Neue', Arial, sans-serif",
+    "mono": "'JetBrains Mono', 'Menlo', monospace"
+  },
+  "marco": {
+    "estilo": "cristal",
+    "radio": "18px",
+    "grosorBorde": "3px",
+    "sombra": "0 10px 28px rgba(62, 39, 35, 0.55)"
+  },
+  "intro": {
+    "titulo": "CalcaApp en directo",
+    "subtitulo": "Dibujamos juntos · aporta ideas por el chat",
+    "duracionSeg": 600
+  },
+  "textos": {
+    "pausa": "Pausa para dibujar · volvemos enseguida",
+    "comenzamos": "Empezamos en breve con el papel y el color",
+    "alertaSeguidor": "Gracias por sumarte al directo de CalcaApp"
+  }
+}

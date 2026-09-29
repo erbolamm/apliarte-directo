@@ -1,0 +1,66 @@
+services:
+  # Servidor HTTP/WebSocket de la escena 3D, chat, alertas y panel móvil
+  overlay:
+    build: .
+    container_name: apliarte-directo-overlay
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${OVERLAY_PORT:-7979}:7979"
+    environment:
+      - PORT=7979
+      - PANEL_PASS=${PANEL_PASS}
+      # Comma-separated public IPs treated like Tailscale (e.g. the home OBS machine)
+      - TRUSTED_CLIENT_IPS=${TRUSTED_CLIENT_IPS:-}
+      - VDO_CAM_ROOM=${VDO_CAM_ROOM:-erbolammapliarte}
+      - VDO_CAM_STREAM=${VDO_CAM_STREAM:-ja_cam_directo}
+      - VDO_CAM_PASS=${VDO_CAM_PASS:-}
+      - WHIP_CONTROL_URL=http://whip:3000
+    volumes:
+      - ./data:/app/data
+      - ./medios:/app/medios
+    networks:
+      - directo-network
+
+  # Streamer WHIP — Chromium headless + Puppeteer → VDO.ninja mixer → Twitch WHIP
+  # Consumo optimizado: ~300-500 MB RAM (frente a 2+ GB de soluciones tradicionales con FFmpeg)
+  whip:
+    build: ./whip
+    container_name: apliarte-directo-whip
+    restart: unless-stopped
+    environment:
+      - TWITCH_STREAM_KEY=${TWITCH_STREAM_KEY}
+      - VDO_ROOM=${VDO_ROOM}
+      - VDO_PASS=${VDO_PASS}
+      - CONTROL_PORT=3000
+      - AUTO_START=${AUTO_START:-false}
+    volumes:
+      - ./data:/app/data:ro
+    shm_size: '512mb'
+    networks:
+      - directo-network
+
+  # Proxy inverso Caddy con SSL automático (opcional, activar con --profile ssl)
+  caddy:
+    image: caddy:2-alpine
+    container_name: apliarte-directo-caddy
+    restart: unless-stopped
+    profiles: ["ssl"]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - directo-network
+
+networks:
+  directo-network:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

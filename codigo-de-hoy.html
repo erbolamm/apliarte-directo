@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Código de hoy · overlay del directo</title>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+//
+//   CAMBIA AQUÍ EL CÓDIGO DE HOY
+//
+//   Escribe el valor entre las comillas, guarda el archivo y en OBS pulsa
+//   «Actualizar» en la fuente de navegador. Nada más.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CODIGO_DE_HOY = "ESCRIBE-AQUI";
+
+// Opcional: el texto pequeño de encima. Déjalo vacío ("") para no mostrar nada.
+const ETIQUETA = "Código de hoy";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A partir de aquí no hace falta tocar nada.
+// ─────────────────────────────────────────────────────────────────────────────
+</script>
+
+<style>
+  /* Lienzo de OBS. El fondo va transparente a propósito: un overlay se superpone
+     al vídeo, así que no debe tapar la escena. Por eso tampoco lleva interruptor
+     claro/oscuro: no es una web que alguien mire, es una capa de composición. */
+  html, body {
+    margin: 0;
+    width: 1920px;
+    height: 1080px;
+    background: transparent;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    font-family: "Fira Sans Condensed", "Inter", "DejaVu Sans", system-ui, sans-serif;
+  }
+
+  .tarjeta {
+    margin: 0 0 72px 72px;
+    padding: 28px 56px 32px;
+    border-radius: 24px;
+    /* Fondo propio semitransparente: legible sobre vídeo claro y oscuro. */
+    background: rgba(0, 70, 123, .82);
+    border: 3px solid #5ecef5;
+    box-shadow: 0 0 40px rgba(94, 206, 245, .45), 0 18px 50px rgba(0, 0, 0, .45);
+    backdrop-filter: blur(6px);
+  }
+
+  .etiqueta {
+    margin: 0 0 6px;
+    font-size: 34px;
+    font-weight: 600;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: #8fd5fa;
+  }
+  .etiqueta:empty { display: none; }
+
+  .codigo {
+    margin: 0;
+    font-size: 116px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: .04em;
+    color: #fdfdfd;
+    /* Contorno oscuro: mantiene el texto legible aunque la tarjeta quede sobre
+       una zona muy clara del vídeo. */
+    text-shadow:
+       0 0 18px rgba(94, 206, 245, .55),
+       2px 2px 0 rgba(0, 0, 0, .55),
+      -2px 2px 0 rgba(0, 0, 0, .55),
+       2px -2px 0 rgba(0, 0, 0, .55),
+      -2px -2px 0 rgba(0, 0, 0, .55);
+  }
+
+  /* Quien pide menos movimiento, no lo recibe. */
+  @media (prefers-reduced-motion: no-preference) {
+    .tarjeta { animation: entrar .6s ease-out both; }
+    @keyframes entrar {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: none; }
+    }
+  }
+</style>
+</head>
+
+<body>
+  <div class="tarjeta">
+    <p class="etiqueta" id="etiqueta"></p>
+    <p class="codigo" id="codigo">—</p>
+  </div>
+
+<script>
+  // textContent, nunca innerHTML: el valor se pinta tal cual, sin interpretar marcas.
+  document.getElementById('codigo').textContent = CODIGO_DE_HOY || '—';
+  document.getElementById('etiqueta').textContent = ETIQUETA || '';
+  document.title = `Código de hoy: ${CODIGO_DE_HOY || '—'}`;
+</script>
+</body>
+</html>

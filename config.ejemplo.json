@@ -1,0 +1,18 @@
+{
+  "puertoRtmp": 1935,
+  "puertoPanel": 8790,
+  "rutaEntrada": "live",
+  "respaldo": "medios/respaldo.mp4",
+  "destinos": [
+    {
+      "nombre": "twitch",
+      "url": "rtmp://live.twitch.tv/app",
+      "variableClave": "CLAVE_TWITCH"
+    },
+    {
+      "nombre": "youtube",
+      "url": "rtmp://a.rtmp.youtube.com/live2",
+      "variableClave": "CLAVE_YOUTUBE"
+    }
+  ]
+}

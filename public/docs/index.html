@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApliArte Directo — Technical Documentation & Web MCP Interface</title>
+  <meta name="description" content="Official technical documentation, architecture specifications, deployment guides, security policies, and Web MCP semantic tool interface for ApliArte Directo.">
+  <meta name="robots" content="index, follow">
+  <meta name="application-name" content="ApliArte Directo">
+
+  <!-- Official ApliArte Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Abel&family=Fira+Sans+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Schema.org & Web MCP Metadata -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "@id": "https://directo.apliarte.com/docs#article",
+        "headline": "ApliArte Directo Technical Architecture & Operational Guide",
+        "inLanguage": "en",
+        "author": {
+          "@type": "Organization",
+          "name": "ApliArte / ErBolamm",
+          "url": "https://github.com/erbolamm"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "ApliArte"
+        },
+        "description": "Exhaustive technical reference, service topology, deployment procedures, and Web MCP semantic tool declarations for ApliArte Directo."
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://directo.apliarte.com/docs#software",
+        "name": "ApliArte Directo",
+        "operatingSystem": "Linux, macOS, Docker",
+        "applicationCategory": "MultimediaApplication",
+        "softwareVersion": "1.0.0",
+        "license": "https://opensource.org/licenses/MIT"
+      },
+      {
+        "@type": "APIReference",
+        "@id": "https://directo.apliarte.com/docs#web-mcp",
+        "name": "Web MCP Tool Manifest",
+        "description": "Model Context Protocol tools exposed semantically via HTML attributes for autonomous AI agents and web crawlers.",
+        "hasPart": [
+          {
+            "@type": "Action",
+            "name": "read_architecture_spec",
+            "description": "Retrieve full system architecture, services topology, network isolation, and WHIP control API.",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "/docs#architecture?section={section}",
+              "httpMethod": "GET"
+            }
+          },
+          {
+            "@type": "Action",
+            "name": "get_deployment_guide",
+            "description": "Get step-by-step production deployment commands for Docker Compose and Caddy SSL.",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "/docs#deployment?target={target}",
+              "httpMethod": "GET"
+            }
+          },
+          {
+            "@type": "Action",
+            "name": "get_configuration_reference",
+            "description": "Inspect environment variables (.env), storage volumes, and OBS integration settings.",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "/docs#configuration?key={key}",
+              "httpMethod": "GET"
+            }
+          },
+          {
+            "@type": "Action",
+            "name": "get_security_directives",
+            "description": "Review defensive security policies, docker.sock elimination, and IP spoofing defenses.",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "/docs#security?topic={topic}",
+              "httpMethod": "GET"
+            }
+          },
+          {
+            "@type": "Action",
+            "name": "get_adr_0001",
+            "description": "Review Architectural Decision Record ADR-0001 on Docker containerization and decoupling.",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "/docs#adr-0001",
+              "httpMethod": "GET"
+            }
+          },
+          {
+            "@type": "Action",
+            "name": "search_documentation",
+            "description": "Full-text semantic keyword search across all technical documentation sections.",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "/docs#search?query={query}",
+              "httpMethod": "GET"
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root {
+      /* ApliArte Official Brand Tokens - Light Theme by Default (APLIARTE_BRAND_KIT.md) */
+      --primary: #005fa9;
+      --primary-deep: #00467b;
+      --accent: #5ecef5;
+      --accent-glow: #8fd5fa;
+      --neutral-white: #fdfdfd;
+      --neutral-dark: #303030;
+      --neutral-light-grey: #d9d9d9;
+      --neutral-muted: #bebbb9;
+      --neutral-border: #a6a6a6;
+      --warm-accent: #e8955e;
+      --warm-brown: #b46734;
+
+      /* Light Theme (Default) */
+      --bg: #fdfdfd;
+      --card-bg: #ffffff;
+      --card-border: #d9d9d9;
+      --text-main: #303030;
+      --text-muted: #57606a;
+      --text-bright: #005fa9;
+      --accent-red: #cf222e;
+      --accent-blue: #005fa9;
+      --accent-cyan: #5ecef5;
+      --accent-green: #1a7f37;
+      --accent-purple: #8250df;
+      --code-bg: #f0f4f8;
+
+      --font-title: 'Fira Sans Condensed', sans-serif;
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-body: 'Abel', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    [data-theme="dark"] {
+      /* Dark Theme (Canonical Dark Charcoal) */
+      --bg: #303030;
+      --card-bg: #262626;
+      --card-border: rgba(94, 206, 245, 0.25);
+      --text-main: #fdfdfd;
+      --text-muted: #bebbb9;
+      --text-bright: #5ecef5;
+      --accent-red: #e91916;
+      --accent-blue: #5ecef5;
+      --accent-cyan: #5ecef5;
+      --accent-green: #3fb950;
+      --accent-purple: #bc8cff;
+      --code-bg: #1e2238;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      font-size: 1.05rem;
+      line-height: 1.6;
+      padding: 0;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    h1, h2, h3, .brand-title {
+      font-family: var(--font-title);
+      font-weight: 700;
+    }
+
+    /* Header & Navigation */
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--card-border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 1rem 2rem;
+    }
+    .header-content {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    .brand-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text-bright);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .brand-badge {
+      background: rgba(0, 95, 169, 0.08);
+      color: var(--primary);
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 95, 169, 0.25);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    [data-theme="dark"] .brand-badge {
+      background: rgba(94, 206, 245, 0.15);
+      color: var(--accent);
+      border-color: rgba(94, 206, 245, 0.35);
+    }
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .btn {
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .btn:hover {
+      background: var(--card-border);
+      color: var(--text-bright);
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+    .btn-primary:hover {
+      background: var(--primary-deep);
+      border-color: var(--primary-deep);
+    }
+    [data-theme="dark"] .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--accent);
+    }
+    [data-theme="dark"] .btn-primary:hover {
+      background: var(--primary-deep);
+    }
+
+    /* Container Layout */
+    .layout-container {
+      max-width: 1280px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 2rem;
+    }
+    @media (max-width: 960px) {
+      .layout-container {
+        grid-template-columns: 1fr;
+      }
+      aside {
+        display: none;
+      }
+    }
+
+    /* Sidebar Navigation */
+    aside {
+      position: sticky;
+      top: 5.5rem;
+      height: fit-content;
+      max-height: calc(100vh - 7rem);
+      overflow-y: auto;
+      padding-right: 0.5rem;
+    }
+    .nav-group {
+      margin-bottom: 1.5rem;
+    }
+    .nav-header {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5rem;
+      padding-left: 0.5rem;
+    }
+    .nav-list {
+      list-style: none;
+    }
+    .nav-item a {
+      display: block;
+      color: var(--text-main);
+      text-decoration: none;
+      font-size: 0.9rem;
+      padding: 0.35rem 0.5rem;
+      border-radius: 6px;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .nav-item a:hover {
+      background: var(--card-bg);
+      color: var(--accent-blue);
+    }
+
+    /* Main Content Area */
+    main {
+      min-width: 0;
+    }
+
+    /* Web MCP Banner & Interactive Bar */
+    .mcp-banner {
+      background: linear-gradient(135deg, rgba(88, 166, 255, 0.08), rgba(188, 140, 255, 0.08));
+      border: 1px solid rgba(88, 166, 255, 0.25);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .mcp-banner h2 {
+      font-size: 1.15rem;
+      color: var(--accent-blue);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .mcp-banner p {
+      font-size: 0.9rem;
+      color: var(--text-main);
+      margin-bottom: 1rem;
+    }
+    .mcp-tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 0.75rem;
+    }
+    .mcp-tool-pill {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 0.6rem 0.8rem;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: border-color 0.2s ease, transform 0.15s ease;
+    }
+    .mcp-tool-pill:hover {
+      border-color: var(--accent-blue);
+      transform: translateY(-1px);
+    }
+    .mcp-tool-pill strong {
+      display: block;
+      color: var(--accent-purple);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      margin-bottom: 0.2rem;
+    }
+
+    /* Interactive Live Tool Console */
+    .tool-runner {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 2rem;
+    }
+    .tool-runner-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .tool-runner-header h3 {
+      font-size: 1rem;
+      color: var(--text-bright);
+    }
+    .tool-input-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .tool-select, .tool-input {
+      background: var(--bg);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 0.45rem 0.75rem;
+      font-size: 0.85rem;
+      font-family: inherit;
+    }
+    .tool-input {
+      flex: 1;
+      font-family: var(--font-mono);
+    }
+    .tool-output {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--text-bright);
+      max-height: 320px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      display: none;
+    }
+
+    /* Content Articles & Sections */
+    article.doc-section {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1.75rem 2rem;
+      margin-bottom: 2rem;
+      scroll-margin-top: 5rem;
+    }
+    .doc-section h2 {
+      font-size: 1.5rem;
+      color: var(--text-bright);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 0.75rem;
+    }
+    .doc-section h3 {
+      font-size: 1.15rem;
+      color: var(--accent-blue);
+      margin: 1.25rem 0 0.5rem;
+    }
+    .doc-section p {
+      margin-bottom: 1rem;
+    }
+    .doc-section ul, .doc-section ol {
+      margin-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .doc-section li {
+      margin-bottom: 0.35rem;
+    }
+
+    /* Semantic Web MCP Forms */
+    form.web-mcp-tool {
+      background: var(--bg);
+      border: 1px dashed var(--accent-blue);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      margin: 1rem 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    form.web-mcp-tool legend {
+      font-size: 0.75rem;
+      color: var(--accent-blue);
+      font-family: var(--font-mono);
+      font-weight: 600;
+      padding: 0 0.4rem;
+    }
+    form.web-mcp-tool input {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-bright);
+      padding: 0.35rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      flex: 1;
+      min-width: 140px;
+    }
+
+    /* Code Blocks & Tables */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 1rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      margin: 1rem 0;
+      line-height: 1.5;
+    }
+    code {
+      background: rgba(110, 118, 129, 0.2);
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 85%;
+    }
+    pre code {
+      background: transparent;
+      padding: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid var(--card-border);
+      padding: 0.6rem 0.85rem;
+      text-align: left;
+    }
+    th {
+      background: var(--bg);
+      color: var(--text-bright);
+      font-weight: 600;
+    }
+    tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Badges & Tags */
+    .tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+    .tag-green { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); }
+    .tag-blue { background: rgba(88, 166, 255, 0.15); color: var(--accent-blue); }
+    .tag-purple { background: rgba(188, 140, 255, 0.15); color: var(--accent-purple); }
+    .tag-red { background: rgba(233, 25, 22, 0.15); color: var(--accent-red); }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--card-border);
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-content">
+      <div class="brand-title">
+        <span>🎬 ApliArte Directo</span>
+        <span class="brand-badge">LOCAL &bull; PRIVATE</span>
+      </div>
+      <div class="header-controls">
+        <a href="#console" class="btn btn-primary" onclick="focusConsole()">⚡ Run Web MCP Tool</a>
+        <span class="btn">🔒 Private Local Stack</span>
+        <button id="theme-toggle" class="btn" onclick="toggleTheme()" aria-label="Toggle Dark/Light Mode">🌓 Theme</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout-container">
+    <!-- Sidebar Navigation -->
+    <aside>
+      <div class="nav-group">
+        <div class="nav-header">Web MCP Engine</div>
+        <ul class="nav-list">
+          <li class="nav-item"><a href="#console">⚡ Interactive Tool Console</a></li>
+          <li class="nav-item"><a href="#tools-catalog">🛠️ Tool Declarations</a></li>
+        </ul>
+      </div>
+      <div class="nav-group">
+        <div class="nav-header">Technical Specifications</div>
+        <ul class="nav-list">
+          <li class="nav-item"><a href="#architecture">1. System Architecture</a></li>
+          <li class="nav-item"><a href="#topology">2. Service Topology</a></li>
+          <li class="nav-item"><a href="#docker-services">3. Docker Services</a></li>
+          <li class="nav-item"><a href="#whip-streamer">4. WHIP Headless Streamer</a></li>
+          <li class="nav-item"><a href="#control-api">5. Internal Control API</a></li>
+          <li class="nav-item"><a href="#configuration">6. Configuration (.env)</a></li>
+          <li class="nav-item"><a href="#deployment">7. Production Deployment</a></li>
+          <li class="nav-item"><a href="#security">8. Security Directives</a></li>
+          <li class="nav-item"><a href="#adr-0001">9. ADR-0001 Decoupling</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main itemscope itemtype="https://schema.org/TechArticle">
+
+      <!-- Web MCP Intro Banner -->
+      <section class="mcp-banner" id="tools-catalog" tool-name="list_available_tools" description="Introspect and list all declared Web MCP semantic tools available on this endpoint">
+        <h2>⚡ Web MCP Standard Interface</h2>
+        <p>This documentation natively implements the <strong>Web Model Context Protocol (Web MCP)</strong> for internal and local AI agents. Every section exposes semantic HTML attributes (<code>tool-name</code>, <code>description</code>, <code>tool-param-*</code>) allowing autonomous AI agents to inspect, invoke, and retrieve structured context directly from DOM queries without external wrappers.</p>
+        <p style="font-size: 0.85rem; color: var(--accent-red); margin-top: 0.5rem; font-weight: 600;">🔒 Governance Notice: Strictly Private & Local Environment. External publication or deployment is forbidden without a dedicated Landing page and formal completion of the canonical INBOX protocol.</p>
+
+        <div class="mcp-tools-grid">
+          <div class="mcp-tool-pill" onclick="prepareTool('read_architecture_spec', 'topology')">
+            <strong>read_architecture_spec</strong>
+            <span>Returns system topology, Docker services, and network layout.</span>
+          </div>
+          <div class="mcp-tool-pill" onclick="prepareTool('get_deployment_guide', 'vps')">
+            <strong>get_deployment_guide</strong>
+            <span>Returns step-by-step production deployment commands.</span>
+          </div>
+          <div class="mcp-tool-pill" onclick="prepareTool('get_configuration_reference', 'PANEL_PASS')">
+            <strong>get_configuration_reference</strong>
+            <span>Inspects environment variables, persistent volumes, and OBS config.</span>
+          </div>
+          <div class="mcp-tool-pill" onclick="prepareTool('get_security_directives', 'docker-socket')">
+            <strong>get_security_directives</strong>
+            <span>Audits socket removal, credential hygiene, and IP spoofing defenses.</span>
+          </div>
+          <div class="mcp-tool-pill" onclick="prepareTool('get_adr_0001', 'all')">
+            <strong>get_adr_0001</strong>
+            <span>Reads Architectural Decision Record on Docker containerization.</span>
+          </div>
+          <div class="mcp-tool-pill" onclick="prepareTool('search_documentation', 'whip')">
+            <strong>search_documentation</strong>
+            <span>Executes keyword search across all documentation sections.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Interactive Web MCP Console -->
+      <section class="tool-runner" id="console">
+        <div class="tool-runner-header">
+          <h3>⚡ Web MCP Interactive Tool Runner</h3>
+          <span class="tag tag-green">READY</span>
+        </div>
+        <div class="tool-input-row">
+          <select id="tool-selector" class="tool-select" onchange="onToolSelectChange()">
+            <option value="read_architecture_spec">read_architecture_spec</option>
+            <option value="get_deployment_guide">get_deployment_guide</option>
+            <option value="get_configuration_reference">get_configuration_reference</option>
+            <option value="get_security_directives">get_security_directives</option>
+            <option value="get_adr_0001">get_adr_0001</option>
+            <option value="search_documentation">search_documentation</option>
+            <option value="list_available_tools">list_available_tools</option>
+          </select>
+          <input type="text" id="tool-param-input" class="tool-input" placeholder="Parameter (e.g. topology, vps, PANEL_PASS, docker-socket, whip)..." />
+          <button class="btn btn-primary" onclick="executeCurrentTool()">Execute Tool</button>
+        </div>
+        <div id="tool-output-box" class="tool-output"></div>
+      </section>
+
+      <!-- 1. System Architecture -->
+      <article class="doc-section" id="architecture" tool-name="read_architecture_spec" description="Retrieve full system architecture, services topology, network isolation, and WHIP control API">
+        <h2>1. System Architecture & Clean Design <span class="tag tag-blue">SPEC</span></h2>
+
+        <!-- Semantic Web MCP Form Declaration -->
+        <form class="web-mcp-tool" tool-name="read_architecture_spec" description="Query architecture specification by section" onsubmit="event.preventDefault(); executeToolFromForm(this);">
+          <legend>Web MCP Tool: read_architecture_spec</legend>
+          <label for="arch-section-input">Section:</label>
+          <input type="text" id="arch-section-input" name="section" tool-param-name="section" tool-param-type="string" tool-param-description="Section to query: 'overview', 'topology', 'docker', 'network', or 'all'" value="all" />
+          <button type="submit" class="btn">Query Spec</button>
+        </form>
+
+        <p><strong>ApliArte Directo</strong> is built on the principles of clean architecture, minimal resource footprint, strict service decoupling, and security by design. It decouples the broadcast rendering layer from the ingest streamer, enabling reliable live streaming directly to Twitch without heavy OBS host instances.</p>
+
+        <h3 id="topology">2. Service Topology Diagram</h3>
+        <pre><code>                           [ INTERNET / USERS ]
+                                      │
+            ┌─────────────────────────┴─────────────────────────┐
+            │                                                   │
+    [ Ports 80 / 443 ]                                  [ Port 7979 ]
+ (Optional: Profile ssl)                            (Direct Access / Proxy)
+            ▼                                                   ▼
+┌───────────────────────┐                           ┌───────────────────────┐
+│     caddy (proxy)     │──────────(HTTP)──────────>│    overlay (Node 22)  │
+│  (Caddy 2 Auto SSL)   │                           │ - Three.js 3 Diorama  │
+└───────────────────────┘                           │ - Twitch Chat (IRC)   │
+                                                    │ - Digital Audio Relay │
+                                                    │ - Mobile Cockpit UI   │
+                                                    │ - Layer Persistence   │
+                                                    └───────────┬───────────┘
+                                                                │
+                                            Private Bridge Network: directo-network
+                                            (Internal HTTP Requests :3000)
+                                                                │
+                                                                ▼
+                                                    ┌───────────────────────┐
+                                                    │      whip (Node/Web)  │
+                                                    │ - Headless Chromium   │
+                                                    │ - VDO.ninja WebRTC    │
+                                                    │ - WHIP Push to Twitch │
+                                                    │ - Internal Control API│
+                                                    └───────────┬───────────┘
+                                                                │ (WHIP WebRTC)
+                                                                ▼
+                                                        [ TWITCH INGEST ]</code></pre>
+
+        <h3 id="docker-services">3. Docker Compose Services</h3>
+        <ul>
+          <li><strong><code>overlay</code> (Node 22 Alpine)</strong>: Serves the real-time 3D diorama (Three.js), avatars, Twitch IRC listener, mini-games (<code>!traidor</code>), mobile audio PCM relay, and the cockpit control dashboard on port <code>7979</code>.</li>
+          <li><strong><code>whip</code> (Debian Bookworm / Chromium Headless)</strong>: Loads the VDO.ninja audio/video mixer and broadcasts via WHIP (WebRTC HTTP Ingestion Protocol) directly to Twitch. Consumes only 300–500 MB RAM. Exposes an internal HTTP control plane on port <code>3000</code>.</li>
+          <li><strong><code>caddy</code> (Caddy 2 Alpine)</strong>: Optional reverse proxy with automated ACME Let's Encrypt TLS certificate provisioning, active under <code>profiles: ["ssl"]</code>.</li>
+        </ul>
+
+        <h3 id="whip-streamer">4. WHIP Headless WebRTC Streamer</h3>
+        <p>WHIP eliminates the legacy dependency on Xvfb, PulseAudio virtual sinks, and FFmpeg software transcoding. Chromium sends encoded H.264/AAC WebRTC streams directly to Twitch Ingest points, resulting in zero generation loss and drastically lower CPU/RAM consumption.</p>
+
+        <h3 id="control-api">5. Internal Control API (Port 3000)</h3>
+        <p>Accessible <strong>strictly inside the private Docker bridge network</strong> (never exposed to host or internet):</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Endpoint</th>
+              <th>Access</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>GET</code></td>
+              <td><code>http://whip:3000/status</code></td>
+              <td>Internal Docker</td>
+              <td>Returns current broadcast state: <code>{ ok: true, streaming: boolean }</code></td>
+            </tr>
+            <tr>
+              <td><code>POST</code></td>
+              <td><code>http://whip:3000/start</code></td>
+              <td>Internal Docker</td>
+              <td>Launches headless browser capture and initiates Twitch broadcast.</td>
+            </tr>
+            <tr>
+              <td><code>POST</code></td>
+              <td><code>http://whip:3000/stop</code></td>
+              <td>Internal Docker</td>
+              <td>Terminates the live broadcast and frees browser memory.</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <!-- 6. Configuration Reference -->
+      <article class="doc-section" id="configuration" tool-name="get_configuration_reference" description="Inspect environment variables (.env), storage volumes, and OBS integration settings">
+        <h2>6. Configuration Reference Manual <span class="tag tag-purple">CONFIG</span></h2>
+
+        <!-- Semantic Web MCP Form Declaration -->
+        <form class="web-mcp-tool" tool-name="get_configuration_reference" description="Lookup configuration keys or volume specifications" onsubmit="event.preventDefault(); executeToolFromForm(this);">
+          <legend>Web MCP Tool: get_configuration_reference</legend>
+          <label for="config-key-input">Config Key:</label>
+          <input type="text" id="config-key-input" name="key" tool-param-name="key" tool-param-type="string" tool-param-description="Environment variable key (e.g. 'PANEL_PASS', 'TWITCH_STREAM_KEY', 'volumes') or 'all'" value="all" />
+          <button type="submit" class="btn">Inspect Key</button>
+        </form>
+
+        <p>Configuration is managed via environment variables (<code>.env</code>) and persistent Docker host volumes.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Variable</th>
+              <th>Type</th>
+              <th>Default</th>
+              <th>Required</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>PANEL_PASS</code></td>
+              <td>String</td>
+              <td><em>(Empty)</em></td>
+              <td><span class="tag tag-red">YES</span></td>
+              <td>Master password to authenticate in the mobile cockpit and control API.</td>
+            </tr>
+            <tr>
+              <td><code>TWITCH_STREAM_KEY</code></td>
+              <td>String</td>
+              <td><em>(Empty)</em></td>
+              <td><span class="tag tag-red">YES (to stream)</span></td>
+              <td>Twitch broadcast ingestion key (<code>live_...</code>).</td>
+            </tr>
+            <tr>
+              <td><code>VDO_ROOM</code></td>
+              <td>String</td>
+              <td><code>erbolammapliarte</code></td>
+              <td>No</td>
+              <td>VDO.ninja room name where video feeds and guest cameras assemble.</td>
+            </tr>
+            <tr>
+              <td><code>VDO_PASS</code></td>
+              <td>String</td>
+              <td><em>(vacía)</em></td>
+              <td>No</td>
+              <td>Password for the VDO.ninja mixer room.</td>
+            </tr>
+            <tr>
+              <td><code>OVERLAY_PORT</code></td>
+              <td>Number</td>
+              <td><code>7979</code></td>
+              <td>No</td>
+              <td>Host port mapped to the overlay HTTP/WebSocket server.</td>
+            </tr>
+            <tr>
+              <td><code>AUTO_START</code></td>
+              <td>Boolean</td>
+              <td><code>false</code></td>
+              <td>No</td>
+              <td>When <code>true</code>, automatically starts Twitch streaming upon container boot.</td>
+            </tr>
+            <tr>
+              <td><code>DOMAIN</code></td>
+              <td>String</td>
+              <td><em>(Empty)</em></td>
+              <td>Required for SSL</td>
+              <td>Public domain name (e.g. <code>directo.mydomain.com</code>) used by Caddy.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Storage Directories & Persistent Volumes</h3>
+        <ul>
+          <li><strong><code>./data:/app/data</code></strong>: Stores <code>layers.json</code> (layer visibility and ordering), <code>categoria.json</code> (stream topic), and <code>camara.json</code>.</li>
+          <li><strong><code>./medios:/app/medios</code></strong>: Media directory containing sound effects (<code>.mp3</code>, <code>.wav</code>), overlay banners, and visual stings.</li>
+        </ul>
+      </article>
+
+      <!-- 7. Production Deployment -->
+      <article class="doc-section" id="deployment" tool-name="get_deployment_guide" description="Get step-by-step production deployment commands for Docker Compose and Caddy SSL">
+        <h2>7. Production Deployment Guide <span class="tag tag-green">DEPLOY</span></h2>
+
+        <!-- Semantic Web MCP Form Declaration -->
+        <form class="web-mcp-tool" tool-name="get_deployment_guide" description="Retrieve deployment instructions for target environment" onsubmit="event.preventDefault(); executeToolFromForm(this);">
+          <legend>Web MCP Tool: get_deployment_guide</legend>
+          <label for="deploy-target-input">Target:</label>
+          <input type="text" id="deploy-target-input" name="target" tool-param-name="target" tool-param-type="string" tool-param-description="Deployment target: 'vps', 'ssl', 'local', or 'all'" value="vps" />
+          <button type="submit" class="btn">Get Guide</button>
+        </form>
+
+        <p>Deployment is fully containerized. A single Docker Compose command spins up the entire production stack.</p>
+
+        <h3>Standard VPS Deployment (Behind existing reverse proxy)</h3>
+        <pre><code># 1. Clone the repository
+git clone https://github.com/erbolamm/apliarte-directo.git /opt/apliarte-directo
+cd /opt/apliarte-directo
+
+# 2. Configure environment credentials
+cp .env.example .env
+nano .env
+
+# 3. Launch the container stack in detached mode
+docker compose up -d
+
+# 4. Verify service health
+docker compose ps
+docker compose logs -f overlay</code></pre>
+
+        <h3>Autonomous Deployment with Automated Let's Encrypt SSL</h3>
+        <pre><code># Enable Caddy SSL reverse proxy profile
+docker compose --profile ssl up -d</code></pre>
+
+        <h3>Zero-Downtime Hot Upgrades</h3>
+        <pre><code># Pull latest source updates and recreate modified containers
+git pull origin main
+docker compose build overlay
+docker compose up -d --no-deps overlay</code></pre>
+      </article>
+
+      <!-- 8. Security Directives -->
+      <article class="doc-section" id="security" tool-name="get_security_directives" description="Review defensive security policies, docker.sock elimination, and IP spoofing defenses">
+        <h2>8. Defensive Security Directives <span class="tag tag-red">SECURITY</span></h2>
+
+        <!-- Semantic Web MCP Form Declaration -->
+        <form class="web-mcp-tool" tool-name="get_security_directives" description="Query security directives by topic" onsubmit="event.preventDefault(); executeToolFromForm(this);">
+          <legend>Web MCP Tool: get_security_directives</legend>
+          <label for="sec-topic-input">Topic:</label>
+          <input type="text" id="sec-topic-input" name="topic" tool-param-name="topic" tool-param-type="string" tool-param-description="Topic: 'docker-socket', 'credentials', 'ip-spoofing', 'network', or 'all'" value="all" />
+          <button type="submit" class="btn">Audit Security</button>
+        </form>
+
+        <h3>1. Complete Elimination of the Docker Socket</h3>
+        <p>Legacy architectures frequently mounted <code>/var/run/docker.sock</code> into web containers to allow the web server to start and stop auxiliary streaming containers. This granted root-equivalent privileges on the host machine.</p>
+        <p><strong>ApliArte Directo solves this cleanly</strong>: the <code>overlay</code> container communicates with the <code>whip</code> container exclusively via the internal HTTP control plane on port <code>3000</code> over an isolated bridge network. The Docker socket is completely omitted.</p>
+
+        <h3>2. Reverse Proxy IP Spoofing Prevention</h3>
+        <p>The server enforces strict <code>isKnownTrustedProxy(ip)</code> validation before trusting forwarded client headers (<code>x-forwarded-for</code>, <code>x-real-ip</code>). If a client connects directly to the server and attempts to forge internal IP addresses (e.g. <code>127.0.0.1</code>), the header is discarded and the real TCP socket IP is recorded.</p>
+
+        <h3>3. Credential Enforcement</h3>
+        <p>In production (<code>NODE_ENV=production</code>), <code>server.js</code> verifies that <code>PANEL_PASS</code> is securely defined. If empty or left at a known default, the process immediately halts with an exit code of 1.</p>
+      </article>
+
+      <!-- 9. ADR-0001 Architecture Decision Record -->
+      <article class="doc-section" id="adr-0001" tool-name="get_adr_0001" description="Review Architectural Decision Record ADR-0001 on Docker containerization and decoupling">
+        <h2>9. ADR-0001: Architectural Decoupling & Docker Stack <span class="tag tag-blue">ADR</span></h2>
+
+        <!-- Semantic Web MCP Form Declaration -->
+        <form class="web-mcp-tool" tool-name="get_adr_0001" description="Fetch ADR-0001 full context" onsubmit="event.preventDefault(); executeToolFromForm(this);">
+          <legend>Web MCP Tool: get_adr_0001</legend>
+          <input type="hidden" name="adr" value="0001" />
+          <button type="submit" class="btn">Read ADR-0001</button>
+        </form>
+
+        <p><strong>Status</strong>: <span class="tag tag-green">ACCEPTED</span> (2026-09-27)</p>
+        <p><strong>Context</strong>: Live broadcast components were historically coupled inside the central orchestration repository, complicating modular maintenance and automated testing.</p>
+        <p><strong>Decision</strong>: Decouple the direct broadcast stack into an autonomous, strictly private repository (<code>apliarte-directo</code>), containerize all services using Docker Compose, eliminate the Docker daemon socket mount, and provide local Web MCP semantic documentation. All assets and services remain 100% private and local; public publication requires a dedicated Landing page and formal completion of the INBOX protocol.</p>
+        <p><strong>Consequences</strong>: Zero host privileges required for containers, RAM consumption reduced by over 70%, independent versioning, and instant local execution with Docker.</p>
+      </article>
+
+      <!-- Full Text Search Tool Section -->
+      <section class="doc-section" id="search" tool-name="search_documentation" description="Full-text semantic keyword search across all technical documentation sections">
+        <h2>🔍 Documentation Search Engine <span class="tag tag-blue">SEARCH</span></h2>
+
+        <!-- Semantic Web MCP Form Declaration -->
+        <form class="web-mcp-tool" tool-name="search_documentation" description="Execute search query across technical documentation" onsubmit="event.preventDefault(); executeToolFromForm(this);">
+          <legend>Web MCP Tool: search_documentation</legend>
+          <label for="search-query-input">Keywords:</label>
+          <input type="text" id="search-query-input" name="query" tool-param-name="query" tool-param-type="string" tool-param-description="Keywords to search in documentation" placeholder="e.g. WHIP, docker.sock, Caddy, Twitch..." />
+          <button type="submit" class="btn">Search</button>
+        </form>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>ApliArte Directo &bull; Sovereign Private Live Broadcasting Architecture &bull; 100% Local &bull; Private Repository</p>
+  </footer>
+
+  <!-- Web MCP Client-Side Engine & Interactive Tool Runner -->
+  <script>
+    // Theme Management (Light by default, persistent choice)
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const target = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', target);
+      try { localStorage.setItem('apliarte_theme', target); } catch (_) {}
+    }
+    (function initTheme() {
+      try {
+        const saved = localStorage.getItem('apliarte_theme') || localStorage.getItem('theme');
+        if (saved) {
+          document.documentElement.setAttribute('data-theme', saved);
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      } catch (_) {}
+    })();
+
+    function focusConsole() {
+      const el = document.getElementById('console');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        const input = document.getElementById('tool-param-input');
+        if (input) input.focus();
+      }
+    }
+
+    // Tool Catalog and Local Execution Database
+    const WEB_MCP_TOOLS = {
+      read_architecture_spec: {
+        name: "read_architecture_spec",
+        description: "Retrieve full system architecture, services topology, network isolation, and WHIP control API.",
+        parameters: { section: "Section to query: 'overview', 'topology', 'docker', 'network', or 'all'" },
+        execute: function(param) {
+          const p = (param || 'all').toLowerCase();
+          const el = document.getElementById('architecture');
+          if (p === 'topology') {
+            return `--- ApliArte Directo: Topology Specification ---\n` +
+                   `Internet -> [Caddy Auto-SSL :80/:443] -> [Overlay Node 22 :7979]\n` +
+                   `Internal -> [directo-network bridge] -> [WHIP Chromium :3000] -> [Twitch WebRTC Ingest]\n` +
+                   `Status: Isolated bridge network, no docker.sock mounted.`;
+          }
+          if (p === 'docker') {
+            return `--- ApliArte Directo: Docker Compose Services ---\n` +
+                   `1. overlay: node:22-alpine, port 7979, mounts ./data and ./medios.\n` +
+                   `2. whip: debian-bookworm/chromium, internal port 3000, WebRTC WHIP streamer.\n` +
+                   `3. caddy: caddy:2-alpine, profile ssl, automatic Let's Encrypt certificates.`;
+          }
+          return el ? el.innerText.trim() : "Architecture spec section not found.";
+        }
+      },
+      get_deployment_guide: {
+        name: "get_deployment_guide",
+        description: "Get step-by-step production deployment commands for Docker Compose and Caddy SSL.",
+        parameters: { target: "Target environment: 'vps', 'ssl', 'local', or 'all'" },
+        execute: function(param) {
+          const el = document.getElementById('deployment');
+          return el ? el.innerText.trim() : "Deployment guide not found.";
+        }
+      },
+      get_configuration_reference: {
+        name: "get_configuration_reference",
+        description: "Inspect environment variables (.env), storage volumes, and OBS integration settings.",
+        parameters: { key: "Config key (e.g. PANEL_PASS, TWITCH_STREAM_KEY, volumes) or 'all'" },
+        execute: function(param) {
+          const el = document.getElementById('configuration');
+          return el ? el.innerText.trim() : "Configuration reference not found.";
+        }
+      },
+      get_security_directives: {
+        name: "get_security_directives",
+        description: "Review defensive security policies, docker.sock elimination, and IP spoofing defenses.",
+        parameters: { topic: "Topic: 'docker-socket', 'credentials', 'ip-spoofing', or 'all'" },
+        execute: function(param) {
+          const el = document.getElementById('security');
+          return el ? el.innerText.trim() : "Security directives not found.";
+        }
+      },
+      get_adr_0001: {
+        name: "get_adr_0001",
+        description: "Review Architectural Decision Record ADR-0001 on Docker containerization and decoupling.",
+        parameters: { topic: "all" },
+        execute: function() {
+          const el = document.getElementById('adr-0001');
+          return el ? el.innerText.trim() : "ADR-0001 not found.";
+        }
+      },
+      search_documentation: {
+        name: "search_documentation",
+        description: "Full-text semantic keyword search across all technical documentation sections.",
+        parameters: { query: "Keywords to match" },
+        execute: function(query) {
+          if (!query || !query.trim()) return "Error: Please provide a search query keyword.";
+          const q = query.toLowerCase().trim();
+          const sections = document.querySelectorAll('article.doc-section');
+          const matches = [];
+          sections.forEach(sec => {
+            const text = sec.innerText;
+            if (text.toLowerCase().includes(q)) {
+              matches.push({
+                id: sec.id,
+                title: sec.querySelector('h2') ? sec.querySelector('h2').innerText : sec.id,
+                snippet: text.substring(0, 300) + "..."
+              });
+            }
+          });
+          if (matches.length === 0) return `No documentation matches found for keyword: "${query}"`;
+          return JSON.stringify({ query: query, matches_count: matches.length, results: matches }, null, 2);
+        }
+      },
+      list_available_tools: {
+        name: "list_available_tools",
+        description: "Introspect and list all declared Web MCP semantic tools available on this endpoint.",
+        parameters: {},
+        execute: function() {
+          const manifest = Object.values(WEB_MCP_TOOLS).map(t => ({
+            name: t.name,
+            description: t.description,
+            parameters: t.parameters
+          }));
+          return JSON.stringify({ mcp_version: "1.0-web", total_tools: manifest.length, tools: manifest }, null, 2);
+        }
+      }
+    };
+
+    function prepareTool(toolName, paramValue) {
+      const select = document.getElementById('tool-selector');
+      const input = document.getElementById('tool-param-input');
+      if (select) select.value = toolName;
+      if (input) input.value = paramValue || '';
+      focusConsole();
+      executeCurrentTool();
+    }
+
+    function onToolSelectChange() {
+      const select = document.getElementById('tool-selector');
+      const input = document.getElementById('tool-param-input');
+      const tool = WEB_MCP_TOOLS[select.value];
+      if (tool && input) {
+        const paramKeys = Object.keys(tool.parameters);
+        input.placeholder = paramKeys.length > 0 ? `Parameter: ${paramKeys.join(', ')}` : "(No parameters required)";
+      }
+    }
+
+    function executeCurrentTool() {
+      const select = document.getElementById('tool-selector');
+      const input = document.getElementById('tool-param-input');
+      const outputBox = document.getElementById('tool-output-box');
+      if (!select || !outputBox) return;
+
+      const toolName = select.value;
+      const param = input ? input.value : '';
+      const tool = WEB_MCP_TOOLS[toolName];
+
+      if (!tool) {
+        outputBox.style.display = 'block';
+        outputBox.textContent = `Error: Tool '${toolName}' not found.`;
+        return;
+      }
+
+      outputBox.style.display = 'block';
+      outputBox.textContent = `[Web MCP] Invoking ${toolName}(${param ? JSON.stringify(param) : ''})...\n\n` + tool.execute(param);
+    }
+
+    function executeToolFromForm(form) {
+      const toolName = form.getAttribute('tool-name');
+      const input = form.querySelector('input[type="text"]');
+      const val = input ? input.value : '';
+      prepareTool(toolName, val);
+    }
+  </script>
+</body>
+</html>

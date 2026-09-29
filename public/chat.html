@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="es" data-tema="oscuro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>💬 Chat Multiplataforma · ApliArte Directo</title>
+  <style>
+    :root {
+      --bg: #0e0e10;
+      --panel: #18181b;
+      --borde: #2f2f35;
+      --texto: #efeff1;
+      --suave: #adadb8;
+      --acento: #5ecef5;
+      --twitch: #9146ff;
+      --kick: #53fc18;
+      --youtube: #ff0000;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--texto);
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--borde);
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .acciones {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    button, a.btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: 0.4rem;
+      border: 1px solid var(--borde);
+      background: #26262c;
+      color: var(--texto);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    button:hover, a.btn:hover {
+      background: #323239;
+      border-color: #4a4a55;
+    }
+    .btn-twitch { border-color: var(--twitch); color: #fff; }
+    .btn-twitch:hover { background: var(--twitch); }
+    .btn-kick { border-color: var(--kick); color: #fff; }
+    .btn-kick:hover { background: #3ec410; color: #000; }
+    .btn-youtube { border-color: var(--youtube); color: #fff; }
+    .btn-youtube:hover { background: var(--youtube); }
+    .btn-destacado {
+      background: var(--acento);
+      color: #000;
+      border-color: var(--acento);
+    }
+    .btn-destacado:hover {
+      background: #8fd5fa;
+    }
+    .campo-yt {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.8rem;
+      color: var(--suave);
+    }
+    .campo-yt input {
+      background: #111;
+      border: 1px solid var(--borde);
+      color: #fff;
+      padding: 0.3rem 0.5rem;
+      border-radius: 0.3rem;
+      font-size: 0.85rem;
+      width: 8rem;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+    }
+    .selector-vistas {
+      display: inline-flex;
+      align-items: center;
+      background: #18181b;
+      border: 1px solid var(--borde);
+      border-radius: 0.45rem;
+      padding: 0.15rem;
+      gap: 0.2rem;
+    }
+    .btn-vista {
+      background: transparent;
+      border: none;
+      color: var(--suave);
+      padding: 0.35rem 0.65rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border-radius: 0.35rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.15s;
+    }
+    .btn-vista:hover {
+      color: var(--texto);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .btn-vista.activa {
+      background: #2a2a32;
+      color: #fff;
+    }
+    /* VISTA 1: 3 Columnas */
+    #vista-columnas {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      height: 100%;
+      width: 100%;
+      gap: 1px;
+      background: var(--borde);
+    }
+    .col-chat {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: var(--bg);
+      overflow: hidden;
+    }
+    .col-chat-header {
+      padding: 0.4rem 0.75rem;
+      background: var(--panel);
+      font-size: 0.82rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--borde);
+      user-select: none;
+    }
+    .col-chat-header.col-twitch { border-top: 3px solid var(--twitch); color: #fff; }
+    .col-chat-header.col-kick { border-top: 3px solid var(--kick); color: #fff; }
+    .col-chat-header.col-youtube { border-top: 3px solid var(--youtube); color: #fff; }
+    .col-chat-header a.btn-mini {
+      color: var(--suave);
+      text-decoration: none;
+      font-size: 0.8rem;
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.25rem;
+      background: rgba(255,255,255,0.06);
+    }
+    .col-chat-header a.btn-mini:hover { color: #fff; background: rgba(255,255,255,0.15); }
+    .col-chat iframe {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    /* VISTA 2: Muro Unificado Directo */
+    #vista-muro {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: #0d0d11;
+      overflow: hidden;
+    }
+    #muro-mensajes {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.75rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      font-size: 0.92rem;
+    }
+    .muro-info {
+      color: var(--suave);
+      font-size: 0.82rem;
+      font-style: italic;
+      padding: 0.4rem 0;
+    }
+    .msg-fila {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      line-height: 1.45;
+      animation: aparecer 0.15s ease-out;
+      word-break: break-word;
+      padding: 0.15rem 0.3rem;
+      border-radius: 0.3rem;
+    }
+    .msg-fila:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .badge-plat {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.12rem 0.5rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      flex-shrink: 0;
+      line-height: 1.2;
+    }
+    .badge-plat.twitch { background: var(--twitch); color: #fff; }
+    .badge-plat.kick { background: var(--kick); color: #000; }
+    .badge-plat.youtube { background: var(--youtube); color: #fff; }
+    .msg-user {
+      font-weight: 700;
+      color: #fff;
+    }
+    .msg-texto {
+      color: #eaeaea;
+    }
+    /* VISTA 3: Botrix */
+    #vista-botrix {
+      flex: 1;
+      height: 100%;
+      width: 100%;
+      display: flex;
+    }
+    #vista-botrix iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      flex: 1;
+    }
+    footer {
+      background: var(--panel);
+      border-top: 1px solid var(--borde);
+      padding: 0.4rem 1rem;
+      font-size: 0.78rem;
+      color: var(--suave);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-silenciados {
+      background: #141418;
+      border-bottom: 1px solid var(--borde);
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .panel-silenciados-fila {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .panel-silenciados-titulo {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--texto);
+    }
+    .badge-contador {
+      font-size: 0.72rem;
+      background: #23232b;
+      color: var(--acento);
+      border: 1px solid var(--borde);
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+    .form-silenciar {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex: 1;
+      max-width: 36rem;
+    }
+    .form-silenciar input {
+      flex: 1;
+      min-width: 11rem;
+      background: #09090b;
+      border: 1px solid var(--borde);
+      color: #fff;
+      padding: 0.35rem 0.6rem;
+      border-radius: 0.35rem;
+      font-size: 0.82rem;
+    }
+    .form-silenciar input:focus {
+      outline: none;
+      border-color: var(--acento);
+    }
+    .btn-silenciar {
+      background: #7a1d1d;
+      border-color: #a82e2e;
+      color: #fff;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.8rem;
+    }
+    .btn-silenciar:hover {
+      background: #a82e2e;
+    }
+    .btn-secundario {
+      background: #222227;
+      border-color: var(--borde);
+      color: var(--suave);
+      padding: 0.35rem 0.55rem;
+      font-size: 0.78rem;
+    }
+    .btn-secundario:hover {
+      background: #2d2d34;
+      color: #fff;
+    }
+    .chips-silenciados {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      max-height: 4.5rem;
+      overflow-y: auto;
+      padding: 0.1rem 0;
+    }
+    .chip-silenciado {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: #1f1f26;
+      border: 1px solid #3c2a2a;
+      border-radius: 999px;
+      padding: 0.15rem 0.3rem 0.15rem 0.55rem;
+      font-size: 0.78rem;
+      font-family: ui-monospace, "SF Mono", monospace;
+      color: #ff9b9b;
+    }
+    .chip-silenciado .btn-quitar {
+      background: transparent;
+      border: none;
+      color: var(--suave);
+      font-size: 0.95rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0.05rem 0.25rem;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .chip-silenciado .btn-quitar:hover {
+      background: #c0392b;
+      color: #fff;
+    }
+    .chips-vacio {
+      color: var(--suave);
+      font-size: 0.78rem;
+      font-style: italic;
+    }
+    .aviso-accion {
+      font-size: 0.76rem;
+      color: var(--acento);
+      margin-left: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>💬 Chat Multiplataforma · ApliArte</h1>
+    <div class="selector-vistas">
+      <button type="button" class="btn-vista activa" id="btn-vista-columnas" title="Ver los 3 chats oficiales en 3 columnas">
+        🪟 3 Chats en 1
+      </button>
+      <button type="button" class="btn-vista" id="btn-vista-muro" title="Muro unificado en tiempo real">
+        📜 Muro en Vivo
+      </button>
+      <button type="button" class="btn-vista" id="btn-vista-botrix" title="Widget Botrix">
+        🤖 Botrix
+      </button>
+    </div>
+    <div class="acciones">
+      <div class="campo-yt">
+        <label for="yt-id">Canal o ID YouTube:</label>
+        <input type="text" id="yt-id" value="qDAG6_UyGHM" placeholder="@erbolammApliArte o ID" title="Canal (@erbolammApliArte) o ID del vídeo de YouTube activo">
+      </div>
+      <button type="button" class="btn btn-destacado" id="btn-abrir-todos" title="Abre las 3 ventanas de chat para poder escribir en todas">
+        🚀 Abrir los 3 para escribir
+      </button>
+      <button type="button" class="btn btn-twitch" id="btn-twitch" title="Abrir ventana de chat de Twitch para escribir">
+        🟣 Twitch
+      </button>
+      <button type="button" class="btn btn-kick" id="btn-kick" title="Abrir ventana de chat de Kick para escribir">
+        🟢 Kick
+      </button>
+      <button type="button" class="btn btn-youtube" id="btn-youtube" title="Abrir ventana de chat de YouTube para escribir">
+        🔴 YouTube
+      </button>
+    </div>
+  </header>
+
+  <div class="panel-silenciados" id="panel-silenciados">
+    <div class="panel-silenciados-fila">
+      <div class="panel-silenciados-titulo">
+        <span>🔇 Silenciados en TTS al vuelo</span>
+        <span class="badge-contador" id="contador-silenciados">0</span>
+        <span class="aviso-accion" id="aviso-accion"></span>
+      </div>
+      <div class="form-silenciar">
+        <input type="text" id="input-silenciar" placeholder="Nombre de usuario (ej. pepitoelpapas)…" aria-label="Usuario a silenciar">
+        <button type="button" class="btn btn-silenciar" id="btn-silenciar" title="Silenciar este usuario en el lector TTS">🔇 Silenciar</button>
+        <button type="button" class="btn btn-secundario" id="btn-vaciar" title="Permitir que todos hablen (vaciar lista negra)">🔊 Vaciar lista</button>
+        <button type="button" class="btn btn-secundario" id="btn-reset-bots" title="Restablecer bots por defecto (StreamElements, Nightbot, etc.)">🤖 Restablecer bots</button>
+      </div>
+    </div>
+    <div class="chips-silenciados" id="chips-silenciados"></div>
+  </div>
+
+  <main>
+    <!-- VISTA 1: 3 Columnas integradas en una sola ventana -->
+    <div id="vista-columnas">
+      <div class="col-chat">
+        <div class="col-chat-header col-twitch">
+          <span>🟣 Twitch · apliarte</span>
+          <a href="https://www.twitch.tv/popout/apliarte/chat?popout=" target="_blank" class="btn-mini" title="Abrir emergente">↗</a>
+        </div>
+        <iframe id="iframe-twitch" allow="autoplay; fullscreen" title="Chat de Twitch"></iframe>
+      </div>
+      <div class="col-chat">
+        <div class="col-chat-header col-kick">
+          <span>🟢 Kick · apliarte</span>
+          <a href="https://kick.com/popout/apliarte/chat" target="_blank" class="btn-mini" title="Abrir emergente">↗</a>
+        </div>
+        <iframe id="iframe-kick" src="https://kick.com/popout/apliarte/chat" allow="autoplay; fullscreen" title="Chat de Kick"></iframe>
+      </div>
+      <div class="col-chat">
+        <div class="col-chat-header col-youtube">
+          <span>🔴 YouTube · @erbolammApliArte</span>
+          <a id="link-yt-popout" href="https://www.youtube.com/live_chat?is_popout=1&v=qDAG6_UyGHM" target="_blank" class="btn-mini" title="Abrir emergente">↗</a>
+        </div>
+        <iframe id="iframe-youtube" allow="autoplay; fullscreen" title="Chat de YouTube"></iframe>
+      </div>
+    </div>
+
+    <!-- VISTA 2: Muro Unificado (Feed en tiempo real) -->
+    <div id="vista-muro" style="display:none;">
+      <div id="muro-mensajes">
+        <div class="muro-info">Conectando en directo con Twitch y Kick…</div>
+      </div>
+    </div>
+
+    <!-- VISTA 3: Botrix original -->
+    <div id="vista-botrix" style="display:none;">
+      <iframe id="chat-widget" src="about:blank" allow="autoplay; fullscreen" title="Visor de chat unificado Botrix"></iframe>
+    </div>
+  </main>
+
+  <footer>
+    <span>👀 <strong>Visor unificado (lectura)</strong>: Recibe y muestra en vivo los mensajes de Twitch, Kick y YouTube en una sola ventana.</span>
+    <span>✍️ <strong>Para escribir</strong>: Pulsa los botones superiores para abrir el chat emergente oficial de cada plataforma con tu cuenta activa.</span>
+  </footer>
+
+  <script type="module">
+    import { FUENTES } from './js/tts-fuentes.js';
+
+    const inputYt = document.getElementById('yt-id');
+    const CANAL_TWITCH = 'apliarte';
+    const CANAL_KICK = 'apliarte';
+    const CANAL_YOUTUBE_DEFECTO = '@erbolammApliArte';
+
+    const host = window.location.hostname || '127.0.0.1';
+
+    const canalGuardado = localStorage.getItem('directo_yt_canal_o_id');
+    if (canalGuardado && canalGuardado !== 'ZZKVJ_W-6Mo' && canalGuardado !== '@erbolammApliArte') {
+      inputYt.value = canalGuardado;
+    } else {
+      inputYt.value = 'qDAG6_UyGHM';
+    }
+
+    function actualizarIframes() {
+      const ytVal = (inputYt.value || 'qDAG6_UyGHM').trim();
+      const iframeTwitch = document.getElementById('iframe-twitch');
+      const iframeYt = document.getElementById('iframe-youtube');
+      const linkYt = document.getElementById('link-yt-popout');
+
+      if (iframeTwitch) {
+        iframeTwitch.src = `https://www.twitch.tv/embed/${CANAL_TWITCH}/chat?parent=${host}&parent=localhost&parent=127.0.0.1&darkpopout`;
+      }
+      if (iframeYt) {
+        iframeYt.src = `https://www.youtube.com/live_chat?is_popout=1&v=${ytVal}&embed_domain=${host}`;
+      }
+      if (linkYt) {
+        linkYt.href = `https://www.youtube.com/live_chat?is_popout=1&v=${ytVal}`;
+      }
+    }
+
+    actualizarIframes();
+
+    inputYt.addEventListener('input', () => {
+      localStorage.setItem('directo_yt_canal_o_id', inputYt.value.trim());
+      actualizarIframes();
+    });
+
+    // ── Selector de Vistas ──────────────────────────────────────────────────
+    const btnVistaColumnas = document.getElementById('btn-vista-columnas');
+    const btnVistaMuro = document.getElementById('btn-vista-muro');
+    const btnVistaBotrix = document.getElementById('btn-vista-botrix');
+    const vistaColumnas = document.getElementById('vista-columnas');
+    const vistaMuro = document.getElementById('vista-muro');
+    const vistaBotrix = document.getElementById('vista-botrix');
+
+    function cambiarVista(modo) {
+      localStorage.setItem('directo_chat_vista', modo);
+      btnVistaColumnas.classList.toggle('activa', modo === 'columnas');
+      btnVistaMuro.classList.toggle('activa', modo === 'muro');
+      btnVistaBotrix.classList.toggle('activa', modo === 'botrix');
+
+      vistaColumnas.style.display = modo === 'columnas' ? 'grid' : 'none';
+      vistaMuro.style.display = modo === 'muro' ? 'flex' : 'none';
+      vistaBotrix.style.display = modo === 'botrix' ? 'flex' : 'none';
+      if (modo === 'botrix') cargarBotrix();
+    }
+
+    // Each streamer uses their own Botrix widget: ?botrix=<url> in the OBS source URL
+    // (OBS has its own browser storage) or the one saved from the panel's chat tab.
+    function esUrlBotrix(texto) {
+      try {
+        const url = new URL(String(texto || '').trim());
+        return url.protocol === 'https:' && url.hostname === 'botrix.live';
+      } catch (_) { return false; }
+    }
+    function cargarBotrix() {
+      const frame = document.getElementById('chat-widget');
+      if (!frame || frame.dataset.cargado === '1') return;
+      const params = new URLSearchParams(window.location.search);
+      let guardada = '';
+      try { guardada = localStorage.getItem('erbolamm-botrix-widget-url') || ''; } catch (_) {}
+      const url = [params.get('botrix'), guardada].find(esUrlBotrix);
+      frame.dataset.cargado = '1';
+      if (url) { frame.src = url; return; }
+      frame.srcdoc = '<p style="font:16px system-ui;color:#fff;padding:16px">Sin widget de Botrix. Añade <code>?botrix=</code> con la dirección de tu widget a esta página, o guárdala en el panel (pestaña Chat → Todos).</p>';
+    }
+
+    btnVistaColumnas.addEventListener('click', () => cambiarVista('columnas'));
+    btnVistaMuro.addEventListener('click', () => cambiarVista('muro'));
+    btnVistaBotrix.addEventListener('click', () => cambiarVista('botrix'));
+
+    const vistaInicial = localStorage.getItem('directo_chat_vista') || 'columnas';
+    cambiarVista(vistaInicial);
+
+    function obtenerUrlYt() {
+      const val = (inputYt.value || CANAL_YOUTUBE_DEFECTO).trim();
+      if (!val || val === CANAL_YOUTUBE_DEFECTO || val === 'erbolammapliarte' || val.toLowerCase() === '@erbolammapliarte') {
+        return 'https://www.youtube.com/@erbolammApliArte/live';
+      }
+      if (val.startsWith('@')) {
+        return `https://www.youtube.com/${val}/live`;
+      }
+      if (val.startsWith('UC') && val.length === 24) {
+        return `https://www.youtube.com/live_chat?is_popout=1&channel=${val}`;
+      }
+      if (val.startsWith('http://') || val.startsWith('https://')) {
+        return val;
+      }
+      return `https://www.youtube.com/live_chat?is_popout=1&v=${val}`;
+    }
+
+    function abrirVentana(url, nombre, offset = 0) {
+      const w = 380;
+      const h = 640;
+      const left = window.screen.availWidth - w - offset;
+      const top = 60 + (offset / 4);
+      return window.open(url, nombre, `width=${w},height=${h},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`);
+    }
+
+    document.getElementById('btn-twitch').addEventListener('click', () => {
+      abrirVentana(`https://www.twitch.tv/popout/${CANAL_TWITCH}/chat?popout=`, 'chat_twitch', 0);
+    });
+
+    document.getElementById('btn-kick').addEventListener('click', () => {
+      abrirVentana(`https://kick.com/popout/${CANAL_KICK}/chat`, 'chat_kick', 50);
+    });
+
+    document.getElementById('btn-youtube').addEventListener('click', () => {
+      abrirVentana(obtenerUrlYt(), 'chat_youtube', 100);
+    });
+
+    document.getElementById('btn-abrir-todos').addEventListener('click', () => {
+      abrirVentana(`https://www.twitch.tv/popout/${CANAL_TWITCH}/chat?popout=`, 'chat_twitch', 0);
+      setTimeout(() => abrirVentana(`https://kick.com/popout/${CANAL_KICK}/chat`, 'chat_kick', 400), 200);
+      setTimeout(() => abrirVentana(obtenerUrlYt(), 'chat_youtube', 800), 400);
+    });
+
+    // ── Panel de usuarios silenciados al vuelo (TTS) ────────────────────────
+    const CLAVE_LOCAL_IGNORADOS = 'directo_tts_usuarios_ignorados_v1';
+    const BOTS_PREDETERMINADOS = [
+      'streamelements', 'nightbot', 'streamlabs', 'streamlabsbot',
+      'botrix', 'wizebot', 'moobot', 'pepitoelpapas',
+      'soundalerts', 'kofistreambot', 'pretzelrocks', 'fossabot'
+    ];
+    const usuariosIgnorados = new Set(BOTS_PREDETERMINADOS);
+
+    const elContadorSilenciados = document.getElementById('contador-silenciados');
+    const elChipsSilenciados = document.getElementById('chips-silenciados');
+    const elInputSilenciar = document.getElementById('input-silenciar');
+    const elBtnSilenciar = document.getElementById('btn-silenciar');
+    const elBtnVaciar = document.getElementById('btn-vaciar');
+    const elBtnResetBots = document.getElementById('btn-reset-bots');
+    const elAvisoAccion = document.getElementById('aviso-accion');
+
+    function avisar(msg) {
+      if (!elAvisoAccion) return;
+      elAvisoAccion.textContent = msg;
+      clearTimeout(avisar._t);
+      avisar._t = setTimeout(() => { elAvisoAccion.textContent = ''; }, 3500);
+    }
+
+    function pintarChipsSilenciados() {
+      const arr = [...usuariosIgnorados].sort();
+      elContadorSilenciados.textContent = arr.length;
+      elChipsSilenciados.replaceChildren();
+      if (arr.length === 0) {
+        const vacio = document.createElement('span');
+        vacio.className = 'chips-vacio';
+        vacio.textContent = 'Sin usuarios silenciados: todos los espectadores y bots se escucharán en TTS.';
+        elChipsSilenciados.appendChild(vacio);
+        return;
+      }
+      for (const u of arr) {
+        const chip = document.createElement('span');
+        chip.className = 'chip-silenciado';
+        const txt = document.createElement('span');
+        txt.textContent = u;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-quitar';
+        btn.textContent = '×';
+        btn.title = `Eliminar ${u} de la lista negra (permitir voz en TTS)`;
+        btn.setAttribute('aria-label', `Eliminar ${u} de la lista negra`);
+        btn.addEventListener('click', () => {
+          usuariosIgnorados.delete(u);
+          guardarSilenciados(true);
+          avisar(`🔊 "${u}" eliminado: ahora se escuchará en TTS.`);
+        });
+        chip.append(txt, btn);
+        elChipsSilenciados.appendChild(chip);
+      }
+    }
+
+    function guardarSilenciados(notificarServidor = true) {
+      const arr = [...usuariosIgnorados].sort();
+      try {
+        localStorage.setItem(CLAVE_LOCAL_IGNORADOS, JSON.stringify(arr));
+        if (notificarServidor) {
+          fetch('/api/panel/usuarios-ignorados', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accion: 'reemplazar', usuarios: arr }),
+          }).catch(() => {});
+        }
+      } catch (_) {}
+      pintarChipsSilenciados();
+    }
+
+    function cargarSilenciados() {
+      let cargadosLocal = false;
+      try {
+        const guardados = localStorage.getItem(CLAVE_LOCAL_IGNORADOS);
+        if (guardados) {
+          const arr = JSON.parse(guardados);
+          if (Array.isArray(arr)) {
+            usuariosIgnorados.clear();
+            for (const u of arr) if (typeof u === 'string' && u.trim()) usuariosIgnorados.add(u.trim().toLowerCase());
+            cargadosLocal = true;
+          }
+        }
+      } catch (_) {}
+      fetch('/api/panel/usuarios-ignorados')
+        .then(r => r.ok ? r.json() : null)
+        .then(datos => {
+          if (datos && Array.isArray(datos.usuarios) && !cargadosLocal) {
+            for (const u of datos.usuarios) {
+              if (typeof u === 'string' && u.trim()) usuariosIgnorados.add(u.trim().toLowerCase());
+            }
+            guardarSilenciados(false);
+          }
+          pintarChipsSilenciados();
+        })
+        .catch(() => {});
+      pintarChipsSilenciados();
+    }
+
+    function silenciarUsuarioActual() {
+      const u = (elInputSilenciar.value || '').trim().toLowerCase();
+      if (!u) return;
+      if (usuariosIgnorados.has(u)) {
+        avisar(`⚠️ "${u}" ya está en la lista negra.`);
+        elInputSilenciar.value = '';
+        return;
+      }
+      usuariosIgnorados.add(u);
+      elInputSilenciar.value = '';
+      guardarSilenciados(true);
+      avisar(`🔇 "${u}" silenciado en TTS.`);
+    }
+
+    elBtnSilenciar.addEventListener('click', silenciarUsuarioActual);
+    elInputSilenciar.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        silenciarUsuarioActual();
+      }
+    });
+
+    elBtnVaciar.addEventListener('click', () => {
+      usuariosIgnorados.clear();
+      guardarSilenciados(true);
+      avisar('🔊 Lista negra vaciada: todos los usuarios y bots se escucharán en TTS.');
+    });
+
+    elBtnResetBots.addEventListener('click', () => {
+      for (const b of BOTS_PREDETERMINADOS) usuariosIgnorados.add(b);
+      guardarSilenciados(true);
+      avisar('🤖 Bots predeterminados restablecidos en la lista negra.');
+    });
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === CLAVE_LOCAL_IGNORADOS && e.newValue) {
+        try {
+          const arr = JSON.parse(e.newValue);
+          if (Array.isArray(arr)) {
+            usuariosIgnorados.clear();
+            for (const u of arr) if (typeof u === 'string' && u.trim()) usuariosIgnorados.add(u.trim().toLowerCase());
+            pintarChipsSilenciados();
+          }
+        } catch (_) {}
+      }
+    });
+
+    // ── Conexión en vivo para el Muro Unificado (Twitch + Kick nativos) ──
+    const elMuroMensajes = document.getElementById('muro-mensajes');
+
+    function agregarMensajeMuro({ plataforma, usuario, texto, color }) {
+      if (!elMuroMensajes) return;
+      if (usuariosIgnorados.has((usuario || '').toLowerCase())) return;
+
+      const infoInicial = elMuroMensajes.querySelector('.muro-info');
+      if (infoInicial) infoInicial.remove();
+
+      const fila = document.createElement('div');
+      fila.className = 'msg-fila';
+
+      const badge = document.createElement('span');
+      badge.className = `badge-plat ${plataforma}`;
+      if (plataforma === 'twitch') badge.textContent = '🟣 Twitch';
+      else if (plataforma === 'kick') badge.textContent = '🟢 Kick';
+      else if (plataforma === 'youtube') badge.textContent = '🔴 YouTube';
+      else badge.textContent = plataforma;
+
+      const userSpan = document.createElement('span');
+      userSpan.className = 'msg-user';
+      if (color) userSpan.style.color = color;
+      userSpan.textContent = `${usuario}:`;
+
+      const txtSpan = document.createElement('span');
+      txtSpan.className = 'msg-texto';
+      txtSpan.textContent = texto;
+
+      fila.append(badge, userSpan, txtSpan);
+      elMuroMensajes.appendChild(fila);
+
+      while (elMuroMensajes.children.length > 250) {
+        elMuroMensajes.removeChild(elMuroMensajes.firstElementChild);
+      }
+      elMuroMensajes.scrollTop = elMuroMensajes.scrollHeight;
+    }
+
+    try {
+      if (FUENTES && FUENTES['twitch-irc']) {
+        const fuenteTwitch = new FUENTES['twitch-irc'].clase({ canal: CANAL_TWITCH });
+        fuenteTwitch.onMensaje(agregarMensajeMuro);
+        fuenteTwitch.conectar();
+      }
+      if (FUENTES && FUENTES['kick-pusher']) {
+        const fuenteKick = new FUENTES['kick-pusher'].clase(FUENTES['kick-pusher'].defaults);
+        fuenteKick.onMensaje(agregarMensajeMuro);
+        fuenteKick.conectar();
+      }
+    } catch (_) {}
+
+    cargarSilenciados();
+  </script>
+</body>
+</html>

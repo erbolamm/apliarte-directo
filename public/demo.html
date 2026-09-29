@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; form-action 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:">
+  <title>ApliArte Directo · Demo pública</title>
+  <meta name="description" content="Prueba local de los avatares y comandos reales de ApliArte Directo, sin conexión al directo.">
+  <link rel="stylesheet" href="./office-3d.css?v=b9609ca652">
+  <style>
+    :root { color-scheme:light; --bg:#f5f7fa; --panel:#fff; --ink:#233044; --muted:#566579; --line:#b7c3d0; --accent:#005fa9; }
+    html[data-theme="dark"] { color-scheme:dark; --bg:#1a2230; --panel:#273243; --ink:#f5f7fa; --muted:#cad4df; --line:#617083; --accent:#7ecaff; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui,sans-serif; }
+    button,select,input { font:inherit; }
+    button,select,input, .panel, .stage { border:1px solid var(--line); border-radius:0; }
+    button,select { background:var(--panel); color:var(--ink); padding:8px; cursor:pointer; }
+    button:hover,button:focus-visible { border-color:var(--accent); color:var(--accent); }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    input { padding:8px; background:var(--panel); color:var(--ink); min-width:0; }
+    .icon { min-width:42px; position:relative; }
+    .icon[data-tip]:hover::after,.icon[data-tip]:focus-visible::after { content:attr(data-tip); position:absolute; z-index:10; top:calc(100% + 4px); right:0; width:max-content; max-width:220px; background:var(--ink); color:var(--bg); padding:8px; pointer-events:none; animation:tip-hide 3s forwards; }
+    @keyframes tip-hide { 0%,88% { opacity:1; } 100% { opacity:0; visibility:hidden; } }
+    .wrap { max-width:1320px; margin:auto; padding:8px; }
+    header,.toolbar,.controls,.chat-form,.row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    header { justify-content:space-between; border-bottom:1px solid var(--line); padding:8px; }
+    h1 { font-size:1.2rem; margin:0; } h2 { font-size:1rem; margin:0 0 8px; }
+    p { margin:8px 0; } small,.muted { color:var(--muted); }
+    .layout { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:8px; margin-top:8px; }
+    .stage { background:var(--panel); min-height:560px; overflow:hidden; }
+    #office-3d { height:550px; display:flex; pointer-events:none; }
+    #office-3d>.real-office { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+    #office-3d .office-volume { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+    #office-3d .volume-viewport { flex:1 1 auto; min-height:0; }
+    #office-3d .office-roster { display:none; }
+    .panel { background:var(--panel); padding:8px; margin-bottom:8px; }
+    .controls { margin:8px 0; } .controls button { flex:1 0 40px; }
+    .chat-log { height:160px; overflow:auto; border:1px solid var(--line); padding:8px; font-size:.9rem; }
+    .chat-log p { margin:0 0 6px; overflow-wrap:anywhere; }
+    .chat-form input { flex:1; }
+    .commands { display:flex; flex-wrap:wrap; gap:8px; }
+    .commands button { font-size:.9rem; }
+    #practiceRaceStatus { min-height:22px; }
+    dialog { max-width:min(680px,95vw); max-height:90vh; overflow:auto; background:var(--panel); color:var(--ink); border:1px solid var(--line); padding:16px; }
+    dialog::backdrop { background:#0009; }
+    .code-block { white-space:pre-wrap; overflow-wrap:anywhere; border:1px solid var(--line); padding:8px; max-height:300px; overflow:auto; font:13px/1.4 ui-monospace,monospace; }
+    a { color:var(--accent); }
+    @media(max-width:800px) { .layout { grid-template-columns:1fr; } .stage { min-height:420px; } #office-3d { height:410px; } }
+    /* The demo has its own view controls; the office toolbar (EN VIVO, inbox, task search) does nothing here. */
+    #office-3d .camera-tools { display: none; }
+  </style>
+  <script defer src="./office-3d.js?v=a646a9b998"></script>
+</head>
+<body>
+  <header>
+    <div><h1>ApliArte Directo · Demo pública</h1><small>Solo en tu navegador · No conecta con el directo, Twitch, OBS ni otros visitantes.</small></div>
+    <div class="toolbar">
+      <button id="themeToggle" class="icon" type="button" aria-label="Cambiar entre modo claro y oscuro" data-tip="Cambiar tema">☾</button>
+      <button id="deployOpen" class="icon" type="button" aria-label="Abrir instrucciones de instalación" data-tip="Instalar tu propio Directo">⬇</button>
+    </div>
+  </header>
+  <main class="wrap">
+    <div class="layout">
+      <section class="stage" aria-label="Plano real de ApliArte Directo">
+        <div id="office-3d" data-fill="1"></div>
+      </section>
+      <aside>
+        <section class="panel">
+          <h2>Vista y avatar</h2>
+          <div class="row">
+            <button id="view3d" type="button">3D</button>
+            <button id="view2d" type="button">Diorama 2D</button>
+            <button id="boardToggle" type="button">Tablero: apagado</button>
+          </div>
+          <p><label for="practiceAgent">Tu avatar</label></p>
+          <select id="practiceAgent" aria-label="Elegir avatar de práctica"></select>
+          <p class="muted">Elige un avatar y escribe un mensaje o comando. Javier no es adoptable.</p>
+        </section>
+        <section class="panel">
+          <h2>Chat de práctica</h2>
+          <div id="chatList" class="chat-log" role="log" aria-live="polite"></div>
+          <form id="practiceForm" class="chat-form">
+            <input id="practiceInput" aria-label="Mensaje de práctica" maxlength="220" placeholder="Hola o !w, !a1, !beso cl…" autocomplete="off">
+            <button type="submit">Enviar</button>
+          </form>
+          <p id="practiceRaceStatus" role="status"></p>
+          <label><input id="practiceVoice" type="checkbox"> Leer bocadillos en voz alta</label>
+        </section>
+        <section class="panel">
+          <h2>Comandos disponibles</h2>
+          <div id="commands" class="commands"></div>
+          <p class="muted">!damas activa las casillas a1–l8. !carrera es una práctica local con los avatares reales, no una partida compartida.</p>
+        </section>
+      </aside>
+    </div>
+    <p class="muted">El plano 3D y el diorama 2D son los del Directo real. La interacción está limitada a controles de esta página para evitar abrir paneles privados.</p>
+  </main>
+  <dialog id="deployModal" aria-labelledby="deployTitle">
+    <div class="row" style="justify-content:space-between"><h2 id="deployTitle">Despliega tu propio ApliArte Directo</h2><button id="deployClose" class="icon" type="button" aria-label="Cerrar instrucciones" data-tip="Cerrar">✕</button></div>
+    <p>Esta demo pública es 100% aislada en navegador. Para tener tu propio estudio privado de streaming con WebRTC y OBS, utiliza estas opciones:</p>
+    <div class="row"><button id="modalTabKodee" type="button">Con Kodee (Hostinger)</button><button id="modalTabDocker" type="button">Docker Compose</button><button id="modalTabSecurity" type="button">Seguridad y Tailscale</button></div>
+    <section id="modalContentKodee">
+      <p>Copia este prompt y pégalo en <strong>Kodee</strong> (el agente de IA en tu panel VPS de Hostinger):</p>
+      <div class="code-block" id="promptText">Despliega de forma soberana y segura el proyecto apliarte-directo en este servidor:
+
+1. Clona el repositorio oficial:
+   git clone https://github.com/erbolamm/apliarte-directo.git &amp;&amp; cd apliarte-directo
+
+2. Prepara la configuración de entorno:
+   cp .env.example .env
+   - Genera una contraseña segura y aleatoria para PANEL_PASS.
+   - Pídeme mi Stream Key de Twitch y configúrala en TWITCH_STREAM_KEY.
+   - Configura una sala y clave propia para VDO_ROOM y VDO_PASS.
+
+3. Inicia el stack de contenedores Docker:
+   docker compose up -d
+
+4. REGLA DE SEGURIDAD CRÍTICA:
+   - Mantén los puertos del panel web restringidos a la red privada (Tailscale o IP local).
+   - No expongas /admin ni los puertos de control a internet público.
+   - Muestra las URLs de acceso privado al terminar.</div>
+      <button id="copyPrompt" type="button">Copiar prompt para Kodee</button>
+      <p>¿Necesitas un VPS? <a href="https://hostinger.es?REFERRALCODE=APLIARTE" target="_blank" rel="noopener sponsored">Hostinger con el enlace de ApliArte</a> (enlace de afiliado).</p>
+    </section>
+    <section id="modalContentDocker" hidden><div class="code-block">git clone https://github.com/erbolamm/apliarte-directo.git
+cd apliarte-directo
+cp .env.example .env
+docker compose up -d</div></section>
+    <section id="modalContentSecurity" hidden><p>Usa Tailscale y HTTPS para el panel privado. No expongas /admin ni puertos de control a internet público.</p></section>
+  </dialog>
+  <script type="module">
+    import { createPracticeSession, PRACTICE_AGENTS } from './demo-practice.js';
+    const session = createPracticeSession();
+    const $ = id => document.getElementById(id);
+    const log = (who, value) => { const p = document.createElement('p'); const strong = document.createElement('strong'); strong.textContent = `${who}: `; p.append(strong, document.createTextNode(value)); $('chatList').append(p); $('chatList').scrollTop = $('chatList').scrollHeight; };
+    const office = () => window.Oficina3D;
+    const speak = event => {
+      office()?.runtime?.say(event.agent, event.text, performance.now());
+      if ($('practiceVoice').checked && window.speechSynthesis && typeof SpeechSynthesisUtterance === 'function') {
+        const utterance = new SpeechSynthesisUtterance(event.text); utterance.lang = 'es-ES'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(utterance);
+      }
+    };
+    const move = event => {
+      let delay = 0;
+      for (const part of event.steps) for (let i = 0; i < part.pasos; i++) {
+        const vector = { w:[0,-25,0,true], a:[-25,0,-1,false], s:[0,25,0,false], d:[25,0,1,false] }[part.dir];
+        if (!vector) continue;
+        window.setTimeout(() => office()?.moverAvatar?.(event.agent, ...vector), delay);
+        delay += 140;
+      }
+    };
+    const render = result => {
+      for (const event of result.events) {
+        if (event.type === 'speech') speak(event);
+        else if (event.type === 'move') move(event);
+        else if (event.type === 'square') { if (!office()?.irACasilla?.(event.agent, event.square)) log('Demo', 'No se pudo ir a esa casilla.'); }
+        else if (event.type === 'board') { office()?.setBoard?.(event.enabled); $('boardToggle').textContent = `Tablero: ${event.enabled ? 'encendido' : 'apagado'}`; }
+        else if (event.type === 'kiss') office()?.ejecutarBeso?.(event.agent, event.target);
+        else if (event.type === 'scold') office()?.ejecutarBronca?.();
+        else if (event.type === 'work') office()?.ejecutarTrabajar?.(event.agent);
+        else if (event.type === 'race_start') { office()?.resetAvatar?.(event.agent); office()?.runtime?.say(event.agent, event.text, performance.now()); log('Demo', event.text); }
+        else if (event.type === 'race_win' || event.type === 'notice') log('Demo', event.text);
+      }
+    };
+    const send = value => { if (!value.trim()) return; log(PRACTICE_AGENTS[session.getState().selected] || 'Visitante', value); render(session.submit(value)); };
+    const select = $('practiceAgent');
+    for (const [id,name] of Object.entries(PRACTICE_AGENTS)) { const option = document.createElement('option'); option.value=id; option.textContent=`${name} (!${id})`; select.append(option); }
+    select.value = 'co'; render(session.choose('co'));
+    select.addEventListener('change', () => render(session.choose(select.value)));
+    $('practiceForm').addEventListener('submit', event => { event.preventDefault(); send($('practiceInput').value); $('practiceInput').value=''; });
+    $('view3d').addEventListener('click', () => window.dispatchEvent(new CustomEvent('erbolamm:set-view', { detail:'3d' })));
+    $('view2d').addEventListener('click', () => window.dispatchEvent(new CustomEvent('erbolamm:set-view', { detail:'diorama' })));
+    $('boardToggle').addEventListener('click', () => render(session.submit('!damas')));
+    $('themeToggle').addEventListener('click', () => { const dark=document.documentElement.dataset.theme !== 'dark'; document.documentElement.dataset.theme=dark?'dark':'light'; $('themeToggle').textContent=dark?'☀':'☾'; });
+    for (const command of ['!w','!a','!s','!d','!damas','!a1','!beso cl','!bronca','!trabajar','!carrera','!salta','!r']) { const button=document.createElement('button'); button.type='button'; button.textContent=command; button.addEventListener('click', () => send(command)); $('commands').append(button); }
+    window.setInterval(() => { const race=session.getState().race; $('practiceRaceStatus').textContent=race.phase==='countdown' ? `🏁 Cuenta atrás: ${race.secondsLeft}. Meta: ${race.target}` : race.phase==='racing' ? `🏁 Muévete a ${race.target} con !a o !d.` : race.phase==='finished' ? `🏁 Carrera terminada. Ganador: ${PRACTICE_AGENTS[race.winner]}.` : ''; }, 250);
+    $('deployOpen').addEventListener('click', () => $('deployModal').showModal());
+    $('deployClose').addEventListener('click', () => $('deployModal').close());
+    for (const tab of ['Kodee','Docker','Security']) $('modalTab'+tab).addEventListener('click', () => { for (const other of ['Kodee','Docker','Security']) $('modalContent'+other).hidden=other!==tab; });
+    $('copyPrompt').addEventListener('click', async () => { await navigator.clipboard.writeText($('promptText').innerText); $('copyPrompt').textContent='Prompt copiado'; });
+  </script>
+</body>
+</html>

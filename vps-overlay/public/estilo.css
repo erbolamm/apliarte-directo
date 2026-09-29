@@ -1,0 +1,320 @@
+/* Paleta oficial del Kit de Marca ApliArte.
+   Modo CLARO por defecto e interruptor obligatorio: no es estética, hay personas a las que un
+   fondo les molesta físicamente. */
+:root {
+ --azul: #005fa9;
+ --marino: #00467b;
+ --cian: #5ecef5;
+ --brillo: #8fd5fa;
+ --ambar: #e8955e;
+ --blanco: #fdfdfd;
+ --carbon: #303030;
+ --gris-claro: #d9d9d9;
+ --gris-medio: #bebbb9;
+ --borde: #a6a6a6;
+
+ --fondo: var(--blanco);
+ --superficie: #ffffff;
+ --texto: var(--carbon);
+ --texto-suave: #5a5a5a;
+ --linea: var(--gris-claro);
+}
+
+[data-tema="oscuro"] {
+ --fondo: var(--carbon);
+ --superficie: var(--marino);
+ --texto: var(--blanco);
+ --texto-suave: var(--gris-medio);
+ --linea: #4a4a4a;
+}
+
+* {
+ box-sizing: border-box;
+}
+
+body {
+ margin: 0;
+ background: var(--fondo);
+ color: var(--texto);
+ font-family: "Inter", "DejaVu Sans", system-ui, sans-serif;
+ font-size: 16px;
+ line-height: 1.5;
+}
+
+h1,
+h2 {
+ font-family: "Fira Sans Condensed", "Inter", system-ui, sans-serif;
+ font-weight: 700;
+}
+
+.saltar {
+ position: absolute;
+ left: -9999px;
+ background: var(--azul);
+ color: var(--blanco);
+ padding: 0.6rem 1rem;
+ z-index: 10;
+}
+.saltar:focus {
+ left: 0.5rem;
+ top: 0.5rem;
+}
+
+.barra {
+ display: flex;
+ flex-wrap: wrap;
+ gap: 1rem;
+ align-items: center;
+ justify-content: space-between;
+ padding: 1rem clamp(1rem, 4vw, 2rem);
+ background: var(--superficie);
+ border-bottom: 2px solid var(--linea);
+}
+.barra h1 {
+ margin: 0;
+ font-size: clamp(1.15rem, 4vw, 1.5rem);
+}
+.barra-acciones {
+ display: flex;
+ align-items: center;
+ gap: 1rem;
+}
+
+.estado-global {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ margin: 0;
+ font-weight: 600;
+}
+
+.bolita {
+ width: 0.9rem;
+ height: 0.9rem;
+ border-radius: 50%;
+ background: var(--borde);
+ flex-shrink: 0;
+}
+.bolita.reenviando {
+ background: #2f9961;
+}
+.bolita.recibiendo {
+ background: var(--cian);
+}
+.bolita.fallback {
+ background: var(--ambar);
+}
+.bolita.error {
+ background: #c0392b;
+}
+
+button {
+ font: inherit;
+ cursor: pointer;
+ background: var(--azul);
+ color: var(--blanco);
+ border: 2px solid transparent;
+ border-radius: 0.5rem;
+ padding: 0.45rem 0.9rem;
+}
+button:hover {
+ background: var(--marino);
+}
+button:focus-visible {
+ outline: 3px solid var(--cian);
+ outline-offset: 2px;
+}
+button[disabled] {
+ background: var(--gris-medio);
+ cursor: not-allowed;
+}
+
+#tema {
+ background: transparent;
+ color: var(--texto);
+ border-color: var(--linea);
+ font-size: 1.1rem;
+}
+
+main {
+ padding: clamp(1rem, 4vw, 2rem);
+ display: grid;
+ gap: 2rem;
+ max-width: 70rem;
+ margin: 0 auto;
+}
+section {
+ background: var(--superficie);
+ border: 1px solid var(--linea);
+ border-radius: 0.75rem;
+ padding: 1rem 1.25rem;
+}
+h2 {
+ margin-top: 0;
+ font-size: 1.15rem;
+}
+
+dl {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+ gap: 1rem;
+ margin: 0;
+}
+dt {
+ font-size: 0.85rem;
+ color: var(--texto-suave);
+ text-transform: uppercase;
+ letter-spacing: 0.03em;
+}
+dd {
+ margin: 0.2rem 0 0;
+ font-size: 1.35rem;
+ font-weight: 600;
+}
+
+table {
+ width: 100%;
+ border-collapse: collapse;
+}
+th,
+td {
+ text-align: left;
+ padding: 0.6rem 0.5rem;
+ border-bottom: 1px solid var(--linea);
+}
+th {
+ font-size: 0.85rem;
+ text-transform: uppercase;
+ letter-spacing: 0.03em;
+ color: var(--texto-suave);
+}
+td.vacio {
+ color: var(--texto-suave);
+ font-style: italic;
+}
+code {
+ font-family: ui-monospace, "DejaVu Sans Mono", monospace;
+ font-size: 0.9em;
+ word-break: break-all;
+}
+
+.pastilla {
+ display: inline-block;
+ padding: 0.15rem 0.6rem;
+ border-radius: 1rem;
+ font-size: 0.85rem;
+ font-weight: 600;
+ border: 1px solid currentColor;
+}
+.pastilla.relay {
+ color: #2f9961;
+}
+.pastilla.respaldo {
+ color: var(--ambar);
+}
+.pastilla.parado {
+ color: var(--texto-suave);
+}
+.pastilla.error {
+ color: #c0392b;
+}
+
+pre {
+ margin: 0;
+ padding: 0.75rem;
+ max-height: 18rem;
+ overflow: auto;
+ background: var(--fondo);
+ border: 1px solid var(--linea);
+ border-radius: 0.5rem;
+ font-family: ui-monospace, "DejaVu Sans Mono", monospace;
+ font-size: 0.85rem;
+ white-space: pre-wrap;
+}
+pre:focus-visible {
+ outline: 3px solid var(--cian);
+ outline-offset: 2px;
+}
+
+.oculto {
+ position: absolute;
+ width: 1px;
+ height: 1px;
+ overflow: hidden;
+ clip: rect(0 0 0 0);
+}
+
+/* En pantalla estrecha la tabla se lee como fichas, sin desplazamiento horizontal. */
+@media (max-width: 34rem) {
+ thead {
+  display: none;
+ }
+ tr {
+  display: block;
+  border-bottom: 2px solid var(--linea);
+  padding: 0.5rem 0;
+ }
+ td {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 0;
+  padding: 0.3rem 0.2rem;
+ }
+ td::before {
+  content: attr(data-etiqueta);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+ }
+}
+
+/* Quien pide menos movimiento, no lo recibe. */
+@media (prefers-reduced-motion: reduce) {
+ *,
+ *::before,
+ *::after {
+  animation: none !important;
+  transition: none !important;
+ }
+}
+
+/* Footer con mensaje de error gracioso y crédito — esquina inferior derecha */
+footer.pie {
+ display: none; /* se muestra solo cuando hay un problema real */
+ position: fixed;
+ bottom: 0;
+ right: 0;
+ padding: 0.75rem 1rem;
+ display: flex;
+ flex-direction: column;
+ align-items: flex-end;
+ gap: 0.3rem;
+ z-index: 100;
+}
+
+footer.pie .error-temporal {
+ margin: 0;
+ font-size: 0.8rem;
+ color: var(--texto-suave);
+ background: var(--superficie);
+ border: 1px solid var(--linea);
+ border-radius: 0.4rem;
+ padding: 0.4rem 0.8rem;
+ box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+footer.pie .credito {
+ margin: 0;
+ font-size: 0.7rem;
+ color: var(--texto-suave);
+}
+
+footer.pie .credito a {
+ color: var(--azul);
+ text-decoration: none;
+}
+
+footer.pie .credito a:hover {
+ text-decoration: underline;
+}

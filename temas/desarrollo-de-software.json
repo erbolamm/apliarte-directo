@@ -1,0 +1,34 @@
+{
+  "id": "apps",
+  "aliasExterno": "desarrollo-de-software",
+  "nombre": "Desarrollo de software · ApliArte",
+  "descripcion": "Paleta del Kit de Marca ApliArte (azul claro y azul oscuro) para directos centrados en programación, código en directo y builds.",
+  "paleta": {
+    "fondo": "#030a16",
+    "primario": "#5ecef5",
+    "secundario": "#00467b",
+    "borde": "#1d4ed8",
+    "texto": "#e0f4fb",
+    "acento": "#9bdcf7"
+  },
+  "fuentes": {
+    "principal": "'Inter', 'Helvetica Neue', Arial, sans-serif",
+    "mono": "'JetBrains Mono', 'Menlo', monospace"
+  },
+  "marco": {
+    "estilo": "solido",
+    "radio": "10px",
+    "grosorBorde": "2px",
+    "sombra": "0 8px 24px rgba(94, 206, 245, 0.28)"
+  },
+  "intro": {
+    "titulo": "Programando en directo",
+    "subtitulo": "Código abierto, decisiones en vivo y preguntas por el chat",
+    "duracionSeg": 600
+  },
+  "textos": {
+    "pausa": "Pausa técnica · volvemos con más código",
+    "comenzamos": "Empezamos en breve con la sesión de programación",
+    "alertaSeguidor": "Gracias por sumarte al directo de programación"
+  }
+}

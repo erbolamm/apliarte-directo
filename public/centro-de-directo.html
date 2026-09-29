@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es" data-tema="claro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Centro de directo · ApliArte</title>
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+  <a class="saltar" href="#principal">Saltar al contenido</a>
+
+  <header class="barra">
+    <h1>Centro de directo</h1>
+    <div class="barra-acciones">
+      <p class="estado-global"><span id="bolita" class="bolita"></span><span id="estado-texto">conectando…</span></p>
+      <button id="tema" type="button" aria-pressed="false" aria-label="Cambiar a modo oscuro">☀️</button>
+    </div>
+  </header>
+
+  <main id="principal">
+    <section class="resumen" aria-labelledby="t-resumen">
+      <h2 id="t-resumen">Resumen</h2>
+      <dl>
+        <div><dt>Señal de OBS</dt><dd id="r-obs">—</dd></div>
+        <div><dt>Tiempo emitiendo</dt><dd id="r-tiempo">0s</dd></div>
+        <div><dt>Destinos activos</dt><dd id="r-activos">0</dd></div>
+        <div><dt>Respaldo</dt><dd id="r-respaldo">—</dd></div>
+      </dl>
+    </section>
+
+    <section aria-labelledby="t-destinos">
+      <h2 id="t-destinos">Destinos</h2>
+      <table>
+        <caption class="oculto">Estado de cada destino de reenvío</caption>
+        <thead>
+          <tr><th scope="col">Destino</th><th scope="col">URL</th><th scope="col">Estado</th><th scope="col">PID</th><th scope="col">Acción</th></tr>
+        </thead>
+        <tbody id="cuerpo-destinos">
+          <tr><td colspan="5" class="vacio">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section aria-labelledby="t-registro">
+      <h2 id="t-registro">Registro</h2>
+      <pre id="registro" tabindex="0" aria-live="polite">—</pre>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <p class="error-temporal" id="error-temporal">⏳ Estamos teniendo algunos problemas técnicos. Volvemos en seguida. Gracias por la paciencia.</p>
+    <p class="credito">Esto existe gracias a una idea de <a href="https://github.com/TheAnibalOS" target="_blank" rel="noopener">TheAnibalOS</a></p>
+  </footer>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="panel.js"></script>
+</body>
+</html>

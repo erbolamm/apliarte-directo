@@ -1,0 +1,16 @@
+{
+  "name": "apliarte-directo-oficina-3d",
+  "private": true,
+  "description": "Build of the 3D office overlay bundle served as public/office-3d.js",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "clsx": "2.1.1",
+    "esbuild": "0.27.7",
+    "postcss": "8.5.28",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "tailwind-merge": "3.4.0"
+  }
+}

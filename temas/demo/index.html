@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tema overlay · demo aislado (sin tocar OBS en producción)</title>
+  <link rel="stylesheet" href="../tema-overlay.css" />
+  <style>
+    /* Layout del demo, no parte del módulo compartido. */
+    .demo-shell {
+      width: 1920px;
+      height: 1080px;
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto 1fr auto;
+      gap: 1rem;
+      padding: 1.5rem;
+      background: var(--color-dark);
+    }
+    .demo-shell > * { min-width: 0; }
+    .demo-controles {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .demo-controles label { font-weight: 700; color: var(--color-text); }
+    .demo-controles select {
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--color-border);
+      background: color-mix(in srgb, var(--color-dark) 80%, transparent);
+      color: var(--color-text);
+      padding: 0 0.5rem;
+      font: inherit;
+    }
+    .demo-tarjeta {
+      padding: 1rem;
+      display: grid;
+      gap: 0.5rem;
+    }
+    .demo-tarjeta h3 { font-family: var(--font-primary); color: var(--color-primary); font-size: 1.1rem; }
+    .demo-tarjeta code { font-family: var(--font-mono); color: var(--color-accent); }
+    .demo-swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+    .demo-swatch { height: 56px; border-radius: 8px; border: 1px solid var(--color-border); display: flex; align-items: end; justify-content: end; padding: 0.35rem; font: 0.7rem var(--font-mono); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+    .demo-pie {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font: 0.8rem var(--font-mono);
+      color: var(--color-text);
+    }
+  </style>
+</head>
+<body>
+  <main class="demo-shell" id="demo">
+    <div class="demo-controles">
+      <label for="selector-categoria">Categoría:</label>
+      <select id="selector-categoria" aria-label="Categoría del directo">
+        <option value="musica">musica</option>
+        <option value="arte">arte</option>
+        <option value="apps">desarrollo-de-software</option>
+      </select>
+      <span class="tema-chip" id="demo-estado">cargando…</span>
+    </div>
+
+    <section class="tema-marco demo-tarjeta" id="tarjeta-marco" aria-label="Vista previa de marco">
+      <h3>Marco</h3>
+      <p>Estilo: <code data-campo="estilo">—</code> · radio <code data-campo="radio">—</code></p>
+      <p>Texto intro: <strong data-campo="intro-titulo">—</strong></p>
+      <p class="tema-codigo" data-campo="intro-subtitulo">—</p>
+    </section>
+
+    <section class="tema-marco demo-tarjeta" id="tarjeta-paleta" aria-label="Vista previa de paleta">
+      <h3>Paleta</h3>
+      <div class="demo-swatches" id="demo-swatches">
+        <div class="demo-swatch" data-token="--color-primary">—</div>
+        <div class="demo-swatch" data-token="--color-secondary">—</div>
+        <div class="demo-swatch" data-token="--color-dark">—</div>
+        <div class="demo-swatch" data-token="--color-border">—</div>
+        <div class="demo-swatch" data-token="--color-text">—</div>
+        <div class="demo-swatch" data-token="--color-accent">—</div>
+      </div>
+    </section>
+
+    <footer class="demo-pie">
+      <span id="demo-fuente" class="tema-codigo">fuente: —</span>
+      <span id="demo-alias" class="tema-codigo">alias: —</span>
+    </footer>
+  </main>
+
+  <script type="module">
+    import {
+      cargarTema,
+      cargarTemaEmbebido,
+      aplicarTema,
+      tokensDerivados,
+      TOKENS_CSS,
+      ALIASES_DISPONIBLES,
+    } from '../tema-overlay.js';
+
+    const $selector = document.getElementById('selector-categoria');
+    const $estado = document.getElementById('demo-estado');
+    const $alias = document.getElementById('demo-alias');
+    const $fuente = document.getElementById('demo-fuente');
+    const swatches = document.querySelectorAll('.demo-swatch');
+    const campos = document.querySelectorAll('[data-campo]');
+
+    // Fallback embebido para que el demo funcione incluso sin servidor HTTP
+    // (cuando se abre con file://, fetch() a archivos locales está bloqueado).
+    // Esta misma información vive en los JSON; aquí la duplicamos solo para
+    // que el demo no rompa en ese caso.
+    const TEMAS_EMBEBIDOS = {
+      musica: {
+        id: 'musica',
+        aliasExterno: 'musica',
+        nombre: 'Música en directo',
+        paleta: { fondo: '#260519', primario: '#ff1493', secundario: '#e91e63', borde: '#ff66b3', texto: '#fde7f1', acento: '#ffd1e3' },
+        fuentes: { principal: "'Inter', sans-serif", mono: "'JetBrains Mono', monospace" },
+        marco: { estilo: 'cristal-color', radio: '14px', grosorBorde: '2px', sombra: '0 12px 36px rgba(255, 20, 147, 0.35)' },
+        intro: { titulo: 'Música en directo', subtitulo: 'Sesión abierta · mezclas, improvisación y peticiones del chat', duracionSeg: 600 },
+        textos: { pausa: 'Volvemos en un momento con más música', comenzamos: 'Empezamos en breve con la sesión musical', alertaSeguidor: 'Gracias por unirte a la sesión musical' },
+      },
+      apps: {
+        id: 'apps',
+        aliasExterno: 'desarrollo-de-software',
+        nombre: 'Desarrollo de software · ApliArte',
+        paleta: { fondo: '#030a16', primario: '#5ecef5', secundario: '#00467b', borde: '#1d4ed8', texto: '#e0f4fb', acento: '#9bdcf7' },
+        fuentes: { principal: "'Inter', sans-serif", mono: "'JetBrains Mono', monospace" },
+        marco: { estilo: 'solido', radio: '10px', grosorBorde: '2px', sombra: '0 8px 24px rgba(94, 206, 245, 0.28)' },
+        intro: { titulo: 'Programando en directo', subtitulo: 'Código abierto, decisiones en vivo y preguntas por el chat', duracionSeg: 600 },
+        textos: { pausa: 'Pausa técnica · volvemos con más código', comenzamos: 'Empezamos en breve con la sesión de programación', alertaSeguidor: 'Gracias por sumarte al directo de programación' },
+      },
+      arte: {
+        id: 'arte',
+        aliasExterno: 'arte',
+        nombre: 'Arte · CalcaApp',
+        paleta: { fondo: '#1a0f0b', primario: '#f5cba7', secundario: '#3e2723', borde: '#a1887f', texto: '#f9ece1', acento: '#d7b899' },
+        fuentes: { principal: "'Calca Round', 'Inter', sans-serif", mono: "'JetBrains Mono', monospace" },
+        marco: { estilo: 'cristal', radio: '18px', grosorBorde: '3px', sombra: '0 10px 28px rgba(62, 39, 35, 0.55)' },
+        intro: { titulo: 'CalcaApp en directo', subtitulo: 'Dibujamos juntos · aporta ideas por el chat', duracionSeg: 600 },
+        textos: { pausa: 'Pausa para dibujar · volvemos enseguida', comenzamos: 'Empezamos en breve con el papel y el color', alertaSeguidor: 'Gracias por sumarte al directo de CalcaApp' },
+      },
+    };
+
+    async function cargar(id) {
+      try {
+        const tema = await cargarTema(id);
+        $fuente.textContent = 'fuente: ./' + (tema.aliasExterno || id) + '.json (HTTP)';
+        return { tema, fuente: 'http' };
+      } catch (err) {
+        const tema = cargarTemaEmbebido(TEMAS_EMBEBIDOS[id]);
+        $fuente.textContent = 'fuente: embebido (file:// sin red)';
+        return { tema, fuente: 'embed' };
+      }
+    }
+
+    function pintar(tema) {
+      const tokens = aplicarTema(tema);
+      $alias.textContent = 'alias: ' + (tema.aliasExterno || tema.id);
+      $estado.textContent = tema.nombre + ' · estilo ' + (tema.marco?.estilo || '?');
+      // Swatches
+      for (const sw of swatches) {
+        const t = sw.dataset.token;
+        sw.style.background = `var(${t})`;
+        sw.textContent = t.replace('--color-', '') + ' ' + (tokens[t] || '');
+      }
+      // Campos
+      for (const el of campos) {
+        const c = el.dataset.campo;
+        if (c === 'estilo') el.textContent = tema.marco?.estilo || '—';
+        else if (c === 'radio') el.textContent = tema.marco?.radio || '—';
+        else if (c === 'intro-titulo') el.textContent = tema.intro?.titulo || '—';
+        else if (c === 'intro-subtitulo') el.textContent = tema.intro?.subtitulo || '—';
+      }
+    }
+
+    $selector.addEventListener('change', async () => {
+      const { tema } = await cargar($selector.value);
+      pintar(tema);
+    });
+
+    const inicial = await cargar($selector.value);
+    pintar(inicial.tema);
+  </script>
+</body>
+</html>
