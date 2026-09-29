@@ -45,3 +45,4 @@ oficina-3d/dist/
 vps-overlay/data/
 data/.lock
 data/*.corrupt
+data/nms/

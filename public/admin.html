@@ -4761,6 +4761,15 @@
     cargarEstadoJuego();
     cargarListas();
 
+    // ── Botón Volver a la Oficina Central ──
+    const btnVolver = document.getElementById('btn-volver-oficina');
+    if (btnVolver && window.top !== window.self) {
+      btnVolver.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.top.location.href = 'http://127.0.0.1:8791/';
+      });
+    }
+
     setInterval(() => {
       cargarSms();
       cargarEstadoJuego();

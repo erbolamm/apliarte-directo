@@ -366,6 +366,9 @@ async function pasarARespaldo() {
 const nms = new NodeMediaServer({
   // Only this machine may push video to the channels; set RTMP_BIND to open it on purpose.
   bind: process.env.RTMP_BIND || "127.0.0.1",
+  store: {
+    path: "./data/nms",
+  },
   rtmp: {
     port: configuracion.puertoRtmp,
     chunk_size: 60000,
