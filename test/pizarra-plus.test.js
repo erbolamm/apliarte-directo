@@ -278,3 +278,52 @@ test('real server mounts only enabled private plus routes without connecting to 
   assert.equal((await fetch(base + '/private/pizarra-plus.html')).status, 404);
   assert.equal((await fetch(base + '/api/pizarra-plus/obs/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'StartStream' }) })).status, 400);
 });
+
+
+test('closing Admin keeps the same camera iframe visible without another capture', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { runInNewContext } = await import('node:vm');
+  const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
+  assert.equal((html.match(/id="admin-frame"/g) || []).length, 1);
+  assert.ok(html.indexOf('id="admin-dock"') > html.indexOf('</header>'));
+  assert.doesNotMatch(html, /getUserMedia|cloneNode/);
+  assert.match(html, /allow="camera; microphone; autoplay; fullscreen"/);
+  const classes = new Set();
+  const toggles = [];
+  const camera = { style: { display: 'block' } };
+  const adminMenu = { open: true };
+  const adminDock = { hidden: true, classList: { toggle: (name, on) => toggles.push([name, on]) } };
+  const body = { classList: { contains: name => classes.has(name), toggle(name, on) { if(on) classes.add(name); else classes.delete(name); } } };
+  const contentDocument = { body, getElementById: () => camera };
+  const ctx = { adminMenu, adminDock, adminFrame: { contentDocument } };
+  runInNewContext(html.match(/function syncAdminDock\(\) \{[\s\S]*?\n    \}/)[0] + ';this.sync = syncAdminDock', ctx);
+  ctx.sync(); assert.equal(adminDock.hidden, false); assert.equal(classes.size, 0);
+  adminMenu.open = false; ctx.sync(); assert.equal(adminDock.hidden, false); assert.equal(classes.has('plus-camera-only'), true);
+  adminMenu.open = true; ctx.sync(); assert.equal(classes.has('plus-camera-only'), false);
+  adminMenu.open = false; camera.style.display = 'none'; ctx.sync(); assert.equal(adminDock.hidden, true);
+  assert.equal(ctx.adminFrame.contentDocument, contentDocument);
+});
+
+test('top bar uses compact vector controls and canonical brand, not emoji or neon UI', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
+  const header = html.match(/<header>[\s\S]*?<\/header>/)[0];
+  assert.doesNotMatch(header, /[\p{Extended_Pictographic}]/u);
+  assert.match(header, /aria-label="Controles OBS"/);
+  assert.match(header, /id="theme-toggle"/);
+  assert.match(html, /--panel-bg:#fdfdfd/);
+  assert.match(html, /--accent:#005fa9/);
+  assert.match(html, /--panel-bg:#00467b/);
+});
+
+test('drawing accepts any RGB color through the native picker', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { runInNewContext } = await import('node:vm');
+  const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
+  assert.match(html, /id="custom-color" type="color"/);
+  let handler;
+  const ctx = { document: { getElementById: () => ({ addEventListener: (_, fn) => {handler = fn;} }), querySelectorAll: () => [] } };
+  const code = html.match(/document.getElementById\('custom-color'\).addEventListener\('input',[\s\S]*?\n    \}\);/)[0];
+  runInNewContext('let currentColor;'+code+';this.getColor = () => currentColor', ctx);
+  handler({ target: { value: '#b46734' } }); assert.equal(ctx.getColor(), '#b46734');
+});
