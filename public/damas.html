@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApliArte – Tablero 3D de Damas</title>
+  <style>
+    :root {
+      --color-primary: #5ecef5;
+      --color-secondary: #00467b;
+      --color-dark: #0c4a6e;
+      --wood-light: #e8d3b0;
+      --wood-dark: #5c3a1e;
+      --board-border: rgba(143, 213, 250, 0.25);
+      --glass-fill: rgba(143, 213, 250, 0.08);
+      --glass-border: rgba(94, 206, 245, 0.55);
+      --glass-glow: rgba(94, 206, 245, 0.35);
+      --piece-white: #fdfdfd;
+      --piece-white-border: #cbd5e1;
+      --piece-red: #c026d3;
+      --piece-dark: #dc2626;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+    }
+
+    /* Fondo degradado si no se pide fondo 100% transparente */
+    body.with-bg {
+      background: radial-gradient(circle at 50% 40%, #0e3b5e 0%, #071f33 100%);
+    }
+
+    .viewport {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      perspective: 1700px;
+      perspective-origin: 50% 38%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stage {
+      position: absolute;
+      width: 1280px;
+      height: 860px;
+      transform-style: preserve-3d;
+      transform: scale(0.95);
+      transition: transform 0.25s ease-out;
+    }
+
+    /* Muros exteriores perimetrales con transparencia total de cristal */
+    .crystal-wall {
+      position: absolute;
+      transform-style: preserve-3d;
+      pointer-events: none;
+    }
+
+    .crystal-wall .wall-face {
+      position: absolute;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, var(--glass-fill) 60%, rgba(94, 206, 245, 0.14) 100%);
+      border: 1.5px solid var(--glass-border);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      box-shadow: 0 0 14px var(--glass-glow);
+    }
+
+    /* Pared trasera (norte) */
+    .wall-north {
+      left: 60px;
+      top: 20px;
+      width: 1160px;
+      height: 70px;
+      transform-origin: top;
+      transform: rotateX(90deg);
+    }
+
+    /* Pared lateral izquierda (oeste) */
+    .wall-west {
+      left: 60px;
+      top: 20px;
+      width: 70px;
+      height: 820px;
+      transform-origin: left;
+      transform: rotateY(-90deg);
+    }
+
+    /* Pared lateral derecha (este) */
+    .wall-east {
+      left: 1220px;
+      top: 20px;
+      width: 70px;
+      height: 820px;
+      transform-origin: left;
+      transform: rotateY(-90deg);
+    }
+
+    /* Murete frontal del escalon que da al vacio (sur) */
+    .wall-south-step {
+      left: 60px;
+      top: 840px;
+      width: 1160px;
+      height: 28px;
+      transform-origin: top;
+      transform: rotateX(-90deg);
+      background: linear-gradient(180deg, rgba(224, 242, 254, 0.25) 0%, rgba(143, 213, 250, 0.08) 60%, rgba(94, 206, 245, 0.2) 100%) !important;
+      border: 1.5px solid var(--glass-border) !important;
+      border-bottom: 3px solid rgba(94, 206, 245, 0.9) !important;
+      box-shadow: 0 6px 20px rgba(0, 70, 123, 0.35), inset 0 0 8px rgba(94, 206, 245, 0.4);
+    }
+
+    /* Plataforma / Base flotante 12x8 */
+    .board-foundation {
+      position: absolute;
+      left: 100px;
+      top: 50px;
+      width: 1080px;
+      height: 760px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(0, 70, 123, 0.12) 100%);
+      border: 2px solid var(--glass-border);
+      border-radius: 12px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 35px rgba(94, 206, 245, 0.2);
+      transform-style: preserve-3d;
+    }
+
+    /* Tablero de damas 12x8 estrictamente cuadrado en cada casilla (casillas 80px x 80px) */
+    .damas-grid {
+      position: absolute;
+      left: 60px;
+      top: 40px;
+      width: 960px;
+      height: 640px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+      border: 3px solid #3e2415;
+      box-shadow: 0 0 0 8px rgba(94, 206, 245, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.6);
+      transform-style: preserve-3d;
+    }
+
+    .square {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      aspect-ratio: 1 / 1;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-style: preserve-3d;
+      cursor: pointer;
+    }
+
+    .square.light {
+      background: linear-gradient(135deg, #f5ebd7 0%, #e2cdab 100%);
+    }
+
+    .square.dark {
+      background: linear-gradient(135deg, #6a3e1f 0%, #452410 100%);
+    }
+
+    .square:hover {
+      filter: brightness(1.15);
+    }
+
+    /* Coordenadas numéricas laterales (1-8): a la izquierda, posición intacta */
+    .damas-number-label {
+      position: absolute;
+      left: 25px;
+      transform: translateY(-50%);
+      font-size: 24px;
+      font-weight: 800;
+      font-family: 'Inter', system-ui, sans-serif;
+      color: #ffffff;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85);
+      pointer-events: none;
+    }
+
+    /* Coordenadas alfabéticas (A-L): 12 letras erguidas en el frontal del escalón en negro */
+    .damas-cols-container {
+      position: absolute;
+      left: 60px;
+      top: 680px;
+      width: 960px;
+      height: 40px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      pointer-events: none;
+      transform-style: preserve-3d;
+    }
+
+    .damas-col-letter {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font: 900 26px/1 'Inter', system-ui, sans-serif;
+      color: #000000 !important;
+      text-transform: uppercase;
+      text-shadow:
+        0 1px 2px rgba(255, 255, 255, 0.95),
+        0 -1px 2px rgba(255, 255, 255, 0.95),
+        1px 0 2px rgba(255, 255, 255, 0.95),
+        -1px 0 2px rgba(255, 255, 255, 0.95);
+      transform-origin: bottom center;
+      transform: rotateX(-90deg);
+    }
+
+    /* Fichas de damas en 3D */
+    .piece {
+      position: absolute;
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      transform-style: preserve-3d;
+      transform: translateZ(8px);
+      box-shadow: 0 8px 14px rgba(0, 0, 0, 0.45);
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .piece:hover {
+      transform: translateZ(24px) scale(1.06);
+    }
+
+    .piece.selected {
+      transform: translateZ(32px) scale(1.12);
+      filter: drop-shadow(0 0 12px #5ecef5);
+    }
+
+    .piece.white {
+      background: radial-gradient(circle at 35% 35%, #ffffff 0%, #e2e8f0 70%, #94a3b8 100%);
+      border: 3px solid #f8fafc;
+    }
+
+    .piece.white::after {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border-radius: 50%;
+      border: 2px dashed rgba(15, 23, 42, 0.25);
+    }
+
+    .piece.red {
+      background: radial-gradient(circle at 35% 35%, #ef4444 0%, #b91c1c 70%, #7f1d1d 100%);
+      border: 3px solid #f87171;
+    }
+
+    .piece.red::after {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border-radius: 50%;
+      border: 2px dashed rgba(255, 255, 255, 0.45);
+    }
+
+    .piece.dama::before {
+      content: "★";
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      color: #fbbf24;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Rótulo superior informativo (discreto, auto-ocultable) */
+    .hud-controls {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+    }
+
+    .hud-btn {
+      background: rgba(0, 70, 123, 0.85);
+      color: #5ecef5;
+      border: 1.5px solid rgba(94, 206, 245, 0.5);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: all 0.2s ease;
+    }
+
+    .hud-btn:hover {
+      background: #005fa9;
+      color: #ffffff;
+      border-color: #5ecef5;
+    }
+  </style>
+</head>
+<body>
+  <div class="hud-controls">
+    <button class="hud-btn" id="btn-toggle-bg">Fondo: Transparente</button>
+    <button class="hud-btn" id="btn-toggle-perspective">Vista 3D / Isométrica</button>
+    <button class="hud-btn" id="btn-reset-board">Reiniciar Fichas</button>
+  </div>
+
+  <div class="viewport">
+    <div class="stage" id="stage">
+      
+      <!-- Paredes exteriores de cristal translúcido (transparencia total) -->
+      <div class="crystal-wall wall-north wall-face" title="Muro Norte de Cristal"></div>
+      <div class="crystal-wall wall-west wall-face" title="Muro Oeste de Cristal"></div>
+      <div class="crystal-wall wall-east wall-face" title="Muro Este de Cristal"></div>
+      
+      <!-- Base flotante del tablero -->
+      <div class="board-foundation">
+        
+        <!-- Cuadrícula 12x8 de Damas (casillas 100% cuadradas) -->
+        <div class="damas-grid" id="damas-grid">
+          <!-- Las 96 casillas se generan dinámicamente con JS -->
+        </div>
+
+        <!-- Números 1-8 en lateral izquierdo (fuera de las casillas, posición intacta) -->
+        <div class="damas-numbers-container" id="damas-numbers"></div>
+
+        <!-- Coordenadas alfabéticas (12 letras A a L) erguidas en el frontal en negro -->
+        <div class="damas-cols-container" id="damas-cols"></div>
+
+      </div>
+
+      <!-- Murete frontal del escalón general que da al vacío -->
+      <div class="crystal-wall wall-south-step" title="Murete Frontal de Cristal del Escalón"></div>
+
+    </div>
+  </div>
+
+  <script>
+    // Las 12 columnas completas (A a L)
+    const COLUMNS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'];
+    const ROWS = [8, 7, 6, 5, 4, 3, 2, 1]; // 8 filas de arriba abajo
+    const grid = document.getElementById('damas-grid');
+    const numbersContainer = document.getElementById('damas-numbers');
+    const colsContainer = document.getElementById('damas-cols');
+    let selectedPiece = null;
+
+    // Estado inicial de fichas (Damas en casillas oscuras)
+    // Filas 8, 7, 6: fichas rojas (negras)
+    // Filas 3, 2, 1: fichas blancas
+    const piecesState = {};
+
+    function initBoard() {
+      grid.innerHTML = '';
+      numbersContainer.innerHTML = '';
+      colsContainer.innerHTML = '';
+
+      // 1. Números de fila (8 a 1) en lateral izquierdo, limpios y posición intacta
+      ROWS.forEach((row, rIdx) => {
+        const numLabel = document.createElement('div');
+        numLabel.className = 'damas-number-label';
+        numLabel.style.top = `${rIdx * 80 + 40 + 40}px`;
+        numLabel.textContent = row;
+        numbersContainer.appendChild(numLabel);
+      });
+
+      // 2. Las 12 letras completas (A a L) erguidas en el frontal en mayúsculas y negro
+      COLUMNS.forEach(col => {
+        const letter = document.createElement('div');
+        letter.className = 'damas-col-letter';
+        letter.textContent = col.toUpperCase();
+        colsContainer.appendChild(letter);
+      });
+
+      // 3. Generar casillas estrictamente cuadradas (1:1) de 12 columnas x 8 filas
+      ROWS.forEach((row, rIdx) => {
+        COLUMNS.forEach((col, cIdx) => {
+          const squareName = `${col}${row}`;
+          const isDark = (cIdx + row) % 2 === 0;
+          const sq = document.createElement('div');
+          sq.className = `square ${isDark ? 'dark' : 'light'}`;
+          sq.dataset.square = squareName;
+
+          // Asignación de fichas iniciales
+          if (isDark) {
+            if (row >= 6) {
+              piecesState[squareName] = { color: 'red', dama: false };
+            } else if (row <= 3) {
+              piecesState[squareName] = { color: 'white', dama: false };
+            }
+          }
+
+          sq.addEventListener('click', () => handleSquareClick(squareName));
+          grid.appendChild(sq);
+        });
+      });
+
+      renderPieces();
+    }
+
+    function renderPieces() {
+      // Limpiar piezas anteriores
+      document.querySelectorAll('.piece').forEach(p => p.remove());
+
+      for (const [sqName, pieceData] of Object.entries(piecesState)) {
+        if (!pieceData) continue;
+        const sq = document.querySelector(`[data-square="${sqName}"]`);
+        if (!sq) continue;
+
+        const pieceEl = document.createElement('div');
+        pieceEl.className = `piece ${pieceData.color} ${pieceData.dama ? 'dama' : ''}`;
+        pieceEl.dataset.square = sqName;
+        pieceEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          handlePieceClick(sqName);
+        });
+        sq.appendChild(pieceEl);
+      }
+    }
+
+    function handlePieceClick(squareName) {
+      if (selectedPiece === squareName) {
+        selectedPiece = null;
+      } else {
+        selectedPiece = squareName;
+      }
+      highlightSelection();
+    }
+
+    function handleSquareClick(squareName) {
+      if (selectedPiece && selectedPiece !== squareName) {
+        // Mover pieza
+        piecesState[squareName] = piecesState[selectedPiece];
+        delete piecesState[selectedPiece];
+
+        // Coronación
+        const row = parseInt(squareName.match(/\d+/)[0], 10);
+        if ((piecesState[squareName].color === 'white' && row === 8) ||
+            (piecesState[squareName].color === 'red' && row === 1)) {
+          piecesState[squareName].dama = true;
+        }
+
+        selectedPiece = null;
+        renderPieces();
+      }
+    }
+
+    function highlightSelection() {
+      document.querySelectorAll('.piece').forEach(p => {
+        p.classList.toggle('selected', p.dataset.square === selectedPiece);
+      });
+    }
+
+    // Controles HUD
+    const btnToggleBg = document.getElementById('btn-toggle-bg');
+    btnToggleBg.addEventListener('click', () => {
+      document.body.classList.toggle('with-bg');
+      btnToggleBg.textContent = document.body.classList.contains('with-bg') ? 'Fondo: Oscuro' : 'Fondo: Transparente';
+    });
+
+    let currentAngle = 0;
+    const btnTogglePerspective = document.getElementById('btn-toggle-perspective');
+    btnTogglePerspective.addEventListener('click', () => {
+      const stage = document.getElementById('stage');
+      currentAngle = (currentAngle + 1) % 3;
+      if (currentAngle === 0) {
+        stage.style.transform = 'scale(0.95)';
+        btnTogglePerspective.textContent = 'Vista: Cuadrada 1:1';
+      } else if (currentAngle === 1) {
+        stage.style.transform = 'scale(0.90) rotateX(32deg) rotateZ(-10deg)';
+        btnTogglePerspective.textContent = 'Vista: Isométrica 3D';
+      } else {
+        stage.style.transform = 'scale(0.86) rotateX(50deg) rotateZ(-12deg)';
+        btnTogglePerspective.textContent = 'Vista: Diorama 3D';
+      }
+    });
+
+    document.getElementById('btn-reset-board').addEventListener('click', () => {
+      for (const k in piecesState) delete piecesState[k];
+      initBoard();
+    });
+
+    // Conexión WebSocket para sincronización en directo
+    function connectWs() {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host || '127.0.0.1:8790';
+      const ws = new WebSocket(`${proto}//${host}/ws`);
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'comando_chat' && msg.comando) {
+            const cmd = msg.comando.trim().toLowerCase();
+            // Soporte !a1 a !l8 (12 columnas x 8 filas)
+            const match = cmd.match(/^!([a-l][1-8])$/);
+            if (match) {
+              const target = match[1];
+              if (selectedPiece) {
+                handleSquareClick(target);
+              }
+            }
+          }
+        } catch (_) {}
+      };
+
+      ws.onclose = () => setTimeout(connectWs, 3000);
+    }
+
+    initBoard();
+    connectWs();
+  </script>
+</body>
+</html>

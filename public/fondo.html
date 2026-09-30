@@ -493,6 +493,11 @@
       </svg>
     </div>
 
+    <!-- 6. DAMAS 3D OVERLAY / ESCENARIO -->
+    <div class="fondo-tematico" id="fondo-damas">
+      <iframe src="/damas.html" title="Tablero 3D de Damas" style="width:100%;height:100%;border:none;pointer-events:auto;background:transparent;"></iframe>
+    </div>
+
     <div class="grid-overlay"></div>
     <div class="vignette"></div>
   </div>
@@ -504,6 +509,7 @@
       arte: { primario: '#f5cba7', secundario: '#3e2723', oscuro: '#6b3a2a' },
       andando: { primario: '#00e676', secundario: '#00c853', oscuro: '#15803d' },
       charlando: { primario: '#e8955e', secundario: '#b46734', oscuro: '#9a3412' },
+      damas: { primario: '#5ecef5', secundario: '#00467b', oscuro: '#081d33' },
     };
 
     // Opaque frame for each theme. Painted even when the WebSocket never connects.
@@ -514,6 +520,7 @@
         arte: 'linear-gradient(180deg, #a1624a 0%, #3e241c 100%)',
         andando: 'linear-gradient(180deg, #22c55e 0%, #052e16 100%)',
         charlando: 'linear-gradient(180deg, #ea580c 0%, #431407 100%)',
+        damas: 'radial-gradient(circle at 50% 40%, #0e3b5e 0%, #071f33 100%)',
       },
       light: {
         apps: 'linear-gradient(180deg, #e0f2fe 0%, #bae6fd 100%)',
@@ -521,10 +528,12 @@
         arte: 'linear-gradient(180deg, #fff7ed 0%, #fed7aa 100%)',
         andando: 'linear-gradient(180deg, #dcfce7 0%, #86efac 100%)',
         charlando: 'linear-gradient(180deg, #ffedd5 0%, #fdba74 100%)',
+        damas: 'radial-gradient(circle at 50% 40%, #e0f2fe 0%, #bae6fd 100%)',
       },
     };
 
-    let categoriaActual = 'apps';
+    const urlParams = new URLSearchParams(window.location.search);
+    let categoriaActual = (urlParams.get('damas') === '1' || urlParams.get('tablero') === 'damas' || urlParams.get('vista') === 'damas') ? 'damas' : 'apps';
     let modoActual = 'dark';
 
     function pintarBase(cat) {
@@ -574,8 +583,9 @@
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            if (data && data.categoria && PALETAS[data.categoria]) {
-              aplicarPaleta(data.categoria);
+            const cat = (data && (data.categoria || (data.tablero === 'damas' ? 'damas' : null)));
+            if (cat && PALETAS[cat]) {
+              aplicarPaleta(cat);
             }
             if (data && data.modo) {
               aplicarModo(data.modo);
@@ -598,8 +608,9 @@
         const res = await fetch('/api/categoria', { cache: 'no-store' });
         if (res && res.ok) {
           const data = await res.json();
-          if (data && data.categoria && data.categoria !== categoriaActual) {
-            aplicarPaleta(data.categoria);
+          const cat = data && (data.categoria || (data.tablero === 'damas' ? 'damas' : null));
+          if (cat && cat !== categoriaActual && PALETAS[cat]) {
+            aplicarPaleta(cat);
           }
           if (data && data.modo && data.modo !== modoActual) {
             aplicarModo(data.modo);
