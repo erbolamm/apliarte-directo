@@ -13,18 +13,22 @@
     html, body {
       width: 100vw;
       height: 100vh;
+      margin: 0;
+      padding: 0;
       overflow: hidden;
       background: transparent !important;
+      background-color: rgba(0, 0, 0, 0) !important;
       user-select: none;
     }
     #canvas {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
+      width: 100vw;
+      height: 100vh;
       display: block;
       background: transparent !important;
+      background-color: rgba(0, 0, 0, 0) !important;
       pointer-events: none;
     }
   </style>
@@ -34,7 +38,7 @@
 
   <script>
     const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true });
 
     // Resolución de referencia canónica: 1920x1080 (16:9)
     const REF_WIDTH = 1920;
@@ -107,16 +111,18 @@
     }
 
     function clearCanvas() {
-      const width = window.innerWidth || REF_WIDTH;
-      const height = window.innerHeight || REF_HEIGHT;
-      ctx.clearRect(0, 0, width, height);
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
       strokesHistory = [];
     }
 
     function redrawAll() {
-      const width = window.innerWidth || REF_WIDTH;
-      const height = window.innerHeight || REF_HEIGHT;
-      ctx.clearRect(0, 0, width, height);
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
 
       for (let i = 0; i < strokesHistory.length; i++) {
         drawSegment(strokesHistory[i]);

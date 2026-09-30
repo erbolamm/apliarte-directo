@@ -1345,8 +1345,8 @@ const { resolvePanelPassword, claimPanel } = require('./src/panel-claim');
 PASSWORD = resolvePanelPassword({ dataDir: DATA_DIR }).password;
 if (PASSWORD) process.env.PANEL_PASS = PASSWORD; // ws-auth reads the password from the environment
 
-// Loopback by default: outside Docker only this machine (OBS, Tailscale Serve) talks to the server.
-const HOST = process.env.HOST || '127.0.0.1';
+// Escucha en 0.0.0.0 para admitir conexiones de Tablet vía Tailscale o red local
+const HOST = process.env.HOST || '0.0.0.0';
 
 const server = http.createServer((req, res) => {
   cors(res);

@@ -1032,8 +1032,9 @@ app.get("/api/walk/peek", (_req, res) => {
 
 // ─── Arranque y cierre limpio ──────────────────────────────────────────────
 nms.run();
-http.listen(configuracion.puertoPanel, "127.0.0.1", () => {
-  console.log(`\n  Panel   → http://127.0.0.1:${configuracion.puertoPanel}`);
+const hostPanel = process.env.HOST || "0.0.0.0";
+http.listen(configuracion.puertoPanel, hostPanel, () => {
+  console.log(`\n  Panel   → http://${hostPanel}:${configuracion.puertoPanel}`);
   console.log(
     `  OBS     → rtmp://127.0.0.1:${configuracion.puertoRtmp}/${configuracion.rutaEntrada}`,
   );
