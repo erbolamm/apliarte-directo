@@ -1,6 +1,8 @@
 # Keep Admin and add a private tablet pizarra
 
-Status: implemented on a local isolated branch, disabled by default, not integrated into the live checkout and not approved for publication. Device/real-OBS acceptance remains pending.
+Status: integrated and locally activated with Javier's approval on 2026-09-30. Not pushed or approved for publication. The default remains disabled; the current panel process explicitly uses `DIRECTO_PIZARRA_PLUS=1`. Device/real-OBS acceptance remains pending.
+
+Activation checks: private HTTPS and local page return 200, original Admin returns 200, foreign Origin/public Host return 403, OBS state discovery returns 200, and panel JSON files are byte-identical to the pre-restart backup. No scene, mute or broadcast was changed. These checks are not visual/audio QA or proof of effective public network isolation. The existing launcher is unchanged; a normal restart without the opt-in flag disables the plus.
 
 ## Quick review path
 
