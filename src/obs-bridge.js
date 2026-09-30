@@ -54,11 +54,50 @@ export function crearClienteObsWebSocket({
   onConectado = null,
   onDesconectado = null,
   onCambioEscena = null,
+  onCambioMute = null,
 } = {}) {
   let ws = null;
   let conectado = false;
   let reintentoTimer = null;
   let cerradoManual = false;
+  const peticionesPendientes = new Map();
+  let reqSeq = 1;
+
+  function limpiarPeticionesPendientes(errorMsg = 'Conexión cerrada') {
+    for (const [id, req] of peticionesPendientes.entries()) {
+      clearTimeout(req.timer);
+      req.reject(new Error(errorMsg));
+    }
+    peticionesPendientes.clear();
+  }
+
+  function enviarPeticion(requestType, requestData = {}) {
+    if (!conectado || !ws || ws.readyState !== 1) {
+      return Promise.reject(new Error('OBS WebSocket no conectado'));
+    }
+    const requestId = `obs_${Date.now()}_${reqSeq++}`;
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        peticionesPendientes.delete(requestId);
+        reject(new Error(`Timeout en petición OBS: ${requestType}`));
+      }, 5000);
+
+      peticionesPendientes.set(requestId, { resolve, reject, timer });
+
+      try {
+        ws.send(
+          JSON.stringify({
+            op: 6,
+            d: { requestType, requestId, requestData },
+          })
+        );
+      } catch (err) {
+        clearTimeout(timer);
+        peticionesPendientes.delete(requestId);
+        reject(err);
+      }
+    });
+  }
 
   function conectar() {
     if (cerradoManual) return;
@@ -99,10 +138,25 @@ export function crearClienteObsWebSocket({
           // Identified
           conectado = true;
           onConectado?.();
+        } else if (msg.op === 7) {
+          // RequestResponse
+          const d = msg.d;
+          if (d && peticionesPendientes.has(d.requestId)) {
+            const { resolve, reject, timer } = peticionesPendientes.get(d.requestId);
+            clearTimeout(timer);
+            peticionesPendientes.delete(d.requestId);
+            if (d.requestStatus?.result) {
+              resolve(d.responseData || {});
+            } else {
+              reject(new Error(d.requestStatus?.comment || 'Error en petición OBS'));
+            }
+          }
         } else if (msg.op === 5) {
           // Event
           if (msg.d?.eventType === 'CurrentProgramSceneChanged') {
             onCambioEscena?.(msg.d.eventData?.sceneName);
+          } else if (msg.d?.eventType === 'InputMuteStateChanged') {
+            onCambioMute?.(msg.d.eventData);
           }
         }
       } catch (_) {}
@@ -110,12 +164,14 @@ export function crearClienteObsWebSocket({
 
     ws.on('close', () => {
       conectado = false;
+      limpiarPeticionesPendientes('OBS Studio desconectado');
       onDesconectado?.();
       programarReintento();
     });
 
     ws.on('error', () => {
       conectado = false;
+      limpiarPeticionesPendientes('Error en conexión OBS WebSocket');
     });
   }
 
@@ -127,28 +183,36 @@ export function crearClienteObsWebSocket({
     }, 5000);
   }
 
-  function cambiarEscena(sceneName) {
-    if (!conectado || !ws || ws.readyState !== 1) return false;
-    try {
-      ws.send(
-        JSON.stringify({
-          op: 6,
-          d: {
-            requestType: 'SetCurrentProgramScene',
-            requestId: `scene-${Date.now()}`,
-            requestData: { sceneName },
-          },
-        })
-      );
-      return true;
-    } catch (_) {
-      return false;
-    }
+  async function cambiarEscena(sceneName) {
+    return enviarPeticion('SetCurrentProgramScene', { sceneName });
+  }
+
+  async function obtenerEscenas() {
+    return enviarPeticion('GetSceneList');
+  }
+
+  async function obtenerMute(inputName = 'Mic/Aux') {
+    return enviarPeticion('GetInputMute', { inputName });
+  }
+
+  async function toggleMute(inputName = 'Mic/Aux') {
+    return enviarPeticion('ToggleInputMute', { inputName });
+  }
+
+  async function obtenerCaptura(sourceName, width = 640, height = 360) {
+    return enviarPeticion('GetSourceScreenshot', {
+      sourceName,
+      imageFormat: 'jpeg',
+      imageWidth: width,
+      imageHeight: height,
+      imageCompressionQuality: 40,
+    });
   }
 
   function cerrar() {
     cerradoManual = true;
     if (reintentoTimer) clearTimeout(reintentoTimer);
+    limpiarPeticionesPendientes('Cliente OBS cerrado manualmente');
     try {
       ws?.close();
     } catch (_) {}
@@ -158,33 +222,70 @@ export function crearClienteObsWebSocket({
 
   return {
     cambiarEscena,
+    obtenerEscenas,
+    obtenerMute,
+    toggleMute,
+    obtenerCaptura,
+    enviarPeticion,
     estaConectado: () => conectado,
     cerrar,
   };
 }
 
 export function iniciarObsBridge({
-  busWsUrl = `ws://127.0.0.1:${process.env.PORT || 7979}/ws`,
+  busWsUrl = process.env.OBS_BRIDGE_WS_URL || `ws://127.0.0.1:${process.env.PORT || 8790}/ws`,
   configObs = null,
 } = {}) {
   const cfg = configObs || obtenerConfiguracionObsLocal();
+  let escenaActual = 'CON_CAMARA';
+
+  let busWs = null;
+  let busReintentoTimer = null;
+  let cerrado = false;
+
+  function enviarAlBus(payload) {
+    if (busWs && busWs.readyState === 1) {
+      try {
+        busWs.send(JSON.stringify(payload));
+      } catch (_) {}
+    }
+  }
+
   const obsClient = crearClienteObsWebSocket({
     puerto: cfg.puerto,
     password: cfg.password,
-    onConectado: () => {
+    onConectado: async () => {
       console.log(`[OBS-Bridge] Conectado a OBS Studio en puerto ${cfg.puerto}`);
+      try {
+        const estado = await obsClient.obtenerEscenas();
+        if (estado?.currentProgramSceneName) {
+          escenaActual = estado.currentProgramSceneName;
+        }
+        const muteInfo = await obsClient.obtenerMute('Mic/Aux').catch(() => ({ inputMuted: false }));
+        enviarAlBus({
+          type: 'obs_estado',
+          escenaActual,
+          escenas: (estado?.scenes || []).map((s) => s.sceneName),
+          microMuteado: Boolean(muteInfo?.inputMuted),
+        });
+      } catch (_) {}
     },
     onDesconectado: () => {
       console.log('[OBS-Bridge] OBS Studio desconectado, reintentando...');
     },
     onCambioEscena: (nuevaEscena) => {
+      escenaActual = nuevaEscena;
       console.log(`[OBS-Bridge] Escena actual de OBS → ${nuevaEscena}`);
+      enviarAlBus({ type: 'obs_escena_cambiada', escena: nuevaEscena });
+    },
+    onCambioMute: (datosMute) => {
+      enviarAlBus({
+        type: 'obs_mute_cambiado',
+        inputName: datosMute?.inputName,
+        inputMuted: Boolean(datosMute?.inputMuted),
+      });
     },
   });
-
-  let busWs = null;
-  let busReintentoTimer = null;
-  let cerrado = false;
 
   function conectarBus() {
     if (cerrado) return;
@@ -195,26 +296,75 @@ export function iniciarObsBridge({
       return;
     }
 
-    busWs.on('open', () => {
+    busWs.on('open', async () => {
       console.log(`[OBS-Bridge] Conectado al bus local en ${busWsUrl}`);
+      if (obsClient.estaConectado()) {
+        try {
+          const estado = await obsClient.obtenerEscenas();
+          if (estado?.currentProgramSceneName) {
+            escenaActual = estado.currentProgramSceneName;
+          }
+          const muteInfo = await obsClient.obtenerMute('Mic/Aux').catch(() => ({ inputMuted: false }));
+          enviarAlBus({
+            type: 'obs_estado',
+            escenaActual,
+            escenas: (estado?.scenes || []).map((s) => s.sceneName),
+            microMuteado: Boolean(muteInfo?.inputMuted),
+          });
+        } catch (_) {}
+      }
     });
 
-    busWs.on('message', (data) => {
+    busWs.on('message', async (data) => {
       try {
         const msg = JSON.parse(data.toString());
         if (msg.type === 'obs_cambiar_escena' && msg.escena) {
           console.log(`[OBS-Bridge] Petición de cambio de escena OBS → ${msg.escena}`);
-          obsClient.cambiarEscena(msg.escena);
+          await obsClient.cambiarEscena(msg.escena).catch(() => {});
+        } else if (msg.type === 'obs_solicitar_estado') {
+          if (obsClient.estaConectado()) {
+            const estado = await obsClient.obtenerEscenas().catch(() => null);
+            if (estado?.currentProgramSceneName) {
+              escenaActual = estado.currentProgramSceneName;
+            }
+            const muteInfo = await obsClient.obtenerMute(msg.inputName || 'Mic/Aux').catch(() => ({ inputMuted: false }));
+            enviarAlBus({
+              type: 'obs_estado',
+              escenaActual,
+              escenas: (estado?.scenes || []).map((s) => s.sceneName),
+              microMuteado: Boolean(muteInfo?.inputMuted),
+            });
+          }
+        } else if (msg.type === 'obs_toggle_mute') {
+          const inputName = msg.inputName || 'Mic/Aux';
+          const res = await obsClient.toggleMute(inputName).catch(() => null);
+          if (res) {
+            enviarAlBus({
+              type: 'obs_mute_cambiado',
+              inputName,
+              inputMuted: Boolean(res.inputMuted),
+            });
+          }
+        } else if (msg.type === 'obs_solicitar_captura') {
+          const fuente = msg.fuente || escenaActual;
+          const snap = await obsClient.obtenerCaptura(fuente).catch(() => null);
+          if (snap?.imageData) {
+            enviarAlBus({
+              type: 'obs_captura',
+              fuente,
+              data: snap.imageData,
+            });
+          }
         } else if (msg.type === 'comando_chat' && msg.comando) {
           const cmd = String(msg.comando).trim().toLowerCase();
           if (cmd === '!pausa' || cmd === '!brb') {
-            obsClient.cambiarEscena('PAUSA');
+            obsClient.cambiarEscena('PAUSA').catch(() => {});
           } else if (cmd === '!volver' || cmd === '!plano') {
-            obsClient.cambiarEscena('PLANO-INTERACTIVO');
+            obsClient.cambiarEscena('PLANO-INTERACTIVO').catch(() => {});
           } else if (cmd === '!calca' || cmd === '!arte') {
-            obsClient.cambiarEscena('Solo_Calca');
+            obsClient.cambiarEscena('Solo_Calca').catch(() => {});
           } else if (cmd === '!cam') {
-            obsClient.cambiarEscena('CON_CAMARA');
+            obsClient.cambiarEscena('CON_CAMARA').catch(() => {});
           }
         }
       } catch (_) {}

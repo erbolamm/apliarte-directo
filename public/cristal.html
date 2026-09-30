@@ -103,10 +103,49 @@
         ctx.lineWidth = baseSize * scale;
       }
 
-      ctx.beginPath();
-      ctx.moveTo(fromX, fromY);
-      ctx.lineTo(toX, toY);
-      ctx.stroke();
+      const shape = seg.shape || 'stroke';
+
+      if (shape === 'rect') {
+        const x = Math.min(fromX, toX);
+        const y = Math.min(fromY, toY);
+        const w = Math.abs(toX - fromX);
+        const h = Math.abs(toY - fromY);
+        ctx.beginPath();
+        ctx.strokeRect(x, y, w, h);
+      } else if (shape === 'ellipse') {
+        const cx = (fromX + toX) / 2;
+        const cy = (fromY + toY) / 2;
+        const rx = Math.abs(toX - fromX) / 2;
+        const ry = Math.abs(toY - fromY) / 2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, Math.max(1, rx), Math.max(1, ry), 0, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (shape === 'arrow') {
+        ctx.beginPath();
+        ctx.moveTo(fromX, fromY);
+        ctx.lineTo(toX, toY);
+        ctx.stroke();
+
+        const headLen = Math.max(14, baseSize * 2.5) * scale;
+        const angle = Math.atan2(toY - fromY, toX - fromX);
+        ctx.beginPath();
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(toX - headLen * Math.cos(angle - Math.PI / 6), toY - headLen * Math.sin(angle - Math.PI / 6));
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(toX - headLen * Math.cos(angle + Math.PI / 6), toY - headLen * Math.sin(angle + Math.PI / 6));
+        ctx.stroke();
+      } else if (shape === 'line') {
+        ctx.beginPath();
+        ctx.moveTo(fromX, fromY);
+        ctx.lineTo(toX, toY);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(fromX, fromY);
+        ctx.lineTo(toX, toY);
+        ctx.stroke();
+      }
+
       ctx.restore();
     }
 

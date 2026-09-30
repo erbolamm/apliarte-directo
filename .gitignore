@@ -46,3 +46,4 @@ vps-overlay/data/
 data/.lock
 data/*.corrupt
 data/nms/
+data/panel/

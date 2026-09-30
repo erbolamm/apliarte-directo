@@ -5,16 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>ApliArte Directo - Pizarra Táctil Tablet</title>
+  <title>ApliArte Directo - Centro de Dibujo y Mando OBS</title>
   <style>
     :root {
       --bg-dark: #0a0e17;
       --bg-canvas: #0f172a;
-      --panel-bg: rgba(15, 23, 42, 0.95);
-      --border-color: rgba(255, 255, 255, 0.12);
+      --panel-bg: rgba(15, 23, 42, 0.85);
+      --border-color: rgba(255, 255, 255, 0.14);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       --accent: #00f0ff;
+      --accent-glow: rgba(0, 240, 255, 0.35);
+      --danger: #ef4444;
+      --success: #10b981;
     }
 
     * {
@@ -47,31 +50,114 @@
       background-color: rgba(0, 0, 0, 0) !important;
     }
 
-    /* Barra superior flotante con opacidad */
+    /* Barra superior flotante con conmutador OBS y controles */
     header {
-      height: 52px;
-      background: rgba(15, 23, 42, 0.45);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      height: 56px;
+      min-height: 56px;
+      flex-shrink: 0;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       border-bottom: 1px solid var(--border-color);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px;
+      padding: 0 12px;
       z-index: 10;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    header::-webkit-scrollbar,
+    footer::-webkit-scrollbar {
+      display: none;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 6px;
       font-weight: 700;
-      font-size: 15px;
+      font-size: 14px;
       letter-spacing: 0.5px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .brand span {
       color: var(--accent);
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .toolbar-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-right: 2px;
+    }
+
+    .btn {
+      height: 40px;
+      min-width: 40px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+      flex-shrink: 0;
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+    }
+
+    .btn.active {
+      background: rgba(0, 240, 255, 0.2);
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .btn-obs-scene {
+      font-size: 12px;
+      padding: 0 8px;
+      height: 36px;
+    }
+
+    .btn-mic-muted {
+      background: rgba(239, 68, 68, 0.2) !important;
+      border-color: var(--danger) !important;
+      color: #fca5a5 !important;
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .btn-danger:active {
+      background: rgba(239, 68, 68, 0.3);
     }
 
     .status-badge {
@@ -79,11 +165,13 @@
       align-items: center;
       gap: 6px;
       font-size: 12px;
-      padding: 4px 10px;
+      padding: 4px 8px;
       border-radius: 9999px;
       background: rgba(255, 255, 255, 0.06);
       border: 1px solid var(--border-color);
       font-weight: 500;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .status-dot {
@@ -102,22 +190,38 @@
     /* Contenedor del lienzo 16:9 100% transparente */
     #canvas-wrapper {
       flex: 1;
+      min-height: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       background: transparent !important;
       background-color: rgba(0, 0, 0, 0) !important;
       position: relative;
-      padding: 12px;
+      padding: 8px;
+      overflow: hidden;
     }
 
     #canvas-container {
       position: relative;
-      border: 1px dashed rgba(255, 255, 255, 0.25);
+      border: 1px dashed rgba(255, 255, 255, 0.28);
       border-radius: 8px;
       overflow: hidden;
       background: transparent !important;
       background-color: rgba(0, 0, 0, 0) !important;
+    }
+
+    /* Imagen de previsualización en vivo de OBS */
+    #obs-preview-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      display: none;
+      opacity: 0.85;
+      z-index: 1;
     }
 
     #drawing-canvas {
@@ -129,94 +233,61 @@
       cursor: crosshair;
       touch-action: none;
       background: transparent !important;
+      z-index: 2;
     }
 
-    /* Barra de herramientas inferior con opacidad */
+    #preview-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      touch-action: none;
+      background: transparent !important;
+      z-index: 3;
+    }
+
+    /* Barra de herramientas inferior */
     footer {
-      height: 74px;
-      background: rgba(15, 23, 42, 0.45);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      height: 68px;
+      min-height: 68px;
+      flex-shrink: 0;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       border-top: 1px solid var(--border-color);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px;
+      padding: 0 12px;
       z-index: 10;
-      gap: 12px;
-      overflow-x: auto;
-    }
-
-    .toolbar-group {
-      display: flex;
-      align-items: center;
       gap: 8px;
-    }
-
-    .btn {
-      height: 44px;
-      min-width: 44px;
-      padding: 0 14px;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      background: rgba(15, 23, 42, 0.55);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      color: var(--text-main);
-      font-size: 14px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      touch-action: manipulation;
-    }
-      touch-action: manipulation;
-    }
-
-    .btn:active {
-      transform: scale(0.96);
-    }
-
-    .btn.active {
-      background: rgba(0, 240, 255, 0.18);
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .btn-danger {
-      background: rgba(239, 68, 68, 0.15);
-      border-color: rgba(239, 68, 68, 0.4);
-      color: #fca5a5;
-    }
-
-    .btn-danger:active {
-      background: rgba(239, 68, 68, 0.3);
+      overflow: hidden;
     }
 
     /* Selector de colores */
     .color-swatch {
-      width: 38px;
-      height: 38px;
+      width: 34px;
+      height: 34px;
       border-radius: 50%;
       border: 2px solid transparent;
       cursor: pointer;
       transition: transform 0.2s, border-color 0.2s;
       position: relative;
+      flex-shrink: 0;
     }
 
     .color-swatch.active {
       border-color: #ffffff;
-      transform: scale(1.15);
-      box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      transform: scale(1.18);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
     }
 
     /* Selector de grosor */
     .size-swatch {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       border-radius: 8px;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--border-color);
@@ -224,11 +295,12 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      flex-shrink: 0;
     }
 
     .size-swatch.active {
       border-color: var(--accent);
-      background: rgba(0, 240, 255, 0.15);
+      background: rgba(0, 240, 255, 0.2);
     }
 
     .size-indicator {
@@ -238,9 +310,114 @@
 
     .separator {
       width: 1px;
-      height: 32px;
+      height: 28px;
       background: var(--border-color);
-      margin: 0 4px;
+      margin: 0 2px;
+      flex-shrink: 0;
+    }
+
+    /* Reglas responsivas fluidas para tablets */
+    @media (max-width: 1100px) {
+      .btn-text-desktop {
+        display: none !important;
+      }
+      .brand-sub {
+        display: none !important;
+      }
+      .tool-label {
+        display: none !important;
+      }
+      .toolbar-label {
+        display: none !important;
+      }
+      .btn {
+        padding: 0 8px;
+        height: 38px;
+        min-width: 38px;
+      }
+      .color-swatch {
+        width: 30px;
+        height: 30px;
+      }
+      .size-swatch {
+        width: 32px;
+        height: 32px;
+      }
+    }
+
+    @media (max-width: 860px) {
+      header {
+        height: 48px;
+        min-height: 48px;
+        padding: 0 6px;
+        gap: 4px;
+      }
+      footer {
+        height: 60px;
+        min-height: 60px;
+        padding: 0 6px;
+        gap: 4px;
+      }
+      .toolbar-group {
+        gap: 3px;
+      }
+      .btn-obs-scene {
+        padding: 0 6px;
+        font-size: 11px;
+        height: 32px;
+        min-width: auto;
+      }
+      .btn {
+        height: 34px;
+        min-width: 34px;
+        padding: 0 6px;
+        font-size: 11px;
+      }
+      .btn-text-tablet {
+        display: none !important;
+      }
+      .color-swatch {
+        width: 26px;
+        height: 26px;
+      }
+      .size-swatch {
+        width: 28px;
+        height: 28px;
+      }
+      .status-text {
+        display: none !important;
+      }
+      .status-badge {
+        padding: 3px 6px;
+      }
+      .separator {
+        height: 20px;
+        margin: 0 1px;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .brand {
+        font-size: 12px;
+      }
+      .btn-obs-scene {
+        padding: 0 4px;
+        font-size: 10px;
+        height: 30px;
+      }
+      .btn {
+        height: 30px;
+        min-width: 30px;
+        padding: 0 4px;
+      }
+      .color-swatch {
+        width: 22px;
+        height: 22px;
+      }
+      .size-swatch {
+        width: 24px;
+        height: 24px;
+      }
     }
   </style>
 </head>
@@ -248,57 +425,111 @@
   <div id="app-container">
     <header>
       <div class="brand">
-        <span>ApliArte</span> Pizarra Directo
+        <span>ApliArte</span><span class="brand-sub"> Directo</span>
       </div>
+
+      <!-- Conmutador de escenas OBS -->
+      <div class="toolbar-group" id="obs-scenes-group" title="Conmutar escena en OBS Studio">
+        <span class="toolbar-label">OBS:</span>
+        <button class="btn btn-obs-scene active" data-scene="CON_CAMARA" title="Cámara">Cámara</button>
+        <button class="btn btn-obs-scene" data-scene="PLANO-INTERACTIVO" title="Plano interactivo">Plano</button>
+        <button class="btn btn-obs-scene" data-scene="INICIO" title="Escena inicio">Inicio</button>
+        <button class="btn btn-obs-scene" data-scene="Alerats" title="Alertas">Alertas</button>
+      </div>
+
+      <div class="separator"></div>
+
+      <!-- Control de Microfono OBS -->
       <div class="toolbar-group">
-        <button id="btn-undo" class="btn" title="Deshacer último trazo">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
-          Deshacer
+        <button id="btn-obs-mute" class="btn" title="Activar/Silenciar micrófono OBS">
+          <svg id="mic-icon-on" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          <svg id="mic-icon-off" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V5a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          <span id="mic-text" class="btn-text-tablet">Mic ON</span>
         </button>
-        <button id="btn-clear" class="btn btn-danger" title="Limpiar lienzo">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          Limpiar
+
+        <!-- Botón Ver OBS en vivo bajo el lienzo -->
+        <button id="btn-obs-preview" class="btn" title="Superponer la emisión en vivo de OBS bajo la pizarra">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span class="btn-text-tablet">Ver OBS</span>
         </button>
-        <div class="status-badge">
+      </div>
+
+      <div class="separator"></div>
+
+      <!-- Deshacer, Rehacer, Limpiar -->
+      <div class="toolbar-group">
+        <button id="btn-undo" class="btn" title="Deshacer último trazo o forma">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+          <span class="btn-text-desktop">Deshacer</span>
+        </button>
+        <button id="btn-redo" class="btn" title="Rehacer trazo o forma">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/></svg>
+          <span class="btn-text-desktop">Rehacer</span>
+        </button>
+        <button id="btn-clear" class="btn btn-danger" title="Limpiar todo el lienzo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span class="btn-text-desktop">Limpiar</span>
+        </button>
+
+        <div class="status-badge" title="Estado de la conexión">
           <div id="status-dot" class="status-dot"></div>
-          <span id="status-text">Conectando...</span>
+          <span id="status-text" class="status-text">En vivo</span>
         </div>
       </div>
     </header>
 
     <main id="canvas-wrapper">
       <div id="canvas-container">
+        <img id="obs-preview-bg" alt="Vista previa OBS" />
         <canvas id="drawing-canvas"></canvas>
+        <canvas id="preview-canvas"></canvas>
       </div>
     </main>
 
     <footer>
-      <!-- Herramientas -->
-      <div class="toolbar-group">
-        <button id="tool-pen" class="btn active" data-tool="pen">
+      <!-- Herramientas estilo Excalidraw -->
+      <div class="toolbar-group" id="tools-group">
+        <button id="tool-pen" class="btn active" data-tool="pen" title="Trazo libre (Stylus / Dedo)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/></svg>
-          Pluma
+          <span class="tool-label">Pluma</span>
         </button>
-        <button id="tool-highlighter" class="btn" data-tool="highlighter">
+        <button id="tool-arrow" class="btn" data-tool="arrow" title="Flecha con punta indicadora">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <span class="tool-label">Flecha</span>
+        </button>
+        <button id="tool-rect" class="btn" data-tool="rect" title="Rectángulo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+          <span class="tool-label">Caja</span>
+        </button>
+        <button id="tool-ellipse" class="btn" data-tool="ellipse" title="Elipse / Círculo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+          <span class="tool-label">Elipse</span>
+        </button>
+        <button id="tool-line" class="btn" data-tool="line" title="Línea recta">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/></svg>
+          <span class="tool-label">Línea</span>
+        </button>
+        <button id="tool-highlighter" class="btn" data-tool="highlighter" title="Marcador fluorescente translúcido">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-6 6v3h3l6-6"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
-          Marcador
+          <span class="tool-label">Marcador</span>
         </button>
-        <button id="tool-eraser" class="btn" data-tool="eraser">
+        <button id="tool-eraser" class="btn" data-tool="eraser" title="Borrador">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
-          Borrador
+          <span class="tool-label">Borrador</span>
         </button>
       </div>
 
       <div class="separator"></div>
 
-      <!-- Colores -->
+      <!-- Colores (incluyendo Negro #000000) -->
       <div class="toolbar-group" id="palette-group">
-        <div class="color-swatch active" style="background-color: #00f0ff;" data-color="#00f0ff"></div>
-        <div class="color-swatch" style="background-color: #ffd000;" data-color="#ffd000"></div>
-        <div class="color-swatch" style="background-color: #ff3366;" data-color="#ff3366"></div>
-        <div class="color-swatch" style="background-color: #00ff66;" data-color="#00ff66"></div>
-        <div class="color-swatch" style="background-color: #ffffff;" data-color="#ffffff"></div>
-        <div class="color-swatch" style="background-color: #ff8800;" data-color="#ff8800"></div>
+        <div class="color-swatch active" style="background-color: #00f0ff;" data-color="#00f0ff" title="Cian neón"></div>
+        <div class="color-swatch" style="background-color: #ffd000;" data-color="#ffd000" title="Amarillo"></div>
+        <div class="color-swatch" style="background-color: #ff3366;" data-color="#ff3366" title="Fucsia neón"></div>
+        <div class="color-swatch" style="background-color: #00ff66;" data-color="#00ff66" title="Verde neón"></div>
+        <div class="color-swatch" style="background-color: #ffffff;" data-color="#ffffff" title="Blanco puro"></div>
+        <div class="color-swatch" style="background-color: #000000; border: 1.5px solid rgba(255, 255, 255, 0.45);" data-color="#000000" title="Negro"></div>
+        <div class="color-swatch" style="background-color: #ff8800;" data-color="#ff8800" title="Naranja"></div>
       </div>
 
       <div class="separator"></div>
@@ -326,20 +557,38 @@
     const container = document.getElementById('canvas-container');
     const canvas = document.getElementById('drawing-canvas');
     const ctx = canvas.getContext('2d', { alpha: true });
+    const previewCanvas = document.getElementById('preview-canvas');
+    const previewCtx = previewCanvas.getContext('2d', { alpha: true });
 
+    const obsPreviewBg = document.getElementById('obs-preview-bg');
     const statusDot = document.getElementById('status-dot');
     const statusText = document.getElementById('status-text');
 
-    // Estado de la herramienta
-    let currentTool = 'pen';
+    // Botones OBS
+    const btnObsMute = document.getElementById('btn-obs-mute');
+    const micIconOn = document.getElementById('mic-icon-on');
+    const micIconOff = document.getElementById('mic-icon-off');
+    const micText = document.getElementById('mic-text');
+    const btnObsPreview = document.getElementById('btn-obs-preview');
+    const sceneButtons = document.querySelectorAll('.btn-obs-scene');
+
+    // Estado de herramientas de dibujo
+    let currentTool = 'pen'; // 'pen', 'arrow', 'rect', 'ellipse', 'line', 'highlighter', 'eraser'
     let currentColor = '#00f0ff';
     let currentSize = 6;
 
     let isDrawing = false;
+    let startPoint = null;
     let lastPoint = null;
     let currentStrokeId = null;
 
     let strokesHistory = [];
+    let redoStack = [];
+
+    // Estado OBS y Preview
+    let obsMuted = false;
+    let obsPreviewActive = false;
+    let obsPreviewInterval = null;
 
     // Relación de aspecto 16:9
     const ASPECT_RATIO = 16 / 9;
@@ -347,8 +596,8 @@
     const REF_HEIGHT = 1080;
 
     function resizeContainer() {
-      const availW = wrapper.clientWidth - 24;
-      const availH = wrapper.clientHeight - 24;
+      const availW = wrapper.clientWidth - 20;
+      const availH = wrapper.clientHeight - 20;
 
       let w = availW;
       let h = w / ASPECT_RATIO;
@@ -362,17 +611,24 @@
       container.style.height = Math.floor(h) + 'px';
 
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
+      const pixelW = Math.floor(w * dpr);
+      const pixelH = Math.floor(h * dpr);
+
+      canvas.width = pixelW;
+      canvas.height = pixelH;
+      previewCanvas.width = pixelW;
+      previewCanvas.height = pixelH;
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
+      previewCtx.setTransform(1, 0, 0, 1, 0, 0);
+      previewCtx.scale(dpr, dpr);
 
       redrawAll();
     }
 
     window.addEventListener('resize', resizeContainer);
-    window.addEventListener('orientationchange', () => setTimeout(resizeContainer, 100));
+    window.addEventListener('orientationchange', () => setTimeout(resizeContainer, 120));
 
     function getNormalizedPos(e) {
       const rect = canvas.getBoundingClientRect();
@@ -380,11 +636,11 @@
       const y = (e.clientY - rect.top) / rect.height;
       return {
         x: Math.max(0, Math.min(1, x)),
-        y: Math.max(0, Math.min(1, y))
+        y: Math.max(0, Math.min(1, y)),
       };
     }
 
-    function drawSegment(seg) {
+    function drawItem(seg, targetCtx) {
       if (!seg || !seg.from || !seg.to) return;
 
       const rect = canvas.getBoundingClientRect();
@@ -396,30 +652,70 @@
       const scale = rect.width / REF_WIDTH;
       const baseSize = seg.size || 6;
 
-      ctx.save();
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+      targetCtx.save();
+      targetCtx.lineCap = 'round';
+      targetCtx.lineJoin = 'round';
 
       if (seg.tool === 'eraser') {
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.lineWidth = (baseSize * 3) * scale;
+        targetCtx.globalCompositeOperation = 'destination-out';
+        targetCtx.lineWidth = (baseSize * 3) * scale;
       } else if (seg.tool === 'highlighter') {
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = 0.38;
-        ctx.strokeStyle = seg.color || '#ffd000';
-        ctx.lineWidth = (baseSize * 2.8) * scale;
+        targetCtx.globalCompositeOperation = 'source-over';
+        targetCtx.globalAlpha = 0.38;
+        targetCtx.strokeStyle = seg.color || '#ffd000';
+        targetCtx.lineWidth = (baseSize * 2.8) * scale;
       } else {
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = 1.0;
-        ctx.strokeStyle = seg.color || '#00f0ff';
-        ctx.lineWidth = baseSize * scale;
+        targetCtx.globalCompositeOperation = 'source-over';
+        targetCtx.globalAlpha = 1.0;
+        targetCtx.strokeStyle = seg.color || '#00f0ff';
+        targetCtx.lineWidth = baseSize * scale;
       }
 
-      ctx.beginPath();
-      ctx.moveTo(fromX, fromY);
-      ctx.lineTo(toX, toY);
-      ctx.stroke();
-      ctx.restore();
+      const shape = seg.shape || 'stroke';
+
+      if (shape === 'rect') {
+        const x = Math.min(fromX, toX);
+        const y = Math.min(fromY, toY);
+        const w = Math.abs(toX - fromX);
+        const h = Math.abs(toY - fromY);
+        targetCtx.beginPath();
+        targetCtx.strokeRect(x, y, w, h);
+      } else if (shape === 'ellipse') {
+        const cx = (fromX + toX) / 2;
+        const cy = (fromY + toY) / 2;
+        const rx = Math.abs(toX - fromX) / 2;
+        const ry = Math.abs(toY - fromY) / 2;
+        targetCtx.beginPath();
+        targetCtx.ellipse(cx, cy, Math.max(1, rx), Math.max(1, ry), 0, 0, Math.PI * 2);
+        targetCtx.stroke();
+      } else if (shape === 'arrow') {
+        targetCtx.beginPath();
+        targetCtx.moveTo(fromX, fromY);
+        targetCtx.lineTo(toX, toY);
+        targetCtx.stroke();
+
+        const headLen = Math.max(14, baseSize * 2.5) * scale;
+        const angle = Math.atan2(toY - fromY, toX - fromX);
+        targetCtx.beginPath();
+        targetCtx.moveTo(toX, toY);
+        targetCtx.lineTo(toX - headLen * Math.cos(angle - Math.PI / 6), toY - headLen * Math.sin(angle - Math.PI / 6));
+        targetCtx.moveTo(toX, toY);
+        targetCtx.lineTo(toX - headLen * Math.cos(angle + Math.PI / 6), toY - headLen * Math.sin(angle + Math.PI / 6));
+        targetCtx.stroke();
+      } else if (shape === 'line') {
+        targetCtx.beginPath();
+        targetCtx.moveTo(fromX, fromY);
+        targetCtx.lineTo(toX, toY);
+        targetCtx.stroke();
+      } else {
+        // Trazo libre
+        targetCtx.beginPath();
+        targetCtx.moveTo(fromX, fromY);
+        targetCtx.lineTo(toX, toY);
+        targetCtx.stroke();
+      }
+
+      targetCtx.restore();
     }
 
     function redrawAll() {
@@ -429,80 +725,138 @@
       ctx.restore();
 
       for (let i = 0; i < strokesHistory.length; i++) {
-        drawSegment(strokesHistory[i]);
+        drawItem(strokesHistory[i], ctx);
       }
     }
 
-    // Interacción táctil fluida con Pointer Events
+    function clearPreview() {
+      previewCtx.save();
+      previewCtx.setTransform(1, 0, 0, 1, 0, 0);
+      previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+      previewCtx.restore();
+    }
+
+    // Interacción táctil y stylus con Pointer Events
     canvas.addEventListener('pointerdown', (e) => {
       canvas.setPointerCapture(e.pointerId);
       isDrawing = true;
-      lastPoint = getNormalizedPos(e);
+      startPoint = getNormalizedPos(e);
+      lastPoint = startPoint;
       currentStrokeId = 's_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 
-      // Dibujar un punto inicial para taps
-      const seg = {
-        type: 'pizarra_draw',
-        strokeId: currentStrokeId,
-        from: { x: lastPoint.x, y: lastPoint.y },
-        to: { x: lastPoint.x + 0.0001, y: lastPoint.y + 0.0001 },
-        color: currentColor,
-        size: currentSize,
-        tool: currentTool
-      };
-      strokesHistory.push(seg);
-      drawSegment(seg);
-      sendWs(seg);
+      const isShape = ['rect', 'ellipse', 'arrow', 'line'].includes(currentTool);
+
+      if (!isShape) {
+        // Trazo libre, marcador o borrador: emitir punto inicial
+        const seg = {
+          type: 'pizarra_draw',
+          shape: 'stroke',
+          strokeId: currentStrokeId,
+          from: { x: startPoint.x, y: startPoint.y },
+          to: { x: startPoint.x + 0.0001, y: startPoint.y + 0.0001 },
+          color: currentColor,
+          size: currentSize,
+          tool: currentTool,
+        };
+        strokesHistory.push(seg);
+        drawItem(seg, ctx);
+        sendWs(seg);
+        redoStack = [];
+      }
     });
 
     canvas.addEventListener('pointermove', (e) => {
       if (!isDrawing || !lastPoint) return;
       const currentPoint = getNormalizedPos(e);
 
-      // Filtro de distancia mínima para reducir saturación de paquetes
-      const dist = Math.hypot(currentPoint.x - lastPoint.x, currentPoint.y - lastPoint.y);
-      if (dist < 0.001) return;
+      const isShape = ['rect', 'ellipse', 'arrow', 'line'].includes(currentTool);
 
-      const seg = {
-        type: 'pizarra_draw',
-        strokeId: currentStrokeId,
-        from: lastPoint,
-        to: currentPoint,
-        color: currentColor,
-        size: currentSize,
-        tool: currentTool
-      };
+      if (isShape) {
+        // Previsualización fluida de la forma en previewCanvas
+        clearPreview();
+        const previewItem = {
+          from: startPoint,
+          to: currentPoint,
+          shape: currentTool,
+          color: currentColor,
+          size: currentSize,
+          tool: 'pen',
+        };
+        drawItem(previewItem, previewCtx);
+      } else {
+        // Trazo libre continuo
+        const dist = Math.hypot(currentPoint.x - lastPoint.x, currentPoint.y - lastPoint.y);
+        if (dist < 0.001) return;
 
-      strokesHistory.push(seg);
-      drawSegment(seg);
-      sendWs(seg);
+        const seg = {
+          type: 'pizarra_draw',
+          shape: 'stroke',
+          strokeId: currentStrokeId,
+          from: lastPoint,
+          to: currentPoint,
+          color: currentColor,
+          size: currentSize,
+          tool: currentTool,
+        };
 
-      lastPoint = currentPoint;
+        strokesHistory.push(seg);
+        drawItem(seg, ctx);
+        sendWs(seg);
+        lastPoint = currentPoint;
+      }
     });
 
-    function endStroke(e) {
-      if (isDrawing) {
-        isDrawing = false;
-        lastPoint = null;
-        currentStrokeId = null;
+    function endDrawing(e) {
+      if (!isDrawing) return;
+      isDrawing = false;
+      clearPreview();
+
+      const isShape = ['rect', 'ellipse', 'arrow', 'line'].includes(currentTool);
+
+      if (isShape && startPoint) {
+        const endPoint = getNormalizedPos(e) || lastPoint;
+        const dist = Math.hypot(endPoint.x - startPoint.x, endPoint.y - startPoint.y);
+
+        // Si hay una distancia mínima detectable, confirmar la forma geométrica
+        if (dist > 0.004) {
+          const shapeItem = {
+            type: 'pizarra_draw',
+            shape: currentTool,
+            strokeId: currentStrokeId,
+            from: startPoint,
+            to: endPoint,
+            color: currentColor,
+            size: currentSize,
+            tool: 'pen',
+          };
+          strokesHistory.push(shapeItem);
+          drawItem(shapeItem, ctx);
+          sendWs(shapeItem);
+          redoStack = [];
+        }
       }
+
+      startPoint = null;
+      lastPoint = null;
+      currentStrokeId = null;
     }
 
-    canvas.addEventListener('pointerup', endStroke);
-    canvas.addEventListener('pointercancel', endStroke);
+    canvas.addEventListener('pointerup', endDrawing);
+    canvas.addEventListener('pointercancel', endDrawing);
 
-    // Controles de barra
-    document.querySelectorAll('[data-tool]').forEach(btn => {
+    // Selección de herramientas
+    document.querySelectorAll('[data-tool]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('[data-tool]').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
         currentTool = btn.dataset.tool;
       });
     });
 
-    document.querySelectorAll('.color-swatch').forEach(swatch => {
+    // Selección de colores
+    document.querySelectorAll('.color-swatch').forEach((swatch) => {
       swatch.addEventListener('click', () => {
-        document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.color-swatch').forEach((s) => s.classList.remove('active'));
         swatch.classList.add('active');
         currentColor = swatch.dataset.color;
         if (currentTool === 'eraser') {
@@ -511,36 +865,113 @@
       });
     });
 
-    document.querySelectorAll('.size-swatch').forEach(swatch => {
+    // Selección de grosor
+    document.querySelectorAll('.size-swatch').forEach((swatch) => {
       swatch.addEventListener('click', () => {
-        document.querySelectorAll('.size-swatch').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.size-swatch').forEach((s) => s.classList.remove('active'));
         swatch.classList.add('active');
         currentSize = parseInt(swatch.dataset.size, 10);
       });
     });
 
+    // Deshacer (Undo)
     document.getElementById('btn-undo').addEventListener('click', () => {
       if (strokesHistory.length === 0) return;
       const lastId = strokesHistory[strokesHistory.length - 1].strokeId;
+      const removedGroup = [];
+
       if (lastId) {
         while (strokesHistory.length > 0 && strokesHistory[strokesHistory.length - 1].strokeId === lastId) {
-          strokesHistory.pop();
+          removedGroup.unshift(strokesHistory.pop());
         }
       } else {
-        strokesHistory.pop();
+        removedGroup.unshift(strokesHistory.pop());
       }
+
+      redoStack.push(removedGroup);
       redrawAll();
       sendWs({ type: 'pizarra_undo' });
     });
 
+    // Rehacer (Redo)
+    document.getElementById('btn-redo').addEventListener('click', () => {
+      if (redoStack.length === 0) return;
+      const restoredGroup = redoStack.pop();
+      if (!Array.isArray(restoredGroup) || restoredGroup.length === 0) return;
+
+      for (let i = 0; i < restoredGroup.length; i++) {
+        const item = restoredGroup[i];
+        strokesHistory.push(item);
+        drawItem(item, ctx);
+        sendWs(item);
+      }
+    });
+
+    // Limpiar (Clear)
     document.getElementById('btn-clear').addEventListener('click', () => {
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.restore();
       strokesHistory = [];
+      redoStack = [];
       sendWs({ type: 'pizarra_clear' });
     });
+
+    // Conmutador de escenas OBS
+    sceneButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const scene = btn.dataset.scene;
+        sceneButtons.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        sendWs({ type: 'obs_cambiar_escena', escena: scene });
+      });
+    });
+
+    // Control de Mute Micro OBS
+    btnObsMute.addEventListener('click', () => {
+      sendWs({ type: 'obs_toggle_mute', inputName: 'Mic/Aux' });
+    });
+
+    function actualizarUiMute(isMuted) {
+      obsMuted = isMuted;
+      if (isMuted) {
+        btnObsMute.classList.add('btn-mic-muted');
+        micIconOn.style.display = 'none';
+        micIconOff.style.display = 'inline-block';
+        micText.textContent = 'Mic MUTED';
+      } else {
+        btnObsMute.classList.remove('btn-mic-muted');
+        micIconOn.style.display = 'inline-block';
+        micIconOff.style.display = 'none';
+        micText.textContent = 'Mic ON';
+      }
+    }
+
+    // Botón Ver OBS en vivo bajo el lienzo
+    btnObsPreview.addEventListener('click', () => {
+      obsPreviewActive = !obsPreviewActive;
+      btnObsPreview.classList.toggle('active', obsPreviewActive);
+      obsPreviewBg.style.display = obsPreviewActive ? 'block' : 'none';
+
+      if (obsPreviewActive) {
+        solicitarCapturaObs();
+        if (!obsPreviewInterval) {
+          obsPreviewInterval = setInterval(() => {
+            if (obsPreviewActive) solicitarCapturaObs();
+          }, 1500);
+        }
+      } else {
+        if (obsPreviewInterval) {
+          clearInterval(obsPreviewInterval);
+          obsPreviewInterval = null;
+        }
+      }
+    });
+
+    function solicitarCapturaObs() {
+      sendWs({ type: 'obs_solicitar_captura' });
+    }
 
     // Conexión WebSocket al servidor :8790
     let ws = null;
@@ -583,6 +1014,7 @@
         statusDot.className = 'status-dot online';
         statusText.textContent = 'En vivo (:8790)';
         sendWs({ type: 'pizarra_solicitar_estado' });
+        sendWs({ type: 'obs_solicitar_estado' });
       };
 
       ws.onmessage = (event) => {
@@ -593,10 +1025,14 @@
           if (data.type === 'pizarra_init' && Array.isArray(data.history)) {
             strokesHistory = data.history.slice();
             redrawAll();
+          } else if (data.type === 'pizarra_draw') {
+            strokesHistory.push(data);
+            drawItem(data, ctx);
           } else if (data.type === 'pizarra_clear') {
             const rect = canvas.getBoundingClientRect();
             ctx.clearRect(0, 0, rect.width, rect.height);
             strokesHistory = [];
+            redoStack = [];
           } else if (data.type === 'pizarra_undo') {
             if (strokesHistory.length > 0) {
               const lastId = strokesHistory[strokesHistory.length - 1].strokeId;
@@ -609,6 +1045,27 @@
               }
               redrawAll();
             }
+          } else if (data.type === 'obs_estado') {
+            if (data.escenaActual) {
+              sceneButtons.forEach((b) => {
+                b.classList.toggle('active', b.dataset.scene === data.escenaActual);
+              });
+            }
+            if (typeof data.microMuteado === 'boolean') {
+              actualizarUiMute(data.microMuteado);
+            }
+          } else if (data.type === 'obs_escena_cambiada') {
+            if (data.escena) {
+              sceneButtons.forEach((b) => {
+                b.classList.toggle('active', b.dataset.scene === data.escena);
+              });
+            }
+          } else if (data.type === 'obs_mute_cambiado') {
+            if (typeof data.inputMuted === 'boolean') {
+              actualizarUiMute(data.inputMuted);
+            }
+          } else if (data.type === 'obs_captura' && data.data) {
+            obsPreviewBg.src = data.data;
           }
         } catch (_) {}
       };
