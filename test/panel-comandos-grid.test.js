@@ -44,15 +44,17 @@ test('admin.html nombra Emision con icono de antena en la barra de navegacion in
   assert.match(publicAdminHtml, /data-tab="tab-directo"[\s\S]*?<span class="nav-icon">📡<\/span>[\s\S]*?<span class="nav-label">Emisión<\/span>/);
 });
 
-test('admin.html precarga presets de usuarios, canales y mensajes con persistencia en localStorage', () => {
+// A1 (2026-09-30): the server owns the lists. Presets are only added through the
+// explicit button; the browser neither reads nor writes these lists. Behaviour is
+// covered in test/panel-persistencia-servidor.test.js.
+test('admin.html conserva los presets, pero solo se anaden con el boton explicito', () => {
   assert.match(publicAdminHtml, /const PRESETS_USUARIOS = \[/);
   assert.match(publicAdminHtml, /const PRESETS_CANALES = \[/);
   assert.match(publicAdminHtml, /const PRESETS_MENSAJES = \[/);
-  assert.match(publicAdminHtml, /elesky/);
-  assert.match(publicAdminHtml, /directo_panel_usuarios_v1/);
-  assert.match(publicAdminHtml, /directo_panel_canales_v1/);
-  assert.match(publicAdminHtml, /directo_panel_mensajes_v1/);
-  assert.match(publicAdminHtml, /function obtenerListaConFallback\(/);
+  assert.match(publicAdminHtml, /id="btn-cargar-predeterminados"[^>]*aria-label="[^"]+"[^>]*data-tip="[^"]+"/);
+  assert.match(publicAdminHtml, /id="listas-estado"[^>]*role="status"/);
+  assert.doesNotMatch(publicAdminHtml, /function obtenerListaConFallback\(/);
+  assert.doesNotMatch(publicAdminHtml, /guardarListaLocal\(/);
   assert.match(publicAdminHtml, /renderChips\(\);\s*renderComandosGrid\(\);\s*\/\/\s*── Polling/);
 });
 

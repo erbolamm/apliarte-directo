@@ -496,6 +496,11 @@
       transform: scale(0.98);
     }
 
+    #listas-estado[data-kind="error"] {
+      color: var(--red);
+      font-weight: 700;
+    }
+
     .drilldown-wrap {
       display: flex;
       flex-wrap: wrap;
@@ -1355,10 +1360,14 @@
         <button type="button" id="btn-grid-add-cmd" class="touch-btn touch-btn-primary" style="min-height:42px; padding:0 12px; font-size:0.8rem; font-weight:700;" title="Crear un nuevo comando personalizado">
           ➕ Nuevo
         </button>
+        <button type="button" id="btn-cargar-predeterminados" class="touch-btn" style="min-height:42px; padding:0 10px; font-size:0.8rem;" aria-label="Añadir los comandos, usuarios, canales y mensajes predeterminados" data-tip="Añadir predeterminados: solo añade lo que falte, no borra ni cambia nada">
+          📥
+        </button>
         <button type="button" id="btn-clear-all-cmds" class="touch-btn touch-btn-danger" style="min-height:42px; padding:0 10px; font-size:0.8rem;" title="Eliminar todos los comandos personalizados">
           🗑️
         </button>
       </div>
+      <p id="listas-estado" role="status" data-kind="info" style="margin:0; font-size:0.8rem; color:var(--muted);">Cargando listas del servidor…</p>
 
       <!-- Cuadrícula en Grid de 4 columnas -->
       <section class="card" style="padding:10px;">
@@ -3390,6 +3399,11 @@
     // ══════════════════════════════════════════════════════════════════════════
     // PESTAÑA 5: COMANDOS Y LISTAS
     // ══════════════════════════════════════════════════════════════════════════
+    /* <panel-persistencia> — el servidor es el dueño de estas listas (A1, 2026-09-30).
+       Nada se da por guardado hasta que el servidor lo confirma, un fallo conserva lo
+       escrito y una lista vacía en el servidor se queda vacía. Las claves antiguas
+       de localStorage (directo_panel_*_v1) no se leen ni se borran: quedan para una
+       importación explícita posterior. */
     const PRESETS_USUARIOS = [
       'elesky', 'TheAnibalOS', 'CursosDeDesarrollo', 'rucalleja77', 'nMarulo',
       'Ocholoko234', 'gordon_f_', 'fromguer', 'marshallflashmusic', 'joaquin_net',
@@ -3414,30 +3428,240 @@
       'hay que recordar que estamos a Sub Septiembre con 30% de descuento en suscripciones ⭐'
     ];
 
-    function obtenerListaConFallback(claveStorage, presets) {
-      try {
-        const item = localStorage.getItem(claveStorage);
-        if (item) {
-          const parsed = JSON.parse(item);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch (_) {}
-      try {
-        localStorage.setItem(claveStorage, JSON.stringify(presets));
-      } catch (_) {}
-      return [...presets];
-    }
+    const COMANDOS_PREDETERMINADOS = [
+      // Moderación oficial Twitch
+      ['/announce [mensaje]', 'Publica un anuncio destacado con banner en el chat de Twitch (máx 500 caracteres)'],
+      ['/ban [usuario] [mensaje]', 'Banea permanentemente a un usuario del chat de Twitch'],
+      ['/unban [usuario]', 'Desbanea a un usuario en el chat de Twitch'],
+      ['/timeout [usuario] 600', 'Silencia temporalmente a un usuario por 10 minutos'],
+      ['/clear', 'Limpia los mensajes del chat por completo'],
+      ['/slow 10', 'Activa modo lento de 10 segundos'],
+      ['/slowoff', 'Desactiva modo lento'],
+      ['/subscribers', 'Activa chat exclusivo para suscriptores'],
+      ['/subscribersoff', 'Desactiva chat exclusivo de suscriptores'],
+      ['/vips', 'Muestra la lista de usuarios VIP del canal'],
+      ['/mods', 'Muestra los moderadores del canal'],
+      // Adopción de Avatares en el diorama
+      ['!co', 'Adoptar avatar de Codex (programación e ingeniería)'],
+      ['!cl', 'Adoptar avatar de Claude (arquitectura y frontend)'],
+      ['!pi', 'Adoptar avatar de Pi (asistente de investigación)'],
+      ['!ge', 'Adoptar avatar de Gemini (análisis multimodal)'],
+      ['!om', 'Adoptar avatar de Ollama (modelos locales)'],
+      ['!gr', 'Adoptar avatar de Groq (inferencia ultra-rápida)'],
+      ['!op', 'Adoptar avatar de OpenAI (razonamiento)'],
+      ['!ex', 'Adoptar avatar de Externo (invitado especial)'],
+      ['!be', 'Adoptar avatar de Vigía (supervisor del sistema)'],
+      ['!liberar', 'Libera el avatar actual que tengas adoptado'],
+      ['!liberar todos', 'Libera todos los avatares ocupados de golpe (solo Javier)'],
+      ['!liberar [agente]', 'Libera el avatar indicado: ge, cl, co, om... (solo Javier)'],
+      // Movimiento y acciones diorama
+      ['!w 1', 'Mueve tu avatar hacia arriba (norte)'],
+      ['!s 1', 'Mueve tu avatar hacia abajo (sur)'],
+      ['!a 1', 'Mueve tu avatar a la izquierda (oeste)'],
+      ['!d 1', 'Mueve tu avatar a la derecha (este)'],
+      ['!salta', 'Hace saltar de alegría a tu avatar'],
+      ['!cafe', 'Envía a tu avatar a la cafetera a por café'],
+      ['!beso [usuario]', 'Manda un beso al avatar de otro usuario'],
+      ['!trabajar', 'Tu avatar se sienta en su escritorio a trabajar'],
+      ['!bronca', 'Javier echa bronca a todos en la oficina'],
+      ['!fiesta', 'Inicia fiesta con luces y baile en la oficina'],
+      ['!info', 'Abre la guía de comandos a pantalla completa en OBS (5s)'],
+      // Minijuegos y utilidades
+      ['!juego', 'Abre votación de minijuegos (!trofeo vs !traidor)'],
+      ['!trofeo', 'Inicia la carrera por la copa'],
+      ['!traidor', 'Inicia el juego del traidor impostor'],
+      ['!sms [mensaje]', 'Envía un mensaje privado al buzón de Javier'],
+      ['!speak -config es-ES 1', 'Configura voz de lectura en español (España 👩)'],
+      ['!speak -config es-AR 1', 'Configura voz de lectura en español (Argentina 👩)'],
+      ['!speak -config es-MX 1', 'Configura voz de lectura en español (México 👩)'],
+      // Enlaces y difusión
+      ['!redes', 'Publica todos los enlaces y redes de ApliArte'],
+      ['!repo', 'Enlace al repositorio abierto en GitHub'],
+      ['!cafecito', 'Enlace de apoyo con café en Ko-fi'],
+      ['!subs', 'Información sobre ventajas para suscriptores'],
+      ['!comandos', 'Resumen rápido de comandos en el chat']
+    ];
 
-    function guardarListaLocal(claveStorage, lista) {
-      try {
-        localStorage.setItem(claveStorage, JSON.stringify(lista));
-      } catch (_) {}
-    }
-
-    let usuariosList = obtenerListaConFallback('directo_panel_usuarios_v1', PRESETS_USUARIOS);
-    let canalesList = obtenerListaConFallback('directo_panel_canales_v1', PRESETS_CANALES);
-    let mensajesList = obtenerListaConFallback('directo_panel_mensajes_v1', PRESETS_MENSAJES);
+    let usuariosList = [];
+    let canalesList = [];
+    let mensajesList = [];
     let comandosList = [];
+
+    function listaDeTipo(tipo) {
+      if (tipo === 'usuario') return usuariosList;
+      if (tipo === 'canal') return canalesList;
+      if (tipo === 'mensaje') return mensajesList;
+      return [];
+    }
+
+    function fijarLista(tipo, valores) {
+      if (tipo === 'usuario') usuariosList = valores;
+      else if (tipo === 'canal') canalesList = valores;
+      else if (tipo === 'mensaje') mensajesList = valores;
+    }
+
+    function repintarListas() {
+      renderChips();
+      renderComandosGrid();
+      renderComandosAccordion();
+    }
+
+    // Nunca lanza: devuelve { ok, status, data }. status 0 = sin conexión.
+    async function pedirPanel(url, cuerpo) {
+      try {
+        const res = await fetch(url, cuerpo === undefined
+          ? { cache: 'no-store' }
+          : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) });
+        let data = null;
+        try { data = await res.json(); } catch (_) {}
+        const ok = res.ok && !!data && typeof data === 'object';
+        return { ok, status: res.status, data };
+      } catch (_) {
+        return { ok: false, status: 0, data: null };
+      }
+    }
+
+    function motivoFallo(r) {
+      if (r.status === 401) return 'la sesión ha caducado, vuelve a entrar';
+      if (r.status === 0) return 'no hay conexión con el servidor';
+      if (r.ok) return 'respuesta inesperada del servidor';
+      return `el servidor respondió ${r.status}`;
+    }
+
+    function marcarEstadoListas(texto, esError) {
+      const el = document.getElementById('listas-estado');
+      if (!el) return;
+      el.textContent = texto;
+      el.hidden = !texto;
+      el.dataset.kind = esError ? 'error' : 'info';
+    }
+
+    async function cargarListas() {
+      const tipos = ['usuario', 'canal', 'mensaje'];
+      const [u, c, m, cmd] = await Promise.all([
+        ...tipos.map(t => pedirPanel(`/api/panel/lista?tipo=${t}`)),
+        pedirPanel('/api/panel/comandos-bot'),
+      ]);
+      const fallos = [];
+      [u, c, m].forEach((r, i) => {
+        if (r.ok && Array.isArray(r.data.valores)) fijarLista(tipos[i], r.data.valores);
+        else fallos.push([tipos[i], r]);
+      });
+      if (cmd.ok && Array.isArray(cmd.data.comandos)) comandosList = cmd.data.comandos;
+      else fallos.push(['comandos', cmd]);
+      if (fallos.length) {
+        marcarEstadoListas(`⚠️ No se pudieron cargar del servidor: ${fallos.map(f => f[0]).join(', ')} (${motivoFallo(fallos[0][1])}). No se muestra nada que el servidor no haya confirmado.`, true);
+      } else {
+        marcarEstadoListas('', false);
+      }
+      repintarListas();
+      return fallos.length === 0;
+    }
+
+    async function agregarValorLista(tipo, bruto, input) {
+      let valor = String(bruto || '').trim();
+      if (tipo === 'usuario' || tipo === 'canal') valor = valor.replace(/^@/, '');
+      if (!valor) return false;
+      if (input) input.disabled = true;
+      showToast(`⏳ Guardando ${valor}…`);
+      const r = await pedirPanel('/api/panel/lista', { tipo, accion: 'agregar', valor });
+      if (input) input.disabled = false;
+      if (!r.ok || !Array.isArray(r.data.valores) || !r.data.valores.includes(valor)) {
+        showToast(`❌ No se guardó «${valor}»: ${motivoFallo(r)}`);
+        return false;
+      }
+      fijarLista(tipo, r.data.valores);
+      if (input) input.value = '';
+      showToast(`✓ Guardado en el servidor: ${valor}`);
+      repintarListas();
+      return true;
+    }
+
+    function agregarItemLista(tipo, inputId) {
+      const input = document.getElementById(inputId);
+      return agregarValorLista(tipo, input?.value, input);
+    }
+
+    async function quitarValorLista(tipo, valor) {
+      const r = await pedirPanel('/api/panel/lista', { tipo, accion: 'quitar', valor });
+      if (!r.ok || !Array.isArray(r.data.valores) || r.data.valores.includes(valor)) {
+        showToast(`❌ No se eliminó «${valor}»: ${motivoFallo(r)}`);
+        return false;
+      }
+      fijarLista(tipo, r.data.valores);
+      showToast(`🗑️ ${valor} eliminado`);
+      repintarListas();
+      return true;
+    }
+
+    const nombreComando = c => (Array.isArray(c) ? c[0] : c);
+
+    async function pedirComandos(cuerpo, comprobar, textoOk, textoFallo) {
+      const r = await pedirPanel('/api/panel/comandos-bot', cuerpo);
+      if (!r.ok || !Array.isArray(r.data.comandos) || !comprobar(r.data.comandos)) {
+        showToast(`❌ ${textoFallo}: ${motivoFallo(r)}`);
+        return false;
+      }
+      comandosList = r.data.comandos;
+      showToast(textoOk);
+      repintarListas();
+      return true;
+    }
+
+    async function guardarNuevoComando(nameInput, descInput, tipoSelect) {
+      let name = (nameInput?.value || '').trim();
+      const desc = (descInput?.value || '').trim();
+      const tipo = tipoSelect?.value || 'ninguno';
+      if (!name) { showToast('⚠️ Introduce el nombre del comando'); return false; }
+      if (tipo !== 'ninguno' && !name.includes(`[${tipo}]`)) name = `${name} [${tipo}]`;
+      const ok = await pedirComandos(
+        { accion: 'agregar', comando: name, descripcion: desc },
+        lista => lista.some(c => nombreComando(c) === name),
+        `✓ Comando guardado: ${name}`,
+        'No se guardó el comando',
+      );
+      if (ok) {
+        if (nameInput) nameInput.value = '';
+        if (descInput) descInput.value = '';
+      }
+      return ok;
+    }
+
+    function quitarComandoPanel(cmdName) {
+      return pedirComandos(
+        { accion: 'quitar', comando: cmdName },
+        lista => !lista.some(c => nombreComando(c) === cmdName),
+        `🗑️ Comando eliminado: ${cmdName}`,
+        'No se eliminó el comando',
+      );
+    }
+
+    function vaciarComandosPanel() {
+      return pedirComandos({ accion: 'vaciar' }, lista => lista.length === 0,
+        '🗑️ Todos los comandos eliminados', 'No se vaciaron los comandos');
+    }
+
+    // Los predeterminados solo se añaden si Javier lo pide: nunca rellenan en
+    // silencio una lista vacía ni pisan lo que ya está guardado.
+    async function cargarPredeterminados() {
+      if (!confirm('¿Añadir los comandos, usuarios, canales y mensajes predeterminados? No se borra ni se cambia nada de lo que ya tienes.')) return false;
+      const listas = [['usuario', PRESETS_USUARIOS], ['canal', PRESETS_CANALES], ['mensaje', PRESETS_MENSAJES]];
+      const [cmd, ...resto] = await Promise.all([
+        pedirPanel('/api/panel/comandos-bot', { accion: 'fusionar', comandos: COMANDOS_PREDETERMINADOS }),
+        ...listas.map(([tipo, valores]) => pedirPanel('/api/panel/lista', { tipo, accion: 'fusionar', valores })),
+      ]);
+      const fallos = [];
+      if (cmd.ok && Array.isArray(cmd.data.comandos)) comandosList = cmd.data.comandos;
+      else fallos.push('comandos');
+      resto.forEach((r, i) => {
+        if (r.ok && Array.isArray(r.data.valores)) fijarLista(listas[i][0], r.data.valores);
+        else fallos.push(listas[i][0]);
+      });
+      showToast(fallos.length ? `❌ No se añadieron: ${fallos.join(', ')}` : '✓ Predeterminados añadidos en el servidor');
+      repintarListas();
+      return fallos.length === 0;
+    }
+    /* </panel-persistencia> */
 
     let comandoEnVuelo = false;
     const ultimoComandoEnviado = { texto: '', ts: 0 };
@@ -3520,118 +3744,6 @@
         copyToClipboard(btn.dataset.msg);
       });
     });
-
-    const COMANDOS_PREDETERMINADOS = [
-      // Moderación oficial Twitch
-      ['/announce [mensaje]', 'Publica un anuncio destacado con banner en el chat de Twitch (máx 500 caracteres)'],
-      ['/ban [usuario] [mensaje]', 'Banea permanentemente a un usuario del chat de Twitch'],
-      ['/unban [usuario]', 'Desbanea a un usuario en el chat de Twitch'],
-      ['/timeout [usuario] 600', 'Silencia temporalmente a un usuario por 10 minutos'],
-      ['/clear', 'Limpia los mensajes del chat por completo'],
-      ['/slow 10', 'Activa modo lento de 10 segundos'],
-      ['/slowoff', 'Desactiva modo lento'],
-      ['/subscribers', 'Activa chat exclusivo para suscriptores'],
-      ['/subscribersoff', 'Desactiva chat exclusivo de suscriptores'],
-      ['/vips', 'Muestra la lista de usuarios VIP del canal'],
-      ['/mods', 'Muestra los moderadores del canal'],
-      // Adopción de Avatares en el diorama
-      ['!co', 'Adoptar avatar de Codex (programación e ingeniería)'],
-      ['!cl', 'Adoptar avatar de Claude (arquitectura y frontend)'],
-      ['!pi', 'Adoptar avatar de Pi (asistente de investigación)'],
-      ['!ge', 'Adoptar avatar de Gemini (análisis multimodal)'],
-      ['!om', 'Adoptar avatar de Ollama (modelos locales)'],
-      ['!gr', 'Adoptar avatar de Groq (inferencia ultra-rápida)'],
-      ['!op', 'Adoptar avatar de OpenAI (razonamiento)'],
-      ['!ex', 'Adoptar avatar de Externo (invitado especial)'],
-      ['!be', 'Adoptar avatar de Vigía (supervisor del sistema)'],
-      ['!liberar', 'Libera el avatar actual que tengas adoptado'],
-      ['!liberar todos', 'Libera todos los avatares ocupados de golpe (solo Javier)'],
-      ['!liberar [agente]', 'Libera el avatar indicado: ge, cl, co, om... (solo Javier)'],
-      // Movimiento y acciones diorama
-      ['!w 1', 'Mueve tu avatar hacia arriba (norte)'],
-      ['!s 1', 'Mueve tu avatar hacia abajo (sur)'],
-      ['!a 1', 'Mueve tu avatar a la izquierda (oeste)'],
-      ['!d 1', 'Mueve tu avatar a la derecha (este)'],
-      ['!salta', 'Hace saltar de alegría a tu avatar'],
-      ['!cafe', 'Envía a tu avatar a la cafetera a por café'],
-      ['!beso [usuario]', 'Manda un beso al avatar de otro usuario'],
-      ['!trabajar', 'Tu avatar se sienta en su escritorio a trabajar'],
-      ['!bronca', 'Javier echa bronca a todos en la oficina'],
-      ['!fiesta', 'Inicia fiesta con luces y baile en la oficina'],
-      ['!info', 'Abre la guía de comandos a pantalla completa en OBS (5s)'],
-      // Minijuegos y utilidades
-      ['!juego', 'Abre votación de minijuegos (!trofeo vs !traidor)'],
-      ['!trofeo', 'Inicia la carrera por la copa'],
-      ['!traidor', 'Inicia el juego del traidor impostor'],
-      ['!sms [mensaje]', 'Envía un mensaje privado al buzón de Javier'],
-      ['!speak -config es-ES 1', 'Configura voz de lectura en español (España 👩)'],
-      ['!speak -config es-AR 1', 'Configura voz de lectura en español (Argentina 👩)'],
-      ['!speak -config es-MX 1', 'Configura voz de lectura en español (México 👩)'],
-      // Enlaces y difusión
-      ['!redes', 'Publica todos los enlaces y redes de ApliArte'],
-      ['!repo', 'Enlace al repositorio abierto en GitHub'],
-      ['!cafecito', 'Enlace de apoyo con café en Ko-fi'],
-      ['!subs', 'Información sobre ventajas para suscriptores'],
-      ['!comandos', 'Resumen rápido de comandos en el chat']
-    ];
-
-    async function cargarListas() {
-      try {
-        const [uRes, cRes, mRes, cmdRes] = await Promise.all([
-          fetch('/api/panel/lista?tipo=usuario', { cache: 'no-store' }).catch(() => null),
-          fetch('/api/panel/lista?tipo=canal', { cache: 'no-store' }).catch(() => null),
-          fetch('/api/panel/lista?tipo=mensaje', { cache: 'no-store' }).catch(() => null),
-          fetch('/api/panel/comandos-bot', { cache: 'no-store' }).catch(() => null)
-        ]);
-
-        if (uRes && uRes.ok) {
-          const data = await uRes.json().catch(() => ({}));
-          const vals = Array.isArray(data.valores) ? data.valores : [];
-          if (vals.length > 0) {
-            usuariosList = vals;
-            guardarListaLocal('directo_panel_usuarios_v1', usuariosList);
-          }
-        }
-        if (cRes && cRes.ok) {
-          const data = await cRes.json().catch(() => ({}));
-          const vals = Array.isArray(data.valores) ? data.valores : [];
-          if (vals.length > 0) {
-            canalesList = vals;
-            guardarListaLocal('directo_panel_canales_v1', canalesList);
-          }
-        }
-        if (mRes && mRes.ok) {
-          const data = await mRes.json().catch(() => ({}));
-          const vals = Array.isArray(data.valores) ? data.valores : [];
-          if (vals.length > 0) {
-            mensajesList = vals;
-            guardarListaLocal('directo_panel_mensajes_v1', mensajesList);
-          }
-        }
-        
-        let loadedCmds = [];
-        if (cmdRes && cmdRes.ok) loadedCmds = (await cmdRes.json().catch(() => ({}))).comandos || [];
-        
-        if (loadedCmds.length === 0) {
-          comandosList = COMANDOS_PREDETERMINADOS;
-        } else {
-          // Fusionar predeterminados si faltan
-          const existingMap = new Map(loadedCmds.map(c => [c[0], c[1]]));
-          for (const [name, desc] of COMANDOS_PREDETERMINADOS) {
-            if (!existingMap.has(name)) existingMap.set(name, desc);
-          }
-          comandosList = Array.from(existingMap.entries());
-        }
-
-        renderChips();
-        renderComandosGrid();
-        renderComandosAccordion();
-      } catch (_) {
-        renderChips();
-        renderComandosGrid();
-        renderComandosAccordion();
-      }
-    }
 
     function renderChips() {
       const cu = document.getElementById('chips-usuarios');
@@ -3732,52 +3844,9 @@
           const tipo = btn.dataset.tipo;
           const valor = btn.dataset.val;
           if (!confirm(`¿Eliminar ${valor} de la lista de ${tipo}s?`)) return;
-          if (tipo === 'canal') {
-            canalesList = canalesList.filter(x => x !== valor);
-            guardarListaLocal('directo_panel_canales_v1', canalesList);
-          } else if (tipo === 'usuario') {
-            usuariosList = usuariosList.filter(x => x !== valor);
-            guardarListaLocal('directo_panel_usuarios_v1', usuariosList);
-          } else if (tipo === 'mensaje') {
-            mensajesList = mensajesList.filter(x => x !== valor);
-            guardarListaLocal('directo_panel_mensajes_v1', mensajesList);
-          }
-          showToast(`🗑️ ${valor} eliminado`);
-          renderChips();
-          renderComandosGrid();
-          fetch('/api/panel/lista', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tipo, accion: 'quitar', valor })
-          }).catch(() => {});
+          await quitarValorLista(tipo, valor);
         });
       });
-    }
-
-    // Añadir chips
-    async function agregarItemLista(tipo, inputId) {
-      const input = document.getElementById(inputId);
-      const val = (input?.value || '').trim().replace(/^@/, '');
-      if (!val) return;
-      if (tipo === 'canal' && !canalesList.includes(val)) {
-        canalesList.push(val);
-        guardarListaLocal('directo_panel_canales_v1', canalesList);
-      } else if (tipo === 'usuario' && !usuariosList.includes(val)) {
-        usuariosList.push(val);
-        guardarListaLocal('directo_panel_usuarios_v1', usuariosList);
-      } else if (tipo === 'mensaje' && !mensajesList.includes(val)) {
-        mensajesList.push(val);
-        guardarListaLocal('directo_panel_mensajes_v1', mensajesList);
-      }
-      input.value = '';
-      showToast(`✓ Añadido: ${val}`);
-      renderChips();
-      renderComandosGrid();
-      fetch('/api/panel/lista', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo, accion: 'agregar', valor: val })
-      }).catch(() => {});
     }
 
     document.getElementById('btn-add-usuario')?.addEventListener('click', () => agregarItemLista('usuario', 'input-add-usuario'));
@@ -3934,21 +4003,7 @@
         `;
         document.getElementById('btn-drill-add-canal')?.addEventListener('click', async () => {
           const inp = document.getElementById('input-drill-add-canal');
-          const val = (inp?.value || '').trim();
-          if (!val) return;
-          if (!canalesList.includes(val)) {
-            canalesList.push(val);
-            guardarListaLocal('directo_panel_canales_v1', canalesList);
-          }
-          showToast(`✓ Canal añadido: ${val}`);
-          renderChips();
-          renderComandosGrid();
-          abrirDrillDown({ tipo: 'gestion_canal' });
-          fetch('/api/panel/lista', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tipo: 'canal', accion: 'agregar', valor: val })
-          }).catch(() => {});
+          if (await agregarValorLista('canal', inp?.value, inp)) abrirDrillDown({ tipo: 'gestion_canal' });
         });
       } else if (opts.tipo === 'gestion_usuario') {
         titleEl.textContent = '👤 Usuarios de Twitch';
@@ -3969,21 +4024,7 @@
         `;
         document.getElementById('btn-drill-add-usuario')?.addEventListener('click', async () => {
           const inp = document.getElementById('input-drill-add-usuario');
-          const val = (inp?.value || '').trim().replace(/^@/, '');
-          if (!val) return;
-          if (!usuariosList.includes(val)) {
-            usuariosList.push(val);
-            guardarListaLocal('directo_panel_usuarios_v1', usuariosList);
-          }
-          showToast(`✓ Usuario añadido: @${val}`);
-          renderChips();
-          renderComandosGrid();
-          abrirDrillDown({ tipo: 'gestion_usuario' });
-          fetch('/api/panel/lista', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tipo: 'usuario', accion: 'agregar', valor: val })
-          }).catch(() => {});
+          if (await agregarValorLista('usuario', inp?.value, inp)) abrirDrillDown({ tipo: 'gestion_usuario' });
         });
       } else if (opts.tipo === 'gestion_mensaje') {
         titleEl.textContent = '💬 Mensajes Guardados';
@@ -4008,21 +4049,7 @@
         `;
         document.getElementById('btn-drill-add-mensaje')?.addEventListener('click', async () => {
           const inp = document.getElementById('input-drill-add-mensaje');
-          const val = (inp?.value || '').trim();
-          if (!val) return;
-          if (!mensajesList.includes(val)) {
-            mensajesList.push(val);
-            guardarListaLocal('directo_panel_mensajes_v1', mensajesList);
-          }
-          showToast(`✓ Mensaje guardado`);
-          renderChips();
-          renderComandosGrid();
-          abrirDrillDown({ tipo: 'gestion_mensaje' });
-          fetch('/api/panel/lista', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tipo: 'mensaje', accion: 'agregar', valor: val })
-          }).catch(() => {});
+          if (await agregarValorLista('mensaje', inp?.value, inp)) abrirDrillDown({ tipo: 'gestion_mensaje' });
         });
         bodyEl.querySelectorAll('.btn-saved-msg-send').forEach(btn => {
           btn.addEventListener('click', async () => {
@@ -4053,19 +4080,12 @@
           </div>
         `;
         document.getElementById('btn-drill-save-cmd')?.addEventListener('click', async () => {
-          let name = (document.getElementById('input-drill-cmd-name')?.value || '').trim();
-          const desc = (document.getElementById('input-drill-cmd-desc')?.value || '').trim();
-          const tipo = document.getElementById('select-drill-cmd-tipo')?.value || 'ninguno';
-          if (!name) { showToast('⚠️ Introduce el nombre del comando'); return; }
-          if (tipo !== 'ninguno' && !name.includes(`[${tipo}]`)) name = `${name} [${tipo}]`;
-          await fetch('/api/panel/comandos-bot', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accion: 'agregar', comando: name, descripcion: desc })
-          });
-          showToast(`✓ Comando guardado: ${name}`);
-          await cargarListas();
-          cerrarDrillDown();
+          const guardado = await guardarNuevoComando(
+            document.getElementById('input-drill-cmd-name'),
+            document.getElementById('input-drill-cmd-desc'),
+            document.getElementById('select-drill-cmd-tipo'),
+          );
+          if (guardado) cerrarDrillDown();
         });
       } else if (opts.tipo === 'comando') {
         const { cmdName, cmdDesc, paramType } = opts;
@@ -4171,14 +4191,7 @@
         document.getElementById('btn-drill-copy-template')?.addEventListener('click', () => copyToClipboard(cmdName));
         document.getElementById('btn-drill-del-cmd')?.addEventListener('click', async () => {
           if (!confirm(`¿Eliminar comando "${cmdName}"?`)) return;
-          await fetch('/api/panel/comandos-bot', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accion: 'quitar', comando: cmdName })
-          });
-          showToast(`🗑️ Comando eliminado`);
-          await cargarListas();
-          cerrarDrillDown();
+          if (await quitarComandoPanel(cmdName)) cerrarDrillDown();
         });
 
         // Confirmación rápida en 2 pasos para chips de parámetros (Wrap)
@@ -4335,25 +4348,7 @@
           const tipo = btn.dataset.tipo;
           const valor = btn.dataset.val;
           if (!confirm(`¿Eliminar "${valor}"?`)) return;
-          if (tipo === 'canal') {
-            canalesList = canalesList.filter(x => x !== valor);
-            guardarListaLocal('directo_panel_canales_v1', canalesList);
-          } else if (tipo === 'usuario') {
-            usuariosList = usuariosList.filter(x => x !== valor);
-            guardarListaLocal('directo_panel_usuarios_v1', usuariosList);
-          } else if (tipo === 'mensaje') {
-            mensajesList = mensajesList.filter(x => x !== valor);
-            guardarListaLocal('directo_panel_mensajes_v1', mensajesList);
-          }
-          showToast(`🗑️ ${valor} eliminado`);
-          renderChips();
-          renderComandosGrid();
-          abrirDrillDown({ tipo: `gestion_${tipo}` });
-          fetch('/api/panel/lista', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tipo, accion: 'quitar', valor })
-          }).catch(() => {});
+          if (await quitarValorLista(tipo, valor)) abrirDrillDown({ tipo: `gestion_${tipo}` });
         });
       });
     }
@@ -4617,17 +4612,7 @@
       // Función común para eliminar comando
       const ejecutarEliminarComando = async (cmdName) => {
         if (!confirm(`¿Seguro que deseas eliminar el comando "${cmdName}"?`)) return;
-        try {
-          await fetch('/api/panel/comandos-bot', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accion: 'quitar', comando: cmdName })
-          });
-          showToast(`🗑️ Comando eliminado: ${cmdName}`);
-          cargarListas();
-        } catch (_) {
-          showToast('❌ Error al eliminar comando');
-        }
+        await quitarComandoPanel(cmdName);
       };
 
       // Eliminar comando directamente desde la cabecera sin desplegar
@@ -4655,49 +4640,19 @@
     // Vaciar todos los comandos
     document.getElementById('btn-clear-all-cmds')?.addEventListener('click', async () => {
       if (!confirm('¿Seguro que deseas eliminar TODOS los comandos de la lista?')) return;
-      try {
-        await fetch('/api/panel/comandos-bot', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ accion: 'vaciar' })
-        });
-        showToast('🗑️ Todos los comandos eliminados');
-        cargarListas();
-      } catch (_) {
-        showToast('❌ Error al vaciar comandos');
-      }
+      await vaciarComandosPanel();
     });
+
+    // Añadir predeterminados: solo a petición, nunca automático
+    document.getElementById('btn-cargar-predeterminados')?.addEventListener('click', () => cargarPredeterminados());
 
     // Guardar nuevo comando
     document.getElementById('btn-save-new-cmd')?.addEventListener('click', async () => {
-      const nameInput = document.getElementById('new-cmd-name');
-      const descInput = document.getElementById('new-cmd-desc');
-      const tipoSelect = document.getElementById('new-cmd-tipo');
-
-      let name = (nameInput?.value || '').trim();
-      const desc = (descInput?.value || '').trim();
-      const tipo = tipoSelect?.value || 'ninguno';
-
-      if (!name) {
-        showToast('⚠️ Introduce el nombre del comando');
-        return;
-      }
-
-      if (tipo !== 'ninguno' && !name.includes(`[${tipo}]`)) {
-        name = `${name} [${tipo}]`;
-      }
-
-      try {
-        await fetch('/api/panel/comandos-bot', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ accion: 'agregar', comando: name, descripcion: desc })
-        });
-        if (nameInput) nameInput.value = '';
-        if (descInput) descInput.value = '';
-        showToast(`✓ Comando guardado: ${name}`);
-        cargarListas();
-      } catch (_) {}
+      await guardarNuevoComando(
+        document.getElementById('new-cmd-name'),
+        document.getElementById('new-cmd-desc'),
+        document.getElementById('new-cmd-tipo'),
+      );
     });
 
     // ── Tooltip flotante sobre botones de icono (3 segundos - AGENTS.md §3.2) ──
@@ -4751,7 +4706,7 @@
     // Registrar tooltips sobre todos los elementos con data-tip
     document.querySelectorAll('[data-tip]').forEach(attachIconHelp);
 
-    // Renderizado síncrono inmediato con presets/localStorage
+    // Pintado inicial vacío: el contenido llega solo desde el servidor (cargarListas)
     renderChips();
     renderComandosGrid();
 

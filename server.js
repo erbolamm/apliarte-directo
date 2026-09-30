@@ -967,6 +967,66 @@ function setScene(id, visible) {
 }
 
 // ── Utilidades HTTP ──────────────────────────────────────────────────────────
+// ── Listas del panel: el servidor es el dueño ────────────────────────────────
+// Un guardado solo existe si llega aquí. Un fichero dañado nunca se sobrescribe:
+// se responde 500 y se deja intacto para recuperarlo a mano.
+const TIPOS_LISTA_PANEL = new Set(['usuario', 'canal', 'mensaje']);
+const MAX_VALOR_PANEL = 500;
+const MAX_FUSION_PANEL = 500;
+const MAX_CUERPO_PANEL = 256 * 1024;
+
+function leerListaPanel(archivo) {
+  if (!fs.existsSync(archivo)) return [];
+  try {
+    const datos = JSON.parse(fs.readFileSync(archivo, 'utf8'));
+    return Array.isArray(datos) ? datos : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function escribirListaPanel(archivo, lista) {
+  fs.mkdirSync(pathMod.dirname(archivo), { recursive: true });
+  const temporal = `${archivo}.${process.pid}.${Date.now()}.tmp`;
+  fs.writeFileSync(temporal, JSON.stringify(lista, null, 2));
+  fs.renameSync(temporal, archivo);
+}
+
+function valorPanelValido(valor) {
+  return typeof valor === 'string' && valor.trim().length > 0 && valor.length <= MAX_VALOR_PANEL;
+}
+
+function responderPanel(res, status, cuerpo) {
+  res.writeHead(status, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(cuerpo));
+}
+
+function leerCuerpoPanel(req, res, alTerminar) {
+  let body = '';
+  let excedido = false;
+  req.on('data', c => {
+    if (excedido) return;
+    body += c;
+    if (body.length > MAX_CUERPO_PANEL) {
+      excedido = true;
+      responderPanel(res, 413, { error: 'cuerpo-demasiado-grande' });
+    }
+  });
+  req.on('end', () => {
+    if (excedido) return;
+    let datos;
+    try {
+      datos = JSON.parse(body || '{}');
+    } catch (_) {
+      return responderPanel(res, 400, { error: 'json-invalido' });
+    }
+    if (!datos || typeof datos !== 'object' || Array.isArray(datos)) {
+      return responderPanel(res, 400, { error: 'json-invalido' });
+    }
+    alTerminar(datos);
+  });
+}
+
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
@@ -1846,115 +1906,99 @@ const server = http.createServer((req, res) => {
   const PANEL_DIR = pathMod.join(DATA_DIR, 'panel');
   if (path === '/api/panel/lista') {
     cors(res);
-    if (!isAuth(req)) {
-      res.writeHead(401, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ error: 'No autorizado' }));
-    }
-    const tipo = params.get('tipo') || 'usuario';
-    const archivo = pathMod.join(PANEL_DIR, tipo + '.json');
+    if (!isAuth(req)) return responderPanel(res, 401, { error: 'No autorizado' });
     if (req.method === 'GET') {
-      try {
-        if (fs.existsSync(archivo)) {
-          const valores = JSON.parse(fs.readFileSync(archivo, 'utf8'));
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify({ valores }));
-        }
-      } catch (_) {}
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ valores: [] }));
+      const tipo = params.get('tipo') || 'usuario';
+      if (!TIPOS_LISTA_PANEL.has(tipo)) return responderPanel(res, 400, { error: 'tipo-invalido' });
+      const valores = leerListaPanel(pathMod.join(PANEL_DIR, tipo + '.json'));
+      if (valores === null) return responderPanel(res, 500, { error: 'lista-danada' });
+      return responderPanel(res, 200, { valores });
     }
     if (req.method === 'POST') {
-      let body = '';
-      req.on('data', c => { body += c; });
-      req.on('end', () => {
-        try {
-          const { tipo: t, accion, valor, valores: arr } = JSON.parse(body || '{}');
-          const targetTipo = t || tipo;
-          const f = pathMod.join(PANEL_DIR, targetTipo + '.json');
-          let lista = [];
-          if (fs.existsSync(f)) {
-            try { lista = JSON.parse(fs.readFileSync(f, 'utf8')); } catch (_) {}
+      return leerCuerpoPanel(req, res, ({ tipo: t, accion, valor, valores: arr }) => {
+        const tipo = t || params.get('tipo') || 'usuario';
+        if (!TIPOS_LISTA_PANEL.has(tipo)) return responderPanel(res, 400, { error: 'tipo-invalido' });
+        const archivo = pathMod.join(PANEL_DIR, tipo + '.json');
+        const lista = leerListaPanel(archivo);
+        if (lista === null) return responderPanel(res, 500, { error: 'lista-danada' });
+        let nueva = lista;
+        if (accion === 'agregar') {
+          if (!valorPanelValido(valor)) return responderPanel(res, 400, { error: 'valor-invalido' });
+          const limpio = valor.trim();
+          if (!lista.includes(limpio)) nueva = [...lista, limpio];
+        } else if (accion === 'quitar') {
+          if (typeof valor !== 'string' || !valor) return responderPanel(res, 400, { error: 'valor-invalido' });
+          nueva = lista.filter(x => x !== valor);
+        } else if (accion === 'fusionar') {
+          if (!Array.isArray(arr) || arr.length > MAX_FUSION_PANEL) return responderPanel(res, 400, { error: 'valores-invalidos' });
+          nueva = [...lista];
+          for (const bruto of arr) {
+            if (!valorPanelValido(bruto)) continue;
+            const limpio = bruto.trim();
+            if (!nueva.includes(limpio)) nueva.push(limpio);
           }
-          if (accion === 'agregar' && valor) {
-            if (!lista.includes(valor)) lista.push(valor);
-          } else if (accion === 'quitar' && valor) {
-            lista = lista.filter(x => x !== valor);
-          } else if (accion === 'fusionar' && Array.isArray(arr)) {
-            const set = new Set([...lista, ...arr]);
-            lista = Array.from(set);
-          }
-          if (!fs.existsSync(PANEL_DIR)) fs.mkdirSync(PANEL_DIR, { recursive: true });
-          fs.writeFileSync(f, JSON.stringify(lista, null, 2));
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, valores: lista }));
-        } catch (e) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: e.message }));
+        } else {
+          return responderPanel(res, 400, { error: 'accion-invalida' });
         }
+        try {
+          if (nueva.length !== lista.length || nueva.some((v, i) => v !== lista[i])) escribirListaPanel(archivo, nueva);
+        } catch (e) {
+          return responderPanel(res, 500, { error: 'no-se-pudo-guardar' });
+        }
+        return responderPanel(res, 200, { ok: true, valores: nueva });
       });
-      return;
     }
   }
 
   if (path === '/api/panel/comandos-bot') {
     cors(res);
-    if (!isAuth(req)) {
-      res.writeHead(401, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ error: 'No autorizado' }));
-    }
+    if (!isAuth(req)) return responderPanel(res, 401, { error: 'No autorizado' });
     const archivoCmd = pathMod.join(PANEL_DIR, 'comandos-bot.json');
     if (req.method === 'GET') {
-      let comandos = [];
-      try {
-        if (fs.existsSync(archivoCmd)) comandos = JSON.parse(fs.readFileSync(archivoCmd, 'utf8'));
-      } catch (_) {}
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ comandos }));
+      const comandos = leerListaPanel(archivoCmd);
+      if (comandos === null) return responderPanel(res, 500, { error: 'lista-danada' });
+      return responderPanel(res, 200, { comandos });
     }
     if (req.method === 'POST') {
-      let body = '';
-      req.on('data', c => { body += c; });
-      req.on('end', () => {
-        try {
-          const { accion, comando, descripcion, comandos: arr } = JSON.parse(body || '{}');
-          let lista = [];
-          if (fs.existsSync(archivoCmd)) {
-            try { lista = JSON.parse(fs.readFileSync(archivoCmd, 'utf8')); } catch (_) {}
+      return leerCuerpoPanel(req, res, ({ accion, comando, descripcion, comandos: arr }) => {
+        const lista = leerListaPanel(archivoCmd);
+        if (lista === null) return responderPanel(res, 500, { error: 'lista-danada' });
+        const nombreDe = c => (Array.isArray(c) ? c[0] : c);
+        let nueva;
+        if (accion === 'agregar') {
+          const nombre = Array.isArray(comando) ? comando[0] : comando;
+          const bruta = Array.isArray(comando) ? comando[1] : descripcion;
+          if (!valorPanelValido(nombre)) return responderPanel(res, 400, { error: 'comando-invalido' });
+          const cmdName = nombre.trim();
+          const cmdDesc = typeof bruta === 'string' && bruta.trim() ? bruta.trim().slice(0, MAX_VALOR_PANEL) : '—';
+          nueva = [...lista.filter(c => nombreDe(c) !== cmdName), [cmdName, cmdDesc]];
+        } else if (accion === 'quitar') {
+          const cmdName = Array.isArray(comando) ? comando[0] : comando;
+          if (typeof cmdName !== 'string' || !cmdName) return responderPanel(res, 400, { error: 'comando-invalido' });
+          nueva = lista.filter(c => nombreDe(c) !== cmdName);
+        } else if (accion === 'vaciar' || accion === 'limpiar') {
+          nueva = [];
+        } else if (accion === 'fusionar') {
+          if (!Array.isArray(arr) || arr.length > MAX_FUSION_PANEL) return responderPanel(res, 400, { error: 'comandos-invalidos' });
+          // Solo añade lo que falta: nunca pisa la descripción ya guardada.
+          nueva = [...lista];
+          for (const item of arr) {
+            if (!Array.isArray(item) || !valorPanelValido(item[0])) continue;
+            const cmdName = item[0].trim();
+            if (nueva.some(c => nombreDe(c) === cmdName)) continue;
+            const cmdDesc = typeof item[1] === 'string' && item[1].trim() ? item[1].trim().slice(0, MAX_VALOR_PANEL) : '—';
+            nueva.push([cmdName, cmdDesc]);
           }
-          if (accion === 'agregar') {
-            let cmdName = '';
-            let cmdDesc = '—';
-            if (Array.isArray(comando)) {
-              cmdName = comando[0];
-              cmdDesc = comando[1] || '—';
-            } else if (typeof comando === 'string') {
-              cmdName = comando.trim();
-              cmdDesc = typeof descripcion === 'string' && descripcion.trim() ? descripcion.trim() : '—';
-            }
-            if (cmdName) {
-              lista = lista.filter(c => (Array.isArray(c) ? c[0] : c) !== cmdName);
-              lista.push([cmdName, cmdDesc]);
-            }
-          } else if (accion === 'quitar' && comando) {
-            const cmdName = Array.isArray(comando) ? comando[0] : comando;
-            lista = lista.filter(c => (Array.isArray(c) ? c[0] : c) !== cmdName);
-          } else if (accion === 'vaciar' || accion === 'limpiar') {
-            lista = [];
-          } else if (accion === 'fusionar' && Array.isArray(arr)) {
-            const map = new Map(lista.map(c => [c[0], c[1]]));
-            for (const item of arr) if (Array.isArray(item)) map.set(item[0], item[1]);
-            lista = Array.from(map.entries());
-          }
-          if (!fs.existsSync(PANEL_DIR)) fs.mkdirSync(PANEL_DIR, { recursive: true });
-          fs.writeFileSync(archivoCmd, JSON.stringify(lista, null, 2));
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, comandos: lista }));
-        } catch (e) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: e.message }));
+        } else {
+          return responderPanel(res, 400, { error: 'accion-invalida' });
         }
+        try {
+          escribirListaPanel(archivoCmd, nueva);
+        } catch (e) {
+          return responderPanel(res, 500, { error: 'no-se-pudo-guardar' });
+        }
+        return responderPanel(res, 200, { ok: true, comandos: nueva });
       });
-      return;
     }
   }
 
