@@ -21,7 +21,7 @@ test('Pencil owns the stroke; palm and other pointer cannot change or finish it'
   assert.equal(owner.begin(palm, true), true);
 });
 
-function fixture({ enabled = true, allowed = true, connected = true } = {}) {
+function fixture({ enabled = true, allowed = true, connected = true, drawingPort } = {}) {
   let created = 0;
   const calls = [];
   const client = {
@@ -37,7 +37,7 @@ function fixture({ enabled = true, allowed = true, connected = true } = {}) {
   const root = mkdtempSync(join(process.env.APLIARTE_TEST_DATA_DIR || tmpdir(), 'pizarra-plus-unit-'));
   mkdirSync(join(root, 'private'));
   for (const file of ['pizarra-plus.html', 'pizarra-plus-guide.html', 'cristal-plus.html', 'pointer-owner.js']) writeFileSync(join(root, 'private', file), 'private fixture');
-  const plus = createPizarraPlus({ enabled, authorize: () => allowed, trustedOrigin: req => !req.headers.origin || req.headers.origin === 'http://private.test', root,
+  const plus = createPizarraPlus({ enabled, drawingPort, authorize: () => allowed, trustedOrigin: req => !req.headers.origin || req.headers.origin === 'http://private.test', root,
     createObsClient: async () => { created++; return client; } });
   return { plus, calls, created: () => created };
 }
@@ -95,11 +95,27 @@ test('screenshots are still JPEGs, not video, and are not publicly cached', asyn
   assert.match(r.json().image, /^data:image\/jpeg;base64,/);
 });
 
-test('private drawing channel replays history, rejects foreign origins and isolates OBS controls', async t => {
+test('private drawing channel replays history, rejects foreign origins and isolates OBS controls', { timeout: 5000 }, async t => {
   const { createServer } = await import('node:http');
   const { WebSocket } = await import('ws');
   const { once } = await import('node:events');
-  const f = fixture();
+  const { WebSocketServer } = await import('ws');
+  const centre = new WebSocketServer({ port: 0, host: '127.0.0.1' });
+  await once(centre, 'listening');
+  const history = [], received = [];
+  centre.on('connection', socket => socket.on('message', raw => {
+    const data = JSON.parse(raw.toString()); received.push(data);
+    if (data.type === 'pizarra_solicitar_estado') {
+      socket.send(JSON.stringify({ type: 'pizarra_init', history })); return;
+    }
+    if (data.type === 'pizarra_draw') history.push(data);
+    if (data.type === 'pizarra_clear') history.length = 0;
+    for (const peer of centre.clients) if (peer !== socket) peer.send(raw.toString());
+  }));
+  const originalOverlay = new WebSocket(`ws://127.0.0.1:${centre.address().port}/ws`);
+  await once(originalOverlay, 'open');
+  t.after(() => { originalOverlay.terminate(); for (const peer of centre.clients) peer.terminate(); centre.close(); });
+  const f = fixture({ drawingPort: centre.address().port });
   const server = createServer((req, res) => { f.plus.handle(req, res); });
   server.on('upgrade', (req, socket, head) => { if (!f.plus.upgrade(req, socket, head)) socket.destroy(); });
   server.listen(0, '127.0.0.1');
@@ -124,8 +140,10 @@ test('private drawing channel replays history, rejects foreign origins and isola
   assert.deepEqual(writer.initial.history, []);
   const stroke = { type: 'pizarra_draw', shape: 'stroke', strokeId: 'one', from: { x: .1, y: .2 }, to: { x: .3, y: .4 }, color: '#000000', size: 6, tool: 'pen' };
   const update = once(overlay.client, 'message');
+  const originalUpdate = once(originalOverlay, 'message');
   writer.client.send(JSON.stringify(stroke));
   assert.deepEqual(JSON.parse((await update)[0].toString()), stroke);
+  assert.deepEqual(JSON.parse((await originalUpdate)[0].toString()), stroke);
   const reconnected = await connect(base + '?overlay=1');
   assert.deepEqual(reconnected.initial.history, [stroke]);
   overlay.client.send(JSON.stringify({ type: 'pizarra_clear' }));
@@ -135,6 +153,16 @@ test('private drawing channel replays history, rejects foreign origins and isola
   writer.client.send(JSON.stringify({ type: 'pizarra_solicitar_estado' }));
   assert.deepEqual(JSON.parse((await state)[0].toString()).history, [stroke]);
   assert.deepEqual(f.calls, []);
+  assert.equal(received.some(d => d.type === 'obs_toggle_mute'), false);
+  assert.equal(received.filter(d => d.type === 'pizarra_draw').length, 1);
+  const originalStroke = { ...stroke, strokeId: 'original-tablet' };
+  const reverse = once(writer.client, 'message');
+  originalOverlay.send(JSON.stringify(originalStroke));
+  assert.deepEqual(JSON.parse((await reverse)[0].toString()), originalStroke);
+  const disconnected = once(writer.client, 'close');
+  for (const peer of centre.clients) peer.close();
+  assert.equal((await disconnected)[0], 1013);
+
   const denied = new WebSocket(base, { origin: 'https://evil.test' });
   const rejection = new Promise(resolve => denied.once('error', resolve));
   await rejection;
@@ -195,6 +223,7 @@ test('complete page startup and real pointer handlers retain Pencil stroke when 
   });
   const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(Boolean);
   for (const script of scripts) vm.runInContext(script, ctx);
+  vm.runInContext('drawingConnected = true', ctx);
   const canvas = nodes.get('drawing-canvas');
   const event = (pointerId, pointerType, x, type) => ({ pointerId, pointerType, clientX: x, clientY: 100, type, preventDefault() {} });
   canvas.listeners.pointerdown(event(1, 'pen', 100, 'pointerdown'));

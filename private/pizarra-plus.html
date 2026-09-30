@@ -742,7 +742,7 @@
 
     // Interacción táctil y stylus con Pointer Events
     canvas.addEventListener('pointerdown', (e) => {
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
+      if (!drawingConnected || !ws || ws.readyState !== WebSocket.OPEN) {
         statusText.textContent = 'Sin conexión: espera antes de dibujar';
         return;
       }
@@ -1081,7 +1081,9 @@
       }
     }
 
+    let drawingConnected = false;
     function connectWs() {
+      drawingConnected = false;
       if (ws) {
         try { ws.close(); } catch (_) {}
       }
@@ -1098,8 +1100,7 @@
       }
 
       ws.onopen = () => {
-        statusDot.className = 'status-dot online';
-        statusText.textContent = 'Pizarra conectada';
+        statusText.textContent = 'Conectando al centro de dibujo...';
         sendWs({ type: 'pizarra_solicitar_estado' });
 
       };
@@ -1110,6 +1111,9 @@
           if (!data || !data.type) return;
 
           if (data.type === 'pizarra_init' && Array.isArray(data.history)) {
+            drawingConnected = true;
+            statusDot.className = 'status-dot online';
+            statusText.textContent = 'Pizarra conectada';
             strokesHistory = data.history.slice();
             redrawAll();
           } else if (data.type === 'pizarra_draw') {
@@ -1137,6 +1141,7 @@
       };
 
       ws.onclose = () => {
+        drawingConnected = false;
         statusDot.className = 'status-dot';
         statusText.textContent = 'Reconectando...';
         scheduleReconnect();

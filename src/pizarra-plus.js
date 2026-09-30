@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { WebSocketServer } = require('ws');
+const { WebSocketServer, WebSocket } = require('ws');
 
 function privateHost(req) {
   try {
@@ -17,10 +17,10 @@ async function localObsClient() {
   return crearClienteObsWebSocket({ puerto: cfg.puerto, password: cfg.password });
 }
 
-function createPizarraPlus({ enabled = false, authorize, trustedOrigin, root, createObsClient = localObsClient }) {
+function createPizarraPlus({ enabled = false, authorize, trustedOrigin, root, createObsClient = localObsClient, drawingPort = Number(process.env.CENTRO_PANEL_PORT || 8790) }) {
   let clientPromise = null;
   let screenshotBusy = false;
-  const history = [];
+  if (!Number.isInteger(drawingPort) || drawingPort < 1 || drawingPort > 65535) throw new Error('invalid-drawing-port');
   const wss = new WebSocketServer({ noServer: true, maxPayload: 16384 });
   const clients = new Set();
   const assets = new Map([
@@ -113,10 +113,6 @@ function createPizarraPlus({ enabled = false, authorize, trustedOrigin, root, cr
     } catch (_) { reply(res, 503, { error: 'obs-unavailable', message: 'OBS no está conectado o no pudo completar la petición.' }); }
     return true;
   }
-  const broadcast = (data, except) => {
-    const text = JSON.stringify(data);
-    for (const client of clients) if (client !== except && client.readyState === 1 && client.bufferedAmount < 262144) client.send(text);
-  };
   function drawingMessage(data) {
     if (data.type !== 'pizarra_draw') return false;
     const point = p => p && Number.isFinite(p.x) && Number.isFinite(p.y) && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1;
@@ -125,27 +121,37 @@ function createPizarraPlus({ enabled = false, authorize, trustedOrigin, root, cr
   wss.on('connection', (ws, req) => {
     clients.add(ws);
     const readonly = new URL(req.url, 'http://localhost').searchParams.get('overlay') === '1';
-    ws.send(JSON.stringify({ type: 'pizarra_init', history }));
-    ws.on('message', raw => {
+    // The original centre owns history and delivery to the existing OBS source.
+    const upstream = new WebSocket(`ws://127.0.0.1:${drawingPort}/ws`, { maxPayload: 2097152, handshakeTimeout: 5000 });
+    let ready = false;
+    const send = (socket, data) => {
+      if (socket.readyState === WebSocket.OPEN && socket.bufferedAmount < 262144) socket.send(JSON.stringify(data));
+    };
+    const cleanDraw = data => ({ type: data.type, from: { x: data.from.x, y: data.from.y }, to: { x: data.to.x, y: data.to.y }, strokeId: data.strokeId, color: data.color, size: data.size, shape: data.shape, tool: data.tool });
+    upstream.on('open', () => send(upstream, { type: 'pizarra_solicitar_estado' }));
+    upstream.on('message', raw => {
       let data;
       try { data = JSON.parse(raw.toString()); } catch (_) { return; }
       if (!data || typeof data !== 'object') return;
-      if (data.type === 'pizarra_solicitar_estado') { ws.send(JSON.stringify({ type: 'pizarra_init', history })); return; }
-      if (readonly) return;
-      if (drawingMessage(data)) {
-        const clean = { type: data.type, from: data.from, to: data.to, strokeId: data.strokeId, color: data.color, size: data.size, shape: data.shape, tool: data.tool };
-        history.push(clean);
-        if (history.length > 4000) history.shift();
-        broadcast(clean, ws);
-      } else if (data.type === 'pizarra_clear') { history.length = 0; broadcast({ type: data.type }, ws); }
-      else if (data.type === 'pizarra_undo') {
-        const id = history.at(-1)?.strokeId;
-        while (history.length && history.at(-1).strokeId === id) history.pop();
-        broadcast({ type: data.type }, ws);
-      }
+      if (data.type === 'pizarra_init' && Array.isArray(data.history) && data.history.length <= 4000) {
+        ready = true;
+        send(ws, { type: 'pizarra_init', history: data.history.filter(drawingMessage).map(cleanDraw) });
+      } else if (drawingMessage(data)) send(ws, cleanDraw(data));
+      else if (['pizarra_clear', 'pizarra_undo'].includes(data.type)) send(ws, { type: data.type });
     });
-    ws.on('close', () => clients.delete(ws));
-    ws.on('error', () => clients.delete(ws));
+    upstream.on('error', () => ws.close(1013, 'Drawing centre unavailable'));
+    upstream.on('close', () => ws.close(1013, 'Drawing centre disconnected'));
+    ws.on('message', raw => {
+      let data;
+      try { data = JSON.parse(raw.toString()); } catch (_) { return; }
+      if (!ready || !data || typeof data !== 'object') return;
+      if (data.type === 'pizarra_solicitar_estado') send(upstream, { type: data.type });
+      else if (!readonly && drawingMessage(data)) send(upstream, cleanDraw(data));
+      else if (!readonly && ['pizarra_clear', 'pizarra_undo'].includes(data.type)) send(upstream, { type: data.type });
+    });
+    const dispose = () => { clients.delete(ws); upstream.terminate(); };
+    ws.on('close', dispose);
+    ws.on('error', dispose);
   });
   function upgrade(req, socket, head) {
     if (req.url.split('?')[0] !== '/pizarra-plus/ws') return false;
