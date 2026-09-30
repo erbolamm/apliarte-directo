@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>ApliArte Directo — Pizarra Plus privada</title>
+  <style>
+    :root {
+      --bg-dark: #0a0e17;
+      --bg-canvas: #0f172a;
+      --panel-bg: rgba(15, 23, 42, 0.85);
+      --border-color: rgba(255, 255, 255, 0.14);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #00f0ff;
+      --accent-glow: rgba(0, 240, 255, 0.35);
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: transparent !important;
+      background-color: rgba(0, 0, 0, 0) !important;
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    #app-container {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      background: transparent !important;
+      background-color: rgba(0, 0, 0, 0) !important;
+    }
+
+    /* Barra superior flotante con conmutador OBS y controles */
+    header {
+      height: 56px;
+      min-height: 56px;
+      flex-shrink: 0;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      z-index: 10;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    header::-webkit-scrollbar,
+    footer::-webkit-scrollbar {
+      display: none;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .brand span {
+      color: var(--accent);
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .toolbar-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-right: 2px;
+    }
+
+    .btn {
+      height: 40px;
+      min-width: 40px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+      flex-shrink: 0;
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+    }
+
+    .btn.active {
+      background: rgba(0, 240, 255, 0.2);
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .btn-obs-scene {
+      font-size: 12px;
+      padding: 0 8px;
+      height: 36px;
+    }
+
+    .btn-mic-muted {
+      background: rgba(239, 68, 68, 0.2) !important;
+      border-color: var(--danger) !important;
+      color: #fca5a5 !important;
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .btn-danger:active {
+      background: rgba(239, 68, 68, 0.3);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      font-weight: 500;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      transition: background 0.3s ease;
+    }
+
+    .status-dot.online {
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    /* Contenedor del lienzo 16:9 100% transparente */
+    #canvas-wrapper {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent !important;
+      background-color: rgba(0, 0, 0, 0) !important;
+      position: relative;
+      padding: 8px;
+      overflow: hidden;
+    }
+
+    #canvas-container {
+      position: relative;
+      border: 1px dashed rgba(255, 255, 255, 0.28);
+      border-radius: 8px;
+      overflow: hidden;
+      background: transparent !important;
+      background-color: rgba(0, 0, 0, 0) !important;
+    }
+
+    /* Imagen de previsualización en vivo de OBS */
+    #obs-preview-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      display: none;
+      opacity: 0.85;
+      z-index: 1;
+    }
+
+    #drawing-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      touch-action: none;
+      background: transparent !important;
+      z-index: 2;
+    }
+
+    #preview-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      touch-action: none;
+      background: transparent !important;
+      z-index: 3;
+    }
+
+    /* Barra de herramientas inferior */
+    footer {
+      height: 68px;
+      min-height: 68px;
+      flex-shrink: 0;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      z-index: 10;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    /* Selector de colores */
+    .color-swatch {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .color-swatch.active {
+      border-color: #ffffff;
+      transform: scale(1.18);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+    }
+
+    /* Selector de grosor */
+    .size-swatch {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .size-swatch.active {
+      border-color: var(--accent);
+      background: rgba(0, 240, 255, 0.2);
+    }
+
+    .size-indicator {
+      border-radius: 50%;
+      background: #ffffff;
+    }
+
+    .separator {
+      width: 1px;
+      height: 28px;
+      background: var(--border-color);
+      margin: 0 2px;
+      flex-shrink: 0;
+    }
+
+    /* Reglas responsivas fluidas para tablets */
+    @media (max-width: 1100px) {
+      .btn-text-desktop {
+        display: none !important;
+      }
+      .brand-sub {
+        display: none !important;
+      }
+      .tool-label {
+        display: none !important;
+      }
+      .toolbar-label {
+        display: none !important;
+      }
+      .btn {
+        padding: 0 8px;
+        height: 38px;
+        min-width: 38px;
+      }
+      .color-swatch {
+        width: 30px;
+        height: 30px;
+      }
+      .size-swatch {
+        width: 32px;
+        height: 32px;
+      }
+    }
+
+    @media (max-width: 860px) {
+      header {
+        height: 48px;
+        min-height: 48px;
+        padding: 0 6px;
+        gap: 4px;
+      }
+      footer {
+        height: 60px;
+        min-height: 60px;
+        padding: 0 6px;
+        gap: 4px;
+      }
+      .toolbar-group {
+        gap: 3px;
+      }
+      .btn-obs-scene {
+        padding: 0 6px;
+        font-size: 11px;
+        height: 32px;
+        min-width: auto;
+      }
+      .btn {
+        height: 34px;
+        min-width: 34px;
+        padding: 0 6px;
+        font-size: 11px;
+      }
+      .btn-text-tablet {
+        display: none !important;
+      }
+      .color-swatch {
+        width: 26px;
+        height: 26px;
+      }
+      .size-swatch {
+        width: 28px;
+        height: 28px;
+      }
+      .status-text {
+        display: none !important;
+      }
+      .status-badge {
+        padding: 3px 6px;
+      }
+      .separator {
+        height: 20px;
+        margin: 0 1px;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .brand {
+        font-size: 12px;
+      }
+      .btn-obs-scene {
+        padding: 0 4px;
+        font-size: 10px;
+        height: 30px;
+      }
+      .btn {
+        height: 30px;
+        min-width: 30px;
+        padding: 0 4px;
+      }
+      .color-swatch {
+        width: 22px;
+        height: 22px;
+      }
+      .size-swatch {
+        width: 24px;
+        height: 24px;
+      }
+    }
+    .plus-menu > summary {cursor:pointer;padding:10px;border:1px solid #445;border-radius:8px;list-style:none;}
+    .plus-popup {position:fixed;top:64px;left:8px;z-index:100;width:min(340px,calc(100vw - 16px));max-height:75vh;overflow:auto;background:#151d2b;border:1px solid #456;border-radius:12px;padding:14px;display:grid;gap:12px;touch-action:auto;}
+    .plus-popup label {display:grid;gap:6px;font:14px system-ui;}
+    .plus-popup select {min-height:42px;width:100%;background:#111827;color:white;border:1px solid #567;border-radius:6px;}
+    .plus-admin {left:auto;right:8px;width:min(680px,calc(100vw - 16px));}
+    .plus-admin iframe {width:100%;height:55vh;border:0;touch-action:auto;}
+    .plus-touch {font:12px system-ui;max-width:110px;}
+    #obs-message {font:13px system-ui;white-space:normal;}
+    @media(max-width:650px) {header {gap:6px;flex-wrap:wrap;height:auto;min-height:64px;padding:8px;} .brand-sub {display:none;} .plus-touch {max-width:90px;}}
+  </style>
+</head>
+<body>
+  <div id="app-container">
+    <header>
+      <div class="brand">
+        <span>ApliArte</span><span class="brand-sub"> Directo</span>
+      </div>
+      <a href="/pizarra-plus/guia" target="_blank" rel="noopener" style="font-size:12px;color:inherit;">Guía</a>
+
+      <details class="plus-menu" id="obs-menu">
+        <summary>OBS ▾</summary>
+        <div class="plus-popup">
+          <label>Escena <select id="obs-scene" disabled></select></label>
+          <label>Entrada de audio <select id="obs-input" disabled></select></label>
+          <button id="btn-obs-mute" class="btn" disabled>Consultar micrófono</button>
+          <button id="btn-obs-refresh" class="btn">Actualizar OBS</button>
+          <button id="btn-obs-preview" class="btn">Mostrar captura OBS</button>
+          <label>Renovar imagen <select id="obs-interval"><option value="1000">1 s</option><option value="2000">2 s</option><option value="5000" selected>5 s</option><option value="10000">10 s</option></select></label>
+          <p id="obs-message" role="status">Capturas fijas, sin vídeo continuo.</p>
+        </div>
+      </details>
+      <details class="plus-menu" id="admin-menu">
+        <summary>Panel Admin ▾</summary>
+        <div class="plus-popup plus-admin">
+          <label>Pestaña <select id="admin-tab" disabled><option>Cargando panel…</option></select></label>
+          <iframe id="admin-frame" title="Panel Admin existente" data-src="/admin"></iframe>
+          <a href="/admin" target="_blank" rel="noopener">Abrir Admin separado</a>
+        </div>
+      </details>
+      <label class="plus-touch"><input id="allow-touch" type="checkbox"> Dibujar con dedo</label>
+      <div class="toolbar-group">
+        <button id="btn-undo" class="btn" title="Deshacer último trazo o forma">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+          <span class="btn-text-desktop">Deshacer</span>
+        </button>
+        <button id="btn-redo" class="btn" title="Rehacer trazo o forma">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/></svg>
+          <span class="btn-text-desktop">Rehacer</span>
+        </button>
+        <button id="btn-clear" class="btn btn-danger" title="Limpiar todo el lienzo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span class="btn-text-desktop">Limpiar</span>
+        </button>
+
+        <div class="status-badge" title="Estado de la conexión">
+          <div id="status-dot" class="status-dot"></div>
+          <span id="status-text" class="status-text">En vivo</span>
+        </div>
+      </div>
+    </header>
+
+    <main id="canvas-wrapper">
+      <div id="canvas-container">
+        <img id="obs-preview-bg" alt="Vista previa OBS" />
+        <canvas id="drawing-canvas"></canvas>
+        <canvas id="preview-canvas"></canvas>
+      </div>
+    </main>
+
+    <footer>
+      <!-- Herramientas estilo Excalidraw -->
+      <div class="toolbar-group" id="tools-group">
+        <button id="tool-pen" class="btn active" data-tool="pen" title="Trazo libre (Stylus / Dedo)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/></svg>
+          <span class="tool-label">Pluma</span>
+        </button>
+        <button id="tool-arrow" class="btn" data-tool="arrow" title="Flecha con punta indicadora">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <span class="tool-label">Flecha</span>
+        </button>
+        <button id="tool-rect" class="btn" data-tool="rect" title="Rectángulo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+          <span class="tool-label">Caja</span>
+        </button>
+        <button id="tool-ellipse" class="btn" data-tool="ellipse" title="Elipse / Círculo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+          <span class="tool-label">Elipse</span>
+        </button>
+        <button id="tool-line" class="btn" data-tool="line" title="Línea recta">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/></svg>
+          <span class="tool-label">Línea</span>
+        </button>
+        <button id="tool-highlighter" class="btn" data-tool="highlighter" title="Marcador fluorescente translúcido">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-6 6v3h3l6-6"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
+          <span class="tool-label">Marcador</span>
+        </button>
+        <button id="tool-eraser" class="btn" data-tool="eraser" title="Borrador">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+          <span class="tool-label">Borrador</span>
+        </button>
+      </div>
+
+      <div class="separator"></div>
+
+      <!-- Colores (incluyendo Negro #000000) -->
+      <div class="toolbar-group" id="palette-group">
+        <div class="color-swatch active" style="background-color: #00f0ff;" data-color="#00f0ff" title="Cian neón"></div>
+        <div class="color-swatch" style="background-color: #ffd000;" data-color="#ffd000" title="Amarillo"></div>
+        <div class="color-swatch" style="background-color: #ff3366;" data-color="#ff3366" title="Fucsia neón"></div>
+        <div class="color-swatch" style="background-color: #00ff66;" data-color="#00ff66" title="Verde neón"></div>
+        <div class="color-swatch" style="background-color: #ffffff;" data-color="#ffffff" title="Blanco puro"></div>
+        <div class="color-swatch" style="background-color: #000000; border: 1.5px solid rgba(255, 255, 255, 0.45);" data-color="#000000" title="Negro"></div>
+        <div class="color-swatch" style="background-color: #ff8800;" data-color="#ff8800" title="Naranja"></div>
+      </div>
+
+      <div class="separator"></div>
+
+      <!-- Grosor -->
+      <div class="toolbar-group" id="size-group">
+        <div class="size-swatch" data-size="3" title="Fino">
+          <div class="size-indicator" style="width: 4px; height: 4px;"></div>
+        </div>
+        <div class="size-swatch active" data-size="6" title="Medio">
+          <div class="size-indicator" style="width: 8px; height: 8px;"></div>
+        </div>
+        <div class="size-swatch" data-size="14" title="Grueso">
+          <div class="size-indicator" style="width: 14px; height: 14px;"></div>
+        </div>
+        <div class="size-swatch" data-size="28" title="Extra grueso">
+          <div class="size-indicator" style="width: 22px; height: 22px;"></div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="/api/pizarra-plus/pointer-owner.js"></script>
+  <script>
+    const wrapper = document.getElementById('canvas-wrapper');
+    const container = document.getElementById('canvas-container');
+    const canvas = document.getElementById('drawing-canvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    const previewCanvas = document.getElementById('preview-canvas');
+    const previewCtx = previewCanvas.getContext('2d', { alpha: true });
+
+    const obsPreviewBg = document.getElementById('obs-preview-bg');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+
+    const pointerOwner = createPointerOwner();
+    const allowTouch = document.getElementById('allow-touch');
+    const btnObsPreview = document.getElementById('btn-obs-preview');
+    const btnObsMute = document.getElementById('btn-obs-mute');
+    const sceneSelect = document.getElementById('obs-scene');
+    const inputSelect = document.getElementById('obs-input');
+    const obsMessage = document.getElementById('obs-message');
+    const intervalSelect = document.getElementById('obs-interval');
+    // Estado de herramientas de dibujo
+    let currentTool = 'pen'; // 'pen', 'arrow', 'rect', 'ellipse', 'line', 'highlighter', 'eraser'
+    let currentColor = '#00f0ff';
+    let currentSize = 6;
+
+    let isDrawing = false;
+    let startPoint = null;
+    let lastPoint = null;
+    let currentStrokeId = null;
+
+    let strokesHistory = [];
+    let redoStack = [];
+
+    // Estado OBS y Preview
+    let obsMuted = false;
+    let obsPreviewActive = false;
+    let obsPreviewInterval = null;
+
+    // Relación de aspecto 16:9
+    const ASPECT_RATIO = 16 / 9;
+    const REF_WIDTH = 1920;
+    const REF_HEIGHT = 1080;
+
+    function resizeContainer() {
+      const availW = wrapper.clientWidth - 20;
+      const availH = wrapper.clientHeight - 20;
+
+      let w = availW;
+      let h = w / ASPECT_RATIO;
+
+      if (h > availH) {
+        h = availH;
+        w = h * ASPECT_RATIO;
+      }
+
+      container.style.width = Math.floor(w) + 'px';
+      container.style.height = Math.floor(h) + 'px';
+
+      const dpr = window.devicePixelRatio || 1;
+      const pixelW = Math.floor(w * dpr);
+      const pixelH = Math.floor(h * dpr);
+
+      canvas.width = pixelW;
+      canvas.height = pixelH;
+      previewCanvas.width = pixelW;
+      previewCanvas.height = pixelH;
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      previewCtx.setTransform(1, 0, 0, 1, 0, 0);
+      previewCtx.scale(dpr, dpr);
+
+      redrawAll();
+    }
+
+    window.addEventListener('resize', resizeContainer);
+    window.addEventListener('orientationchange', () => setTimeout(resizeContainer, 120));
+
+    function getNormalizedPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      return {
+        x: Math.max(0, Math.min(1, x)),
+        y: Math.max(0, Math.min(1, y)),
+      };
+    }
+
+    function drawItem(seg, targetCtx) {
+      if (!seg || !seg.from || !seg.to) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const fromX = seg.from.x * rect.width;
+      const fromY = seg.from.y * rect.height;
+      const toX = seg.to.x * rect.width;
+      const toY = seg.to.y * rect.height;
+
+      const scale = rect.width / REF_WIDTH;
+      const baseSize = seg.size || 6;
+
+      targetCtx.save();
+      targetCtx.lineCap = 'round';
+      targetCtx.lineJoin = 'round';
+
+      if (seg.tool === 'eraser') {
+        targetCtx.globalCompositeOperation = 'destination-out';
+        targetCtx.lineWidth = (baseSize * 3) * scale;
+      } else if (seg.tool === 'highlighter') {
+        targetCtx.globalCompositeOperation = 'source-over';
+        targetCtx.globalAlpha = 0.38;
+        targetCtx.strokeStyle = seg.color || '#ffd000';
+        targetCtx.lineWidth = (baseSize * 2.8) * scale;
+      } else {
+        targetCtx.globalCompositeOperation = 'source-over';
+        targetCtx.globalAlpha = 1.0;
+        targetCtx.strokeStyle = seg.color || '#00f0ff';
+        targetCtx.lineWidth = baseSize * scale;
+      }
+
+      const shape = seg.shape || 'stroke';
+
+      if (shape === 'rect') {
+        const x = Math.min(fromX, toX);
+        const y = Math.min(fromY, toY);
+        const w = Math.abs(toX - fromX);
+        const h = Math.abs(toY - fromY);
+        targetCtx.beginPath();
+        targetCtx.strokeRect(x, y, w, h);
+      } else if (shape === 'ellipse') {
+        const cx = (fromX + toX) / 2;
+        const cy = (fromY + toY) / 2;
+        const rx = Math.abs(toX - fromX) / 2;
+        const ry = Math.abs(toY - fromY) / 2;
+        targetCtx.beginPath();
+        targetCtx.ellipse(cx, cy, Math.max(1, rx), Math.max(1, ry), 0, 0, Math.PI * 2);
+        targetCtx.stroke();
+      } else if (shape === 'arrow') {
+        targetCtx.beginPath();
+        targetCtx.moveTo(fromX, fromY);
+        targetCtx.lineTo(toX, toY);
+        targetCtx.stroke();
+
+        const headLen = Math.max(14, baseSize * 2.5) * scale;
+        const angle = Math.atan2(toY - fromY, toX - fromX);
+        targetCtx.beginPath();
+        targetCtx.moveTo(toX, toY);
+        targetCtx.lineTo(toX - headLen * Math.cos(angle - Math.PI / 6), toY - headLen * Math.sin(angle - Math.PI / 6));
+        targetCtx.moveTo(toX, toY);
+        targetCtx.lineTo(toX - headLen * Math.cos(angle + Math.PI / 6), toY - headLen * Math.sin(angle + Math.PI / 6));
+        targetCtx.stroke();
+      } else if (shape === 'line') {
+        targetCtx.beginPath();
+        targetCtx.moveTo(fromX, fromY);
+        targetCtx.lineTo(toX, toY);
+        targetCtx.stroke();
+      } else {
+        // Trazo libre
+        targetCtx.beginPath();
+        targetCtx.moveTo(fromX, fromY);
+        targetCtx.lineTo(toX, toY);
+        targetCtx.stroke();
+      }
+
+      targetCtx.restore();
+    }
+
+    function redrawAll() {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      for (let i = 0; i < strokesHistory.length; i++) {
+        drawItem(strokesHistory[i], ctx);
+      }
+    }
+
+    function clearPreview() {
+      previewCtx.save();
+      previewCtx.setTransform(1, 0, 0, 1, 0, 0);
+      previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+      previewCtx.restore();
+    }
+
+    // Interacción táctil y stylus con Pointer Events
+    canvas.addEventListener('pointerdown', (e) => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        statusText.textContent = 'Sin conexión: espera antes de dibujar';
+        return;
+      }
+      if (!pointerOwner.begin(e, allowTouch.checked)) return;
+      e.preventDefault();
+      canvas.setPointerCapture(e.pointerId);
+      isDrawing = true;
+      startPoint = getNormalizedPos(e);
+      lastPoint = startPoint;
+      currentStrokeId = 's_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+      const isShape = ['rect', 'ellipse', 'arrow', 'line'].includes(currentTool);
+
+      if (!isShape) {
+        // Trazo libre, marcador o borrador: emitir punto inicial
+        const seg = {
+          type: 'pizarra_draw',
+          shape: 'stroke',
+          strokeId: currentStrokeId,
+          from: { x: startPoint.x, y: startPoint.y },
+          to: { x: Math.min(1, startPoint.x + 0.0001), y: Math.min(1, startPoint.y + 0.0001) },
+          color: currentColor,
+          size: currentSize,
+          tool: currentTool,
+        };
+        strokesHistory.push(seg);
+        drawItem(seg, ctx);
+        sendWs(seg);
+        redoStack = [];
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!pointerOwner.owns(e) || !isDrawing || !lastPoint) return;
+      const currentPoint = getNormalizedPos(e);
+
+      const isShape = ['rect', 'ellipse', 'arrow', 'line'].includes(currentTool);
+
+      if (isShape) {
+        // Previsualización fluida de la forma en previewCanvas
+        clearPreview();
+        const previewItem = {
+          from: startPoint,
+          to: currentPoint,
+          shape: currentTool,
+          color: currentColor,
+          size: currentSize,
+          tool: 'pen',
+        };
+        drawItem(previewItem, previewCtx);
+      } else {
+        // Trazo libre continuo
+        const dist = Math.hypot(currentPoint.x - lastPoint.x, currentPoint.y - lastPoint.y);
+        if (dist < 0.001) return;
+
+        const seg = {
+          type: 'pizarra_draw',
+          shape: 'stroke',
+          strokeId: currentStrokeId,
+          from: lastPoint,
+          to: currentPoint,
+          color: currentColor,
+          size: currentSize,
+          tool: currentTool,
+        };
+
+        strokesHistory.push(seg);
+        drawItem(seg, ctx);
+        sendWs(seg);
+        lastPoint = currentPoint;
+      }
+    });
+
+    function endDrawing(e) {
+      if (!pointerOwner.end(e) || !isDrawing) return;
+      isDrawing = false;
+      clearPreview();
+
+      const isShape = ['rect', 'ellipse', 'arrow', 'line'].includes(currentTool);
+
+      if (e.type !== 'pointercancel' && isShape && startPoint) {
+        const endPoint = getNormalizedPos(e) || lastPoint;
+        const dist = Math.hypot(endPoint.x - startPoint.x, endPoint.y - startPoint.y);
+
+        // Si hay una distancia mínima detectable, confirmar la forma geométrica
+        if (dist > 0.004) {
+          const shapeItem = {
+            type: 'pizarra_draw',
+            shape: currentTool,
+            strokeId: currentStrokeId,
+            from: startPoint,
+            to: endPoint,
+            color: currentColor,
+            size: currentSize,
+            tool: 'pen',
+          };
+          strokesHistory.push(shapeItem);
+          drawItem(shapeItem, ctx);
+          sendWs(shapeItem);
+          redoStack = [];
+        }
+      }
+
+      startPoint = null;
+      lastPoint = null;
+      currentStrokeId = null;
+    }
+
+    canvas.addEventListener('pointerup', endDrawing);
+    canvas.addEventListener('pointercancel', endDrawing);
+
+    // Selección de herramientas
+    document.querySelectorAll('[data-tool]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-tool]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentTool = btn.dataset.tool;
+      });
+    });
+
+    // Selección de colores
+    document.querySelectorAll('.color-swatch').forEach((swatch) => {
+      swatch.addEventListener('click', () => {
+        document.querySelectorAll('.color-swatch').forEach((s) => s.classList.remove('active'));
+        swatch.classList.add('active');
+        currentColor = swatch.dataset.color;
+        if (currentTool === 'eraser') {
+          document.getElementById('tool-pen').click();
+        }
+      });
+    });
+
+    // Selección de grosor
+    document.querySelectorAll('.size-swatch').forEach((swatch) => {
+      swatch.addEventListener('click', () => {
+        document.querySelectorAll('.size-swatch').forEach((s) => s.classList.remove('active'));
+        swatch.classList.add('active');
+        currentSize = parseInt(swatch.dataset.size, 10);
+      });
+    });
+
+    // Deshacer (Undo)
+    document.getElementById('btn-undo').addEventListener('click', () => {
+      if (strokesHistory.length === 0) return;
+      const lastId = strokesHistory[strokesHistory.length - 1].strokeId;
+      const removedGroup = [];
+
+      if (lastId) {
+        while (strokesHistory.length > 0 && strokesHistory[strokesHistory.length - 1].strokeId === lastId) {
+          removedGroup.unshift(strokesHistory.pop());
+        }
+      } else {
+        removedGroup.unshift(strokesHistory.pop());
+      }
+
+      redoStack.push(removedGroup);
+      redrawAll();
+      sendWs({ type: 'pizarra_undo' });
+    });
+
+    // Rehacer (Redo)
+    document.getElementById('btn-redo').addEventListener('click', () => {
+      if (redoStack.length === 0) return;
+      const restoredGroup = redoStack.pop();
+      if (!Array.isArray(restoredGroup) || restoredGroup.length === 0) return;
+
+      for (let i = 0; i < restoredGroup.length; i++) {
+        const item = restoredGroup[i];
+        strokesHistory.push(item);
+        drawItem(item, ctx);
+        sendWs(item);
+      }
+    });
+
+    // Limpiar (Clear)
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+      strokesHistory = [];
+      redoStack = [];
+      sendWs({ type: 'pizarra_clear' });
+    });
+
+    // OBS uses private same-origin request/response, never the public broadcast bus.
+    let captureBusy = false;
+    let stateBusy = false;
+    let actionBusy = false;
+    function reportObs(message, error = false) {
+      obsMessage.textContent = message;
+      obsMessage.style.color = error ? '#ff9c9c' : '';
+    }
+    async function obsRequest(route, body) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch('/api/pizarra-plus/obs/' + route, {
+          cache: 'no-store', signal: controller.signal,
+          ...(body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.message || 'OBS no completó la petición (' + response.status + ').');
+        return data;
+      } finally { clearTimeout(timer); }
+    }
+    function populateSelect(select, values, preferred) {
+      const previous = select.value;
+      select.replaceChildren();
+      for (const value of values) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      }
+      if (values.includes(preferred)) select.value = preferred;
+      else if (values.includes(previous)) select.value = previous;
+      select.disabled = values.length === 0;
+    }
+    function updateMute(muted) {
+      obsMuted = muted;
+      btnObsMute.disabled = muted === null || actionBusy;
+      btnObsMute.textContent = muted === null ? 'Entrada sin estado de audio' : muted ? 'Activar audio' : 'Silenciar audio';
+    }
+    async function refreshObs() {
+      if (stateBusy) return;
+      stateBusy = true;
+      try {
+        let data = await obsRequest('state' + (inputSelect.value ? '?input=' + encodeURIComponent(inputSelect.value) : ''));
+        populateSelect(sceneSelect, data.scenes, data.scene);
+        populateSelect(inputSelect, data.inputs, inputSelect.value || (data.inputs.includes('Mic/Aux') ? 'Mic/Aux' : data.inputs[0]));
+        if (inputSelect.value && data.muted === null) data = await obsRequest('state?input=' + encodeURIComponent(inputSelect.value));
+        updateMute(data.muted);
+        reportObs('OBS conectado. Capturas fijas; no vídeo continuo.');
+      } catch (error) {
+        sceneSelect.disabled = true;
+        inputSelect.disabled = true;
+        updateMute(null);
+        reportObs(error.message, true);
+      } finally { stateBusy = false; }
+    }
+    async function obsAction(action, name) {
+      if (actionBusy || !name) return;
+      actionBusy = true;
+      sceneSelect.disabled = true;
+      btnObsMute.disabled = true;
+      try {
+        await obsRequest('action', { action, name });
+        await refreshObs();
+      } catch (error) {
+        await refreshObs();
+        reportObs(error.message, true);
+      } finally {
+        actionBusy = false;
+        btnObsMute.disabled = obsMuted === null;
+      }
+    }
+    sceneSelect.addEventListener('change', () => obsAction('scene', sceneSelect.value));
+    inputSelect.addEventListener('change', refreshObs);
+    btnObsMute.addEventListener('click', () => obsAction('mute', inputSelect.value));
+    document.getElementById('btn-obs-refresh').addEventListener('click', refreshObs);
+    document.getElementById('obs-menu').addEventListener('toggle', event => { if (event.target.open) refreshObs(); });
+
+    function scheduleCapture() {
+      clearTimeout(obsPreviewInterval);
+      obsPreviewInterval = null;
+      if (obsPreviewActive && !document.hidden) obsPreviewInterval = setTimeout(solicitarCapturaObs, Number(intervalSelect.value));
+    }
+    async function solicitarCapturaObs() {
+      if (!obsPreviewActive || document.hidden || captureBusy) return;
+      captureBusy = true;
+      try {
+        const data = await obsRequest('screenshot');
+        if (obsPreviewActive && !document.hidden) obsPreviewBg.src = data.image;
+        reportObs('Imagen OBS actualizada.');
+      } catch (error) { reportObs(error.message, true); }
+      finally { captureBusy = false; scheduleCapture(); }
+    }
+    btnObsPreview.addEventListener('click', () => {
+      obsPreviewActive = !obsPreviewActive;
+      btnObsPreview.classList.toggle('active', obsPreviewActive);
+      btnObsPreview.textContent = obsPreviewActive ? 'Ocultar captura OBS' : 'Mostrar captura OBS';
+      obsPreviewBg.style.display = obsPreviewActive ? 'block' : 'none';
+      clearTimeout(obsPreviewInterval);
+      if (obsPreviewActive) solicitarCapturaObs();
+    });
+    intervalSelect.addEventListener('change', scheduleCapture);
+    document.addEventListener('visibilitychange', () => {
+      clearTimeout(obsPreviewInterval);
+      if (!document.hidden && obsPreviewActive) solicitarCapturaObs();
+    });
+    setInterval(() => {
+      if (!document.hidden && document.getElementById('obs-menu').open && !actionBusy) refreshObs();
+    }, 5000);
+
+    // Embed the existing Admin instead of duplicating its controls, data or storage.
+    const adminMenu = document.getElementById('admin-menu');
+    const adminFrame = document.getElementById('admin-frame');
+    const adminTabs = document.getElementById('admin-tab');
+    adminMenu.addEventListener('toggle', () => {
+      if (adminMenu.open && !adminFrame.getAttribute('src')) adminFrame.src = adminFrame.dataset.src;
+    });
+    adminFrame.addEventListener('load', () => {
+      try {
+        const buttons = [...adminFrame.contentDocument.querySelectorAll('.nav-item[data-tab]')];
+        adminTabs.replaceChildren();
+        for (const button of buttons) {
+          const option = document.createElement('option');
+          option.value = button.dataset.tab;
+          option.textContent = button.textContent.trim();
+          adminTabs.appendChild(option);
+          if (button.classList.contains('active')) adminTabs.value = option.value;
+        }
+        adminTabs.disabled = buttons.length === 0;
+      } catch (_) { adminTabs.disabled = true; }
+    });
+    adminTabs.addEventListener('change', () => {
+      const buttons = [...adminFrame.contentDocument.querySelectorAll('.nav-item[data-tab]')];
+      buttons.find(button => button.dataset.tab === adminTabs.value)?.click();
+    });
+
+    // Private same-origin drawing channel; the original :8790 channel is unchanged.
+    let ws = null;
+    let reconnectTimeout = null;
+
+    function getWsUrl() {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      return `${proto}//${window.location.host}/pizarra-plus/ws`;
+    }
+
+    function sendWs(payload) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(JSON.stringify(payload));
+        } catch (_) {}
+      }
+    }
+
+    function connectWs() {
+      if (ws) {
+        try { ws.close(); } catch (_) {}
+      }
+
+      statusDot.className = 'status-dot';
+      statusText.textContent = 'Conectando...';
+
+      const url = getWsUrl();
+      try {
+        ws = new WebSocket(url);
+      } catch (e) {
+        scheduleReconnect();
+        return;
+      }
+
+      ws.onopen = () => {
+        statusDot.className = 'status-dot online';
+        statusText.textContent = 'Pizarra conectada';
+        sendWs({ type: 'pizarra_solicitar_estado' });
+
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (!data || !data.type) return;
+
+          if (data.type === 'pizarra_init' && Array.isArray(data.history)) {
+            strokesHistory = data.history.slice();
+            redrawAll();
+          } else if (data.type === 'pizarra_draw') {
+            strokesHistory.push(data);
+            drawItem(data, ctx);
+          } else if (data.type === 'pizarra_clear') {
+            const rect = canvas.getBoundingClientRect();
+            ctx.clearRect(0, 0, rect.width, rect.height);
+            strokesHistory = [];
+            redoStack = [];
+          } else if (data.type === 'pizarra_undo') {
+            if (strokesHistory.length > 0) {
+              const lastId = strokesHistory[strokesHistory.length - 1].strokeId;
+              if (lastId) {
+                while (strokesHistory.length > 0 && strokesHistory[strokesHistory.length - 1].strokeId === lastId) {
+                  strokesHistory.pop();
+                }
+              } else {
+                strokesHistory.pop();
+              }
+              redrawAll();
+            }
+          }
+        } catch (_) {}
+      };
+
+      ws.onclose = () => {
+        statusDot.className = 'status-dot';
+        statusText.textContent = 'Reconectando...';
+        scheduleReconnect();
+      };
+
+      ws.onerror = () => {
+        statusDot.className = 'status-dot';
+        statusText.textContent = 'Error enlace';
+        scheduleReconnect();
+      };
+    }
+
+    function scheduleReconnect() {
+      if (reconnectTimeout) return;
+      reconnectTimeout = setTimeout(() => {
+        reconnectTimeout = null;
+        connectWs();
+      }, 2000);
+    }
+
+    resizeContainer();
+    connectWs();
+  </script>
+</body>
+</html>

@@ -1408,6 +1408,15 @@ if (PASSWORD) process.env.PANEL_PASS = PASSWORD; // ws-auth reads the password f
 // Escucha en 0.0.0.0 para admitir conexiones de Tablet vía Tailscale o red local
 const HOST = process.env.HOST || '0.0.0.0';
 
+// Private, opt-in tablet add-on. Never included in the public static webroot.
+const { createPizarraPlus } = require('./src/pizarra-plus');
+const pizarraPlus = createPizarraPlus({
+  enabled: process.env.DIRECTO_PIZARRA_PLUS === '1',
+  authorize: req => isTailscaleOrLocal(req) && isAuth(req),
+  trustedOrigin: isTrustedWsOrigin,
+  root: __dirname,
+});
+
 const server = http.createServer((req, res) => {
   cors(res);
   if (req.method === 'OPTIONS') {
@@ -1417,6 +1426,12 @@ const server = http.createServer((req, res) => {
 
   const url    = req.url || '/';
   const path   = url.split('?')[0];
+  if (path === '/pizarra-plus' || path === '/pizarra-plus/guia' || path === '/cristal-plus' || path.startsWith('/api/pizarra-plus/')) {
+    return pizarraPlus.handle(req, res).catch(() => {
+      if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'application/json' });
+      if (!res.writableEnded) res.end(JSON.stringify({ error: 'private-plus-unavailable' }));
+    });
+  }
   if (path === '/claim' && req.method === 'GET') {
     const token = new URL(url, 'http://localhost').searchParams.get('t') || '';
     const nueva = claimPanel(DATA_DIR, token);
@@ -2708,6 +2723,7 @@ wss.on('connection', (ws, request) => {
 });
 
 server.on('upgrade', (request, socket, head) => {
+  if (pizarraPlus.upgrade(request, socket, head)) return;
   const pathname = request.url.split('?')[0];
 
   if (pathname === '/ws') {
@@ -2718,6 +2734,8 @@ server.on('upgrade', (request, socket, head) => {
     socket.destroy();
   }
 });
+
+server.on('close', () => { pizarraPlus.close().catch(() => {}); });
 
 if (require.main === module) {
   server.listen(PORT, HOST, () => {

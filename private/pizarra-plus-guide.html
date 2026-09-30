@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Private Pizarra Plus — operating contract</title>
+<style>body{font:17px/1.6 system-ui;background:#111827;color:#e5e7eb;max-width:850px;margin:32px auto;padding:16px}a{color:#7dd3fc}code{color:#a7f3d0}h2{border-top:1px solid #475569;padding-top:20px}li{margin:8px 0}strong{color:#fff}</style>
+<h1>Private Pizarra Plus</h1>
+<p><strong>A private add-on, not a replacement for Admin and not approved for publication.</strong> The original Admin, pizarra and crystal routes remain unchanged. This document records the operating and regression contract of the new interface.</p>
+<nav><a href="#use">Use</a> · <a href="#drawing">Drawing</a> · <a href="#obs">OBS</a> · <a href="#admin">Admin</a> · <a href="#boundaries">Boundaries</a> · <a href="#qa">Acceptance</a></nav>
+<h2 id="use">Private access</h2>
+<ol><li>Enable only with Javier's approval: <code>DIRECTO_PIZARRA_PLUS=1</code> on the 7979 panel process. It is disabled by default.</li><li>Open <code>/pizarra-plus</code> through the existing private HTTPS Tailscale Serve origin. Do not configure Funnel or a public proxy for these routes.</li><li>For OBS drawing output, a separate transparent browser source uses <code>/cristal-plus</code> on the same private panel origin. Do not replace existing sources without approval.</li></ol>
+<h2 id="drawing">Drawing and Apple Pencil</h2>
+<p>Only one pointer owns each stroke. Touch is ignored by default; mouse and Pencil work. Enable “Dibujar con dedo” only when finger drawing is intended; do not enable it for palm rejection. A different pointer cannot move or end the active stroke. Cancellation does not commit a geometric shape.</p>
+<p>Tools, colors, undo, redo and clear retain the existing drawing behavior. Coordinates are normalized to the 16:9 drawing canvas. Drawing is blocked while the private socket is disconnected. Up to 4,000 segments are retained <strong>in server memory only</strong>; reconnect replays them, but restarting the panel clears drawings. No durable drawing-history feature is claimed.</p>
+<h2 id="obs">OBS controls and screenshots</h2>
+<p>The OBS menu discovers actual scenes and inputs using the existing local OBS WebSocket client. Choose the audio input explicitly; a source without mute support disables that control. Scene and mute changes wait for OBS confirmation. There are no start/stop streaming actions.</p>
+<p>“Mostrar captura OBS” fetches still JPEG screenshots of the current program scene. Default interval: 5 seconds; options: 1, 2, 5 or 10 seconds. Requests do not overlap; hidden pages stop polling. This is not a video stream. Errors are visible rather than silently indicating success.</p>
+<h2 id="admin">The existing Admin is reused</h2>
+<p>The Admin menu lazily embeds <code>/admin</code> in a same-origin iframe. Its tab selector is populated from the real Admin navigation buttons, not a second hardcoded catalog. Camera, audio, chats, saved commands, users, channels and messages remain owned by their existing implementation. Opening Admin separately remains supported.</p>
+<p>A1 lists and commands keep using <code>/api/panel/lista</code> and <code>/api/panel/comandos-bot</code>, persisted in ignored <code>data/panel/</code>. The plus creates no duplicate store. <strong>Botrix settings remain browser-local in the existing Admin</strong>; A3 server persistence is not part of this change.</p>
+<h2 id="boundaries">Security and ownership</h2>
+<ul><li>Assets live in <code>private/</code>, outside <code>public/</code>, with exact route allowlists and no-store responses.</li><li>Page, guide, OBS API and drawing socket require private local/Tailscale access. Public-domain Host and foreign Origin are rejected.</li><li>OBS state, mute and screenshots use private same-origin HTTP, never public broadcast events. Only enumerated scene/mute actions are allowed.</li><li>Credentials are consumed by the existing local OBS configuration loader; their values must never enter docs, logs, Git or screenshots.</li><li>The old 8790 drawing service, public demo, Damas geometry, audio gain and VPS implementation are not modified.</li></ul>
+<h2 id="qa">Acceptance and rollback</h2>
+<p>Automated tests cover access denial, Host/Origin checks, fake OBS actions, pointer ownership, full-script startup with simulated pointers, private drawing replay and separation from OBS controls. They do not prove iPad palm handling, browser layout, real OBS scenes/audio or effective public network isolation.</p>
+<ol><li>On iPad: draw with Pencil and rest palm; confirm no stray strokes or jumps. Try touch mode intentionally.</li><li>Check Admin tabs, server-backed lists and camera permissions without losing the current drawing.</li><li>With OBS idle: confirm actual scenes, the intended microphone, periodic still screenshots and transparent crystal output. Never start a stream as a test.</li><li>Close menus, rotate iPad, hide the page and reconnect. Confirm errors, capture pause and drawing replay.</li><li>Rollback: remove the opt-in flag and restart only the approved panel process. Existing Admin and data remain unchanged; no migration is needed.</li></ol>
+<p><a href="/pizarra-plus">Back to private pizarra</a> · <a href="/admin">Original Admin</a></p>
+</html>
