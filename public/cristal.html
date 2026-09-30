@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApliArte Directo - Cristal Transparente OBS</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: transparent !important;
+      user-select: none;
+    }
+    #canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: transparent !important;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Resolución de referencia canónica: 1920x1080 (16:9)
+    const REF_WIDTH = 1920;
+    const REF_HEIGHT = 1080;
+
+    let strokesHistory = [];
+
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      const width = window.innerWidth || REF_WIDTH;
+      const height = window.innerHeight || REF_HEIGHT;
+
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+
+      redrawAll();
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    function getScale() {
+      const width = window.innerWidth || REF_WIDTH;
+      const height = window.innerHeight || REF_HEIGHT;
+      return Math.min(width / REF_WIDTH, height / REF_HEIGHT);
+    }
+
+    function drawSegment(seg) {
+      if (!seg || !seg.from || !seg.to) return;
+
+      const width = window.innerWidth || REF_WIDTH;
+      const height = window.innerHeight || REF_HEIGHT;
+
+      const fromX = seg.from.x * width;
+      const fromY = seg.from.y * height;
+      const toX = seg.to.x * width;
+      const toY = seg.to.y * height;
+
+      const baseSize = seg.size || 6;
+      const scale = getScale();
+
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      if (seg.tool === 'eraser') {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.lineWidth = (baseSize * 3) * scale;
+      } else if (seg.tool === 'highlighter') {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 0.38;
+        ctx.strokeStyle = seg.color || '#ffd000';
+        ctx.lineWidth = (baseSize * 2.8) * scale;
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1.0;
+        ctx.strokeStyle = seg.color || '#00f0ff';
+        ctx.lineWidth = baseSize * scale;
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function clearCanvas() {
+      const width = window.innerWidth || REF_WIDTH;
+      const height = window.innerHeight || REF_HEIGHT;
+      ctx.clearRect(0, 0, width, height);
+      strokesHistory = [];
+    }
+
+    function redrawAll() {
+      const width = window.innerWidth || REF_WIDTH;
+      const height = window.innerHeight || REF_HEIGHT;
+      ctx.clearRect(0, 0, width, height);
+
+      for (let i = 0; i < strokesHistory.length; i++) {
+        drawSegment(strokesHistory[i]);
+      }
+    }
+
+    // Conexión WebSocket al servidor de directo (:8790)
+    let ws = null;
+    let reconnectTimeout = null;
+
+    function getWsUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const portParam = params.get('port') || '8790';
+      const loc = window.location;
+      const proto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+      const hostname = loc.hostname || 'localhost';
+      return `${proto}//${hostname}:${portParam}/ws`;
+    }
+
+    function connectWs() {
+      if (ws) {
+        try { ws.close(); } catch (_) {}
+      }
+
+      const url = getWsUrl();
+      try {
+        ws = new WebSocket(url);
+      } catch (e) {
+        scheduleReconnect();
+        return;
+      }
+
+      ws.onopen = () => {
+        // Solicitar estado actual si se reconecta
+        try {
+          ws.send(JSON.stringify({ type: 'pizarra_solicitar_estado' }));
+        } catch (_) {}
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (!data || !data.type) return;
+
+          if (data.type === 'pizarra_draw') {
+            strokesHistory.push(data);
+            drawSegment(data);
+          } else if (data.type === 'pizarra_clear') {
+            clearCanvas();
+          } else if (data.type === 'pizarra_undo') {
+            if (strokesHistory.length > 0) {
+              const lastId = strokesHistory[strokesHistory.length - 1].strokeId;
+              if (lastId) {
+                while (strokesHistory.length > 0 && strokesHistory[strokesHistory.length - 1].strokeId === lastId) {
+                  strokesHistory.pop();
+                }
+              } else {
+                strokesHistory.pop();
+              }
+              redrawAll();
+            }
+          } else if (data.type === 'pizarra_init') {
+            if (Array.isArray(data.history)) {
+              strokesHistory = data.history.slice();
+              redrawAll();
+            }
+          }
+        } catch (_) {}
+      };
+
+      ws.onclose = () => scheduleReconnect();
+      ws.onerror = () => scheduleReconnect();
+    }
+
+    function scheduleReconnect() {
+      if (reconnectTimeout) return;
+      reconnectTimeout = setTimeout(() => {
+        reconnectTimeout = null;
+        connectWs();
+      }, 2000);
+    }
+
+    resizeCanvas();
+    connectWs();
+  </script>
+</body>
+</html>

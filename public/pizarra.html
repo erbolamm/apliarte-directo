@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>ApliArte Directo - Pizarra Táctil Tablet</title>
+  <style>
+    :root {
+      --bg-dark: #0a0e17;
+      --bg-canvas: #0f172a;
+      --panel-bg: rgba(15, 23, 42, 0.95);
+      --border-color: rgba(255, 255, 255, 0.12);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #00f0ff;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    #app-container {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    /* Barra superior */
+    header {
+      height: 52px;
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.5px;
+    }
+
+    .brand span {
+      color: var(--accent);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      transition: background 0.3s ease;
+    }
+
+    .status-dot.online {
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    /* Contenedor del lienzo 16:9 */
+    #canvas-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #06090e;
+      position: relative;
+      padding: 12px;
+    }
+
+    #canvas-container {
+      position: relative;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: var(--bg-canvas);
+      background-image: 
+        radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    #drawing-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    /* Barra de herramientas inferior */
+    footer {
+      height: 74px;
+      background: var(--panel-bg);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 10;
+      gap: 12px;
+      overflow-x: auto;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      height: 44px;
+      min-width: 44px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+    }
+
+    .btn.active {
+      background: rgba(0, 240, 255, 0.18);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .btn-danger:active {
+      background: rgba(239, 68, 68, 0.3);
+    }
+
+    /* Selector de colores */
+    .color-swatch {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+      position: relative;
+    }
+
+    .color-swatch.active {
+      border-color: #ffffff;
+      transform: scale(1.15);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    }
+
+    /* Selector de grosor */
+    .size-swatch {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .size-swatch.active {
+      border-color: var(--accent);
+      background: rgba(0, 240, 255, 0.15);
+    }
+
+    .size-indicator {
+      border-radius: 50%;
+      background: #ffffff;
+    }
+
+    .separator {
+      width: 1px;
+      height: 32px;
+      background: var(--border-color);
+      margin: 0 4px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app-container">
+    <header>
+      <div class="brand">
+        <span>ApliArte</span> Pizarra Directo
+      </div>
+      <div class="toolbar-group">
+        <button id="btn-undo" class="btn" title="Deshacer último trazo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+          Deshacer
+        </button>
+        <button id="btn-clear" class="btn btn-danger" title="Limpiar lienzo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Limpiar
+        </button>
+        <div class="status-badge">
+          <div id="status-dot" class="status-dot"></div>
+          <span id="status-text">Conectando...</span>
+        </div>
+      </div>
+    </header>
+
+    <main id="canvas-wrapper">
+      <div id="canvas-container">
+        <canvas id="drawing-canvas"></canvas>
+      </div>
+    </main>
+
+    <footer>
+      <!-- Herramientas -->
+      <div class="toolbar-group">
+        <button id="tool-pen" class="btn active" data-tool="pen">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/></svg>
+          Pluma
+        </button>
+        <button id="tool-highlighter" class="btn" data-tool="highlighter">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-6 6v3h3l6-6"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
+          Marcador
+        </button>
+        <button id="tool-eraser" class="btn" data-tool="eraser">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+          Borrador
+        </button>
+      </div>
+
+      <div class="separator"></div>
+
+      <!-- Colores -->
+      <div class="toolbar-group" id="palette-group">
+        <div class="color-swatch active" style="background-color: #00f0ff;" data-color="#00f0ff"></div>
+        <div class="color-swatch" style="background-color: #ffd000;" data-color="#ffd000"></div>
+        <div class="color-swatch" style="background-color: #ff3366;" data-color="#ff3366"></div>
+        <div class="color-swatch" style="background-color: #00ff66;" data-color="#00ff66"></div>
+        <div class="color-swatch" style="background-color: #ffffff;" data-color="#ffffff"></div>
+        <div class="color-swatch" style="background-color: #ff8800;" data-color="#ff8800"></div>
+      </div>
+
+      <div class="separator"></div>
+
+      <!-- Grosor -->
+      <div class="toolbar-group" id="size-group">
+        <div class="size-swatch" data-size="3" title="Fino">
+          <div class="size-indicator" style="width: 4px; height: 4px;"></div>
+        </div>
+        <div class="size-swatch active" data-size="6" title="Medio">
+          <div class="size-indicator" style="width: 8px; height: 8px;"></div>
+        </div>
+        <div class="size-swatch" data-size="14" title="Grueso">
+          <div class="size-indicator" style="width: 14px; height: 14px;"></div>
+        </div>
+        <div class="size-swatch" data-size="28" title="Extra grueso">
+          <div class="size-indicator" style="width: 22px; height: 22px;"></div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const wrapper = document.getElementById('canvas-wrapper');
+    const container = document.getElementById('canvas-container');
+    const canvas = document.getElementById('drawing-canvas');
+    const ctx = canvas.getContext('2d');
+
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+
+    // Estado de la herramienta
+    let currentTool = 'pen';
+    let currentColor = '#00f0ff';
+    let currentSize = 6;
+
+    let isDrawing = false;
+    let lastPoint = null;
+    let currentStrokeId = null;
+
+    let strokesHistory = [];
+
+    // Relación de aspecto 16:9
+    const ASPECT_RATIO = 16 / 9;
+    const REF_WIDTH = 1920;
+    const REF_HEIGHT = 1080;
+
+    function resizeContainer() {
+      const availW = wrapper.clientWidth - 24;
+      const availH = wrapper.clientHeight - 24;
+
+      let w = availW;
+      let h = w / ASPECT_RATIO;
+
+      if (h > availH) {
+        h = availH;
+        w = h * ASPECT_RATIO;
+      }
+
+      container.style.width = Math.floor(w) + 'px';
+      container.style.height = Math.floor(h) + 'px';
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+
+      redrawAll();
+    }
+
+    window.addEventListener('resize', resizeContainer);
+    window.addEventListener('orientationchange', () => setTimeout(resizeContainer, 100));
+
+    function getNormalizedPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      return {
+        x: Math.max(0, Math.min(1, x)),
+        y: Math.max(0, Math.min(1, y))
+      };
+    }
+
+    function drawSegment(seg) {
+      if (!seg || !seg.from || !seg.to) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const fromX = seg.from.x * rect.width;
+      const fromY = seg.from.y * rect.height;
+      const toX = seg.to.x * rect.width;
+      const toY = seg.to.y * rect.height;
+
+      const scale = rect.width / REF_WIDTH;
+      const baseSize = seg.size || 6;
+
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      if (seg.tool === 'eraser') {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.lineWidth = (baseSize * 3) * scale;
+      } else if (seg.tool === 'highlighter') {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 0.38;
+        ctx.strokeStyle = seg.color || '#ffd000';
+        ctx.lineWidth = (baseSize * 2.8) * scale;
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1.0;
+        ctx.strokeStyle = seg.color || '#00f0ff';
+        ctx.lineWidth = baseSize * scale;
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function redrawAll() {
+      const rect = canvas.getBoundingClientRect();
+      ctx.clearRect(0, 0, rect.width, rect.height);
+
+      for (let i = 0; i < strokesHistory.length; i++) {
+        drawSegment(strokesHistory[i]);
+      }
+    }
+
+    // Interacción táctil fluida con Pointer Events
+    canvas.addEventListener('pointerdown', (e) => {
+      canvas.setPointerCapture(e.pointerId);
+      isDrawing = true;
+      lastPoint = getNormalizedPos(e);
+      currentStrokeId = 's_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+      // Dibujar un punto inicial para taps
+      const seg = {
+        type: 'pizarra_draw',
+        strokeId: currentStrokeId,
+        from: { x: lastPoint.x, y: lastPoint.y },
+        to: { x: lastPoint.x + 0.0001, y: lastPoint.y + 0.0001 },
+        color: currentColor,
+        size: currentSize,
+        tool: currentTool
+      };
+      strokesHistory.push(seg);
+      drawSegment(seg);
+      sendWs(seg);
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!isDrawing || !lastPoint) return;
+      const currentPoint = getNormalizedPos(e);
+
+      // Filtro de distancia mínima para reducir saturación de paquetes
+      const dist = Math.hypot(currentPoint.x - lastPoint.x, currentPoint.y - lastPoint.y);
+      if (dist < 0.001) return;
+
+      const seg = {
+        type: 'pizarra_draw',
+        strokeId: currentStrokeId,
+        from: lastPoint,
+        to: currentPoint,
+        color: currentColor,
+        size: currentSize,
+        tool: currentTool
+      };
+
+      strokesHistory.push(seg);
+      drawSegment(seg);
+      sendWs(seg);
+
+      lastPoint = currentPoint;
+    });
+
+    function endStroke(e) {
+      if (isDrawing) {
+        isDrawing = false;
+        lastPoint = null;
+        currentStrokeId = null;
+      }
+    }
+
+    canvas.addEventListener('pointerup', endStroke);
+    canvas.addEventListener('pointercancel', endStroke);
+
+    // Controles de barra
+    document.querySelectorAll('[data-tool]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentTool = btn.dataset.tool;
+      });
+    });
+
+    document.querySelectorAll('.color-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+        currentColor = swatch.dataset.color;
+        if (currentTool === 'eraser') {
+          document.getElementById('tool-pen').click();
+        }
+      });
+    });
+
+    document.querySelectorAll('.size-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        document.querySelectorAll('.size-swatch').forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+        currentSize = parseInt(swatch.dataset.size, 10);
+      });
+    });
+
+    document.getElementById('btn-undo').addEventListener('click', () => {
+      if (strokesHistory.length === 0) return;
+      const lastId = strokesHistory[strokesHistory.length - 1].strokeId;
+      if (lastId) {
+        while (strokesHistory.length > 0 && strokesHistory[strokesHistory.length - 1].strokeId === lastId) {
+          strokesHistory.pop();
+        }
+      } else {
+        strokesHistory.pop();
+      }
+      redrawAll();
+      sendWs({ type: 'pizarra_undo' });
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      const rect = canvas.getBoundingClientRect();
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      strokesHistory = [];
+      sendWs({ type: 'pizarra_clear' });
+    });
+
+    // Conexión WebSocket al servidor :8790
+    let ws = null;
+    let reconnectTimeout = null;
+
+    function getWsUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const portParam = params.get('port') || '8790';
+      const loc = window.location;
+      const proto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+      const hostname = loc.hostname || 'localhost';
+      return `${proto}//${hostname}:${portParam}/ws`;
+    }
+
+    function sendWs(payload) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(JSON.stringify(payload));
+        } catch (_) {}
+      }
+    }
+
+    function connectWs() {
+      if (ws) {
+        try { ws.close(); } catch (_) {}
+      }
+
+      statusDot.className = 'status-dot';
+      statusText.textContent = 'Conectando...';
+
+      const url = getWsUrl();
+      try {
+        ws = new WebSocket(url);
+      } catch (e) {
+        scheduleReconnect();
+        return;
+      }
+
+      ws.onopen = () => {
+        statusDot.className = 'status-dot online';
+        statusText.textContent = 'En vivo (:8790)';
+        sendWs({ type: 'pizarra_solicitar_estado' });
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (!data || !data.type) return;
+
+          if (data.type === 'pizarra_init' && Array.isArray(data.history)) {
+            strokesHistory = data.history.slice();
+            redrawAll();
+          } else if (data.type === 'pizarra_clear') {
+            const rect = canvas.getBoundingClientRect();
+            ctx.clearRect(0, 0, rect.width, rect.height);
+            strokesHistory = [];
+          } else if (data.type === 'pizarra_undo') {
+            if (strokesHistory.length > 0) {
+              const lastId = strokesHistory[strokesHistory.length - 1].strokeId;
+              if (lastId) {
+                while (strokesHistory.length > 0 && strokesHistory[strokesHistory.length - 1].strokeId === lastId) {
+                  strokesHistory.pop();
+                }
+              } else {
+                strokesHistory.pop();
+              }
+              redrawAll();
+            }
+          }
+        } catch (_) {}
+      };
+
+      ws.onclose = () => {
+        statusDot.className = 'status-dot';
+        statusText.textContent = 'Reconectando...';
+        scheduleReconnect();
+      };
+
+      ws.onerror = () => {
+        statusDot.className = 'status-dot';
+        statusText.textContent = 'Error enlace';
+        scheduleReconnect();
+      };
+    }
+
+    function scheduleReconnect() {
+      if (reconnectTimeout) return;
+      reconnectTimeout = setTimeout(() => {
+        reconnectTimeout = null;
+        connectWs();
+      }, 2000);
+    }
+
+    resizeContainer();
+    connectWs();
+  </script>
+</body>
+</html>

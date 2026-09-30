@@ -2411,6 +2411,14 @@ html,body{width:100%;height:100%;overflow:hidden;
     if (serveStatic(req, res, '/plano.html')) return;
   }
 
+  if (path === '/cristal' || path === '/cristal.html') {
+    if (serveStatic(req, res, '/cristal.html')) return;
+  }
+
+  if (path === '/pizarra' || path === '/pizarra.html') {
+    if (serveStatic(req, res, '/pizarra.html')) return;
+  }
+
   if (path === '/sms' || path === '/sms.html') {
     if (serveStatic(req, res, '/sms.html')) return;
   }
@@ -2527,6 +2535,7 @@ wss.on('connection', (ws, request) => {
       'stream_state', 'twitch_state',
       'sms_nuevo', 'nuevo_sms',
       'juego_estado', 'categoria',
+      'pizarra_draw', 'pizarra_clear', 'pizarra_undo', 'pizarra_init', 'pizarra_solicitar_estado',
       'ping', 'pong'
     ]);
 

@@ -502,6 +502,12 @@ app.use('/medios', express.static(join(RAIZ, 'medios')));
 app.get("/panel-twitch-comandos.html", (_req, res) =>
   res.sendFile(join(RAIZ, "panel-twitch-comandos.html")),
 );
+app.get("/cristal", (_req, res) =>
+  res.sendFile(join(RAIZ, "public", "cristal.html")),
+);
+app.get("/pizarra", (_req, res) =>
+  res.sendFile(join(RAIZ, "public", "pizarra.html")),
+);
 app.get("/api/estado", (_req, res) => {
   for (const destination of configuracion.destinos) refreshDestination(destination);
   res.json({ ...centro.instantanea(), registro: registro.slice(-40) });
@@ -951,13 +957,49 @@ walkWss.on("connection", (socket, req) => {
   walkSignaling.manejar(socket, url.searchParams.get("session"));
 });
 
-// WebSocket para overlay y transmisión de voz en directo (/ws)
+// WebSocket para overlay, cristal transparente y pizarra táctil (/ws)
 const overlayWss = new WebSocketServer({ noServer: true });
 const overlayClients = new Set();
+const pizarraHistory = [];
+const MAX_PIZARRA_HISTORY = 4000;
+
 overlayWss.on("connection", (ws) => {
   overlayClients.add(ws);
+
+  // Al conectar un nuevo cliente (ej. OBS /cristal), enviar el estado actual de la pizarra
+  if (pizarraHistory.length > 0) {
+    try {
+      ws.send(JSON.stringify({ type: "pizarra_init", history: pizarraHistory }));
+    } catch (_) {}
+  }
+
   ws.on("message", (msg) => {
     const text = typeof msg === "string" ? msg : msg.toString("utf-8");
+
+    try {
+      const data = JSON.parse(text);
+      if (data && data.type === "pizarra_draw") {
+        pizarraHistory.push(data);
+        if (pizarraHistory.length > MAX_PIZARRA_HISTORY) pizarraHistory.shift();
+      } else if (data && data.type === "pizarra_clear") {
+        pizarraHistory.length = 0;
+      } else if (data && data.type === "pizarra_undo") {
+        if (pizarraHistory.length > 0) {
+          const lastId = pizarraHistory[pizarraHistory.length - 1].strokeId;
+          if (lastId) {
+            while (pizarraHistory.length > 0 && pizarraHistory[pizarraHistory.length - 1].strokeId === lastId) {
+              pizarraHistory.pop();
+            }
+          } else {
+            pizarraHistory.pop();
+          }
+        }
+      } else if (data && data.type === "pizarra_solicitar_estado") {
+        ws.send(JSON.stringify({ type: "pizarra_init", history: pizarraHistory }));
+        return;
+      }
+    } catch (_) {}
+
     for (const client of overlayClients) {
       if (client !== ws && client.readyState === 1) {
         client.send(text);
