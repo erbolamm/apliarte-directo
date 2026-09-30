@@ -1,5 +1,5 @@
 import { AGENTS, ROTATING_IDS, type AgentId, normalizeLiveSnapshot, type LiveSnapshot } from './agents';
-import { COMMAND_SEAT, DELIV_SLOTS, EQUIPO1_SLOTS, JUNCTION, LOUNGE_SLOTS, OWNER_DESK, VIGIA_PATROL, VISITOR_SEAT, WAITING_SLOTS, WORK_SLOTS, WORKER_SLOTS, pathLength, pointAt, type Pose, type Pt } from './layout';
+import { CHAT_ZONE_COMMANDS, COMMAND_SEAT, DELIV_SLOTS, EQUIPO1_SLOTS, JUNCTION, LOUNGE_SLOTS, OWNER_DESK, VIGIA_PATROL, VISITOR_SEAT, WAITING_SLOTS, WORK_SLOTS, WORKER_SLOTS, ZONE_ANCHORS, pathLength, pointAt, type Pose, type Pt, type ZoneId } from './layout';
 import { isBoardMode, navigate, parseSquare, setBoardMode, squareCenter } from './geometry';
 export type Task={role:AgentId;project:string;title:string;fileName:string;priority:string};
 export type Snapshot={valid:boolean;states:Record<string,Task[]>;orchestrator:AgentId|null};
@@ -144,7 +144,7 @@ const lounge=(id:AgentId)=>{
 };
 const COFFEE_STATION: Pt = { x: 96, y: 320 };
 /** Live chat command forwarded by `/api/directo/comando` (Twitch `!` commands). */
-export type OfficeCommand={comando:string;agente?:string|null;texto?:string|null;usuario?:string|null;seq?:number};
+export type OfficeCommand={comando:string;agente?:string|null;texto?:string|null;usuario?:string|null;seq?:number;zona?:string|null};
 export type Speech={text:string;until:number};
 export const SPEECH_MAX=120;
 /** Bubble lifetime grows with the text: 5 s minimum, 15 s maximum. */
@@ -177,8 +177,23 @@ export class OfficeRuntime {
   hub: HubState | null = null;
   /** Twitch users that adopted an avatar, Javier excluded. Feeds the quorum guard. */
   adoptedViewers: string[] = [];
+  /** avatar id → twitch login. Used to walk the writer's avatar on `!oficina` and the other room commands. */
+  avatarOwners: Record<string, string> = {};
   /** The quorum guard applies once the live overlay reports its viewers; the plain office has none. */
   quorumEnforced = false;
+
+  /** Records who adopted which avatar. Keys are agent ids, values are twitch logins. */
+  setAvatarOwners(owners: Record<string, string> | null | undefined) {
+    const next: Record<string, string> = {};
+    if (owners && typeof owners === 'object') {
+      for (const [avatar, owner] of Object.entries(owners)) {
+        if (!roles.has(avatar as AgentId)) continue;
+        const name = String(owner ?? '').trim();
+        if (name) next[avatar] = name;
+      }
+    }
+    this.avatarOwners = next;
+  }
 
   setAdoptedViewers(users: string[]) {
     this.quorumEnforced = true;
@@ -798,10 +813,54 @@ export class OfficeRuntime {
   const total=AGENTS.filter(a=>a.id!=='ja').length;
   return{working:working.size,resting:Math.max(0,total-working.size)};
  }
+ /** Room id from a `!cafeteria` / `!entregas` / `!oficina` / `!reuniones` command. */
+ private zoneFromCommand(cmd:OfficeCommand):ZoneId|null{
+  const raw=String(cmd.zona||cmd.texto||'').trim().toLowerCase();
+  if(raw==='lounge'||raw==='orch'||raw==='work'||raw==='deliv')return raw;
+  return CHAT_ZONE_COMMANDS[raw]??null;
+ }
+ /** Avatar that should walk: explicit agent, the login's adopted avatar, or Javier himself. */
+ private avatarForCommand(cmd:OfficeCommand):AgentId|null{
+  if(cmd.agente&&roles.has(cmd.agente as AgentId))return cmd.agente as AgentId;
+  const user=String(cmd.usuario??'').trim().toLowerCase();
+  if(!user)return null;
+  for(const [avatar,owner] of Object.entries(this.avatarOwners)){
+   if(String(owner).trim().toLowerCase()===user&&roles.has(avatar as AgentId))return avatar as AgentId;
+  }
+  if(user==='ja'||user==='apliarte'||user==='erbolamm')return 'ja';
+  if(roles.has(user as AgentId))return user as AgentId;
+  return null;
+ }
+ /** Walks `id` to the room's open-floor anchor along the office nav mesh. */
+ goToZone(id:AgentId,zone:ZoneId,now:number):boolean{
+  if(!roles.has(id)||!ZONE_ANCHORS[zone])return false;
+  if(this.isCinematicActive()||this.isFrozen())return false;
+  if(this.isTraitorActive()&&this.hub!.players.includes(id))return false;
+  const p=this.people.find(person=>person.id===id);
+  if(!p)return false;
+  const end=ZONE_ANCHORS[zone];
+  try{p.path=navigate(p.pos,end);}catch(_){p.path=[p.pos,end];}
+  p.target={...end};
+  p.travelled=0;
+  p.speed=160;
+  p.deliveringUntil=0;
+  if(end.x!==p.pos.x)p.facing=end.x>p.pos.x?1:-1;
+  p.isRear=end.y<p.pos.y;
+  p.pose=p.isRear?'work':'walk';
+  p.manualUntil=isBoardMode()?Infinity:now+45000;
+  this.triggerWake();
+  return true;
+ }
  /** Applies a live chat command. Returns false when it was not recognised. */
  applyCommand(cmd:OfficeCommand,now:number):boolean{
   switch(cmd?.comando){
    case 'cafe':{const id=cmd.agente&&cmd.agente!=='ja'&&roles.has(cmd.agente as AgentId)?cmd.agente as AgentId:undefined;this.traerCafe(id);return true;}
+   case 'zona':{
+    const zone=this.zoneFromCommand(cmd);
+    const id=this.avatarForCommand(cmd);
+    if(!zone||!id)return false;
+    return this.goToZone(id,zone,now);
+   }
    case 'git':return this.say(this.speaker(cmd.agente),cmd.texto||'Git: sin datos',now);
    case 'say':return this.say(this.speaker(cmd.agente),cmd.texto??'',now);
    case 'estado':{const{working,resting}=this.statusSummary();return this.say(this.speaker(cmd.agente),`Agentes: ${working} trabajando · ${resting} en reposo`,now);}

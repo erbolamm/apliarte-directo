@@ -145,6 +145,22 @@ export function parsearComandoChat(texto) {
     const agente = posibleAgente && AGENTES_OFICINA.has(posibleAgente) ? posibleAgente : null;
     return agente ? { comando: "cafe", agente } : { comando: "cafe" };
   }
+  // Room walks. `!cafe` stays the coffee order; these names are the rooms.
+  // Zone ids match `CHAT_ZONE_COMMANDS` / `ZONE_ANCHORS` in layout.ts.
+  const zonasChat = {
+    cafeteria: "lounge",
+    cafetería: "lounge",
+    entregas: "deliv",
+    oficina: "work",
+    reuniones: "orch",
+  };
+  if (zonasChat[nombre]) {
+    const posibleAgente = resto.trim().split(/\s+/)[0]?.toLowerCase();
+    const agente = posibleAgente && AGENTES_OFICINA.has(posibleAgente) ? posibleAgente : null;
+    return agente
+      ? { comando: "zona", zona: zonasChat[nombre], agente }
+      : { comando: "zona", zona: zonasChat[nombre] };
+  }
   if (nombre === "git") return { comando: "git" };
   if (nombre === "estado" || nombre === "agentes") return { comando: "estado" };
   if (nombre === "hablar") {

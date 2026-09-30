@@ -281,6 +281,17 @@ const {
   QUORUM_ESPECTADORES_MIN,
 } = internos;
 
+test("parsearComandoChat: !cafeteria, !entregas, !oficina y !reuniones nombran una zona", () => {
+  assert.deepEqual(parsearComandoChat("!cafeteria"), { comando: "zona", zona: "lounge" });
+  assert.deepEqual(parsearComandoChat("!cafetería"), { comando: "zona", zona: "lounge" });
+  assert.deepEqual(parsearComandoChat("  !CAFETERIA  "), { comando: "zona", zona: "lounge" });
+  assert.deepEqual(parsearComandoChat("!entregas"), { comando: "zona", zona: "deliv" });
+  assert.deepEqual(parsearComandoChat("!oficina"), { comando: "zona", zona: "work" });
+  assert.deepEqual(parsearComandoChat("!reuniones"), { comando: "zona", zona: "orch" });
+  assert.deepEqual(parsearComandoChat("!oficina ge"), { comando: "zona", zona: "work", agente: "ge" });
+  assert.deepEqual(parsearComandoChat("!cafe"), { comando: "cafe" });
+});
+
 test("parsearComandoChat: reconoce !cafe, !git, !estado y !agentes", () => {
   assert.deepEqual(parsearComandoChat("!cafe"), { comando: "cafe" });
   assert.deepEqual(parsearComandoChat("  !CAFE  "), { comando: "cafe" });

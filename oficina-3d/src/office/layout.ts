@@ -172,6 +172,81 @@ export const VIGIA_PATROL: Pt[] = [
   { x: 1152, y: 340 }, // orch – despacho de Javier
 ];
 
+/** Chat words that walk an avatar to a room. `!cafe` is the coffee order, not this map. */
+export const CHAT_ZONE_COMMANDS: Record<string, ZoneId> = {
+  cafeteria: "lounge",
+  "cafetería": "lounge",
+  entregas: "deliv",
+  oficina: "work",
+  reuniones: "orch",
+};
+
+/** Open-floor stand point per room, clear of the desks and parcels in geometry.ts.
+ *  Checked against expanded obstacle rects (RADIUS 16): lounge (400,300),
+ *  orch (900,280), work (200,560), deliv (800,560). */
+export const ZONE_ANCHORS: Record<ZoneId, Pt> = {
+  lounge: { x: 400, y: 300 },
+  orch: { x: 900, y: 280 },
+  work: { x: 200, y: 560 },
+  deliv: { x: 800, y: 560 },
+};
+
+/**
+ * !damas board footprint. Same numbers as `BOARD` in geometry.ts:
+ * 12×8 squares, columns a–l left to right, rows 1–8 bottom to top, a1 bottom-left.
+ * While the board is on, interior furniture and partitions are hidden and only
+ * the outer shell (plus this board) remains, so every square stays visible.
+ */
+export const DAMAS_BOARD = {
+  cols: 12,
+  rows: 8,
+  cell: 97,
+  x: 58,
+  y: 37,
+  frame: 40,
+  columns: "abcdefghijkl",
+} as const;
+
+/** Translucent partition. `side: "double"` so the iso camera and the top view both see through. */
+export const GLASS_MATERIAL = {
+  fill: "rgba(143, 213, 250, 0.18)",
+  edge: "rgba(224, 242, 254, 0.92)",
+  edgeWidthPx: 2,
+  side: "double",
+} as const;
+
+export type GlassWallSpec = {
+  x: number;
+  y: number;
+  w: number;
+  d: number;
+  h: number;
+  role: "partition";
+};
+
+/**
+ * Interior partitions that must render with GLASS_MATERIAL.
+ * The outer shell stays opaque. Door gaps follow DOORS (span 92 → 46 px each side).
+ * The two slices at x=1040 are the owner's office glass already drawn in geometry.ts;
+ * the rest are the room partitions that geometry.ts still emits as solid walls.
+ */
+export const GLASS_WALLS: GlassWallSpec[] = [
+  { x: 595, y: 24, w: 12, d: 390, h: 65, role: "partition" },
+  { x: 650, y: 24, w: 12, d: 390, h: 65, role: "partition" },
+  { x: 595, y: 498, w: 12, d: 336, h: 65, role: "partition" },
+  { x: 650, y: 498, w: 12, d: 336, h: 65, role: "partition" },
+  { x: 24, y: 408, w: 240, d: 10, h: 40, role: "partition" },
+  { x: 356, y: 408, w: 240, d: 10, h: 40, role: "partition" },
+  { x: 660, y: 408, w: 244, d: 10, h: 40, role: "partition" },
+  { x: 996, y: 408, w: 260, d: 10, h: 40, role: "partition" },
+  { x: 24, y: 492, w: 240, d: 10, h: 40, role: "partition" },
+  { x: 356, y: 492, w: 240, d: 10, h: 40, role: "partition" },
+  { x: 660, y: 492, w: 244, d: 10, h: 40, role: "partition" },
+  { x: 996, y: 492, w: 260, d: 10, h: 40, role: "partition" },
+  { x: 1040, y: 24, w: 6, d: 218, h: 110, role: "partition" },
+  { x: 1040, y: 318, w: 6, d: 90, h: 110, role: "partition" },
+];
+
 export const ZONE_ORDER: ZoneId[] = ["lounge", "orch", "work", "deliv"];
 
 export const ZONE_META: Record<ZoneId, { step: number; tone: string }> = {

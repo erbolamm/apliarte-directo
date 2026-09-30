@@ -8,18 +8,18 @@
     :root {
       --color-primary: #5ecef5;
       --color-secondary: #00467b;
-      --color-dark: #030a16;
-      --bg-base: var(--color-dark);
+      --color-dark: #0c4a6e;
+      --bg-base: #0c4a6e;
 
       /* Andando (verde paseo) */
-      --sky-top: #0a3d1c;
-      --sky-bottom: #031208;
+      --sky-top: #15803d;
+      --sky-bottom: #052e16;
       --sky-shape: #00e676;
       --sky-line: #00c853;
 
-      /* Apps (código ApliArte) */
-      --code-top: #030a16;
-      --code-bottom: #001830;
+      /* Apps (código ApliArte). Lifted off near-black so OBS does not key the frame as empty. */
+      --code-top: #1d6fad;
+      --code-bottom: #0c4a6e;
       --code-c1: #5ecef5;
       --code-c2: #00467b;
 
@@ -42,8 +42,8 @@
       --chat-lamp: #b46734;
 
       /* Overlays */
-      --grid-line: rgba(255, 255, 255, 0.02);
-      --vignette-color: rgba(0, 0, 0, 0.65);
+      --grid-line: rgba(255, 255, 255, 0.05);
+      --vignette-color: rgba(0, 0, 0, 0.28);
     }
 
     html[data-theme="light"], :root[data-theme="light"] {
@@ -90,8 +90,11 @@
       box-sizing: border-box;
     }
 
+    html, body {
+      background-color: #0c4a6e;
+    }
+
     body {
-      background-color: transparent;
       overflow: hidden;
       width: 1920px;
       height: 1080px;
@@ -104,7 +107,8 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: var(--bg-base);
+      background-color: #0c4a6e;
+      background-image: linear-gradient(180deg, #1d6fad 0%, #0c4a6e 55%, #083556 100%);
       z-index: 0;
       pointer-events: none;
       overflow: hidden;
@@ -200,10 +204,55 @@
       transition: background 1.5s ease-in-out;
     }
 
+    /* OBS Browser Source drops var() inside SVG presentation attributes.
+       Literal stop/fill colors below keep every theme visible with no WebSocket.
+       Light mode overrides the same paints from [data-theme="light"]. */
+    #skyGrad stop:nth-child(1) { stop-color: #15803d; }
+    #skyGrad stop:nth-child(2) { stop-color: #052e16; }
+    #codeGrad stop:nth-child(1) { stop-color: #1d6fad; }
+    #codeGrad stop:nth-child(2) { stop-color: #0c4a6e; }
+    #artGrad stop:nth-child(1) { stop-color: #6b3a2a; }
+    #artGrad stop:nth-child(2) { stop-color: #3e241c; }
+    #musicGrad stop:nth-child(1) { stop-color: #9d174d; }
+    #musicGrad stop:nth-child(2) { stop-color: #4a044e; }
+    #talkGrad stop:nth-child(1) { stop-color: #9a3412; }
+    #talkGrad stop:nth-child(2) { stop-color: #431407; }
+    #fondo-andando [fill="var(--sky-shape)"] { fill: #4ade80; }
+    #fondo-andando [stroke="var(--sky-line)"] { stroke: #86efac; }
+    #fondo-apps [fill="var(--code-c1)"] { fill: #b9ecff; }
+    #fondo-apps [fill="var(--code-c2)"] { fill: #7dd3fc; }
+    #fondo-arte [stroke="var(--art-brush)"],
+    #fondo-arte [fill="var(--art-brush)"] { stroke: #f5cba7; fill: #f5cba7; }
+    #fondo-arte [fill="var(--art-blob)"] { fill: #e7c8b4; }
+    #fondo-musica [stroke="var(--music-wave1)"],
+    #fondo-musica [fill="var(--music-wave1)"] { stroke: #fb7185; fill: #fb7185; }
+    #fondo-musica [stroke="var(--music-wave2)"] { stroke: #f9a8d4; }
+    #fondo-charlando [stroke="var(--chat-lamp)"] { stroke: #fdba74; }
+    #fondo-charlando [fill="var(--chat-glow)"] { fill: #fed7aa; }
+    #fondo-charlando [stroke="var(--chat-glow)"] { stroke: #fdba74; }
+    .personajes { fill: #f8fafc; }
+    #fondo-apps .personajes { fill: #e0f2fe; }
+    #fondo-andando .personajes { fill: #ecfccb; }
+    #fondo-arte .personajes { fill: #fff7ed; }
+    #fondo-musica .personajes { fill: #fce7f3; }
+    #fondo-charlando .personajes { fill: #ffedd5; }
+
+    html[data-theme="light"] #skyGrad stop:nth-child(1) { stop-color: #e8f5e9; }
+    html[data-theme="light"] #skyGrad stop:nth-child(2) { stop-color: #c8e6c9; }
+    html[data-theme="light"] #codeGrad stop:nth-child(1) { stop-color: #f0f4f8; }
+    html[data-theme="light"] #codeGrad stop:nth-child(2) { stop-color: #e2e8f0; }
+    html[data-theme="light"] #artGrad stop:nth-child(1) { stop-color: #fdfbf7; }
+    html[data-theme="light"] #artGrad stop:nth-child(2) { stop-color: #f5ede0; }
+    html[data-theme="light"] #musicGrad stop:nth-child(1) { stop-color: #fdf2f8; }
+    html[data-theme="light"] #musicGrad stop:nth-child(2) { stop-color: #fce7f3; }
+    html[data-theme="light"] #talkGrad stop:nth-child(1) { stop-color: #fef9f5; }
+    html[data-theme="light"] #talkGrad stop:nth-child(2) { stop-color: #faece1; }
+    html[data-theme="light"] .personajes { fill: #1e293b; }
+
     .vignette {
       position: absolute;
       inset: 0;
-      background: radial-gradient(circle at center, transparent 40%, var(--vignette-color) 100%);
+      background: radial-gradient(circle at center, transparent 55%, var(--vignette-color) 100%);
       pointer-events: none;
       z-index: 2;
       transition: background 1.5s ease-in-out;
@@ -217,8 +266,8 @@
       <svg viewBox="0 0 1920 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="var(--sky-top)"/>
-            <stop offset="100%" stop-color="var(--sky-bottom)"/>
+            <stop offset="0%" stop-color="#15803d"/>
+            <stop offset="100%" stop-color="#052e16"/>
           </linearGradient>
           <pattern id="streetGrid" width="60" height="60" patternUnits="userSpaceOnUse">
             <path d="M 60 0 L 0 0 0 60" fill="none" stroke="var(--sky-line)" stroke-width="0.5" opacity="0.08"/>
@@ -227,7 +276,7 @@
         <rect width="1920" height="1080" fill="url(#skyGrad)"/>
         <rect width="1920" height="1080" fill="url(#streetGrid)"/>
         <g style="animation: scrollSkyline 90s linear infinite;">
-          <g fill="var(--sky-shape)" opacity="0.14">
+          <g fill="var(--sky-shape)" opacity="0.42">
             <rect x="50" y="680" width="120" height="400" rx="4"/>
             <rect x="200" y="600" width="180" height="480" rx="4"/>
             <rect x="420" y="730" width="90" height="350" rx="4"/>
@@ -248,7 +297,7 @@
             <circle cx="1790" cy="850" r="16" opacity="0.3"/>
           </g>
           <g transform="translate(1920, 0)">
-            <g fill="var(--sky-shape)" opacity="0.14">
+            <g fill="var(--sky-shape)" opacity="0.42">
               <rect x="50" y="680" width="120" height="400" rx="4"/>
               <rect x="200" y="600" width="180" height="480" rx="4"/>
               <rect x="420" y="730" width="90" height="350" rx="4"/>
@@ -270,21 +319,27 @@
             </g>
           </g>
         </g>
+        <g class="personajes" style="animation: floatBrush 72s ease-in-out infinite;">
+          <circle cx="700" cy="760" r="28"/>
+          <rect x="672" y="796" width="56" height="92" rx="20"/>
+          <circle cx="1180" cy="790" r="24"/>
+          <rect x="1156" y="820" width="48" height="80" rx="18"/>
+        </g>
       </svg>
     </div>
 
     <!-- 2. APPS (Código / ApliArte) -->
-    <div class="fondo-tematico" id="fondo-apps">
+    <div class="fondo-tematico activa" id="fondo-apps">
       <svg viewBox="0 0 1920 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="codeGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="var(--code-top)"/>
-            <stop offset="100%" stop-color="var(--code-bottom)"/>
+            <stop offset="0%" stop-color="#1d6fad"/>
+            <stop offset="100%" stop-color="#0c4a6e"/>
           </linearGradient>
         </defs>
         <rect width="1920" height="1080" fill="url(#codeGrad)"/>
         <g style="animation: floatCode 65s linear infinite;">
-          <g fill="var(--code-c1)" opacity="0.18">
+          <g fill="var(--code-c1)" opacity="0.72">
             <rect x="120" y="300" width="80" height="12" rx="3"/>
             <rect x="220" y="300" width="140" height="12" rx="3"/>
             <rect x="160" y="330" width="220" height="12" rx="3"/>
@@ -312,7 +367,7 @@
             <rect x="160" y="1140" width="160" height="12" rx="3"/>
             <rect x="120" y="1170" width="40" height="12" rx="3"/>
           </g>
-          <g fill="var(--code-c2)" opacity="0.25">
+          <g fill="var(--code-c2)" opacity="0.8">
             <rect x="1450" y="240" width="130" height="12" rx="3"/>
             <rect x="1500" y="270" width="260" height="12" rx="3"/>
             <rect x="1540" y="300" width="140" height="12" rx="3"/>
@@ -336,6 +391,12 @@
             <rect x="1450" y="1110" width="60" height="12" rx="3"/>
           </g>
         </g>
+        <g class="personajes" style="animation: floatBrush 64s ease-in-out infinite;">
+          <circle cx="860" cy="720" r="28"/>
+          <rect x="832" y="756" width="56" height="92" rx="20"/>
+          <circle cx="1080" cy="740" r="24"/>
+          <rect x="1056" y="770" width="48" height="80" rx="18"/>
+        </g>
       </svg>
     </div>
 
@@ -344,17 +405,23 @@
       <svg viewBox="0 0 1920 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="artGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="var(--art-top)"/>
-            <stop offset="100%" stop-color="var(--art-bottom)"/>
+            <stop offset="0%" stop-color="#6b3a2a"/>
+            <stop offset="100%" stop-color="#3e241c"/>
           </linearGradient>
         </defs>
         <rect width="1920" height="1080" fill="url(#artGrad)"/>
         <g style="animation: floatBrush 80s ease-in-out infinite;">
-          <path d="M-100 350 C 300 200, 600 550, 1050 380 S 1650 200, 2050 420" fill="none" stroke="var(--art-brush)" stroke-width="28" stroke-linecap="round" opacity="0.14"/>
-          <path d="M-50 680 C 400 820, 850 500, 1300 750 S 1850 650, 2050 800" fill="none" stroke="var(--art-brush)" stroke-width="16" stroke-linecap="round" opacity="0.11"/>
+          <path d="M-100 350 C 300 200, 600 550, 1050 380 S 1650 200, 2050 420" fill="none" stroke="var(--art-brush)" stroke-width="28" stroke-linecap="round" opacity="0.55"/>
+          <path d="M-50 680 C 400 820, 850 500, 1300 750 S 1850 650, 2050 800" fill="none" stroke="var(--art-brush)" stroke-width="16" stroke-linecap="round" opacity="0.4"/>
           <ellipse cx="400" cy="380" rx="220" ry="140" fill="var(--art-blob)" opacity="0.25"/>
           <ellipse cx="1550" cy="720" rx="260" ry="160" fill="var(--art-blob)" opacity="0.2"/>
-          <ellipse cx="980" cy="540" rx="180" ry="110" fill="var(--art-brush)" opacity="0.09"/>
+          <ellipse cx="980" cy="540" rx="180" ry="110" fill="var(--art-brush)" opacity="0.28"/>
+        </g>
+        <g class="personajes" style="animation: floatBrush 80s ease-in-out infinite;">
+          <circle cx="640" cy="780" r="28"/>
+          <rect x="612" y="816" width="56" height="92" rx="20"/>
+          <circle cx="1280" cy="760" r="24"/>
+          <rect x="1256" y="790" width="48" height="80" rx="18"/>
         </g>
       </svg>
     </div>
@@ -364,16 +431,16 @@
       <svg viewBox="0 0 1920 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="musicGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="var(--music-top)"/>
-            <stop offset="100%" stop-color="var(--music-bottom)"/>
+            <stop offset="0%" stop-color="#9d174d"/>
+            <stop offset="100%" stop-color="#4a044e"/>
           </linearGradient>
         </defs>
         <rect width="1920" height="1080" fill="url(#musicGrad)"/>
         <g style="animation: waveShift 50s linear infinite;">
-          <path d="M0 550 Q 240 450, 480 550 T 960 550 T 1440 550 T 1920 550 T 2400 550 T 2880 550" fill="none" stroke="var(--music-wave1)" stroke-width="4" opacity="0.22"/>
-          <path d="M0 620 Q 240 700, 480 620 T 960 620 T 1440 620 T 1920 620 T 2400 620 T 2880 620" fill="none" stroke="var(--music-wave2)" stroke-width="2.5" opacity="0.16"/>
+          <path d="M0 550 Q 240 450, 480 550 T 960 550 T 1440 550 T 1920 550 T 2400 550 T 2880 550" fill="none" stroke="var(--music-wave1)" stroke-width="6" opacity="0.7"/>
+          <path d="M0 620 Q 240 700, 480 620 T 960 620 T 1440 620 T 1920 620 T 2400 620 T 2880 620" fill="none" stroke="var(--music-wave2)" stroke-width="4" opacity="0.55"/>
         </g>
-        <g transform="translate(680, 880)" fill="var(--music-wave1)" opacity="0.22">
+        <g transform="translate(680, 880)" fill="var(--music-wave1)" opacity="0.75">
           <rect x="0" y="-120" width="24" height="120" rx="3" style="transform-origin: 12px 0px; animation: eqBar1 12s ease-in-out infinite;"/>
           <rect x="40" y="-160" width="24" height="160" rx="3" style="transform-origin: 52px 0px; animation: eqBar2 9s ease-in-out infinite;"/>
           <rect x="80" y="-90" width="24" height="90" rx="3" style="transform-origin: 92px 0px; animation: eqBar3 14s ease-in-out infinite;"/>
@@ -383,6 +450,12 @@
           <rect x="240" y="-110" width="24" height="110" rx="3" style="transform-origin: 252px 0px; animation: eqBar1 10s ease-in-out infinite;"/>
           <rect x="280" y="-70" width="24" height="70" rx="3" style="transform-origin: 292px 0px; animation: eqBar3 15s ease-in-out infinite;"/>
         </g>
+        <g class="personajes" style="animation: floatBrush 68s ease-in-out infinite;">
+          <circle cx="420" cy="700" r="28"/>
+          <rect x="392" y="736" width="56" height="92" rx="20"/>
+          <circle cx="1500" cy="720" r="24"/>
+          <rect x="1476" y="750" width="48" height="80" rx="18"/>
+        </g>
       </svg>
     </div>
 
@@ -391,13 +464,13 @@
       <svg viewBox="0 0 1920 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="talkGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="var(--chat-top)"/>
-            <stop offset="100%" stop-color="var(--chat-bottom)"/>
+            <stop offset="0%" stop-color="#9a3412"/>
+            <stop offset="100%" stop-color="#431407"/>
           </linearGradient>
           <radialGradient id="lampGlow" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0%" stop-color="var(--chat-glow)" stop-opacity="0.25"/>
-            <stop offset="70%" stop-color="var(--chat-lamp)" stop-opacity="0.08"/>
-            <stop offset="100%" stop-color="var(--chat-bottom)" stop-opacity="0"/>
+            <stop offset="0%" stop-color="#fed7aa" stop-opacity="0.55"/>
+            <stop offset="70%" stop-color="#fdba74" stop-opacity="0.22"/>
+            <stop offset="100%" stop-color="#431407" stop-opacity="0"/>
           </radialGradient>
         </defs>
         <rect width="1920" height="1080" fill="url(#talkGrad)"/>
@@ -411,6 +484,12 @@
           <path d="M 1600 780 Q 1630 700, 1590 620 T 1620 480" style="animation: riseVapor 35s ease-in-out infinite;"/>
           <path d="M 1640 820 Q 1610 740, 1650 660 T 1630 520" style="animation: riseVapor 42s ease-in-out -15s infinite;"/>
         </g>
+        <g class="personajes" style="animation: floatBrush 76s ease-in-out infinite;">
+          <circle cx="900" cy="760" r="28"/>
+          <rect x="872" y="796" width="56" height="92" rx="20"/>
+          <circle cx="1220" cy="740" r="24"/>
+          <rect x="1196" y="770" width="48" height="80" rx="18"/>
+        </g>
       </svg>
     </div>
 
@@ -420,15 +499,43 @@
 
   <script>
     const PALETAS = {
-      apps: { primario: '#5ecef5', secundario: '#00467b', oscuro: '#030a16' },
-      musica: { primario: '#ff1493', secundario: '#e91e63', oscuro: '#260519' },
-      arte: { primario: '#f5cba7', secundario: '#3e2723', oscuro: '#1a0f0b' },
-      andando: { primario: '#00e676', secundario: '#00c853', oscuro: '#0a3d1c' },
-      charlando: { primario: '#e8955e', secundario: '#b46734', oscuro: '#1c1208' },
+      apps: { primario: '#5ecef5', secundario: '#00467b', oscuro: '#0c4a6e' },
+      musica: { primario: '#ff1493', secundario: '#e91e63', oscuro: '#9d174d' },
+      arte: { primario: '#f5cba7', secundario: '#3e2723', oscuro: '#6b3a2a' },
+      andando: { primario: '#00e676', secundario: '#00c853', oscuro: '#15803d' },
+      charlando: { primario: '#e8955e', secundario: '#b46734', oscuro: '#9a3412' },
+    };
+
+    // Opaque frame for each theme. Painted even when the WebSocket never connects.
+    const BASES = {
+      dark: {
+        apps: 'linear-gradient(180deg, #1d6fad 0%, #0c4a6e 55%, #083556 100%)',
+        musica: 'linear-gradient(180deg, #be185d 0%, #4a044e 100%)',
+        arte: 'linear-gradient(180deg, #a1624a 0%, #3e241c 100%)',
+        andando: 'linear-gradient(180deg, #22c55e 0%, #052e16 100%)',
+        charlando: 'linear-gradient(180deg, #ea580c 0%, #431407 100%)',
+      },
+      light: {
+        apps: 'linear-gradient(180deg, #e0f2fe 0%, #bae6fd 100%)',
+        musica: 'linear-gradient(180deg, #fce7f3 0%, #fbcfe8 100%)',
+        arte: 'linear-gradient(180deg, #fff7ed 0%, #fed7aa 100%)',
+        andando: 'linear-gradient(180deg, #dcfce7 0%, #86efac 100%)',
+        charlando: 'linear-gradient(180deg, #ffedd5 0%, #fdba74 100%)',
+      },
     };
 
     let categoriaActual = 'apps';
     let modoActual = 'dark';
+
+    function pintarBase(cat) {
+      const grupo = BASES[modoActual] || BASES.dark;
+      const imagen = grupo[cat] || grupo.apps;
+      const bg = document.getElementById('bg');
+      if (!bg || !imagen) return;
+      bg.style.backgroundColor = PALETAS[cat] ? PALETAS[cat].oscuro : '#0c4a6e';
+      bg.style.backgroundImage = imagen;
+      document.documentElement.style.backgroundColor = bg.style.backgroundColor;
+    }
 
     function aplicarPaleta(cat) {
       const p = PALETAS[cat];
@@ -438,6 +545,7 @@
       rootStyle.setProperty('--color-primary', p.primario);
       rootStyle.setProperty('--color-secondary', p.secundario);
       rootStyle.setProperty('--color-dark', p.oscuro);
+      pintarBase(cat);
 
       document.querySelectorAll('.fondo-tematico').forEach(el => {
         el.classList.toggle('activa', el.id === `fondo-${cat}`);
@@ -449,6 +557,7 @@
       modoActual = normalizado;
       document.documentElement.dataset.theme = normalizado;
       document.documentElement.setAttribute('data-theme', normalizado);
+      pintarBase(categoriaActual);
     }
 
     aplicarPaleta(categoriaActual);

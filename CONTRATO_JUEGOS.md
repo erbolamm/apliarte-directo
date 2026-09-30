@@ -102,3 +102,42 @@ Consumido exclusivamente por `panel-twitch-comandos.html`:
 1. **Pi**: `npm test` en `directo/test/tts-fuentes.test.js` probando que el parser reconoce comandos válidos, rechaza comandos espurios durante la votación y solo deja pasar números enteros positivos.
 2. **Codex**: Tests unitarios en `directo/test/panel-twitch.test.js` validando que el sorteo es aleatorio y que ningún endpoint público contiene la clave `traidorSecreto`.
 3. **Claude**: Comprobación visual en el diorama 3D de que la congelación no descoordina las animaciones y que la silueta de tiza se renderiza exactamente en las coordenadas de la sala de reuniones.
+
+---
+
+## 6. `!damas` y paredes acristaladas
+
+`!damas` (solo Javier) sustituye el suelo de la oficina por un tablero. Los números viven en `DAMAS_BOARD` (`oficina-3d/src/office/layout.ts`) y coinciden con `BOARD` en `geometry.ts`.
+
+| Campo | Valor | Significado |
+| :--- | :--- | :--- |
+| `cols` / `rows` | 12 / 8 | Casillas. Columnas `a`–`l` de izquierda a derecha. Filas `1`–`8` de abajo arriba. |
+| `cell` | 97 | Lado de cada casilla, en las mismas unidades que `VIEW` (1280×860). |
+| `x`, `y` | 58, 37 | Esquina superior izquierda del tablero. |
+| `frame` | 40 | Margen del marco. |
+| `a1` | abajo-izquierda | `!a2` (y el resto de `!{a-l}{1-8}`) mueve al avatar de quien escribe al centro de esa casilla. |
+
+Con el tablero activo no se dibujan muebles ni tabiques interiores: solo el cascarón exterior (`BOARD_WALLS`) y las casillas, para que ninguna pieza quede tapada. Al salir (`!damas` otra vez o `!3d`) cada avatar vuelve a su puesto.
+
+### Paredes acristaladas
+
+En la oficina normal (tablero apagado) los tabiques interiores se leen como vidrio, no como muro opaco, para que muebles y avatares de las cuatro salas sigan viéndose en la vista isométrica y en la cenital. El cascarón exterior sigue opaco.
+
+Material (`GLASS_MATERIAL`):
+
+- relleno translúcido `rgba(143, 213, 250, 0.18)`
+- borde `rgba(224, 242, 254, 0.92)` de 2 px
+- caras por los dos lados (`side: "double"`), porque una cara `FrontSide` desaparece desde dentro de la sala
+
+Geometría (`GLASS_WALLS`): los cuatro tabiques de las salas (incluidos los vanos de puerta de `DOORS`, hueco de 92 px) y las dos hojas ya existentes del despacho de Javier en `x = 1040`. Esas dos hojas son las únicas que `geometry.ts` pinta hoy como `kind: "glass"`; el resto de `GLASS_WALLS` sigue saliendo como muro sólido hasta que el render tome esta lista. El vidrio no entra en la navegación como obstáculo distinto del muro: el hueco de la puerta es el único paso.
+
+### Comandos de sala
+
+| Chat | Zona | Ancla (`ZONE_ANCHORS`) |
+| :--- | :--- | :--- |
+| `!cafeteria`, `!cafetería` | `lounge` | (400, 300) |
+| `!entregas` | `deliv` | (800, 560) |
+| `!oficina` | `work` | (200, 560) |
+| `!reuniones` | `orch` | (900, 280) |
+
+`!cafe` sigue siendo el pedido de café, no un alias de sala. `OfficeRuntime.goToZone` lleva al avatar por `navigate` hasta la ancla y lo deja ahí (`manualUntil`) hasta que vuelve a su puesto. El avatar es `agente` si el comando lo nombra, si no el avatar cuyo dueño es `usuario` (`setAvatarOwners`), y si el login es Javier, `ja`.
