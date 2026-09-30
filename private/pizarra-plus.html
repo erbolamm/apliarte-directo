@@ -27,7 +27,6 @@
       -webkit-touch-callout: none;
       -webkit-user-select: none;
       user-select: none;
-      touch-action: none;
     }
 
     html, body {
@@ -52,6 +51,7 @@
 
     /* Barra superior flotante con conmutador OBS y controles */
     header {
+      position: relative;
       height: 56px;
       min-height: 56px;
       flex-shrink: 0;
@@ -63,9 +63,9 @@
       align-items: center;
       justify-content: space-between;
       padding: 0 12px;
-      z-index: 10;
+      z-index: 20;
       gap: 8px;
-      overflow: hidden;
+      overflow: visible;
     }
 
     header::-webkit-scrollbar,
@@ -420,7 +420,8 @@
       }
     }
     .plus-menu > summary {cursor:pointer;padding:10px;border:1px solid #445;border-radius:8px;list-style:none;}
-    .plus-popup {position:fixed;top:64px;left:8px;z-index:100;width:min(340px,calc(100vw - 16px));max-height:75vh;overflow:auto;background:#151d2b;border:1px solid #456;border-radius:12px;padding:14px;display:grid;gap:12px;touch-action:auto;}
+    .plus-menu:not([open]) > .plus-popup {display:none;}
+    .plus-popup {position:absolute;top:calc(100% + 8px);left:8px;z-index:100;width:min(340px,calc(100vw - 16px));max-height:75vh;overflow:auto;background:#151d2b;border:1px solid #456;border-radius:12px;padding:14px;display:grid;gap:12px;touch-action:auto;}
     .plus-popup label {display:grid;gap:6px;font:14px system-ui;}
     .plus-popup select {min-height:42px;width:100%;background:#111827;color:white;border:1px solid #567;border-radius:6px;}
     .plus-admin {left:auto;right:8px;width:min(680px,calc(100vw - 16px));}

@@ -156,6 +156,21 @@ test('private HTML uses same-origin transports and embeds the unchanged Admin la
   for (const match of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) new Script(match[1]);
 });
 
+test('dropdowns escape the header clipping area and stay hidden until explicitly opened', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
+  const header = html.match(/\bheader\s*\{([^}]+)\}/)[1];
+  assert.match(header, /position:\s*relative/);
+  assert.match(header, /overflow:\s*visible/);
+  const popup = html.match(/^\s*\.plus-popup\s*\{([^}]+)\}/m)[1];
+  assert.match(popup, /position:\s*absolute/);
+  assert.match(popup, /top:\s*calc\(100% \+ 8px\)/);
+  assert.match(html, /\.plus-menu:not\(\[open\]\)\s*>\s*\.plus-popup\s*\{\s*display:\s*none/);
+  const universal = html.match(/\n\s*\*\s*\{([^}]+)\}/)[1];
+  assert.doesNotMatch(universal, /touch-action:\s*none/);
+  assert.match(html.match(/#drawing-canvas\s*\{([^}]+)\}/)[1], /touch-action:\s*none/);
+});
+
 test('complete page startup and real pointer handlers retain Pencil stroke when palm moves/releases', async () => {
   const { readFileSync } = await import('node:fs');
   const vm = await import('node:vm');

@@ -4,6 +4,8 @@ Status: integrated and locally activated with Javier's approval on 2026-09-30. N
 
 Activation checks: private HTTPS and local page return 200, original Admin returns 200, foreign Origin/public Host return 403, OBS state discovery returns 200, and panel JSON files are byte-identical to the pre-restart backup. No scene, mute or broadcast was changed. These checks are not visual/audio QA or proof of effective public network isolation. The existing launcher is unchanged; a normal restart without the opt-in flag disables the plus.
 
+Device feedback: Javier confirmed Pencil drawing with the palm resting, without jumps. He then reported visible menu buttons whose content did not appear. The header's filtered/clipping box contained fixed-position popups. The correction positions the popups below a relative header with visible overflow and explicitly hides closed menus; gesture suppression remains on the canvases, not every ancestor. A source-level regression test guards this CSS contract. Dropdown visibility still requires his device confirmation; no backend or service restart is involved in this static fix.
+
 ## Quick review path
 
 1. Read `private/pizarra-plus-guide.html`: HTML operating contract, boundaries, QA and rollback.
