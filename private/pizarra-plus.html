@@ -187,6 +187,9 @@
     #size-range {flex: 1; min-width: 140px; accent-color: var(--accent);}
     #size-value {min-width: 3ch; font-variant-numeric: tabular-nums;}
     .touch-toggle {display: flex; align-items: center; gap: 8px; font-size: 14px;}
+    .text-entry {position: fixed; z-index: 35; display: flex; align-items: center; gap: 6px; padding: 6px; background: var(--panel-bg); border: 1px solid var(--accent); border-radius: 8px;}
+    .text-entry[hidden] {display: none;}
+    #text-entry-input {min-width: 200px; min-height: 40px; padding: 0 10px; font-size: 16px; color: var(--text-main); background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 6px;}
 
     /* Full-screen sheets inside the safe area: Chat, Commands, OBS, Settings. */
     .sheet {
@@ -313,9 +316,15 @@
       <button type="button" id="tool-highlighter" class="bar-icon" data-tool="highlighter" aria-label="Marcador translúcido"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 11-6 6v3h3l6-6"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg></button>
       <button type="button" id="tool-line" class="bar-icon" data-tool="line" aria-label="Línea recta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="19" x2="19" y2="5"/></svg></button>
       <button type="button" id="tool-arrow" class="bar-icon" data-tool="arrow" aria-label="Flecha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+      <button type="button" id="tool-arrow2" class="bar-icon" data-tool="arrow2" aria-label="Flecha doble"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="15 8 19 12 15 16"/><polyline points="9 8 5 12 9 16"/></svg></button>
       <button type="button" id="tool-rect" class="bar-icon" data-tool="rect" aria-label="Rectángulo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></button>
       <button type="button" id="tool-ellipse" class="bar-icon" data-tool="ellipse" aria-label="Elipse o círculo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg></button>
+      <button type="button" id="tool-text" class="bar-icon" data-tool="text" aria-label="Texto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></svg></button>
       <button type="button" id="tool-eraser" class="bar-icon" data-tool="eraser" aria-label="Borrador"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg></button>
+    </div>
+    <div class="panel-row">
+      <label class="touch-toggle"><input id="shape-fill" type="checkbox"> Relleno (rectángulo y elipse)</label>
+      <label class="touch-toggle"><input id="shape-dash" type="checkbox"> Línea discontinua</label>
     </div>
     <div class="panel-title">Color</div>
     <!-- Drawing colors are user content, not interface brand tokens. -->
@@ -345,6 +354,12 @@
     </div>
     <label class="touch-toggle"><input id="allow-touch" type="checkbox"> Dibujar también con el dedo</label>
   </section>
+
+  <div id="text-entry" class="text-entry" hidden>
+    <input id="text-entry-input" type="text" maxlength="120" autocomplete="off" aria-label="Texto para la pizarra">
+    <button type="button" class="bar-icon" id="text-entry-ok" aria-label="Poner el texto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L19 7"/></svg></button>
+    <button type="button" class="bar-icon" id="text-entry-cancel" aria-label="Cancelar el texto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
 
   <section id="chat-sheet" class="sheet" aria-label="Chat" hidden>
     <div class="sheet-head">
@@ -407,6 +422,7 @@
     <iframe id="admin-frame" title="Panel Admin completo" data-src="/admin" allow="camera; microphone; autoplay; fullscreen"></iframe>
   </div>
 
+  <script src="/js/pizarra-render.js?v=1"></script>
   <script src="/api/pizarra-plus/pointer-owner.js"></script>
   <script>
     const wrapper = document.getElementById('canvas-wrapper');
@@ -535,81 +551,8 @@
     }
 
     function drawItem(seg, targetCtx) {
-      if (!seg || !seg.from || !seg.to) return;
-
       const rect = canvas.getBoundingClientRect();
-      const fromX = seg.from.x * rect.width;
-      const fromY = seg.from.y * rect.height;
-      const toX = seg.to.x * rect.width;
-      const toY = seg.to.y * rect.height;
-
-      const scale = rect.width / REF_WIDTH;
-      const baseSize = seg.size || 6;
-
-      targetCtx.save();
-      targetCtx.lineCap = 'round';
-      targetCtx.lineJoin = 'round';
-
-      if (seg.tool === 'eraser') {
-        targetCtx.globalCompositeOperation = 'destination-out';
-        targetCtx.lineWidth = (baseSize * 3) * scale;
-      } else if (seg.tool === 'highlighter') {
-        targetCtx.globalCompositeOperation = 'source-over';
-        targetCtx.globalAlpha = 0.38;
-        targetCtx.strokeStyle = seg.color || '#ffd000';
-        targetCtx.lineWidth = (baseSize * 2.8) * scale;
-      } else {
-        targetCtx.globalCompositeOperation = 'source-over';
-        targetCtx.globalAlpha = 1.0;
-        targetCtx.strokeStyle = seg.color || '#00f0ff';
-        targetCtx.lineWidth = baseSize * scale;
-      }
-
-      const shape = seg.shape || 'stroke';
-
-      if (shape === 'rect') {
-        const x = Math.min(fromX, toX);
-        const y = Math.min(fromY, toY);
-        const w = Math.abs(toX - fromX);
-        const h = Math.abs(toY - fromY);
-        targetCtx.beginPath();
-        targetCtx.strokeRect(x, y, w, h);
-      } else if (shape === 'ellipse') {
-        const cx = (fromX + toX) / 2;
-        const cy = (fromY + toY) / 2;
-        const rx = Math.abs(toX - fromX) / 2;
-        const ry = Math.abs(toY - fromY) / 2;
-        targetCtx.beginPath();
-        targetCtx.ellipse(cx, cy, Math.max(1, rx), Math.max(1, ry), 0, 0, Math.PI * 2);
-        targetCtx.stroke();
-      } else if (shape === 'arrow') {
-        targetCtx.beginPath();
-        targetCtx.moveTo(fromX, fromY);
-        targetCtx.lineTo(toX, toY);
-        targetCtx.stroke();
-
-        const headLen = Math.max(14, baseSize * 2.5) * scale;
-        const angle = Math.atan2(toY - fromY, toX - fromX);
-        targetCtx.beginPath();
-        targetCtx.moveTo(toX, toY);
-        targetCtx.lineTo(toX - headLen * Math.cos(angle - Math.PI / 6), toY - headLen * Math.sin(angle - Math.PI / 6));
-        targetCtx.moveTo(toX, toY);
-        targetCtx.lineTo(toX - headLen * Math.cos(angle + Math.PI / 6), toY - headLen * Math.sin(angle + Math.PI / 6));
-        targetCtx.stroke();
-      } else if (shape === 'line') {
-        targetCtx.beginPath();
-        targetCtx.moveTo(fromX, fromY);
-        targetCtx.lineTo(toX, toY);
-        targetCtx.stroke();
-      } else {
-        // Trazo libre
-        targetCtx.beginPath();
-        targetCtx.moveTo(fromX, fromY);
-        targetCtx.lineTo(toX, toY);
-        targetCtx.stroke();
-      }
-
-      targetCtx.restore();
+      drawPizarraShape(targetCtx, seg, { width: rect.width, height: rect.height, scale: rect.width / REF_WIDTH });
     }
 
     function redrawAll() {
@@ -630,6 +573,66 @@
       previewCtx.restore();
     }
 
+    const SHAPE_TOOLS = ['rect', 'ellipse', 'arrow', 'arrow2', 'line'];
+    const shapeFill = document.getElementById('shape-fill');
+    const shapeDash = document.getElementById('shape-dash');
+    function shapeOptions(tool) {
+      const options = {};
+      if (shapeFill.checked && (tool === 'rect' || tool === 'ellipse')) options.fill = true;
+      if (shapeDash.checked && SHAPE_TOOLS.includes(tool)) options.dash = true;
+      return options;
+    }
+
+    // Text: a small box appears where the user tapped; no browser dialog.
+    const textEntry = document.getElementById('text-entry');
+    const textInput = document.getElementById('text-entry-input');
+    let textPoint = null;
+    function openTextEntry(point, clientX, clientY) {
+      textPoint = point;
+      textEntry.hidden = false;
+      const maxLeft = Math.max(8, (window.innerWidth || 800) - 340);
+      const maxTop = Math.max(8, (window.innerHeight || 600) - 64);
+      textEntry.style.left = Math.min(Math.max(8, clientX), maxLeft) + 'px';
+      textEntry.style.top = Math.min(Math.max(8, clientY - 56), maxTop) + 'px';
+      textInput.value = '';
+      textInput.focus?.();
+    }
+    function closeTextEntry() {
+      textEntry.hidden = true;
+      textPoint = null;
+    }
+    function commitText() {
+      const text = String(textInput.value || '').trim().slice(0, 120);
+      if (!text || !textPoint) { closeTextEntry(); return; }
+      if (!drawingConnected || !ws || ws.readyState !== WebSocket.OPEN) {
+        statusText.textContent = 'Sin conexión: el texto no se ha enviado';
+        statusText.hidden = false;
+        return;
+      }
+      const item = {
+        type: 'pizarra_draw',
+        shape: 'text',
+        strokeId: 's_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        from: textPoint,
+        to: textPoint,
+        color: currentColor,
+        size: currentSize,
+        tool: 'pen',
+        text,
+      };
+      strokesHistory.push(item);
+      drawItem(item, ctx);
+      sendWs(item);
+      redoStack = [];
+      closeTextEntry();
+    }
+    document.getElementById('text-entry-ok').addEventListener('click', commitText);
+    document.getElementById('text-entry-cancel').addEventListener('click', closeTextEntry);
+    textInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); commitText(); }
+      else if (event.key === 'Escape') closeTextEntry();
+    });
+
     // Interacción táctil y stylus con Pointer Events
     canvas.addEventListener('pointerdown', (e) => {
       if (!drawingConnected || !ws || ws.readyState !== WebSocket.OPEN) {
@@ -641,11 +644,16 @@
       e.preventDefault();
       canvas.setPointerCapture(e.pointerId);
       isDrawing = true;
+      if (currentTool === 'text') {
+        isDrawing = false;
+        openTextEntry(getNormalizedPos(e), e.clientX, e.clientY);
+        return;
+      }
       startPoint = getNormalizedPos(e);
       lastPoint = startPoint;
       currentStrokeId = 's_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 
-      const isShape = ['rect', 'ellipse', 'arrow', 'line'].includes(currentTool);
+      const isShape = SHAPE_TOOLS.includes(currentTool);
 
       if (!isShape) {
         // Trazo libre, marcador o borrador: emitir punto inicial
@@ -670,7 +678,7 @@
       if (!pointerOwner.owns(e) || !isDrawing || !lastPoint) return;
       const currentPoint = getNormalizedPos(e);
 
-      const isShape = ['rect', 'ellipse', 'arrow', 'line'].includes(currentTool);
+      const isShape = SHAPE_TOOLS.includes(currentTool);
 
       if (isShape) {
         // Previsualización fluida de la forma en previewCanvas
@@ -682,6 +690,7 @@
           color: currentColor,
           size: currentSize,
           tool: 'pen',
+          ...shapeOptions(currentTool),
         };
         drawItem(previewItem, previewCtx);
       } else {
@@ -712,7 +721,7 @@
       isDrawing = false;
       clearPreview();
 
-      const isShape = ['rect', 'ellipse', 'arrow', 'line'].includes(currentTool);
+      const isShape = SHAPE_TOOLS.includes(currentTool);
 
       if (e.type !== 'pointercancel' && isShape && startPoint) {
         const endPoint = getNormalizedPos(e) || lastPoint;
@@ -729,6 +738,7 @@
             color: currentColor,
             size: currentSize,
             tool: 'pen',
+            ...shapeOptions(currentTool),
           };
           strokesHistory.push(shapeItem);
           drawItem(shapeItem, ctx);
@@ -751,10 +761,12 @@
         const raw = JSON.parse(store.getItem('pizarra-plus-prefs') || '{}');
         const prefs = {};
         if (!raw || typeof raw !== 'object') return prefs;
-        if (['pen', 'highlighter', 'line', 'arrow', 'rect', 'ellipse', 'eraser'].includes(raw.tool)) prefs.tool = raw.tool;
+        if (['pen', 'highlighter', 'line', 'arrow', 'arrow2', 'rect', 'ellipse', 'text', 'eraser'].includes(raw.tool)) prefs.tool = raw.tool;
         if (typeof raw.color === 'string' && /^#[0-9a-f]{6}$/i.test(raw.color)) prefs.color = raw.color;
         if (Number.isInteger(raw.size) && raw.size >= 1 && raw.size <= 40) prefs.size = raw.size;
         if (typeof raw.touch === 'boolean') prefs.touch = raw.touch;
+        if (typeof raw.fill === 'boolean') prefs.fill = raw.fill;
+        if (typeof raw.dash === 'boolean') prefs.dash = raw.dash;
         return prefs;
       } catch (_) {
         return {};
@@ -762,7 +774,7 @@
     }
     function savePrefs() {
       try {
-        localStorage.setItem('pizarra-plus-prefs', JSON.stringify({ tool: currentTool, color: currentColor, size: currentSize, touch: allowTouch.checked }));
+        localStorage.setItem('pizarra-plus-prefs', JSON.stringify({ tool: currentTool, color: currentColor, size: currentSize, touch: allowTouch.checked, fill: shapeFill.checked, dash: shapeDash.checked }));
       } catch (_) {}
     }
     function updateDrawIndicator() {
@@ -801,6 +813,8 @@
       savePrefs();
     });
     allowTouch.addEventListener('change', savePrefs);
+    shapeFill.addEventListener('change', savePrefs);
+    shapeDash.addEventListener('change', savePrefs);
 
     // Deshacer (Undo)
     document.getElementById('btn-undo').addEventListener('click', () => {
@@ -1046,6 +1060,7 @@
         return;
       }
       if (event.key !== 'Escape') return;
+      closeTextEntry();
       closeDrawPanel();
       closeSheets();
       closeSettings();
@@ -1491,6 +1506,8 @@
         sizeValue.textContent = String(prefs.size);
       }
       if (prefs.touch !== undefined) allowTouch.checked = prefs.touch;
+      if (prefs.fill !== undefined) shapeFill.checked = prefs.fill;
+      if (prefs.dash !== undefined) shapeDash.checked = prefs.dash;
       updateDrawIndicator();
     })();
 

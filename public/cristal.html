@@ -36,6 +36,7 @@
 <body>
   <canvas id="canvas"></canvas>
 
+  <script src="/js/pizarra-render.js?v=1"></script>
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d', { alpha: true });
@@ -71,82 +72,9 @@
     }
 
     function drawSegment(seg) {
-      if (!seg || !seg.from || !seg.to) return;
-
       const width = window.innerWidth || REF_WIDTH;
       const height = window.innerHeight || REF_HEIGHT;
-
-      const fromX = seg.from.x * width;
-      const fromY = seg.from.y * height;
-      const toX = seg.to.x * width;
-      const toY = seg.to.y * height;
-
-      const baseSize = seg.size || 6;
-      const scale = getScale();
-
-      ctx.save();
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      if (seg.tool === 'eraser') {
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.lineWidth = (baseSize * 3) * scale;
-      } else if (seg.tool === 'highlighter') {
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = 0.38;
-        ctx.strokeStyle = seg.color || '#ffd000';
-        ctx.lineWidth = (baseSize * 2.8) * scale;
-      } else {
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = 1.0;
-        ctx.strokeStyle = seg.color || '#00f0ff';
-        ctx.lineWidth = baseSize * scale;
-      }
-
-      const shape = seg.shape || 'stroke';
-
-      if (shape === 'rect') {
-        const x = Math.min(fromX, toX);
-        const y = Math.min(fromY, toY);
-        const w = Math.abs(toX - fromX);
-        const h = Math.abs(toY - fromY);
-        ctx.beginPath();
-        ctx.strokeRect(x, y, w, h);
-      } else if (shape === 'ellipse') {
-        const cx = (fromX + toX) / 2;
-        const cy = (fromY + toY) / 2;
-        const rx = Math.abs(toX - fromX) / 2;
-        const ry = Math.abs(toY - fromY) / 2;
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, Math.max(1, rx), Math.max(1, ry), 0, 0, Math.PI * 2);
-        ctx.stroke();
-      } else if (shape === 'arrow') {
-        ctx.beginPath();
-        ctx.moveTo(fromX, fromY);
-        ctx.lineTo(toX, toY);
-        ctx.stroke();
-
-        const headLen = Math.max(14, baseSize * 2.5) * scale;
-        const angle = Math.atan2(toY - fromY, toX - fromX);
-        ctx.beginPath();
-        ctx.moveTo(toX, toY);
-        ctx.lineTo(toX - headLen * Math.cos(angle - Math.PI / 6), toY - headLen * Math.sin(angle - Math.PI / 6));
-        ctx.moveTo(toX, toY);
-        ctx.lineTo(toX - headLen * Math.cos(angle + Math.PI / 6), toY - headLen * Math.sin(angle + Math.PI / 6));
-        ctx.stroke();
-      } else if (shape === 'line') {
-        ctx.beginPath();
-        ctx.moveTo(fromX, fromY);
-        ctx.lineTo(toX, toY);
-        ctx.stroke();
-      } else {
-        ctx.beginPath();
-        ctx.moveTo(fromX, fromY);
-        ctx.lineTo(toX, toY);
-        ctx.stroke();
-      }
-
-      ctx.restore();
+      drawPizarraShape(ctx, seg, { width, height, scale: getScale() });
     }
 
     function clearCanvas() {

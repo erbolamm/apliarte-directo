@@ -18,6 +18,12 @@ Requested by Javier on 2026-10-01. Layout and controls only; the drawing, Pencil
 
 Validation (2026-10-01): `node --test test/pizarra-controles-compactos.test.js test/pizarra-plus.test.js test/pizarra-cristal.test.js test/pizarra-panel-propio.test.js` → 41/41. Visual check on an isolated server (port 17979, temporary `DATA_DIR`, drawing bus pointed at an unused port, `OBS_BRIDGE=off`) at 1024×768, 768×1024, 1920×1080 and 500×900; Drawing panel, Commands flow, Chat and Settings exercised in Chrome. Not verified: a real iPad 2018 with Pencil, a real phone, Safari, iOS speech for TTS through the hidden engine, OBS/Twitch end to end. Not implemented: new drawing shapes (they need the OBS renderer in `public/cristal.html` too), persistence of drawings and screenshots, Botrix stored on the server (A3).
 
+### New drawing shapes (same branch)
+
+`public/js/pizarra-render.js` is the single renderer used by `private/pizarra-plus.html`, the OBS layer `public/cristal.html`, `private/cristal-plus.html` and `public/pizarra.html`. It adds text (`shape: 'text'`, `text` 1–120 chars), double arrow (`arrow2`), filled rectangle/ellipse (`fill: true`) and dashed lines (`dash: true`); unknown shapes still draw as a plain segment. The private proxy (`src/pizarra-plus.js`, `drawingMessage`/`cleanDraw`) accepts only those optional fields with those limits and strips everything else. The centre `:8790` relays segments unchanged.
+
+Activation order matters: OBS loads `http://127.0.0.1:8790/cristal.html` from the main checkout. Until the renderer and `cristal.html` are integrated into `main`, an old OBS layer would draw text and double arrows as a plain line. The `:7979` panel must also be restarted for the proxy to accept the new fields. Test: `test/pizarra-formas.test.js` plus a headless Chrome render of every shape.
+
 ## Quick review path
 
 1. Read `private/pizarra-plus-guide.html`: HTML operating contract, boundaries, QA and rollback.

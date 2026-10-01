@@ -21,10 +21,10 @@ test('Archivos public/cristal.html y public/pizarra.html existen y son validos',
   assert.match(cristalContent, /<canvas id="canvas"/, 'cristal.html debe contener el canvas');
   assert.match(cristalContent, /pizarra_draw/, 'cristal.html debe escuchar eventos pizarra_draw');
   assert.match(cristalContent, /pizarra_clear/, 'cristal.html debe escuchar eventos pizarra_clear');
-  assert.match(cristalContent, /shape === 'rect'/, 'cristal.html debe soportar rectángulos');
-  assert.match(cristalContent, /shape === 'ellipse'/, 'cristal.html debe soportar elipses');
-  assert.match(cristalContent, /shape === 'arrow'/, 'cristal.html debe soportar flechas');
-  assert.match(cristalContent, /shape === 'line'/, 'cristal.html debe soportar líneas');
+  // Shapes are painted by the shared renderer (test/pizarra-formas.test.js).
+  assert.match(cristalContent, /<script src="\/js\/pizarra-render\.js\?v=\d+"><\/script>/, 'cristal.html carga el renderizador compartido');
+  const renderer = readFileSync(join(process.cwd(), 'public', 'js', 'pizarra-render.js'), 'utf8');
+  for (const shape of ['rect', 'ellipse', 'arrow', 'line']) assert.ok(renderer.includes(`'${shape}'`), `el renderizador soporta ${shape}`);
 
   // pizarra.html
   assert.match(pizarraContent, /<canvas id="drawing-canvas"/, 'pizarra.html debe contener el canvas de dibujo');

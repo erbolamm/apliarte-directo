@@ -11,6 +11,29 @@ function privateHost(req) {
   } catch (_) { return false; }
 }
 
+// Drawing messages the private tablet may send. New shapes travel with only
+// these optional fields: fill/dash (booleans) and text (text shape, 1-120 chars).
+const DRAW_SHAPES = ['stroke', 'rect', 'ellipse', 'arrow', 'arrow2', 'line', 'text'];
+const MAX_TEXT = 120;
+
+function drawingMessage(data) {
+  if (!data || data.type !== 'pizarra_draw') return false;
+  const point = p => p && Number.isFinite(p.x) && Number.isFinite(p.y) && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1;
+  if (!(point(data.from) && point(data.to) && typeof data.strokeId === 'string' && data.strokeId.length <= 100 && /^#[0-9a-f]{6}$/i.test(data.color || '') && Number.isFinite(data.size) && data.size > 0 && data.size <= 100 && DRAW_SHAPES.includes(data.shape) && ['pen', 'highlighter', 'eraser'].includes(data.tool))) return false;
+  if (data.fill !== undefined && typeof data.fill !== 'boolean') return false;
+  if (data.dash !== undefined && typeof data.dash !== 'boolean') return false;
+  if (data.shape === 'text') return typeof data.text === 'string' && data.text.length > 0 && data.text.length <= MAX_TEXT;
+  return true;
+}
+
+function cleanDraw(data) {
+  const clean = { type: data.type, from: { x: data.from.x, y: data.from.y }, to: { x: data.to.x, y: data.to.y }, strokeId: data.strokeId, color: data.color, size: data.size, shape: data.shape, tool: data.tool };
+  if (data.fill === true) clean.fill = true;
+  if (data.dash === true) clean.dash = true;
+  if (data.shape === 'text' && typeof data.text === 'string') clean.text = data.text.slice(0, MAX_TEXT);
+  return clean;
+}
+
 async function localObsClient() {
   const { crearClienteObsWebSocket, obtenerConfiguracionObsLocal } = await import('./obs-bridge.js');
   const cfg = obtenerConfiguracionObsLocal();
@@ -113,11 +136,6 @@ function createPizarraPlus({ enabled = false, authorize, trustedOrigin, root, cr
     } catch (_) { reply(res, 503, { error: 'obs-unavailable', message: 'OBS no está conectado o no pudo completar la petición.' }); }
     return true;
   }
-  function drawingMessage(data) {
-    if (data.type !== 'pizarra_draw') return false;
-    const point = p => p && Number.isFinite(p.x) && Number.isFinite(p.y) && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1;
-    return point(data.from) && point(data.to) && typeof data.strokeId === 'string' && data.strokeId.length <= 100 && /^#[0-9a-f]{6}$/i.test(data.color || '') && Number.isFinite(data.size) && data.size > 0 && data.size <= 100 && ['stroke', 'rect', 'ellipse', 'arrow', 'line'].includes(data.shape) && ['pen', 'highlighter', 'eraser'].includes(data.tool);
-  }
   wss.on('connection', (ws, req) => {
     clients.add(ws);
     const readonly = new URL(req.url, 'http://localhost').searchParams.get('overlay') === '1';
@@ -127,7 +145,6 @@ function createPizarraPlus({ enabled = false, authorize, trustedOrigin, root, cr
     const send = (socket, data) => {
       if (socket.readyState === WebSocket.OPEN && socket.bufferedAmount < 262144) socket.send(JSON.stringify(data));
     };
-    const cleanDraw = data => ({ type: data.type, from: { x: data.from.x, y: data.from.y }, to: { x: data.to.x, y: data.to.y }, strokeId: data.strokeId, color: data.color, size: data.size, shape: data.shape, tool: data.tool });
     upstream.on('open', () => send(upstream, { type: 'pizarra_solicitar_estado' }));
     upstream.on('message', raw => {
       let data;
@@ -166,4 +183,4 @@ function createPizarraPlus({ enabled = false, authorize, trustedOrigin, root, cr
   }
   return { handle, upgrade, close };
 }
-module.exports = { createPizarraPlus };
+module.exports = { createPizarraPlus, drawingMessage, cleanDraw };

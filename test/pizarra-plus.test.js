@@ -257,6 +257,7 @@ test('complete page startup and real pointer handlers retain Pencil stroke when 
     },
   });
   const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(Boolean);
+  vm.runInContext(readFileSync(new URL('../public/js/pizarra-render.js', import.meta.url), 'utf8'), ctx);
   for (const script of scripts) vm.runInContext(script, ctx);
   assert.ok(nodes.has('btn-obs-snapshot'), 'compact controls must actually mount during startup');
   assert.ok(nodes.has('toolbar'), 'the toolbar mounts under the stage');
