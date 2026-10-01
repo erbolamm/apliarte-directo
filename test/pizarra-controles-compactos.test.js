@@ -48,6 +48,7 @@ test('compact menus reuse the original tools, palette and width controls', () =>
   assert.match(script, /popup\.appendChild\(document\.getElementById\(group\)\)/);
   assert.match(script, /\['palette-group', 'size-group'\]/);
   assert.match(script, /\['tools-group'\]/);
+  assert.match(html, /\.compact-popup \.tool-label \{display:none!important;\}/);
 });
 test('quick controls delegate to the original Admin handlers', () => {
   for (const id of ['btn-micro-toggle', 'btn-apagar-camara', 'btn-toggle-camara-modo']) assert.ok(script.includes(id));

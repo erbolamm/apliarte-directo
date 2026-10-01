@@ -62,6 +62,14 @@ Independent Node tests, browser layout and real-device/OBS verification are stil
 required before activation. This change does not implement disk persistence of
 drawing history or cross-device screenshot synchronization; those remain pending.
 
+Review follow-up: compact-menu tool labels are hidden at every viewport width to
+avoid desktop label overlap. The existing complete-page Pencil/palm test now
+models the DOM creation, attribute APIs and observers required by the compact
+toolbar; it still executes the actual page script and pointer handlers, and also
+asserts the snapshot shortcut was mounted and the footer hidden. That test passes
+in an author-side V8 adapter. A fresh independent Node run and desktop visual
+check remain required; the live panel has not been changed.
+
 The single existing Admin iframe lives outside the collapsing menu. While the menu is closed and its camera-push-container is active, only the original camera card's preview is shown in a compact dock. CSS is injected into the same-origin Admin document; neither Admin nor its nested VDO.ninja iframe is moved, recreated, navigated or cloned. Explicit camera off still hides the dock; closing the menu never changes mute/capture state. Device acceptance remains pending.
 
 Toolbar uses the central `ingredientes/marca/APLIARTE_BRAND_KIT.md`, not the stale project brand-spec neon palette: blue #005fa9, navy #00467b, cyan #5ecef5, charcoal #303030, white #fdfdfd. Compact vector buttons, no emoji, accessible labels. Light/dark preference is per-device presentation only. Native RGB picker allows arbitrary drawing colors, which are user content and not UI brand tokens. Text insertion is still pending; not claimed here.

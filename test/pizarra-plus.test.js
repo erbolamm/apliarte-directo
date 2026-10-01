@@ -205,24 +205,64 @@ test('complete page startup and real pointer handlers retain Pencil stroke when 
   const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
   const context2d = new Proxy({}, { get: (obj, key) => key in obj ? obj[key] : () => {}, set: (obj, key, value) => { obj[key] = value; return true; } });
-  const nodes = new Map(ids.map(id => [id, {
-    id, style: {}, dataset: {}, checked: false, disabled: false, value: '', clientWidth: 960, clientHeight: 540,
-    listeners: {}, classList: { add() {}, remove() {}, toggle() {} },
-    addEventListener(type, callback) { this.listeners[type] = callback; },
-    getBoundingClientRect: () => ({ width: 960, height: 540, top: 0, left: 0 }),
-    getContext: () => context2d, setPointerCapture() {}, querySelectorAll: () => [],
-  }]));
+  const nodes = new Map();
+  function element(tagName = 'div') {
+    const attributes = new Map();
+    const classes = new Set();
+    let id = '';
+    return {
+      tagName, style: {}, dataset: {}, checked: false, disabled: false, value: '', clientWidth: 960, clientHeight: 540,
+      children: [], listeners: {},
+      get id() { return id; },
+      set id(value) { id = value; nodes.set(value, this); },
+      classList: {
+        add(name) { classes.add(name); }, remove(name) { classes.delete(name); },
+        contains(name) { return classes.has(name); },
+        toggle(name, force) {
+          const on = force === undefined ? !classes.has(name) : force;
+          if (on) classes.add(name); else classes.delete(name);
+          return on;
+        },
+      },
+      addEventListener(type, callback) {
+        const previous = this.listeners[type];
+        this.listeners[type] = previous ? event => { previous(event); callback(event); } : callback;
+      },
+      setAttribute(name, value) { attributes.set(name, String(value)); },
+      getAttribute(name) { return attributes.get(name) ?? null; },
+      appendChild(child) { this.children.push(child); return child; },
+      append(...children) { this.children.push(...children); },
+      prepend(child) { this.children.unshift(child); },
+      replaceChildren(...children) { this.children = [...children]; },
+      querySelector(selector) { return this.children.find(child => child.tagName === selector) || null; },
+      querySelectorAll: () => [], focus() {},
+      getBoundingClientRect: () => ({ width: 960, height: 540, top: 0, left: 0 }),
+      getContext: () => context2d, setPointerCapture() {},
+    };
+  }
+  for (const id of ids) { const node = element(); node.id = id; }
+  const header = element('header');
+  const footer = element('footer');
+  const documentElement = element('html');
   const transmitted = [];
   class Socket { static OPEN = 1; readyState = 1; send(text) { transmitted.push(JSON.parse(text)); } close() {} }
   const ctx = vm.createContext({
     console, Math, Date, JSON, String, Number, Set, Map, Array, Promise, URLSearchParams,
     createPointerOwner, WebSocket: Socket,
+    MutationObserver: class { constructor(callback) { this.callback = callback; } observe() {} disconnect() {} },
     setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1,
     window: { innerWidth: 960, innerHeight: 540, devicePixelRatio: 2, addEventListener() {}, location: { protocol: 'https:', host: 'private.ts.net:8446', search: '' } },
-    document: { hidden: false, getElementById: id => nodes.get(id) || null, querySelectorAll: () => [], addEventListener() {} },
+    document: {
+      hidden: false, documentElement,
+      getElementById: id => nodes.get(id) || null,
+      querySelector: selector => selector === 'header' ? header : selector === 'footer' ? footer : null,
+      createElement: element, querySelectorAll: () => [], addEventListener() {},
+    },
   });
   const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(Boolean);
   for (const script of scripts) vm.runInContext(script, ctx);
+  assert.ok(nodes.has('btn-obs-snapshot'), 'compact controls must actually mount during startup');
+  assert.equal(footer.hidden, true);
   vm.runInContext('drawingConnected = true', ctx);
   const canvas = nodes.get('drawing-canvas');
   const event = (pointerId, pointerType, x, type) => ({ pointerId, pointerType, clientX: x, clientY: 100, type, preventDefault() {} });
