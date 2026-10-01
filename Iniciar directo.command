@@ -1,6 +1,7 @@
 #!/bin/bash
 # Double-click on macOS to start ApliArte Directo.
 cd "$(dirname "$0")" || exit 1
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 if ! command -v node >/dev/null 2>&1; then
   echo "❌ Falta Node.js. Se abrirá su web: descarga la versión LTS, instálala y vuelve a hacer doble clic aquí."
   open "https://nodejs.org"
