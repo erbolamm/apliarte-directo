@@ -169,12 +169,11 @@ test('private drawing channel replays history, rejects foreign origins and isola
   denied.terminate();
 });
 
-test('private HTML uses same-origin transports and embeds the unchanged Admin lazily', async () => {
+test('private HTML uses same-origin transports and keeps the unchanged Admin as hidden engine', async () => {
   const { readFileSync } = await import('node:fs');
   const { Script } = await import('node:vm');
   const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
   assert.match(html, /data-src="\/admin"/);
-  assert.match(html, /\.nav-item\[data-tab\]/);
   assert.match(html, /window\.location\.host}\/pizarra-plus\/ws/);
   assert.match(html, /pointerOwner\.owns\(e\)/);
   assert.match(html, /e\.type !== 'pointercancel'/);
@@ -184,16 +183,14 @@ test('private HTML uses same-origin transports and embeds the unchanged Admin la
   for (const match of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) new Script(match[1]);
 });
 
-test('dropdowns escape the header clipping area and stay hidden until explicitly opened', async () => {
+test('panels stay hidden until opened and never block drawing on the canvas', async () => {
   const { readFileSync } = await import('node:fs');
   const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
-  const header = html.match(/\bheader\s*\{([^}]+)\}/)[1];
-  assert.match(header, /position:\s*relative/);
-  assert.match(header, /overflow:\s*visible/);
-  const popup = html.match(/^\s*\.plus-popup\s*\{([^}]+)\}/m)[1];
-  assert.match(popup, /position:\s*absolute/);
-  assert.match(popup, /top:\s*calc\(100% \+ 8px\)/);
-  assert.match(html, /\.plus-menu:not\(\[open\]\)\s*>\s*\.plus-popup\s*\{\s*display:\s*none/);
+  for (const id of ['draw-panel', 'chat-sheet', 'commands-sheet', 'obs-sheet']) {
+    assert.match(html, new RegExp(`<section id="${id}"[^>]*\\bhidden\\b`), `${id} starts hidden`);
+  }
+  assert.match(html, /\.popover\[hidden\],\s*\.sheet\[hidden\]\s*\{display:\s*none;\}/);
+  assert.match(html, /<div id="admin-dock" hidden>/);
   const universal = html.match(/\n\s*\*\s*\{([^}]+)\}/)[1];
   assert.doesNotMatch(universal, /touch-action:\s*none/);
   assert.match(html.match(/#drawing-canvas\s*\{([^}]+)\}/)[1], /touch-action:\s*none/);
@@ -262,7 +259,7 @@ test('complete page startup and real pointer handlers retain Pencil stroke when 
   const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(Boolean);
   for (const script of scripts) vm.runInContext(script, ctx);
   assert.ok(nodes.has('btn-obs-snapshot'), 'compact controls must actually mount during startup');
-  assert.equal(footer.hidden, true);
+  assert.ok(nodes.has('toolbar'), 'the toolbar mounts under the stage');
   vm.runInContext('drawingConnected = true', ctx);
   const canvas = nodes.get('drawing-canvas');
   const event = (pointerId, pointerType, x, type) => ({ pointerId, pointerType, clientX: x, clientY: 100, type, preventDefault() {} });
@@ -320,37 +317,41 @@ test('real server mounts only enabled private plus routes without connecting to 
 });
 
 
-test('closing Admin keeps the same camera iframe visible without another capture', async () => {
+test('one Admin engine: complete only in Settings, compact camera preview otherwise, never a second capture', async () => {
   const { readFileSync } = await import('node:fs');
   const { runInNewContext } = await import('node:vm');
   const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
   assert.equal((html.match(/id="admin-frame"/g) || []).length, 1);
-  assert.ok(html.indexOf('id="admin-dock"') > html.indexOf('</header>'));
+  assert.ok(html.indexOf('id="admin-dock"') > html.indexOf('id="toolbar"'));
   assert.doesNotMatch(html, /getUserMedia|cloneNode/);
   assert.match(html, /allow="camera; microphone; autoplay; fullscreen"/);
   const classes = new Set();
-  const toggles = [];
+  const dockClasses = new Set();
   const camera = { style: { display: 'block' } };
-  const adminMenu = { open: true };
-  const adminDock = { hidden: true, classList: { toggle: (name, on) => toggles.push([name, on]) } };
-  const body = { classList: { contains: name => classes.has(name), toggle(name, on) { if(on) classes.add(name); else classes.delete(name); } } };
+  const adminDock = { hidden: true, classList: { toggle: (name, on) => { if (on) dockClasses.add(name); else dockClasses.delete(name); } } };
+  const body = { classList: { contains: name => classes.has(name), toggle(name, on) { if (on) classes.add(name); else classes.delete(name); } } };
   const contentDocument = { body, getElementById: () => camera };
-  const ctx = { adminMenu, adminDock, adminFrame: { contentDocument } };
+  const ctx = { settingsOpen: true, cameraPreviewHidden: false, adminDock, adminFrame: { contentDocument } };
   runInNewContext(html.match(/function syncAdminDock\(\) \{[\s\S]*?\n    \}/)[0] + ';this.sync = syncAdminDock', ctx);
-  ctx.sync(); assert.equal(adminDock.hidden, false); assert.equal(classes.size, 0);
-  adminMenu.open = false; ctx.sync(); assert.equal(adminDock.hidden, false); assert.equal(classes.has('plus-camera-only'), true);
-  adminMenu.open = true; ctx.sync(); assert.equal(classes.has('plus-camera-only'), false);
-  adminMenu.open = false; camera.style.display = 'none'; ctx.sync(); assert.equal(adminDock.hidden, true);
+  ctx.sync();
+  assert.equal(adminDock.hidden, false); assert.ok(dockClasses.has('settings')); assert.equal(classes.size, 0);
+  ctx.settingsOpen = false; ctx.sync();
+  assert.equal(adminDock.hidden, false); assert.ok(dockClasses.has('camera-dock')); assert.ok(classes.has('plus-camera-only'));
+  ctx.cameraPreviewHidden = true; ctx.sync();
+  assert.equal(adminDock.hidden, true, 'hiding the preview hides the dock');
+  assert.equal(camera.style.display, 'block', 'but never stops the camera');
+  ctx.cameraPreviewHidden = false; camera.style.display = 'none'; ctx.sync();
+  assert.equal(adminDock.hidden, true);
   assert.equal(ctx.adminFrame.contentDocument, contentDocument);
 });
 
-test('top bar uses compact vector controls and canonical brand, not emoji or neon UI', async () => {
+test('toolbar uses vector controls and the canonical brand, not emoji or neon UI', async () => {
   const { readFileSync } = await import('node:fs');
   const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
-  const header = html.match(/<header>[\s\S]*?<\/header>/)[0];
-  assert.doesNotMatch(header, /[\p{Extended_Pictographic}]/u);
-  assert.match(header, /aria-label="Controles OBS"/);
-  assert.match(header, /id="theme-toggle"/);
+  const toolbar = html.match(/<nav id="toolbar"[\s\S]*?<\/nav>/)[0];
+  assert.doesNotMatch(toolbar, /[\p{Extended_Pictographic}]/u);
+  assert.match(toolbar, /aria-label="Controles OBS"/);
+  assert.match(html, /id="theme-toggle"/);
   assert.match(html, /--panel-bg:#fdfdfd/);
   assert.match(html, /--accent:#005fa9/);
   assert.match(html, /--panel-bg:#00467b/);

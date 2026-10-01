@@ -6,6 +6,18 @@ Activation checks: private HTTPS and local page return 200, original Admin retur
 
 Device feedback: Javier confirmed Pencil drawing with the palm resting, without jumps. He then reported visible menu buttons whose content did not appear. The header's filtered/clipping box contained fixed-position popups. The correction positions the popups below a relative header with visible overflow and explicitly hides closed menus; gesture suppression remains on the canvases, not every ancestor. A source-level regression test guards this CSS contract. Javier confirmed dropdown visibility; no backend or service restart is involved in this static fix.
 
+## Own panel redesign (branch `feature/pizarra-panel-propio`, not activated)
+
+Requested by Javier on 2026-10-01. Layout and controls only; the drawing, Pencil/palm, OBS and drawing-bus engine is unchanged.
+
+1. The drawing area keeps the 16:9 broadcast ratio and the single toolbar is glued directly under it. On 4:3 (iPad 2018) the area touches the sides; on 16:9 screens it shrinks slightly so the bar never covers it. Everything sits inside the iPad safe area (`env(safe-area-inset-*)`), so nothing is drawn under the clock, battery, Wi-Fi or multitasking dots.
+2. One icon per control, no `<details>/<summary>` disclosure markers: Drawing, Undo, Redo, Clear, OBS snapshot, device camera, device microphone, TTS, Chat, Commands, OBS, Settings.
+3. Drawing: one panel with the tools, 16 quick colours, the free colour picker, a 1–40 size slider and "draw with finger too". Starting a stroke closes it.
+4. Chat, Commands and OBS open full-screen sheets inside the safe area. Commands read `/api/panel/comandos-bot` and the saved lists, fill `[usuario]/[canal]/[mensaje]/[agente]` in order like the Admin, ask for confirmation and send through `/api/directo/comando`; server errors are shown as returned.
+5. Camera, microphone and TTS are toggles that click the original Admin controls in the hidden engine. Hiding the camera preview never stops the camera; with the preview hidden, the first camera tap shows it again.
+
+Validation (2026-10-01): `node --test test/pizarra-controles-compactos.test.js test/pizarra-plus.test.js test/pizarra-cristal.test.js test/pizarra-panel-propio.test.js` → 41/41. Visual check on an isolated server (port 17979, temporary `DATA_DIR`, drawing bus pointed at an unused port, `OBS_BRIDGE=off`) at 1024×768, 768×1024, 1920×1080 and 500×900; Drawing panel, Commands flow, Chat and Settings exercised in Chrome. Not verified: a real iPad 2018 with Pencil, a real phone, Safari, iOS speech for TTS through the hidden engine, OBS/Twitch end to end. Not implemented: new drawing shapes (they need the OBS renderer in `public/cristal.html` too), persistence of drawings and screenshots, Botrix stored on the server (A3).
+
 ## Quick review path
 
 1. Read `private/pizarra-plus-guide.html`: HTML operating contract, boundaries, QA and rollback.
@@ -17,7 +29,8 @@ Device feedback: Javier confirmed Pencil drawing with the palm resting, without 
 
 | Area | Owner | Invariant |
 | --- | --- | --- |
-| Admin and tabs | `public/admin.html` | Reuse same-origin iframe and discover actual navigation; do not duplicate controls/data. |
+| Admin engine | `public/admin.html` | One hidden same-origin iframe drives device camera, microphone and TTS; it is shown complete only from the gear (Settings). The Pizarra never opens Admin tabs for Chat or Commands. |
+| Chat | Twitch embed, or the viewer's Botrix widget when the Admin "Todos" option is on in that browser | Same storage keys as the Admin (`erbolamm-chat-todos`, `erbolamm-botrix-widget-url`); no new storage. |
 | Lists/commands | Existing A1 APIs and ignored `data/panel/` | Preserve server authority and existing records. |
 | OBS protocol/config | `src/obs-bridge.js` | Local loopback client; never disclose passwords; no stream start/stop through the plus. |
 | Drawing | Original centre `src/server.js` on 8790 `/ws` | Private validated loopback proxy; original centre owns history and feeds existing OBS `/cristal.html`. No second drawing store. |

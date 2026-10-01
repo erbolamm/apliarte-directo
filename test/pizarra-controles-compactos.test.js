@@ -42,23 +42,25 @@ test('clearing drawings does not remove the independent snapshot image', () => {
 });
 test('the capture shortcut switches back to manual mode', () => {
   assert.match(script, /intervalSelect\.value = '0'/);
-  assert.match(script, /iconButton\('btn-obs-snapshot'/);
+  assert.match(script, /getElementById\('btn-obs-snapshot'\)/);
 });
-test('compact menus reuse the original tools, palette and width controls', () => {
-  assert.match(script, /popup\.appendChild\(document\.getElementById\(group\)\)/);
-  assert.match(script, /\['palette-group', 'size-group'\]/);
-  assert.match(script, /\['tools-group'\]/);
-  assert.match(html, /\.compact-popup \.tool-label \{display:none!important;\}/);
+test('one drawing button opens the drawing panel and a stroke closes it', () => {
+  assert.match(script, /drawPanel\.hidden = !open/);
+  assert.match(script, /pointerOwner\.begin\(e, allowTouch\.checked\)\) return;\n\s*closeDrawPanel\(\);/);
+  assert.doesNotMatch(html, /<details|<summary|<footer/);
 });
 test('quick controls delegate to the original Admin handlers', () => {
-  for (const id of ['btn-micro-toggle', 'btn-apagar-camara', 'btn-toggle-camara-modo']) assert.ok(script.includes(id));
+  for (const id of ['btn-micro-toggle', 'btn-apagar-camara', 'btn-toggle-camara-modo', 'btn-tts-main-toggle']) assert.ok(script.includes(id));
   assert.match(script, /original\.click\(\)/);
-  assert.match(script, /'tab-chat'/);
-  assert.match(script, /'tab-comandos'/);
 });
-test('closing the panel does not dispatch capture or audio controls', () => {
-  const close = script.slice(script.indexOf("adminDock.prepend(iconButton('btn-admin-dock-close'"), script.indexOf("document.getElementById('btn-admin-dock-close').classList"));
-  assert.doesNotMatch(close, /original\.click|obsAction|sendWs|\.src\s*=/);
+test('closing Settings or the camera preview never dispatches capture or audio controls', () => {
+  for (const id of ['btn-settings-close', 'btn-camera-preview-close']) {
+    const start = script.indexOf(`getElementById('${id}').addEventListener('click'`);
+    assert.ok(start > 0, `${id} handler exists`);
+    const body = script.slice(start, script.indexOf('});', start));
+    assert.doesNotMatch(body, /original\.click|obsAction|sendWs|\.src\s*=/);
+  }
+  assert.match(script, /function closeSettings\(\) \{[\s\S]*?syncAdminDock\(\);/);
 });
 test('pointer sizing guards against palm-induced layout changes during drawing', () => {
   assert.match(script, /if \(isDrawing && event\.pointerType !== 'pen'\) return/);
