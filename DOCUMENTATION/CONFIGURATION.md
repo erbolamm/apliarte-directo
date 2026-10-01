@@ -53,9 +53,19 @@ same `data/panel/` files are shared with every browser and device that opens the
   `directo_panel_mensajes_v1`). They are neither read nor deleted any more, so a
   later explicit import can still recover browser-only entries.
 
-Not covered yet: the Botrix combined-chat widget URL and the “Todos” chat
-option are still stored only in the browser. `vps-overlay/server.js` still has
-the previous list handlers and does not include these protections.
+#### Combined chat ("Todos" with Botrix): also on the server (since A3)
+
+`/api/panel/chat-config` stores `{ todos, botrixUrl }` in `data/panel/chat.json`,
+so the Admin and the Pizarra show the same chat on every device. Only
+`https://botrix.live/...` addresses (up to 500 characters) or an empty address are
+accepted, and `todos` must be true or false; anything else is `400`. A damaged
+file answers `500 config-danada` and is left untouched. The widget address is
+private: it lives only in `data/panel/` (ignored by Git) and is never logged.
+An address that an older version left in a browser (`erbolamm-botrix-widget-url`)
+is only pre-filled when you open "Todos"; it is uploaded when you press save.
+
+`vps-overlay/server.js` still has the previous list handlers and does not include
+these protections or the chat configuration endpoint.
 
 ### `./medios` (Mounted to `/app/medios`)
 User media directory for custom static assets:

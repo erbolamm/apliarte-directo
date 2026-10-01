@@ -1069,30 +1069,29 @@
       if (openSheet(obsSheet)) refreshObs();
     });
 
-    // ── Chat: the Pizarra's own panel. Twitch chat, or the viewer's Botrix
-    // widget when "Todos" is on in this browser (same keys the Admin uses). ──
+    // ── Chat: the Pizarra's own panel. Twitch chat, or the streamer's Botrix
+    // widget when "Todos" is on in the server chat configuration (A3). ──
     const TWITCH_CHANNEL = 'apliarte';
     function esUrlBotrix(valor) {
       return typeof valor === 'string' && /^https:\/\/botrix\.live\/[^\s"'<>]*$/i.test(valor.trim());
     }
-    function chatUrl(store, host, channel) {
-      let todos = false;
-      let botrix = '';
-      try {
-        todos = store.getItem('erbolamm-chat-todos') === '1';
-        botrix = store.getItem('erbolamm-botrix-widget-url') || '';
-      } catch (_) {}
+    function chatUrl(config, host, channel) {
+      const todos = !!config && config.todos === true;
+      const botrix = config && typeof config.botrixUrl === 'string' ? config.botrixUrl : '';
       if (todos && esUrlBotrix(botrix)) return botrix.trim();
       const parents = [...new Set([host, 'directo.apliarte.com'])].filter(Boolean);
       const query = parents.map(parent => 'parent=' + encodeURIComponent(parent)).join('&');
       return 'https://www.twitch.tv/embed/' + encodeURIComponent(channel) + '/chat?' + query + '&darkpopout';
     }
     const chatFrame = document.getElementById('chat-frame');
-    document.getElementById('btn-chat-view').addEventListener('click', () => {
+    document.getElementById('btn-chat-view').addEventListener('click', async () => {
       if (!openSheet(chatSheet)) return;
-      let store = { getItem: () => null };
-      try { store = localStorage; } catch (_) {}
-      const target = chatUrl(store, window.location.hostname, TWITCH_CHANNEL);
+      let config = null;
+      try {
+        const res = await fetch('/api/panel/chat-config', { cache: 'no-store' });
+        if (res.ok) config = await res.json();
+      } catch (_) {}
+      const target = chatUrl(config, window.location.hostname, TWITCH_CHANNEL);
       if (chatFrame.getAttribute('src') !== target) chatFrame.src = target;
     });
 

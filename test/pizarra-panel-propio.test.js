@@ -75,16 +75,14 @@ test('the stage keeps 16:9 and leaves room below for the toolbar on any screen',
 
 test('Chat is the Pizarra own panel: Twitch chat, or the Botrix widget when Todos is on', () => {
   const { chatUrl } = load(['chatUrl', 'esUrlBotrix']);
-  const store = values => ({ getItem: key => values[key] ?? null });
-  const twitch = chatUrl(store({}), 'mac.tail.ts.net', 'apliarte');
+  const twitch = chatUrl(null, 'mac.tail.ts.net', 'apliarte');
   assert.match(twitch, /^https:\/\/www\.twitch\.tv\/embed\/apliarte\/chat\?/);
   assert.match(twitch, /parent=mac\.tail\.ts\.net/);
   const botrix = 'https://botrix.live/widgets/chat/?bid=abc';
-  assert.equal(chatUrl(store({ 'erbolamm-chat-todos': '1', 'erbolamm-botrix-widget-url': botrix }), 'h', 'apliarte'), botrix);
-  assert.match(chatUrl(store({ 'erbolamm-chat-todos': '0', 'erbolamm-botrix-widget-url': botrix }), 'h', 'apliarte'), /twitch\.tv/);
-  assert.match(chatUrl(store({ 'erbolamm-chat-todos': '1', 'erbolamm-botrix-widget-url': 'javascript:alert(1)' }), 'h', 'apliarte'), /twitch\.tv/);
-  const throwing = { getItem() { throw new Error('blocked'); } };
-  assert.match(chatUrl(throwing, 'h', 'apliarte'), /twitch\.tv/);
+  assert.equal(chatUrl({ todos: true, botrixUrl: botrix }, 'h', 'apliarte'), botrix);
+  assert.match(chatUrl({ todos: false, botrixUrl: botrix }, 'h', 'apliarte'), /twitch\.tv/);
+  assert.match(chatUrl({ todos: true, botrixUrl: 'javascript:alert(1)' }, 'h', 'apliarte'), /twitch\.tv/);
+  assert.match(chatUrl({ todos: 'yes', botrixUrl: botrix }, 'h', 'apliarte'), /twitch\.tv/);
   assert.match(html, /<iframe id="chat-frame"/, 'own chat frame, not the Admin');
 });
 

@@ -2731,11 +2731,13 @@
     const btnReloadChat = document.getElementById('btn-reload-chat');
 
     // "Todos": all chats together through the streamer's own Botrix widget.
+    // Saved on the server (A3), so every device shows the same chat. An address
+    // left in this browser by older versions is only offered, never uploaded alone.
     const CLAVE_BOTRIX_URL = 'erbolamm-botrix-widget-url';
-    const CLAVE_CHAT_TODOS = 'erbolamm-chat-todos';
     const btnChatTodos = document.getElementById('btn-chat-todos');
     const botrixConfig = document.getElementById('botrix-config');
     const botrixInput = document.getElementById('botrix-url');
+    let chatConfig = { todos: false, botrixUrl: '' };
     function esUrlBotrix(texto) {
       try {
         const url = new URL(String(texto || '').trim());
@@ -2743,39 +2745,58 @@
       } catch (_) { return false; }
     }
     function leerUrlBotrix() {
-      try { const v = localStorage.getItem(CLAVE_BOTRIX_URL); return esUrlBotrix(v) ? v : ''; } catch (_) { return ''; }
+      return esUrlBotrix(chatConfig.botrixUrl) ? chatConfig.botrixUrl : '';
     }
     function chatTodosActivo() {
-      try { return localStorage.getItem(CLAVE_CHAT_TODOS) === '1'; } catch (_) { return false; }
+      return chatConfig.todos === true;
     }
     function pintarBotonTodos() {
       btnChatTodos?.classList.toggle('active', chatTodosActivo() && Boolean(leerUrlBotrix()));
     }
-    btnChatTodos?.addEventListener('click', () => {
+    async function guardarConfigChat(cambios) {
+      const r = await pedirPanel('/api/panel/chat-config', cambios);
+      if (!r.ok || typeof r.data.todos !== 'boolean' || typeof r.data.botrixUrl !== 'string') {
+        showToast(`❌ No se guardó la configuración del chat: ${motivoFallo(r)}`);
+        return false;
+      }
+      chatConfig = { todos: r.data.todos, botrixUrl: r.data.botrixUrl };
+      return true;
+    }
+    async function cargarConfigChat() {
+      const r = await pedirPanel('/api/panel/chat-config');
+      if (r.ok && typeof r.data.todos === 'boolean' && typeof r.data.botrixUrl === 'string') {
+        chatConfig = { todos: r.data.todos, botrixUrl: r.data.botrixUrl };
+      }
+      pintarBotonTodos();
+    }
+    btnChatTodos?.addEventListener('click', async () => {
       if (!leerUrlBotrix()) {
         if (botrixConfig) botrixConfig.hidden = false;
+        let anterior = '';
+        try { anterior = localStorage.getItem(CLAVE_BOTRIX_URL) || ''; } catch (_) {}
+        if (botrixInput && !botrixInput.value && esUrlBotrix(anterior)) botrixInput.value = anterior;
         botrixInput?.focus();
-        showToast('Pega la dirección de tu widget de chat de Botrix');
+        showToast('Pega la dirección de tu widget de chat de Botrix y pulsa guardar');
         return;
       }
-      try { localStorage.setItem(CLAVE_CHAT_TODOS, chatTodosActivo() ? '0' : '1'); } catch (_) {}
+      if (!await guardarConfigChat({ todos: !chatTodosActivo() })) return;
       pintarBotonTodos();
       activarPestanaChat(true);
       showToast(chatTodosActivo() ? '🤖 Todos los chats juntos (Botrix)' : '💬 Solo chat de Twitch');
     });
-    document.getElementById('btn-botrix-guardar')?.addEventListener('click', () => {
+    document.getElementById('btn-botrix-guardar')?.addEventListener('click', async () => {
       const valor = String(botrixInput?.value || '').trim();
       if (!esUrlBotrix(valor)) { showToast('⚠️ Tiene que ser una dirección https://botrix.live/…'); return; }
-      try {
-        localStorage.setItem(CLAVE_BOTRIX_URL, valor);
-        localStorage.setItem(CLAVE_CHAT_TODOS, '1');
-      } catch (_) {}
+      if (!await guardarConfigChat({ botrixUrl: valor, todos: true })) return;
       if (botrixConfig) botrixConfig.hidden = true;
       pintarBotonTodos();
       activarPestanaChat(true);
-      showToast('🤖 Todos los chats juntos (Botrix)');
+      showToast('🤖 Guardado en el servidor: todos los chats juntos (Botrix)');
     });
     pintarBotonTodos();
+    cargarConfigChat().then(() => {
+      if (chatTodosActivo() && document.getElementById('tab-chat')?.classList.contains('active')) activarPestanaChat(true);
+    });
     const twitchChatFrame = document.getElementById('twitch-chat-frame');
 
     function actualizarBotonesFilaChat() {

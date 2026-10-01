@@ -13,11 +13,11 @@ for (const ruta of ["../public/admin.html", "../vps-overlay/public/admin.html"])
     assert.match(html, /id="botrix-url"/);
   });
 
-  test(`${ruta}: solo acepta widgets de botrix.live y se guarda en el navegador`, () => {
-    assert.match(html, /const CLAVE_BOTRIX_URL = 'erbolamm-botrix-widget-url'/);
+  test(`${ruta}: solo acepta widgets de botrix.live y se guarda en el servidor (A3)`, () => {
     assert.match(html, /function esUrlBotrix\(/);
     assert.match(html, /url\.hostname === 'botrix\.live'/);
-    assert.match(html, /localStorage\.setItem\(CLAVE_BOTRIX_URL/);
+    assert.match(html, /\/api\/panel\/chat-config/);
+    assert.doesNotMatch(html, /localStorage\.setItem\(CLAVE_BOTRIX_URL/);
   });
 
   test(`${ruta}: no lleva ningún widget personal escrito en el código`, () => {

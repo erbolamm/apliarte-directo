@@ -975,6 +975,33 @@ const MAX_VALOR_PANEL = 500;
 const MAX_FUSION_PANEL = 500;
 const MAX_CUERPO_PANEL = 256 * 1024;
 
+// Combined chat ("Todos") through the streamer's own Botrix widget. Lives on
+// the server so every device shows the same chat; null means a damaged file.
+const CHAT_CONFIG_DEFECTO = Object.freeze({ todos: false, botrixUrl: '' });
+function urlBotrixValida(valor) {
+  if (typeof valor !== 'string' || valor.length > MAX_VALOR_PANEL) return false;
+  if (valor === '') return true;
+  try {
+    const url = new URL(valor);
+    return url.protocol === 'https:' && url.hostname === 'botrix.live';
+  } catch (_) {
+    return false;
+  }
+}
+function leerConfigChat(archivo) {
+  if (!fs.existsSync(archivo)) return { ...CHAT_CONFIG_DEFECTO };
+  try {
+    const datos = JSON.parse(fs.readFileSync(archivo, 'utf8'));
+    if (!datos || typeof datos !== 'object' || Array.isArray(datos)) return null;
+    return {
+      todos: datos.todos === true,
+      botrixUrl: urlBotrixValida(datos.botrixUrl) ? datos.botrixUrl : '',
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
 function leerListaPanel(archivo) {
   if (!fs.existsSync(archivo)) return [];
   try {
@@ -2013,6 +2040,36 @@ const server = http.createServer((req, res) => {
           return responderPanel(res, 500, { error: 'no-se-pudo-guardar' });
         }
         return responderPanel(res, 200, { ok: true, comandos: nueva });
+      });
+    }
+  }
+
+  if (path === '/api/panel/chat-config') {
+    cors(res);
+    if (!isAuth(req)) return responderPanel(res, 401, { error: 'No autorizado' });
+    const archivoChat = pathMod.join(PANEL_DIR, 'chat.json');
+    if (req.method === 'GET') {
+      const config = leerConfigChat(archivoChat);
+      if (config === null) return responderPanel(res, 500, { error: 'config-danada' });
+      return responderPanel(res, 200, config);
+    }
+    if (req.method === 'POST') {
+      return leerCuerpoPanel(req, res, ({ todos, botrixUrl }) => {
+        if (todos === undefined && botrixUrl === undefined) return responderPanel(res, 400, { error: 'sin-cambios' });
+        if (todos !== undefined && typeof todos !== 'boolean') return responderPanel(res, 400, { error: 'todos-invalido' });
+        if (botrixUrl !== undefined && !urlBotrixValida(botrixUrl)) return responderPanel(res, 400, { error: 'url-botrix-invalida' });
+        const actual = leerConfigChat(archivoChat);
+        if (actual === null) return responderPanel(res, 500, { error: 'config-danada' });
+        const nueva = {
+          todos: todos === undefined ? actual.todos : todos,
+          botrixUrl: botrixUrl === undefined ? actual.botrixUrl : botrixUrl,
+        };
+        try {
+          escribirListaPanel(archivoChat, nueva);
+        } catch (_) {
+          return responderPanel(res, 500, { error: 'no-se-pudo-guardar' });
+        }
+        return responderPanel(res, 200, { ok: true, ...nueva });
       });
     }
   }
