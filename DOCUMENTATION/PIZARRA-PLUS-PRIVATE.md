@@ -24,6 +24,10 @@ Validation (2026-10-01): `node --test test/pizarra-controles-compactos.test.js t
 
 Activation order matters: OBS loads `http://127.0.0.1:8790/cristal.html` from the main checkout. Until the renderer and `cristal.html` are integrated into `main`, an old OBS layer would draw text and double arrows as a plain line. The `:7979` panel must also be restarted for the proxy to accept the new fields. Test: `test/pizarra-formas.test.js` plus a headless Chrome render of every shape.
 
+### Drawing survives a centre restart (same branch)
+
+The centre (`src/server.js`, `:8790`) loads `data/pizarra/historial.json` on startup through `src/pizarra-historial.js`, keeps the history in memory, and saves it after every draw, clear or undo, at most once per second and atomically (temporary file + rename). Shutdown (SIGINT/SIGTERM) writes any pending change. Loading keeps only valid segments and the last 4,000; a damaged file is moved to `historial.json.danado-<timestamp>` and the board starts clean. `data/pizarra/` is ignored by Git. Takes effect only after the centre restarts with this code, which interrupts an active broadcast, so it is activated outside a live show. End-to-end restart check pending for that moment; unit and wiring tests: `test/pizarra-historial.test.js`.
+
 ## Quick review path
 
 1. Read `private/pizarra-plus-guide.html`: HTML operating contract, boundaries, QA and rollback.

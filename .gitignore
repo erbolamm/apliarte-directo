@@ -47,3 +47,4 @@ data/.lock
 data/*.corrupt
 data/nms/
 data/panel/
+data/pizarra/

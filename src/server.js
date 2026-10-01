@@ -42,6 +42,7 @@ import { crearRutasPanel } from "./panel-rutas.js";
 import { iniciarObsBridge } from "./obs-bridge.js";
 import { bridgeOptions } from "./obs-bridge-config.js";
 import { resolveDestinationKey } from "./stream-credentials.js";
+import { cargarHistorial, crearGuardador } from "./pizarra-historial.js";
 import ContextoNms from "node-media-server/src/core/context.js";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
@@ -960,8 +961,14 @@ walkWss.on("connection", (socket, req) => {
 // WebSocket para overlay, cristal transparente y pizarra táctil (/ws)
 const overlayWss = new WebSocketServer({ noServer: true });
 const overlayClients = new Set();
-const pizarraHistory = [];
+// The board survives a centre restart: history is loaded from disk on startup
+// and saved (debounced, atomic) after every change.
 const MAX_PIZARRA_HISTORY = 4000;
+const PIZARRA_FILE = join(DATA_DIR, "pizarra", "historial.json");
+const pizarraHistory = cargarHistorial(PIZARRA_FILE, MAX_PIZARRA_HISTORY);
+const guardarPizarra = crearGuardador(PIZARRA_FILE, {
+  alFallar: (error) => console.error(`[pizarra] No se pudo guardar el dibujo: ${error.message}`),
+});
 
 overlayWss.on("connection", (ws) => {
   overlayClients.add(ws);
@@ -981,8 +988,10 @@ overlayWss.on("connection", (ws) => {
       if (data && data.type === "pizarra_draw") {
         pizarraHistory.push(data);
         if (pizarraHistory.length > MAX_PIZARRA_HISTORY) pizarraHistory.shift();
+        guardarPizarra.programar(pizarraHistory);
       } else if (data && data.type === "pizarra_clear") {
         pizarraHistory.length = 0;
+        guardarPizarra.programar(pizarraHistory);
       } else if (data && data.type === "pizarra_undo") {
         if (pizarraHistory.length > 0) {
           const lastId = pizarraHistory[pizarraHistory.length - 1].strokeId;
@@ -993,6 +1002,7 @@ overlayWss.on("connection", (ws) => {
           } else {
             pizarraHistory.pop();
           }
+          guardarPizarra.programar(pizarraHistory);
         }
       } else if (data && data.type === "pizarra_solicitar_estado") {
         ws.send(JSON.stringify({ type: "pizarra_init", history: pizarraHistory }));
@@ -1069,6 +1079,9 @@ const cerrar = async () => {
   console.log(
     "\nCerrando: se detienen solo los FFmpeg lanzados por este centro.",
   );
+  try {
+    guardarPizarra.ahora();
+  } catch (_) {}
   try {
     obsBridge?.cerrar();
   } catch (_) {}
