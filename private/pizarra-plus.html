@@ -447,6 +447,19 @@
     #admin-dock iframe {width:100%;height:100%;border:0;}
     #admin-dock.camera-dock {top:auto;bottom:82px;width:min(320px,45vw);height:220px;}
     .plus-popup select {background:var(--panel-bg);color:var(--text-main);border-color:var(--border-color);}
+    .compact-popup {display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
+    .compact-popup .toolbar-group {flex-wrap:wrap;}
+    .popup-close {justify-self:end;margin-left:auto;}
+    .bar-icon[aria-pressed="true"] {color:var(--accent);border-color:var(--accent);background:rgba(0,95,169,.1);}
+    .bar-icon:disabled {opacity:.4;cursor:not-allowed;}
+    .bar-icon:focus-visible {outline:2px solid var(--accent);outline-offset:2px;}
+    #admin-dock > .dock-close {position:absolute;right:8px;top:8px;z-index:2;background:var(--panel-bg);}
+    @media(max-width:650px),(pointer:coarse) {
+      header .btn,header .bar-icon {width:44px;min-width:44px;height:44px;}
+      header {height:auto;min-height:56px;flex-wrap:wrap;justify-content:flex-start;}
+    }
+    html[data-precision="pen"] header .btn,html[data-precision="pen"] header .bar-icon {width:28px;min-width:28px;height:28px;}
+    html[data-precision="pen"] header {min-height:40px;}
   </style>
 </head>
 <body>
@@ -466,7 +479,7 @@
           <button id="btn-obs-mute" class="btn" disabled>Consultar micrófono</button>
           <button id="btn-obs-refresh" class="btn">Actualizar OBS</button>
           <button id="btn-obs-preview" class="btn">Mostrar captura OBS</button>
-          <label>Renovar imagen <select id="obs-interval"><option value="1000">1 s</option><option value="2000">2 s</option><option value="5000" selected>5 s</option><option value="10000">10 s</option></select></label>
+          <label>Renovar imagen <select id="obs-interval"><option value="0" selected>Solo al pulsar captura</option><option value="1000">1 s</option><option value="2000">2 s</option><option value="5000">5 s</option><option value="10000">10 s</option></select></label>
           <p id="obs-message" role="status">Capturas fijas, sin vídeo continuo.</p>
         </div>
       </details>
@@ -1000,7 +1013,11 @@
     function updateMute(muted) {
       obsMuted = muted;
       btnObsMute.disabled = muted === null || actionBusy;
-      btnObsMute.textContent = muted === null ? 'Entrada sin estado de audio' : muted ? 'Activar audio' : 'Silenciar audio';
+      const label = muted === null ? 'Micrófono OBS sin estado confirmado' : (muted ? 'Activar audio OBS' : 'Silenciar audio OBS') + ': ' + inputSelect.value;
+      btnObsMute.setAttribute('aria-label', label);
+      btnObsMute.setAttribute('data-tip', label);
+      btnObsMute.setAttribute('aria-pressed', String(muted === false));
+      btnObsMute.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/>' + (muted === true ? '<path d="M3 3l18 18"/>' : '') + '</svg>';
     }
     async function refreshObs() {
       if (stateBusy) return;
@@ -1044,7 +1061,7 @@
     function scheduleCapture() {
       clearTimeout(obsPreviewInterval);
       obsPreviewInterval = null;
-      if (obsPreviewActive && !document.hidden) obsPreviewInterval = setTimeout(solicitarCapturaObs, Number(intervalSelect.value));
+      if (obsPreviewActive && !document.hidden && Number(intervalSelect.value) > 0) obsPreviewInterval = setTimeout(solicitarCapturaObs, Number(intervalSelect.value));
     }
     async function solicitarCapturaObs() {
       if (!obsPreviewActive || document.hidden || captureBusy) return;
@@ -1067,10 +1084,10 @@
     intervalSelect.addEventListener('change', scheduleCapture);
     document.addEventListener('visibilitychange', () => {
       clearTimeout(obsPreviewInterval);
-      if (!document.hidden && obsPreviewActive) solicitarCapturaObs();
+      if (!document.hidden && obsPreviewActive && Number(intervalSelect.value) > 0) solicitarCapturaObs();
     });
     setInterval(() => {
-      if (!document.hidden && document.getElementById('obs-menu').open && !actionBusy) refreshObs();
+      if (!document.hidden && !actionBusy) refreshObs();
     }, 5000);
 
     // Embed the existing Admin instead of duplicating its controls, data or storage.
@@ -1223,6 +1240,162 @@
       }, 2000);
     }
 
+    // Compact controls reuse the original drawing and Admin handlers. No second
+    // camera iframe, drawing store, or live video preview is created.
+    const compactHeader = document.querySelector('header');
+    const svgIcon = path => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + path + '</svg>';
+    const closeIcon = '<path d="M6 6l12 12M18 6L6 18"/>';
+    function iconButton(id, label, path, action) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.id = id;
+      button.className = 'bar-icon';
+      button.setAttribute('aria-label', label);
+      button.setAttribute('data-tip', label);
+      button.innerHTML = svgIcon(path);
+      button.addEventListener('click', action);
+      return button;
+    }
+    function addCompactMenu(id, label, path, groups) {
+      const menu = document.createElement('details');
+      menu.id = id;
+      menu.className = 'plus-menu';
+      const summary = document.createElement('summary');
+      summary.className = 'bar-icon';
+      summary.setAttribute('aria-label', label);
+      summary.setAttribute('data-tip', label);
+      summary.innerHTML = svgIcon(path);
+      const popup = document.createElement('div');
+      popup.className = 'plus-popup compact-popup';
+      popup.appendChild(iconButton(id + '-close', 'Cerrar ' + label, closeIcon, () => { menu.open = false; summary.focus(); }));
+      for (const group of groups) popup.appendChild(document.getElementById(group));
+      menu.append(summary, popup);
+      compactHeader.appendChild(menu);
+      return menu;
+    }
+    const toolsMenu = addCompactMenu('drawing-tools-menu', 'Herramientas de dibujo', '<path d="M4 20l4-1L20 7l-3-3L5 16zM14 7l3 3"/>', ['tools-group']);
+    const colorsMenu = addCompactMenu('drawing-colors-menu', 'Colores y grosor', '<circle cx="12" cy="12" r="9"/><circle cx="8" cy="8" r="1"/><circle cx="15" cy="7" r="1"/><circle cx="17" cy="13" r="1"/>', ['palette-group', 'size-group']);
+    toolsMenu.addEventListener('click', event => { if (event.target.closest('[data-tool]')) toolsMenu.open = false; });
+    colorsMenu.addEventListener('click', event => { if (event.target.closest('[data-color],[data-size]')) colorsMenu.open = false; });
+    document.querySelector('footer').hidden = true;
+    document.querySelector('footer').style.display = 'none';
+    document.addEventListener('pointerdown', event => {
+      // Detect the actual pointer, not a guessed tablet user agent.
+      if (isDrawing && event.pointerType !== 'pen') return;
+      document.documentElement.dataset.precision = event.pointerType === 'pen' ? 'pen' : event.pointerType === 'touch' ? 'touch' : 'mouse';
+    }, { passive: true });
+    for (const menu of document.querySelectorAll('.plus-menu')) {
+      if (menu === toolsMenu || menu === colorsMenu) continue;
+      const popup = menu.querySelector('.plus-popup');
+      if (popup) popup.prepend(iconButton(menu.id + '-close', 'Cerrar panel', closeIcon, () => { menu.open = false; menu.querySelector('summary').focus(); }));
+    }
+    btnObsMute.className = 'bar-icon';
+    compactHeader.appendChild(btnObsMute);
+    updateMute(null);
+    const snapshotButton = iconButton('btn-obs-snapshot', 'Capturar imagen fija de OBS', '<path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="4"/>', async () => {
+      if (captureBusy) return;
+      clearTimeout(obsPreviewInterval);
+      intervalSelect.value = '0';
+      obsPreviewActive = true;
+      obsPreviewBg.style.display = 'block';
+      btnObsPreview.classList.add('active');
+      btnObsPreview.textContent = 'Ocultar captura OBS';
+      snapshotButton.disabled = true;
+      try { await solicitarCapturaObs(); } finally { snapshotButton.disabled = false; }
+    });
+    compactHeader.appendChild(snapshotButton);
+
+    // One persistent Admin frame; view controls never stop the camera or audio.
+    let cameraPreviewHidden = false;
+    const cameraViewButton = iconButton('btn-camera-view', 'Mostrar u ocultar vista de cámara, sin apagar emisión', '<rect x="3" y="5" width="12" height="14" rx="2"/><path d="M15 10l6-4v12l-6-4"/>', () => {
+      cameraPreviewHidden = !cameraPreviewHidden;
+      cameraViewButton.setAttribute('aria-pressed', String(!cameraPreviewHidden));
+      syncAdminDock();
+      syncCompactDock();
+    });
+    compactHeader.appendChild(cameraViewButton);
+    function syncCompactDock() {
+      if (!adminMenu.open && cameraPreviewHidden) adminDock.hidden = true;
+    }
+    const dockObserver = new MutationObserver(syncCompactDock);
+    dockObserver.observe(adminDock, { attributes: true, attributeFilter: ['class'] });
+    adminMenu.addEventListener('toggle', syncCompactDock);
+    adminDock.prepend(iconButton('btn-admin-dock-close', 'Cerrar vista del panel, sin apagar cámara ni audio', closeIcon, () => {
+      adminMenu.open = false;
+      cameraPreviewHidden = true;
+      cameraViewButton.setAttribute('aria-pressed', 'false');
+      adminDock.hidden = true;
+    }));
+    document.getElementById('btn-admin-dock-close').classList.add('dock-close');
+    const quickPanels = [];
+    function showAdminPanel(tab) {
+      if (adminMenu.open && adminTabs.value === tab) { adminMenu.open = false; return; }
+      const original = adminFrame.contentDocument?.querySelector('.nav-item[data-tab="' + tab + '"]');
+      if (!original) { reportObs('El panel todavía no está listo.'); return; }
+      original.click();
+      adminTabs.value = tab;
+      adminMenu.open = true;
+    }
+    for (const [id, label, tab, path] of [
+      ['btn-chat-view', 'Mostrar u ocultar chat', 'tab-chat', '<path d="M3 4h18v13H8l-5 4zM7 8h10M7 12h7"/>'],
+      ['btn-commands-view', 'Mostrar u ocultar comandos', 'tab-comandos', '<path d="M4 6l6 6-6 6M13 18h7"/>']
+    ]) {
+      const button = iconButton(id, label, path, () => showAdminPanel(tab));
+      button.disabled = true;
+      quickPanels.push(button);
+      compactHeader.appendChild(button);
+    }
+    const tabletMicButton = iconButton('btn-tablet-mic', 'Micrófono de este dispositivo: estado no disponible', '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/>', () => {
+      const original = adminFrame.contentDocument?.getElementById('btn-micro-toggle');
+      if (original && !original.disabled) original.click();
+    });
+    tabletMicButton.disabled = true;
+    compactHeader.appendChild(tabletMicButton);
+    const cameraCaptureButton = iconButton('btn-device-camera', 'Cámara de este dispositivo: estado no disponible', '<rect x="3" y="5" width="12" height="14" rx="2"/><path d="M15 10l6-4v12l-6-4"/>', () => {
+      const doc = adminFrame.contentDocument;
+      const stop = doc?.getElementById('btn-apagar-camara');
+      const start = doc?.getElementById('btn-toggle-camara-modo');
+      const active = stop && stop.style.display !== 'none';
+      const original = active ? stop : start;
+      if (original && !original.disabled) original.click();
+    });
+    cameraCaptureButton.disabled = true;
+    compactHeader.appendChild(cameraCaptureButton);
+    adminFrame.addEventListener('load', () => {
+      const doc = adminFrame.contentDocument;
+      if (!doc) return;
+      quickPanels.forEach(button => { button.disabled = false; });
+      const original = doc.getElementById('btn-micro-toggle');
+      const badge = doc.getElementById('badge-micro-estado');
+      const syncMic = () => {
+        tabletMicButton.disabled = !original || original.disabled;
+        const state = (badge?.textContent?.trim() || 'Estado desconocido').replace(/[\p{Extended_Pictographic}\uFE0F]/gu, '').trim();
+        tabletMicButton.setAttribute('aria-label', 'Micrófono de este dispositivo: ' + state);
+        tabletMicButton.setAttribute('data-tip', 'Micrófono de este dispositivo: ' + state);
+        tabletMicButton.setAttribute('aria-pressed', String(state === 'EN VIVO'));
+      };
+      syncMic();
+      if (badge) new MutationObserver(syncMic).observe(badge, { childList: true, subtree: true, characterData: true });
+      if (original) new MutationObserver(syncMic).observe(original, { attributes: true, attributeFilter: ['disabled'] });
+      const stop = doc.getElementById('btn-apagar-camara');
+      const start = doc.getElementById('btn-toggle-camara-modo');
+      const syncCamera = () => {
+        const active = !!stop && stop.style.display !== 'none';
+        cameraCaptureButton.disabled = !start || !stop || (active ? stop.disabled : start.disabled);
+        const label = active ? 'Apagar cámara de este dispositivo' : 'Activar cámara de este dispositivo';
+        cameraCaptureButton.setAttribute('aria-label', label);
+        cameraCaptureButton.setAttribute('data-tip', label);
+        cameraCaptureButton.setAttribute('aria-pressed', String(active));
+        syncCompactDock();
+      };
+      syncCamera();
+      for (const target of [start, stop]) {
+        if (target) new MutationObserver(syncCamera).observe(target, { attributes: true, attributeFilter: ['style', 'disabled'] });
+      }
+    });
+    // Load controls only; camera/microphone capture still requires a user's tap.
+    adminFrame.src = adminFrame.dataset.src;
+    refreshObs();
     resizeContainer();
     connectWs();
   </script>

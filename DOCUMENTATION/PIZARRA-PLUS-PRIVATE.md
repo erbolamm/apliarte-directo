@@ -40,6 +40,28 @@ Drawing history is bounded original-centre memory (4,000 segments). A 7979 panel
 
 ## Camera visibility and toolbar contract
 
+### Compact controls candidate (isolated branch, not activated)
+
+`fix/pizarra-controles-compactos` groups the existing drawing tools and the RGB
+picker/width controls into closable top-bar menus. SVG shortcuts expose a fixed
+OBS snapshot, OBS input mute, this device's microphone and camera, local camera
+visibility, chat and commands. Camera/audio shortcuts delegate to the existing
+Admin controls in one persistent iframe; opening or closing a view never invokes
+capture or mute handlers. Device capture state is not claimed to be global OBS
+state. The drawing canvas and snapshot image remain separate layers.
+
+Snapshots default to manual refresh (interval `0`). Capturing explicitly returns
+to manual mode; clearing strokes does not clear the image. Periodic snapshots
+remain opt-in. Pen input reduces control size; coarse touch targets remain 44px,
+and palm input cannot change the layout during an active pen stroke.
+
+Validation: `node scripts/run-tests.mjs test/pizarra-controles-compactos.test.js
+test/pizarra-plus.test.js`. The author's Node execution is blocked by runtime
+permissions; only V8 syntax/function checks and source checks have run so far.
+Independent Node tests, browser layout and real-device/OBS verification are still
+required before activation. This change does not implement disk persistence of
+drawing history or cross-device screenshot synchronization; those remain pending.
+
 The single existing Admin iframe lives outside the collapsing menu. While the menu is closed and its camera-push-container is active, only the original camera card's preview is shown in a compact dock. CSS is injected into the same-origin Admin document; neither Admin nor its nested VDO.ninja iframe is moved, recreated, navigated or cloned. Explicit camera off still hides the dock; closing the menu never changes mute/capture state. Device acceptance remains pending.
 
 Toolbar uses the central `ingredientes/marca/APLIARTE_BRAND_KIT.md`, not the stale project brand-spec neon palette: blue #005fa9, navy #00467b, cyan #5ecef5, charcoal #303030, white #fdfdfd. Compact vector buttons, no emoji, accessible labels. Light/dark preference is per-device presentation only. Native RGB picker allows arbitrary drawing colors, which are user content and not UI brand tokens. Text insertion is still pending; not claimed here.
