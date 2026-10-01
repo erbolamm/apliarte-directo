@@ -160,3 +160,32 @@ test('sheets open full screen inside the safe area and close with a visible butt
 test('rows hidden in the command steps really disappear', () => {
   assert.match(html, /\.panel-row\[hidden\]\s*\{\s*display:\s*none;?\s*\}/);
 });
+
+test('Clear needs a second tap within a few seconds, without browser dialogs', () => {
+  const { clearArmed } = load(['clearArmed']);
+  assert.equal(clearArmed(0, 1000), false, 'never armed');
+  assert.equal(clearArmed(1000, 2500), true, 'second tap in time');
+  assert.equal(clearArmed(1000, 4500), false, 'too late: arm again');
+  assert.doesNotMatch(script, /\bconfirm\(|\balert\(/);
+});
+
+test('tool, colour, size and finger drawing are remembered on this device only', () => {
+  const { readPrefs } = load(['readPrefs']);
+  const store = value => ({ getItem: () => value });
+  assert.deepEqual({ ...readPrefs(store(JSON.stringify({ tool: 'arrow', color: '#ff0000', size: 12, touch: true }))) }, { tool: 'arrow', color: '#ff0000', size: 12, touch: true });
+  assert.deepEqual({ ...readPrefs(store('{"tool":"rm -rf","color":"red;x","size":999,"touch":"yes"}')) }, {}, 'invalid values are ignored');
+  assert.deepEqual({ ...readPrefs(store('not json')) }, {});
+  assert.deepEqual({ ...readPrefs({ getItem() { throw new Error('blocked'); } }) }, {});
+});
+
+test('the drawing button shows the current colour and the offline state is visible', () => {
+  assert.match(script, /drawButton\.style\.setProperty\('--current-color'/);
+  assert.match(html, /#btn-draw-menu\s*\{[^}]*--current-color/);
+  assert.match(html, /<span id="status-text"[^>]*>/);
+  assert.match(script, /statusText\.hidden = /);
+});
+
+test('desktop shortcuts undo and redo, but never while typing', () => {
+  assert.match(script, /key === 'z'/);
+  assert.match(script, /closest\?\.\('input, textarea, select'\)/);
+});
