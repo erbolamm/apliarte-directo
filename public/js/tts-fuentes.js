@@ -245,6 +245,9 @@ export function parsearComandoChat(texto) {
   if (nombre === "r" || nombre === "reset" || nombre === "volver" || nombre === "sitio" || nombre === "mesa") {
     return { comando: "reset" };
   }
+  if (nombre === "conga") {
+    return { comando: "conga" };
+  }
   if (nombre === "fiesta" || nombre === "party" || nombre === "bailar" || nombre === "baile") {
     return { comando: "fiesta", requiereAutorizacion: true };
   }
