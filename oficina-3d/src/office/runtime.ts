@@ -1,6 +1,19 @@
 import { AGENTS, ROTATING_IDS, type AgentId, normalizeLiveSnapshot, type LiveSnapshot } from './agents';
 import { CHAT_ZONE_COMMANDS, COMMAND_SEAT, DELIV_SLOTS, EQUIPO1_SLOTS, JUNCTION, LOUNGE_SLOTS, OWNER_DESK, VIGIA_PATROL, VISITOR_SEAT, WAITING_SLOTS, WORK_SLOTS, WORKER_SLOTS, ZONE_ANCHORS, pathLength, pointAt, type Pose, type Pt, type ZoneId } from './layout';
 import { isBoardMode, navigate, parseSquare, setBoardMode, squareCenter } from './geometry';
+import {
+  type CongaAgentId,
+  type CongaState,
+  emptyCongaState,
+  applyCongaCommand as applyCongaCommandPure,
+  tickConga as tickCongaPure,
+  getCongaAgentPositions,
+  getCreditText,
+  getAdoptionSpeech,
+  CONGA_CREDIT,
+  CONGA_ADOPT_TEXT,
+  countdownSecondsLeft,
+} from './conga';
 export type Task={role:AgentId;project:string;title:string;fileName:string;priority:string};
 export type Snapshot={valid:boolean;states:Record<string,Task[]>;orchestrator:AgentId|null};
 export type Person={id:AgentId;pos:Pt;pose:Pose;facing:number;status:string;path:Pt[]|null;target:Pt;travelled:number;deliveringUntil:number;queued:number;speaking?:boolean;manualUntil?:number;isRear?:boolean;jumping?:boolean;speed?:number};
@@ -181,6 +194,12 @@ export class OfficeRuntime {
   avatarOwners: Record<string, string> = {};
   /** The quorum guard applies once the live overlay reports its viewers; the plain office has none. */
   quorumEnforced = false;
+  /** !conga circuit state. Pure state machine in `./conga`. */
+  congaState: CongaState = emptyCongaState('apliarte');
+  /** Cached dancer positions, recomputed each tick. */
+  private congaPositions: Map<CongaAgentId, Pt> = new Map();
+  /** Last announced countdown second (0..10). */
+  private lastCongaCountdownSec: number = -1;
 
   /** Records who adopted which avatar. Keys are agent ids, values are twitch logins. */
   setAvatarOwners(owners: Record<string, string> | null | undefined) {
@@ -553,7 +572,51 @@ export class OfficeRuntime {
   if(this.hub&&this.hub.source==='local'&&this.hub.fase==='lobby_votacion'&&now>=this.hub.endsAt)this.closeLobby(now);
   const frozen=this.isFrozen();
   if(frozen)dt=0;
+  // Conga tick: advance state, emit phase transitions, countdown announcements
+  const prevCongaPhase = this.congaState.phase;
+  this.congaState = tickCongaPure(this.congaState, now);
+  if (prevCongaPhase !== this.congaState.phase) {
+    if (this.congaState.phase === 'dancing') {
+      this.say('ja', '¡A bailar! La conga arranca por la oficina.', now);
+    } else if (this.congaState.phase === 'ended') {
+      // Adoption request bubbles for free-assigned dancers
+      for (const d of this.congaState.dancers) {
+        if (d.freeAssignment) this.say(d.agentId as AgentId, CONGA_ADOPT_TEXT, now);
+      }
+    } else if (this.congaState.phase === 'idle' && prevCongaPhase === 'ended') {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('erbolamm:conga-credit', { detail: { text: null } }));
+      }
+    }
+  }
+  if (this.congaState.phase === 'countdown') {
+    const sec = countdownSecondsLeft(this.congaState, now);
+    if (sec !== this.lastCongaCountdownSec && sec > 0 && sec <= 3) {
+      this.say('ja', String(sec), now);
+    }
+    this.lastCongaCountdownSec = sec;
+  }
+  // Cache dancer positions for the per-person loop (only while dancing)
+  this.congaPositions = this.congaState.phase === 'dancing'
+    ? getCongaAgentPositions(this.congaState, now) as Map<CongaAgentId, Pt>
+    : new Map();
   for(const p of this.people){
+   // Conga dancers: teleport to conga position, set walk pose, apply dance bob
+   if (this.congaPositions.has(p.id as CongaAgentId) && this.congaState.phase === 'dancing') {
+    const congaPos = this.congaPositions.get(p.id as CongaAgentId)!;
+    const bobMs = 400;
+    const bobAmp = 3;
+    const bobPhase = (now % bobMs) / bobMs;
+    const bob = Math.sin(bobPhase * 2 * Math.PI) * bobAmp;
+    p.pos = { x: congaPos.x, y: congaPos.y + bob };
+    p.path = null;
+    p.target = { x: congaPos.x, y: congaPos.y };
+    p.travelled = 0;
+    p.pose = 'walk';
+    p.status = 'Bailando conga';
+    moving = true;
+    continue;
+   }
    if(p.manualUntil&&p.manualUntil>now){
     if(p.path){
      p.travelled+=(p.speed||160)*dt;
@@ -870,6 +933,24 @@ export class OfficeRuntime {
    case 'trabajar':this.trabajar(now,cmd.agente as AgentId);return true;
    case 'bronca':this.bronca(now);return true;
    case 'beso':this.beso((cmd as any).sender || this.speaker(cmd.agente), (cmd.agente as AgentId) || 'ja', now);return true;
+   case 'conga':{
+    const next = applyCongaCommandPure(this.congaState, cmd, now, { broadcaster: 'apliarte', avatarOwners: this.avatarOwners });
+    if (next !== this.congaState) {
+      this.congaState = next;
+      this.lastCongaCountdownSec = -1;
+      if (this.congaState.phase === 'countdown') {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('erbolamm:conga-credit', { detail: { text: CONGA_CREDIT } }));
+        }
+      } else if (this.congaState.phase === 'idle') {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('erbolamm:conga-credit', { detail: { text: null } }));
+        }
+      }
+    }
+    this.triggerWake();
+    return true;
+   }
    case 'salta':if(cmd.agente&&roles.has(cmd.agente as AgentId)){this.jumpAgent(cmd.agente as AgentId,now);return true;}return false;
    case 'reset':if(cmd.agente&&roles.has(cmd.agente as AgentId)){this.resetAgent(cmd.agente as AgentId,now);return true;}return false;
    case 'juego':{if(this.isFrozen()&&this.hub?.source==='local')return false;this.openLobby(now);return true;}
