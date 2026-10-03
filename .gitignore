@@ -48,3 +48,6 @@ data/*.corrupt
 data/nms/
 data/panel/
 data/pizarra/
+
+# Contenedor local soberano de control ErBolamm (ADR-0013)
+control-erbolamm/

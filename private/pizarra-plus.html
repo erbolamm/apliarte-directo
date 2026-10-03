@@ -251,6 +251,57 @@
     .chip-list {display: flex; flex-wrap: wrap; gap: 8px;}
     .chip {min-height: 40px; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 20px; background: transparent; color: var(--text-main); font-size: 14px; cursor: pointer;}
 
+    /* Escenas y Fuentes táctiles OBS */
+    .scene-grid {display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px;}
+    .scene-btn {
+      min-height: 56px; padding: 10px 12px; text-align: left;
+      display: grid; gap: 3px; align-content: center;
+      background: transparent; color: var(--text-main);
+      border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;
+      touch-action: manipulation;
+    }
+    .scene-btn strong {font-size: 15px; font-weight: 700; overflow-wrap: anywhere;}
+    .scene-btn small {font-size: 11px; color: var(--text-muted);}
+    .scene-btn.active {
+      background: rgba(0, 95, 169, 0.12);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .scene-btn.active small {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .sources-grid {display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px;}
+    .source-card {
+      min-height: 56px; padding: 8px 12px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      background: transparent; color: var(--text-main);
+      border: 1px solid var(--border-color); border-radius: 6px;
+    }
+    .source-card.hidden-source {
+      opacity: 0.6;
+      border-style: dashed;
+    }
+    .source-info {display: grid; gap: 2px; min-width: 0; flex: 1;}
+    .source-info strong {font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+    .source-info small {font-size: 11px; color: var(--text-muted);}
+    .eye-btn {
+      width: 44px; height: 44px; min-width: 44px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: transparent; color: var(--text-main);
+      border: 1px solid var(--border-color); border-radius: 6px;
+      cursor: pointer; touch-action: manipulation; flex-shrink: 0;
+    }
+    .eye-btn.visible {
+      color: var(--accent); border-color: var(--accent);
+      background: rgba(0, 95, 169, 0.12);
+    }
+    .eye-btn.hidden-source {
+      color: var(--text-muted);
+    }
+    .eye-btn svg {width: 22px; height: 22px;}
+
     /* One Admin engine: hidden, compact camera preview, or complete in Settings. */
     #admin-dock {position: fixed; z-index: 22; background: #303030; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;}
     #admin-dock[hidden] {display: none;}
@@ -397,17 +448,36 @@
 
   <section id="obs-sheet" class="sheet" aria-label="Controles OBS" hidden>
     <div class="sheet-head">
-      <h2>OBS</h2>
+      <h2>Escenas y OBS</h2>
       <button type="button" class="bar-icon sheet-close" aria-label="Cerrar controles OBS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="sheet-body">
-      <label>Escena <select id="obs-scene" disabled></select></label>
+      <div class="panel-title">Escenas disponibles</div>
+      <div id="obs-scenes-grid" class="scene-grid" role="group" aria-label="Escenas disponibles en OBS"></div>
+      <button type="button" id="btn-open-sources" class="sheet-btn primary">Ver y gestionar fuentes de la escena</button>
+      <div class="bar-sep" style="width: 100%; height: 1px;" aria-hidden="true"></div>
+      <div class="panel-title">Audio y captura fija</div>
       <label>Entrada de audio de OBS <select id="obs-input" disabled></select></label>
       <button type="button" id="btn-obs-mute" class="sheet-btn" disabled>Consultar audio de OBS</button>
       <button type="button" id="btn-obs-preview" class="sheet-btn">Mostrar captura OBS</button>
       <label>Renovar imagen <select id="obs-interval"><option value="0" selected>Solo al pulsar captura</option><option value="1000">1 s</option><option value="2000">2 s</option><option value="5000">5 s</option><option value="10000">10 s</option></select></label>
       <button type="button" id="btn-obs-refresh" class="sheet-btn">Actualizar OBS</button>
+      <select id="obs-scene" style="display:none;" disabled></select>
       <p id="obs-message" role="status">Capturas fijas, sin vídeo continuo.</p>
+    </div>
+  </section>
+
+  <section id="sources-sheet" class="sheet" aria-label="Fuentes de la escena OBS" hidden>
+    <div class="sheet-head">
+      <button type="button" class="bar-icon" id="btn-sources-back" aria-label="Volver a Escenas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+      <h2 id="sources-title">Fuentes de la escena</h2>
+      <button type="button" class="bar-icon" id="btn-sources-refresh" aria-label="Actualizar lista de fuentes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/></svg></button>
+      <button type="button" class="bar-icon sheet-close" aria-label="Cerrar fuentes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="sheet-body">
+      <input id="sources-filter" type="search" placeholder="Buscar fuente..." aria-label="Buscar fuente">
+      <p id="sources-message" role="status"></p>
+      <div id="sources-grid" class="sources-grid"></div>
     </div>
   </section>
 
@@ -924,6 +994,151 @@
       btnObsMute.textContent = muted === null ? 'Audio de OBS sin estado confirmado' : (muted ? 'Activar en OBS: ' : 'Silenciar en OBS: ') + name;
       btnObsMute.setAttribute('aria-pressed', String(muted === false));
     }
+    let currentObsScene = '';
+    let currentObsScenes = [];
+    let sourcesCache = [];
+    let sourcesBusy = false;
+
+    const obsScenesGrid = document.getElementById('obs-scenes-grid');
+    const btnOpenSources = document.getElementById('btn-open-sources');
+    const sourcesSheet = document.getElementById('sources-sheet');
+    const sourcesTitle = document.getElementById('sources-title');
+    const sourcesFilter = document.getElementById('sources-filter');
+    const sourcesGrid = document.getElementById('sources-grid');
+    const sourcesMessage = document.getElementById('sources-message');
+    const btnSourcesBack = document.getElementById('btn-sources-back');
+    const btnSourcesRefresh = document.getElementById('btn-sources-refresh');
+
+    function renderScenesGrid(scenes, activeScene) {
+      currentObsScenes = Array.isArray(scenes) ? scenes : [];
+      currentObsScene = activeScene || currentObsScenes[0] || '';
+      if (obsScenesGrid) {
+        obsScenesGrid.replaceChildren();
+        for (const scene of currentObsScenes) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'scene-btn' + (scene === currentObsScene ? ' active' : '');
+          btn.setAttribute('aria-pressed', String(scene === currentObsScene));
+          const title = document.createElement('strong');
+          title.textContent = scene;
+          const sub = document.createElement('small');
+          sub.textContent = scene === currentObsScene ? 'Activa en emisión' : 'Tocar para activar';
+          btn.appendChild(title);
+          btn.appendChild(sub);
+          btn.addEventListener('click', async () => {
+            if (actionBusy) return;
+            await obsAction('scene', scene);
+            if (sourcesSheet && !sourcesSheet.hidden) loadSources(scene);
+          });
+          obsScenesGrid.appendChild(btn);
+        }
+      }
+      if (btnOpenSources) btnOpenSources.textContent = 'Ver fuentes de ' + (currentObsScene || 'la escena activa');
+      if (sourcesTitle) sourcesTitle.textContent = 'Fuentes: ' + (currentObsScene || 'Escena');
+    }
+
+    function reportSources(message, error = false) {
+      if (!sourcesMessage) return;
+      sourcesMessage.textContent = message;
+      sourcesMessage.style.color = error ? 'var(--danger)' : '';
+    }
+
+    const SVG_EYE_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const SVG_EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+    async function loadSources(scene = currentObsScene) {
+      if (sourcesBusy) return;
+      sourcesBusy = true;
+      reportSources('Cargando fuentes de OBS…');
+      try {
+        const target = scene || currentObsScene;
+        const data = await obsRequest('sources' + (target ? '?scene=' + encodeURIComponent(target) : ''));
+        sourcesCache = Array.isArray(data.sources) ? data.sources : [];
+        if (target) {
+          currentObsScene = target;
+          if (sourcesTitle) sourcesTitle.textContent = 'Fuentes: ' + target;
+        }
+        renderSourcesGrid();
+        reportSources(sourcesCache.length === 0 ? 'No hay fuentes en esta escena.' : (sourcesCache.length + ' fuentes encontradas.'));
+      } catch (error) {
+        sourcesCache = [];
+        renderSourcesGrid();
+        reportSources(error.message, true);
+      } finally {
+        sourcesBusy = false;
+      }
+    }
+
+    function renderSourcesGrid() {
+      if (!sourcesGrid) return;
+      const query = (sourcesFilter && sourcesFilter.value ? sourcesFilter.value : '').trim().toLowerCase();
+      const filtered = sourcesCache.filter(s => !query || s.name.toLowerCase().includes(query) || (s.type || '').toLowerCase().includes(query));
+      sourcesGrid.replaceChildren();
+      for (const source of filtered) {
+        const card = document.createElement('div');
+        card.className = 'source-card' + (source.enabled ? '' : ' hidden-source');
+
+        const info = document.createElement('div');
+        info.className = 'source-info';
+        const name = document.createElement('strong');
+        name.textContent = source.name;
+        const type = document.createElement('small');
+        type.textContent = source.type ? source.type.replace(/_/g, ' ') : 'fuente';
+        info.appendChild(name);
+        info.appendChild(type);
+
+        const eyeBtn = document.createElement('button');
+        eyeBtn.type = 'button';
+        eyeBtn.className = 'eye-btn' + (source.enabled ? ' visible' : ' hidden-source');
+        eyeBtn.setAttribute('aria-pressed', String(source.enabled));
+        eyeBtn.setAttribute('aria-label', (source.enabled ? 'Ocultar ' : 'Mostrar ') + source.name);
+        eyeBtn.title = (source.enabled ? 'Visible en OBS (tocar para ocultar)' : 'Oculta en OBS (tocar para mostrar)');
+        eyeBtn.innerHTML = source.enabled ? SVG_EYE_ON : SVG_EYE_OFF;
+
+        eyeBtn.addEventListener('click', async () => {
+          const nextState = !source.enabled;
+          source.enabled = nextState;
+          eyeBtn.className = 'eye-btn' + (nextState ? ' visible' : ' hidden-source');
+          card.className = 'source-card' + (nextState ? '' : ' hidden-source');
+          eyeBtn.setAttribute('aria-pressed', String(nextState));
+          eyeBtn.setAttribute('aria-label', (nextState ? 'Ocultar ' : 'Mostrar ') + source.name);
+          eyeBtn.title = (nextState ? 'Visible en OBS (tocar para ocultar)' : 'Oculta en OBS (tocar para mostrar)');
+          eyeBtn.innerHTML = nextState ? SVG_EYE_ON : SVG_EYE_OFF;
+          try {
+            await obsRequest('action', {
+              action: 'toggle_source',
+              scene: currentObsScene,
+              id: source.id,
+              enabled: nextState,
+            });
+            reportSources('Fuente «' + source.name + '» ' + (nextState ? 'activada' : 'ocultada') + '.');
+          } catch (err) {
+            source.enabled = !nextState;
+            eyeBtn.className = 'eye-btn' + (!nextState ? ' visible' : ' hidden-source');
+            card.className = 'source-card' + (!nextState ? '' : ' hidden-source');
+            eyeBtn.setAttribute('aria-pressed', String(!nextState));
+            eyeBtn.setAttribute('aria-label', (!nextState ? 'Ocultar ' : 'Mostrar ') + source.name);
+            eyeBtn.innerHTML = !nextState ? SVG_EYE_ON : SVG_EYE_OFF;
+            reportSources('Error: ' + err.message, true);
+          }
+        });
+
+        card.appendChild(info);
+        card.appendChild(eyeBtn);
+        sourcesGrid.appendChild(card);
+      }
+    }
+
+    if (sourcesFilter) sourcesFilter.addEventListener('input', renderSourcesGrid);
+    if (btnSourcesRefresh) btnSourcesRefresh.addEventListener('click', () => loadSources(currentObsScene));
+    if (btnOpenSources) btnOpenSources.addEventListener('click', () => {
+      openSheet(sourcesSheet);
+      loadSources(currentObsScene);
+    });
+    if (btnSourcesBack) btnSourcesBack.addEventListener('click', () => {
+      openSheet(obsSheet);
+    });
+
     async function refreshObs() {
       if (stateBusy) return;
       stateBusy = true;
@@ -933,11 +1148,13 @@
         populateSelect(inputSelect, data.inputs, inputSelect.value || (data.inputs.includes('Mic/Aux') ? 'Mic/Aux' : data.inputs[0]));
         if (inputSelect.value && data.muted === null) data = await obsRequest('state?input=' + encodeURIComponent(inputSelect.value));
         updateMute(data.muted);
+        renderScenesGrid(data.scenes, data.scene);
         reportObs('OBS conectado. Capturas fijas; no vídeo continuo.');
       } catch (error) {
         sceneSelect.disabled = true;
         inputSelect.disabled = true;
         updateMute(null);
+        renderScenesGrid([], '');
         reportObs(error.message, true);
       } finally { stateBusy = false; }
     }
@@ -1015,6 +1232,7 @@
       [chatSheet, document.getElementById('btn-chat-view')],
       [commandsSheet, document.getElementById('btn-commands-view')],
       [obsSheet, document.getElementById('btn-obs-menu')],
+      [sourcesSheet, document.getElementById('btn-obs-menu')],
     ]);
     function closeDrawPanel() {
       if (drawPanel.hidden) return;

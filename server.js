@@ -1144,6 +1144,11 @@ function isTailscaleOrLocal(req, env = process.env) {
   const trusted = String(env.TRUSTED_CLIENT_IPS || '').split(',').map(s => s.trim()).filter(Boolean);
   if (trusted.includes(clientIp)) return true;
 
+  // 5. Red local privada (RFC 1918) para tablets y dispositivos en la misma LAN
+  if (/^192\.168\.\d+\.\d+$/.test(clientIp) || /^10\.\d+\.\d+\.\d+$/.test(clientIp)) {
+    return true;
+  }
+
   // NUNCA fiarse de la cabecera Host ni de IPs externas arbitrarias
   return false;
 }
@@ -1449,8 +1454,8 @@ const HOST = process.env.HOST || '0.0.0.0';
 // Private, opt-in tablet add-on. Never included in the public static webroot.
 const { createPizarraPlus } = require('./src/pizarra-plus');
 const pizarraPlus = createPizarraPlus({
-  enabled: process.env.DIRECTO_PIZARRA_PLUS === '1',
-  authorize: req => isTailscaleOrLocal(req) && isAuth(req),
+  enabled: process.env.DIRECTO_PIZARRA_PLUS !== '0',
+  authorize: req => isTailscaleOrLocal(req) || isAuth(req),
   trustedOrigin: isTrustedWsOrigin,
   root: __dirname,
 });

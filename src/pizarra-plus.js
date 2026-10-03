@@ -97,21 +97,54 @@ function createPizarraPlus({ enabled = false, authorize, trustedOrigin, root, cr
       if (pathname === '/api/pizarra-plus/obs/action' && req.method === 'POST') {
         let body;
         try { body = await readBody(req); } catch (_) { reply(res, 400, { error: 'invalid-body' }); return true; }
-        if (!['scene', 'mute'].includes(body.action) || typeof body.name !== 'string' || !body.name || body.name.length > 256) {
+        if (!['scene', 'mute', 'toggle_source'].includes(body.action)) {
           reply(res, 400, { error: 'invalid-action' }); return true;
         }
         const client = await obs();
         if (body.action === 'scene') {
+          if (typeof body.name !== 'string' || !body.name || body.name.length > 256) {
+            reply(res, 400, { error: 'invalid-action' }); return true;
+          }
           const state = await client.obtenerEscenas();
           if (!(state.scenes || []).some(s => s.sceneName === body.name)) { reply(res, 400, { error: 'unknown-scene' }); return true; }
           await client.cambiarEscena(body.name);
           reply(res, 200, { ok: true, scene: body.name });
-        } else {
+        } else if (body.action === 'mute') {
+          if (typeof body.name !== 'string' || !body.name || body.name.length > 256) {
+            reply(res, 400, { error: 'invalid-action' }); return true;
+          }
           const state = await client.enviarPeticion('GetInputList');
           if (!(state.inputs || []).some(s => s.inputName === body.name)) { reply(res, 400, { error: 'unknown-input' }); return true; }
           const mute = await client.toggleMute(body.name);
           reply(res, 200, { ok: true, input: body.name, muted: Boolean(mute.inputMuted) });
+        } else {
+          if (typeof body.id !== 'number' || typeof body.enabled !== 'boolean') {
+            reply(res, 400, { error: 'invalid-action' }); return true;
+          }
+          const state = await client.obtenerEscenas();
+          const targetScene = (typeof body.scene === 'string' && body.scene) ? body.scene : state.currentProgramSceneName;
+          await client.enviarPeticion('SetSceneItemEnabled', {
+            sceneName: targetScene,
+            sceneItemId: body.id,
+            sceneItemEnabled: body.enabled,
+          });
+          reply(res, 200, { ok: true, scene: targetScene, id: body.id, enabled: body.enabled });
         }
+      } else if (pathname === '/api/pizarra-plus/obs/sources' && req.method === 'GET') {
+        const client = await obs();
+        const state = await client.obtenerEscenas();
+        const requestedScene = url.searchParams.get('scene') || state.currentProgramSceneName;
+        const items = await client.enviarPeticion('GetSceneItemList', { sceneName: requestedScene }).catch(() => ({ sceneItems: [] }));
+        reply(res, 200, {
+          ok: true,
+          scene: requestedScene,
+          sources: (items.sceneItems || []).map(i => ({
+            id: i.sceneItemId,
+            name: i.sourceName,
+            enabled: Boolean(i.sceneItemEnabled),
+            type: i.sourceType || '',
+          })),
+        });
       } else if (pathname === '/api/pizarra-plus/obs/state' && req.method === 'GET') {
         const client = await obs();
         const [state, inputs] = await Promise.all([client.obtenerEscenas(), client.enviarPeticion('GetInputList')]);

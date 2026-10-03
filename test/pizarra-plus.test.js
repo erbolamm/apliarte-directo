@@ -27,7 +27,11 @@ function fixture({ enabled = true, allowed = true, connected = true, drawingPort
   const client = {
     estaConectado: () => connected,
     obtenerEscenas: async () => ({ currentProgramSceneName: 'Camera', scenes: [{ sceneName: 'Camera' }, { sceneName: 'Board' }] }),
-    enviarPeticion: async () => ({ inputs: [{ inputName: 'Real mic' }] }),
+    enviarPeticion: async (req, data) => {
+      if (req === 'GetSceneItemList') return { sceneItems: [{ sceneItemId: 1, sourceName: 'Webcam', sceneItemEnabled: true, sourceType: 'input' }] };
+      if (req === 'SetSceneItemEnabled') { calls.push(['toggle_source', data?.sceneItemId, data?.sceneItemEnabled]); return {}; }
+      return { inputs: [{ inputName: 'Real mic' }] };
+    },
     obtenerMute: async () => ({ inputMuted: false }),
     toggleMute: async name => { calls.push(['mute', name]); return { inputMuted: true }; },
     cambiarEscena: async name => { calls.push(['scene', name]); },
@@ -85,9 +89,14 @@ test('only explicit scene and mute actions are allowed; no stream actions', asyn
   const f = fixture();
   assert.equal((await request(f, '/api/pizarra-plus/obs/action', { method: 'POST', body: { action: 'scene', name: 'Board' } })).status, 200);
   assert.equal((await request(f, '/api/pizarra-plus/obs/action', { method: 'POST', body: { action: 'mute', name: 'Real mic' } })).status, 200);
+  assert.equal((await request(f, '/api/pizarra-plus/obs/action', { method: 'POST', body: { action: 'toggle_source', scene: 'Board', id: 1, enabled: false } })).status, 200);
+  assert.equal((await request(f, '/api/pizarra-plus/obs/action', { method: 'POST', body: { action: 'toggle_source', id: 'not-a-number' } })).status, 400);
   for (const action of ['StartStream', 'StopStream', 'request']) assert.equal((await request(f, '/api/pizarra-plus/obs/action', { method: 'POST', body: { action, name: 'Board' } })).status, 400);
   assert.equal((await request(f, '/api/pizarra-plus/obs/action', { method: 'POST', body: { action: 'scene', name: 'Invented' } })).status, 400);
-  assert.deepEqual(f.calls, [['scene', 'Board'], ['mute', 'Real mic']]);
+  assert.deepEqual(f.calls, [['scene', 'Board'], ['mute', 'Real mic'], ['toggle_source', 1, false]]);
+  const s = await request(f, '/api/pizarra-plus/obs/sources?scene=Board');
+  assert.equal(s.status, 200);
+  assert.equal(s.json().sources[0].name, 'Webcam');
 });
 test('screenshots are still JPEGs, not video, and are not publicly cached', async () => {
   const r = await request(fixture(), '/api/pizarra-plus/obs/screenshot');
@@ -369,3 +378,20 @@ test('drawing accepts any RGB color through the native picker', async () => {
   runInNewContext('let currentColor;'+code+';this.getColor = () => currentColor', ctx);
   handler({ target: { value: '#b46734' } }); assert.equal(ctx.getColor(), '#b46734');
 });
+
+test('tactile scenes grid and sources sheet with eye toggle are present and start hidden', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
+  assert.match(html, /id="obs-scenes-grid"/);
+  assert.match(html, /id="btn-open-sources"/);
+  assert.match(html, /<section id="sources-sheet"[^>]*\bhidden\b/);
+  assert.match(html, /id="sources-grid"/);
+  assert.match(html, /id="sources-filter"/);
+  assert.match(html, /\.scene-grid/);
+  assert.match(html, /\.sources-grid/);
+  assert.match(html, /\.eye-btn/);
+  assert.match(html, /function renderScenesGrid/);
+  assert.match(html, /function loadSources/);
+  assert.match(html, /toggle_source/);
+});
+
