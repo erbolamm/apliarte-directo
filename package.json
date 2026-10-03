@@ -11,7 +11,8 @@
     "start": "node server.js",
     "centro": "node src/server.js",
     "test": "node scripts/run-tests.mjs test/*.test.js temas/test/*.test.js",
-    "directo": "node scripts/directo.mjs"
+    "directo": "node scripts/directo.mjs",
+    "comprobar": "node scripts/comprobar-directo.mjs"
   },
   "dependencies": {
     "ws": "^8.18.0"
