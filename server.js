@@ -7,6 +7,17 @@ const { parseWsAuth, parseWsPanelCookie, isTrustedWsOrigin, decideWsRole, canRec
 const { handleStreamingConfig } = require('./src/streaming-config');
 const { handleCentreStatus } = require('./src/centro-status');
 
+// Local, gitignored launch settings (data/directo.local.json → {"env": {...}}).
+// Applied as defaults so every launcher (npm run directo, erbolamm directo on,
+// "Arrancar Panel", double-click) starts with the same configuration.
+// Explicit environment variables still win.
+try {
+  const local = JSON.parse(fs.readFileSync(require('path').join(__dirname, 'data', 'directo.local.json'), 'utf8'));
+  for (const [k, v] of Object.entries(local.env || {})) {
+    if (process.env[k] === undefined) process.env[k] = String(v);
+  }
+} catch (_) { /* no local settings: public defaults */ }
+
 const PORT        = parseInt(process.env.PORT || '7979', 10);
 // Resolved after DATA_DIR is known: PANEL_PASS, a claimed password, or a one-time claim link.
 let PASSWORD    = process.env.PANEL_PASS || '';

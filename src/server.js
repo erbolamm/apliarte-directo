@@ -47,6 +47,15 @@ import ContextoNms from "node-media-server/src/core/context.js";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const RAIZ = resolve(AQUI, "..");
+// Local, gitignored launch settings (data/directo.local.json → {"env": {...}}).
+// Explicit environment variables still win.
+try {
+  const local = JSON.parse(readFileSync(join(RAIZ, "data", "directo.local.json"), "utf8"));
+  for (const [k, v] of Object.entries(local.env || {})) {
+    if (process.env[k] === undefined) process.env[k] = String(v);
+  }
+} catch (_) { /* no local settings: public defaults */ }
+
 const DATA_DIR = process.env.DATA_DIR || join(RAIZ, "data");
 const destinationKey = (destination) => resolveDestinationKey(destination, DATA_DIR, process.env);
 
