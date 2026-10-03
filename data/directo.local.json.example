@@ -1,0 +1,7 @@
+{
+  "env": {
+    "DIRECTO_PIZARRA_PLUS": "1",
+    "CENTRO_PANEL_PORT": "8790",
+    "OBS_BRIDGE_WS_URL": "ws://127.0.0.1:7979/ws"
+  }
+}
