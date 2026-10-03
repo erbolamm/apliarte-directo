@@ -1,0 +1,25 @@
+# Contenedor de control ErBolamm (soberania y packaging limpio)
+control-erbolamm/
+
+# Secretos y entorno local
+.env
+.env.*
+config.local.json*
+
+# Control de versiones
+.git
+.worktrees
+
+# Dependencias y temporales
+node_modules
+npm-debug.log*
+.coverage/
+
+# Datos y medios locales
+data/*.json
+medios/*
+!medios/.gitkeep
+!data/.gitkeep
+caddy_data/
+caddy_config/
+logs/
