@@ -301,9 +301,43 @@ html[data-theme="dark"] .real-office {
 .real-office .face.rear {width:var(--w);height:var(--h);transform-origin:top;transform:rotateX(90deg);}
 .real-office .face.left {width:var(--h);height:var(--d);transform-origin:left;transform:rotateY(-90deg);background-image:linear-gradient(#fff1,#0002);}
 .real-office .face.right {left:var(--w);width:var(--h);height:var(--d);transform-origin:left;transform:translateZ(var(--h)) rotateY(90deg);background-image:linear-gradient(#0002,#0005);}
-.real-office .solid-shadow {position:absolute;inset:0;box-shadow:6px 10px 10px rgba(0,0,0,.12);transform:translateZ(.5px);}
-.real-office .wall .front,.real-office .wall .right {background-color:var(--wall-line);}
-.real-office .wall .top {border-top:3px solid var(--accent-glow);}
+/* Muros exteriores y murete frontal: material de cristal con alta transparencia */
+.real-office .solid.wall {
+  --material: rgba(143, 213, 250, 0.10);
+  pointer-events: none;
+}
+.real-office .solid.wall .face {
+  background: linear-gradient(115deg, rgba(253, 253, 253, 0.22) 20%, rgba(143, 213, 250, 0.08) 50%, rgba(94, 206, 245, 0.16) 85%) !important;
+  border: 1px solid rgba(94, 206, 245, 0.45) !important;
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+}
+.real-office .solid.wall .front,
+.real-office .solid.wall .right,
+.real-office .solid.wall .left,
+.real-office .solid.wall .rear {
+  background-color: rgba(143, 213, 250, 0.12) !important;
+}
+.real-office .solid.wall .top {
+  background-color: rgba(224, 242, 254, 0.35) !important;
+  border-top: 2px solid rgba(94, 206, 245, 0.95) !important;
+  box-shadow: 0 0 8px rgba(94, 206, 245, 0.45);
+}
+/* Murete frontal del escalon hacia el vacio: cristal ultra-transparente */
+.real-office .solid.wall[style*="--h: 22px"],
+.real-office .solid.wall[style*="--h:22px"] {
+  --material: rgba(143, 213, 250, 0.08);
+}
+.real-office .solid.wall[style*="--h: 22px"] .face,
+.real-office .solid.wall[style*="--h:22px"] .face {
+  background: linear-gradient(180deg, rgba(224, 242, 254, 0.22) 0%, rgba(143, 213, 250, 0.06) 60%, rgba(94, 206, 245, 0.14) 100%) !important;
+  border: 1px solid rgba(94, 206, 245, 0.5) !important;
+}
+.real-office .solid.wall[style*="--h: 22px"] .face.front,
+.real-office .solid.wall[style*="--h:22px"] .face.front {
+  border-bottom: 2.5px solid rgba(94, 206, 245, 0.85) !important;
+  box-shadow: inset 0 -3px 6px rgba(94, 206, 245, 0.3);
+}
 .real-office .face.top span {font-size:12px;font-weight:800;position:absolute;left:5px;bottom:3px;color:#303030;}
 .real-office .monitor {position:absolute;left:calc(var(--w) * .3);top:8px;width:48px;height:32px;transform-origin:top;transform:translateZ(calc(var(--h) + 34px)) rotateX(-90deg);border:4px solid var(--screen-dark);border-radius:3px;background:var(--nav);color:var(--accent-glow);font:8px monospace;box-shadow:2px 3px 0 #303030;}
 .real-office .monitor-foot {position:absolute;left:calc(var(--w) * .47);top:4px;width:8px;height:16px;transform-origin:top;transform:translateZ(calc(var(--h) + 16px)) rotateX(-90deg);background:var(--screen-dark);}
@@ -1072,8 +1106,41 @@ body.hub-frozen .real-office .world *::after {
 }
 
 /* !damas board (3D view): squares laid on the floor with chess-style labels */
-.real-office .damas-board{position:absolute;display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:repeat(8,1fr);box-shadow:0 0 0 40px #efe9df;pointer-events:none;}
-.real-office .damas-square{display:block;}
-.real-office .damas-label{position:absolute;font:800 26px/1 Inter,system-ui,sans-serif;color:#111;transform:translate(-50%,-50%);}
-.real-office .damas-col{top:-20px;}
-.real-office .damas-row{left:-20px;}
+.real-office .damas-board {
+  position: absolute;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  box-shadow: 0 0 0 40px #efe9df;
+  pointer-events: none;
+}
+.real-office .damas-square {
+  display: block;
+  aspect-ratio: 1 / 1;
+}
+.real-office .damas-label {
+  position: absolute;
+  font: 800 26px/1 Inter, system-ui, sans-serif;
+  color: #111;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.real-office .damas-col {
+  top: auto;
+  bottom: -2px;
+  transform-origin: bottom center;
+  transform: translateX(-50%) rotateX(-90deg);
+  font: 900 28px/1 'Inter', system-ui, sans-serif;
+  color: #000000 !important;
+  text-transform: uppercase;
+  text-shadow:
+    0 1px 2px rgba(255, 255, 255, 0.95),
+    0 -1px 2px rgba(255, 255, 255, 0.95),
+    1px 0 2px rgba(255, 255, 255, 0.95),
+    -1px 0 2px rgba(255, 255, 255, 0.95);
+}
+.real-office .damas-row {
+  left: -20px;
+}
+
+
