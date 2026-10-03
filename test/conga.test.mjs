@@ -280,3 +280,18 @@ test('isCongaDancer: true for dancers, false otherwise', () => {
   assert.equal(conga.isCongaDancer(s, 'v1'), true);
   assert.equal(conga.isCongaDancer(s, 'ghost'), false);
 });
+
+test('CONGA_CIRCUIT: crosses the room walls (y=414 / y=498) only through the doors (x=310 / x=950)', async () => {
+  const { CONGA_CIRCUIT } = await import('../oficina-3d/src/office/conga.ts').catch(() => import('../oficina-3d/dist-test/conga.js'));
+  const walls = [414, 498];
+  for (let i = 1; i < CONGA_CIRCUIT.length; i++) {
+    const a = CONGA_CIRCUIT[i - 1];
+    const b = CONGA_CIRCUIT[i];
+    assert.ok(a.x === b.x || a.y === b.y, `segment ${i} must be horizontal or vertical`);
+    for (const w of walls) {
+      const crosses = (a.y - w) * (b.y - w) < 0;
+      if (crosses) assert.ok(a.x === 310 || a.x === 950, `segment ${i} crosses wall y=${w} outside a door (x=${a.x})`);
+    }
+  }
+  assert.deepEqual(CONGA_CIRCUIT[0], CONGA_CIRCUIT[CONGA_CIRCUIT.length - 1]);
+});

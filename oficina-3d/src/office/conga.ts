@@ -44,17 +44,30 @@ export const CONGA_ADOPT_TEXT = 'Adoptadme, por favor';
  *  Excludes `ja` (the leader) and `om` (not animated in the office). */
 const DANCING_POOL: CongaAgentId[] = ['co', 'cl', 'pi', 'ge', 'gr', 'op', 'ex', 'be'];
 
-/** Circuit waypoints. One full circuit returns to the start. */
+/** Circuit waypoints. One full circuit returns to the start.
+ *  Every room is entered and left through its door (layout.ts DOORS at x=310/950,
+ *  walls at y=414/498) and rooms are linked only through the corridor (y=456),
+ *  so dancers never cross a wall. */
 export const CONGA_CIRCUIT: CongaPt[] = [
-  { x: 400, y: 300 }, // lounge (descanso)
-  { x: 628, y: 456 }, // junction (pasillo)
-  { x: 900, y: 280 }, // orch (reuniones)
-  { x: 628, y: 456 }, // junction
-  { x: 200, y: 560 }, // work (trabajo)
-  { x: 628, y: 456 }, // junction
-  { x: 800, y: 560 }, // deliv (entregas)
-  { x: 628, y: 456 }, // junction
-  { x: 400, y: 300 }, // lounge (back to start)
+  { x: 310, y: 300 }, // lounge (descanso)
+  { x: 310, y: 414 }, // lounge door
+  { x: 310, y: 456 }, // corridor
+  { x: 950, y: 456 }, // corridor
+  { x: 950, y: 414 }, // orch door
+  { x: 950, y: 250 }, // orch (reuniones)
+  { x: 950, y: 414 }, // orch door
+  { x: 950, y: 456 }, // corridor
+  { x: 950, y: 498 }, // deliv door
+  { x: 950, y: 640 }, // deliv (entregas)
+  { x: 950, y: 498 }, // deliv door
+  { x: 950, y: 456 }, // corridor
+  { x: 310, y: 456 }, // corridor
+  { x: 310, y: 498 }, // work door
+  { x: 310, y: 640 }, // work (trabajo)
+  { x: 310, y: 498 }, // work door
+  { x: 310, y: 456 }, // corridor
+  { x: 310, y: 414 }, // lounge door
+  { x: 310, y: 300 }, // lounge (back to start)
 ];
 
 /** Total length of the circuit path in pixels. */
