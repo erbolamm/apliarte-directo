@@ -17,7 +17,8 @@ await writeFile(path.join(base,'dist/office-3d.css'),css);
 const repoPublic = path.resolve(base, '../public');
 try {
   await copyFile(path.join(base, 'dist/office-3d.js'), path.join(repoPublic, 'office-3d.js'));
-  await copyFile(path.join(base, 'dist/office-3d.css'), path.join(repoPublic, 'office-3d.css'));
+  // public/office-3d.css is hand-maintained (crystal walls, damas board):
+  // never overwrite it from dist. Port new styles by hand when needed.
 } catch (e) {
   console.warn('Could not copy to public:', e);
 }
