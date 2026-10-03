@@ -60,9 +60,15 @@
   }
 
   setInterval(() => {
-    const st = window.Oficina3D?.runtime?.congaState;
+    const rt = window.Oficina3D?.runtime;
+    const st = rt?.congaState;
     const fase = st?.phase;
     const ahora = performance.now();
+
+    // The office render loop stops when nothing moves (App.tsx loop keeps
+    // running only while tick() reports motion), which froze the conga at the
+    // end of the countdown. Keep it awake while a conga is in progress.
+    if (fase && fase !== 'idle' && typeof rt.triggerWake === 'function') rt.triggerWake();
 
     if (fase === 'countdown') {
       const quedan = Math.max(0, Math.ceil((st.countdownEndsAt - ahora) / 1000));
