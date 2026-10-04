@@ -116,24 +116,17 @@
     <div class="row"><button id="modalTabKodee" type="button">Con Kodee (Hostinger)</button><button id="modalTabDocker" type="button">Docker Compose</button><button id="modalTabSecurity" type="button">Seguridad y Tailscale</button></div>
     <section id="modalContentKodee">
       <p>Copia este prompt y pégalo en <strong>Kodee</strong> (el agente de IA en tu panel VPS de Hostinger):</p>
-      <div class="code-block" id="promptText">Despliega de forma soberana y segura el proyecto apliarte-directo en este servidor:
+      <div class="code-block" id="promptText">Despliega de forma limpia y segura el proyecto ApliArte Directo con Docker Compose en este servidor:
 
-1. Clona el repositorio oficial:
+1. Instala Docker y el plugin Docker Compose si aún no están instalados.
+2. Clona el repositorio oficial si no existe:
    git clone https://github.com/erbolamm/apliarte-directo.git &amp;&amp; cd apliarte-directo
-
-2. Prepara la configuración de entorno:
-   cp .env.example .env
-   - Genera una contraseña segura y aleatoria para PANEL_PASS.
-   - Pídeme mi Stream Key de Twitch y configúrala en TWITCH_STREAM_KEY.
-   - Configura una sala y clave propia para VDO_ROOM y VDO_PASS.
-
-3. Inicia el stack de contenedores Docker:
+3. Si no existe el archivo .env, copia la plantilla de ejemplo:
+   cp -n .env.example .env
+   (No me pidas contraseñas ni claves de emisión en este chat; las configuraré después de forma segura desde la interfaz web).
+4. Levanta el stack en segundo plano:
    docker compose up -d
-
-4. REGLA DE SEGURIDAD CRÍTICA:
-   - Mantén los puertos del panel web restringidos a la red privada (Tailscale o IP local).
-   - No expongas /admin ni los puertos de control a internet público.
-   - Muestra las URLs de acceso privado al terminar.</div>
+5. Comprueba el estado con 'docker compose ps' y facilítame la URL de acceso web privado (puerto 7979 por IP local o Tailscale) y el enlace de primer acceso para configurar mis claves en el navegador sin exponer el panel a internet público.</div>
       <button id="copyPrompt" type="button">Copiar prompt para Kodee</button>
       <p>¿Necesitas un VPS? <a href="https://hostinger.es?REFERRALCODE=APLIARTE" target="_blank" rel="noopener sponsored">Hostinger con el enlace de ApliArte</a> (enlace de afiliado).</p>
     </section>
