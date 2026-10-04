@@ -13,7 +13,7 @@ function buildVdoPushUrl(config, tipo = 'camara', presetKey = 'low') {
     return `https://vdo.ninja/?push=${encodeURIComponent(config.streamId)}&room=${encodeURIComponent(config.room)}${passParam}&mic&novideo&autostart&cleanoutput`;
   }
   const preset = PRESETS_CAMARA[presetKey] || PRESETS_CAMARA.low;
-  return `https://vdo.ninja/?push=${encodeURIComponent(config.streamId)}&room=${encodeURIComponent(config.room)}${passParam}&webcam&facing=user&videobitrate=${preset.bitrate}&width=${preset.width}&height=${preset.height}&framerate=${preset.fps}&autostart&cleanoutput`;
+  return `https://vdo.ninja/?push=${encodeURIComponent(config.streamId)}&room=${encodeURIComponent(config.room)}${passParam}&webcam&facing=user&videobitrate=${preset.bitrate}&width=${preset.width}&height=${preset.height}&framerate=${preset.fps}&autostart&cleanoutput&noaudio`;
 }
 
 test('Punto b: WebRTC Mic genera URL con &mic&novideo y sin sensor de vídeo', () => {
@@ -29,41 +29,29 @@ test('Punto b: WebRTC Mic genera URL con &mic&novideo y sin sensor de vídeo', (
   assert.ok(!micUrl.includes('webcam'), 'No debe solicitar hardware de webcam');
 });
 
-test('Punto b: Cámara WebRTC transmite vídeo Y audio sin &noaudio', () => {
+test('Punto b: Cámara WebRTC incluye &noaudio para desacoplar el audio hacia el canal independiente', () => {
   const config = { room: 'sala123', streamId: 'ja_cam_directo', password: '' };
   const camUrl = buildVdoPushUrl(config, 'camara', 'low');
 
   assert.match(camUrl, /push=ja_cam_directo/);
   assert.match(camUrl, /&webcam&facing=user/);
   assert.match(camUrl, /videobitrate=250/);
-  assert.ok(!camUrl.includes('&noaudio'), 'No debe incluir &noaudio para enviar audio de alta calidad por WebRTC');
+  assert.ok(camUrl.includes('&noaudio'), 'Debe incluir &noaudio para que el micrófono opere por su canal independiente');
 });
 
-test('Punto a: Activar micrófono con cámara encendida apaga la cámara y conmuta a monigote en OBS', () => {
+test('Punto a: Micrófono y cámara operan de forma desacoplada e independiente', () => {
   const wsMensajes = [];
   let camaraActiva = true;
   let modoActual = 'camara';
-  let pushIframeSrc = 'https://vdo.ninja/?push=ja_cam&webcam';
   let microActivo = false;
-
-  function detenerCamara(motivo) {
-    camaraActiva = false;
-    modoActual = 'monigote';
-    wsMensajes.push({ type: 'camara_stop', motivo });
-  }
 
   function toggleMicro() {
     if (!microActivo) {
-      // Si la cámara estaba activa, apagarla inmediatamente para volver al monigote en OBS
-      if (camaraActiva || modoActual === 'camara') {
-        detenerCamara('Cámara apagada al activar micrófono');
-      }
-      pushIframeSrc = 'https://vdo.ninja/?push=ja_cam&mic&novideo';
+      // Desacople total: no detiene la cámara ni altera el modo camara
       microActivo = true;
       wsMensajes.push({ type: 'micro_start' });
     } else {
       microActivo = false;
-      pushIframeSrc = 'about:blank';
       wsMensajes.push({ type: 'micro_stop' });
     }
   }
@@ -71,15 +59,11 @@ test('Punto a: Activar micrófono con cámara encendida apaga la cámara y conmu
   // Ejecutar activación de micrófono mientras la cámara está en antena
   toggleMicro();
 
-  assert.equal(camaraActiva, false, 'La cámara debe apagarse');
-  assert.equal(modoActual, 'monigote', 'El modo debe conmutar a monigote en OBS');
-  assert.equal(microActivo, true, 'El micrófono debe quedar activo');
-  assert.match(pushIframeSrc, /&mic&novideo/, 'El stream WebRTC debe pasar a solo audio');
-
-  // Comprobar secuencia de mensajes WebSocket enviados
-  assert.equal(wsMensajes.length, 2);
-  assert.equal(wsMensajes[0].type, 'camara_stop', 'Primero emite camara_stop para que OBS pinte el monigote');
-  assert.equal(wsMensajes[1].type, 'micro_start', 'Luego emite micro_start para el estado del micro');
+  assert.equal(camaraActiva, true, 'La cámara permanece activa');
+  assert.equal(modoActual, 'camara', 'El modo cámara no se altera');
+  assert.equal(microActivo, true, 'El micrófono se activa correctamente');
+  assert.equal(wsMensajes.length, 1);
+  assert.equal(wsMensajes[0].type, 'micro_start');
 });
 
 // ── 2. Punto c: Ocultar vista previa local para ahorro de batería/GPU ──

@@ -1917,11 +1917,6 @@
       const badge = document.getElementById('badge-micro-estado');
       if (!mobileMicroActivo) {
         try {
-          // Si la cámara está activa, se apaga y vuelve al monigote en OBS
-          if (mobileCamaraActiva || camaraModoAdmin === 'camara') {
-            detenerCamaraMobile('Cámara apagada al activar micrófono');
-          }
-
           mobileStream = await navigator.mediaDevices.getUserMedia({
             audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
           });
@@ -2067,7 +2062,7 @@
           // Cambiar únicamente la captura local de VDO.ninja sin enviar órdenes de conmutación al servidor ni a OBS
           const preset = PRESETS_CAMARA[val] || PRESETS_CAMARA.low;
           const passParam = camaraConfig.password ? `&password=${encodeURIComponent(camaraConfig.password)}` : '';
-          const pushUrl = `https://vdo.ninja/?push=${encodeURIComponent(camaraConfig.streamId)}&room=${encodeURIComponent(camaraConfig.room)}${passParam}&webcam&facing=user&videobitrate=${preset.bitrate}&width=${preset.width}&height=${preset.height}&framerate=${preset.fps}&autostart&cleanoutput`;
+          const pushUrl = `https://vdo.ninja/?push=${encodeURIComponent(camaraConfig.streamId)}&room=${encodeURIComponent(camaraConfig.room)}${passParam}&webcam&facing=user&videobitrate=${preset.bitrate}&width=${preset.width}&height=${preset.height}&framerate=${preset.fps}&autostart&cleanoutput&noaudio`;
           if (cameraPushIframe && cameraPushIframe.src !== pushUrl) {
             cameraPushIframe.src = pushUrl;
           }
@@ -2137,45 +2132,13 @@
         showToast('Stream Twitch pausado (Ahorro de batería)');
       }
 
-      // Si el micro estaba activo en modo solo voz, se apaga e integra en la emisión de cámara
-      if (mobileMicroActivo) {
-        mobileMicroActivo = false;
-        if (adminWs && adminWs.readyState === WebSocket.OPEN) {
-          adminWs.send(JSON.stringify({ type: 'micro_stop' }));
-        }
-        if (animVumetroMobileId) cancelAnimationFrame(animVumetroMobileId);
-        if (mobileProcessor) {
-          try { mobileProcessor.disconnect(); } catch (_) {}
-          mobileProcessor = null;
-        }
-        if (mobileStream) {
-          mobileStream.getTracks().forEach(t => t.stop());
-          mobileStream = null;
-        }
-        if (mobileAudioCtx) {
-          try { mobileAudioCtx.close(); } catch (_) {}
-          mobileAudioCtx = null;
-        }
-        const btnMic = document.getElementById('btn-micro-toggle');
-        const badgeMic = document.getElementById('badge-micro-estado');
-        if (btnMic) {
-          btnMic.textContent = '🎙️ Activar Micrófono';
-          btnMic.classList.remove('touch-btn-live');
-        }
-        if (badgeMic) {
-          badgeMic.textContent = 'En Cámara';
-          badgeMic.style.background = '#1e293b';
-          badgeMic.style.color = 'var(--cyan)';
-        }
-      }
-
       // 2. Obtener preset de calidad configurado
       const presetKey = selectCamaraCalidad?.value || localStorage.getItem('erbolamm_cam_preset') || 'low';
       const preset = PRESETS_CAMARA[presetKey] || PRESETS_CAMARA.low;
 
-      // 3. Generar URL de emisión en VDO.Ninja (vídeo + audio WebRTC con Opus sin &noaudio)
+      // 3. Generar URL de emisión en VDO.Ninja (vídeo WebRTC con &noaudio para no colisionar con el micro independiente)
       const passParam = camaraConfig.password ? `&password=${encodeURIComponent(camaraConfig.password)}` : '';
-      const pushUrl = `https://vdo.ninja/?push=${encodeURIComponent(camaraConfig.streamId)}&room=${encodeURIComponent(camaraConfig.room)}${passParam}&webcam&facing=user&videobitrate=${preset.bitrate}&width=${preset.width}&height=${preset.height}&framerate=${preset.fps}&autostart&cleanoutput`;
+      const pushUrl = `https://vdo.ninja/?push=${encodeURIComponent(camaraConfig.streamId)}&room=${encodeURIComponent(camaraConfig.room)}${passParam}&webcam&facing=user&videobitrate=${preset.bitrate}&width=${preset.width}&height=${preset.height}&framerate=${preset.fps}&autostart&cleanoutput&noaudio`;
 
       if (cameraPushIframe) {
         cameraPushIframe.src = pushUrl;

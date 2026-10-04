@@ -39,29 +39,33 @@ test('loadAppConfig y saveAppConfig gestionan configuracion y permisos 0o600', (
   assert.ok(initial.twitch);
   assert.ok(initial.openai);
 
-  // Guardar configuración de prueba
-  const saved = saveAppConfig({
-    vdo: { room: 'sala-test-123' },
-    twitch: { canal: 'canaltest' },
-    openai: { apiKey: 'sk-test-secret-key-456' }
-  });
+  try {
+    // Guardar configuración de prueba
+    const saved = saveAppConfig({
+      vdo: { room: 'sala-test-123' },
+      twitch: { canal: 'canaltest' },
+      openai: { apiKey: 'sk-test-secret-key-456' }
+    });
 
-  assert.equal(saved.vdo.room, 'sala-test-123');
-  assert.equal(saved.twitch.canal, 'canaltest');
-  assert.equal(saved.openai.apiKey, 'sk-test-secret-key-456');
+    assert.equal(saved.vdo.room, 'sala-test-123');
+    assert.equal(saved.twitch.canal, 'canaltest');
+    assert.equal(saved.openai.apiKey, 'sk-test-secret-key-456');
 
-  // Verificar que el archivo existe con permisos seguros
-  assert.ok(fs.existsSync(testConfigFile));
-  const stats = fs.statSync(testConfigFile);
-  // En sistemas POSIX los permisos deben ser 0o600 (lectura y escritura solo para el dueño)
-  const mode = stats.mode & 0o777;
-  assert.equal(mode, 0o600);
+    // Verificar que el archivo existe con permisos seguros
+    assert.ok(fs.existsSync(testConfigFile));
+    const stats = fs.statSync(testConfigFile);
+    // En sistemas POSIX los permisos deben ser 0o600 (lectura y escritura solo para el dueño)
+    const mode = stats.mode & 0o777;
+    assert.equal(mode, 0o600);
 
-  // Al guardar de nuevo con un token enmascarado, no debe sobreescribir con los puntos
-  const reSaved = saveAppConfig({
-    openai: { apiKey: 'sk-••••••••456' }
-  });
-  assert.equal(reSaved.openai.apiKey, 'sk-test-secret-key-456');
+    // Al guardar de nuevo con un token enmascarado, no debe sobreescribir con los puntos
+    const reSaved = saveAppConfig({
+      openai: { apiKey: 'sk-••••••••456' }
+    });
+    assert.equal(reSaved.openai.apiKey, 'sk-test-secret-key-456');
+  } finally {
+    saveAppConfig(initial);
+  }
 });
 
 test('getObsUrls genera URLs completas de fuentes OBS Studio según la petición', () => {

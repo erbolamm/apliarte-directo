@@ -446,6 +446,31 @@
       overflow: visible;
       filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
       margin-bottom: -10px;
+      transition: transform 0.3s ease;
+    }
+
+    .ja-avatar-cam-box.mini-pip {
+      position: absolute;
+      inset: auto auto 8px 8px;
+      width: 90px;
+      height: 98px;
+      border-radius: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.75);
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .ja-avatar-cam-box.mini-pip .ja-cam-header {
+      display: none;
+    }
+
+    .ja-avatar-cam-box.mini-pip .ja-cam-avatar-svg {
+      transform: scale(0.44);
+      transform-origin: bottom center;
+      margin-bottom: -5px;
     }
 
     .camera-container iframe {
@@ -3264,6 +3289,19 @@
       }
     }
 
+    const jaAvatarCamBox = document.getElementById('ja-avatar-cam-box');
+
+    function actualizarVisibilidadCamaraYMonigote() {
+      const tieneVideo = Boolean(videoCamaraRecibido && modoCamaraActual === 'camara');
+      if (cameraIframe) {
+        cameraIframe.style.opacity = tieneVideo ? '1' : '0';
+        cameraIframe.style.pointerEvents = tieneVideo ? 'auto' : 'none';
+      }
+      if (jaAvatarCamBox) {
+        jaAvatarCamBox.classList.toggle('mini-pip', tieneVideo);
+      }
+    }
+
     function setModoCamara(modo) {
       const normalizado = (modo === 'camara' || modo === 'on' || modo === true) ? 'camara' : 'monigote';
       if (normalizado === modoCamaraActual) {
@@ -3275,35 +3313,7 @@
         cameraEl.classList.remove('hidden');
       }
 
-      if (cameraVideoTimer) {
-        clearTimeout(cameraVideoTimer);
-        cameraVideoTimer = null;
-      }
-
-      if (modoCamaraActual === 'camara') {
-        if (cameraIframe) {
-          // Mantener oculto/transparente hasta que VDO.Ninja confirme que llega vídeo real
-          if (videoCamaraRecibido) {
-            cameraIframe.style.opacity = '1';
-            cameraIframe.style.pointerEvents = 'auto';
-          } else {
-            cameraIframe.style.opacity = '0';
-            cameraIframe.style.pointerEvents = 'none';
-            cameraVideoTimer = setTimeout(() => {
-              if (modoCamaraActual === 'camara' && cameraIframe) {
-                cameraIframe.style.opacity = '1';
-                cameraIframe.style.pointerEvents = 'auto';
-              }
-            }, 3500);
-          }
-        }
-      } else {
-        videoCamaraRecibido = false;
-        if (cameraIframe) {
-          cameraIframe.style.opacity = '0';
-          cameraIframe.style.pointerEvents = 'none';
-        }
-      }
+      actualizarVisibilidadCamaraYMonigote();
       actualizarLabelCam(modoCamaraActual === 'camara');
     }
     window.setModoCamara = setModoCamara;
@@ -3344,17 +3354,10 @@
         const act = msg.action || msg.event || msg.type;
         if (act === 'video-started' || act === 'stream-started' || act === 'new-stream' || act === 'playing' || act === 'loaded') {
           videoCamaraRecibido = true;
-          if (modoCamaraActual === 'camara' && cameraIframe) {
-            if (cameraVideoTimer) { clearTimeout(cameraVideoTimer); cameraVideoTimer = null; }
-            cameraIframe.style.opacity = '1';
-            cameraIframe.style.pointerEvents = 'auto';
-          }
+          actualizarVisibilidadCamaraYMonigote();
         } else if (act === 'stream-stopped' || act === 'stream-ended' || act === 'peer-disconnected') {
           videoCamaraRecibido = false;
-          if (cameraIframe) {
-            cameraIframe.style.opacity = '0';
-            cameraIframe.style.pointerEvents = 'none';
-          }
+          actualizarVisibilidadCamaraYMonigote();
         }
       } catch (_) {}
     });

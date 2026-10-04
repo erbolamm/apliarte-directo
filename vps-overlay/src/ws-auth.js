@@ -101,6 +101,11 @@ const PUBLIC_EVENTS = new Set([
   'micro_stop',
   'micro_desactivado',
   'voz_pcm',
+  'pizarra_draw',
+  'pizarra_clear',
+  'pizarra_undo',
+  'pizarra_init',
+  'pizarra_solicitar_estado',
 ]);
 
 const RESTRICTED_EVENTS = new Set([
