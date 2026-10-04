@@ -246,8 +246,30 @@
     }
     .cmd-btn strong {font-size: 15px; font-family: ui-monospace, SFMono-Regular, monospace; overflow-wrap: anywhere;}
     .cmd-btn small {font-size: 12px; color: var(--text-muted);}
-    .cmd-step {display: grid; gap: 10px; padding: 12px; border: 1px solid var(--accent); border-radius: 8px;}
-    .cmd-step[hidden] {display: none;}
+    /* Command dialog: floats centred above every panel, sized for touch. */
+    .cmd-modal {position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .55);}
+    .cmd-modal[hidden] {display: none;}
+    .cmd-step {
+      display: grid; gap: 14px; width: min(560px, 100%); max-height: 100%; overflow-y: auto; padding: 20px;
+      background: var(--panel-bg); color: var(--text-main);
+      border: 1px solid var(--accent); border-radius: 12px; font-size: 16px;
+    }
+    .cmd-step:focus {outline: none;}
+    .cmd-step h2 {margin: 0; font-size: 18px; overflow-wrap: anywhere;}
+    .cmd-step input[type="text"] {
+      flex: 1; min-width: 0; min-height: 52px; width: 100%; padding: 0 12px;
+      background: var(--panel-bg); color: var(--text-main);
+      border: 1px solid var(--border-color); border-radius: 6px; font-size: 17px;
+    }
+    .cmd-step .chip {min-height: 48px; font-size: 16px;}
+    .cmd-step .sheet-btn {min-height: 52px;}
+    .cmd-field {display: grid; gap: 6px; font-size: 14px; color: var(--text-muted);}
+    .cmd-field[hidden] {display: none;}
+    .cmd-field input[type="text"] {font-family: ui-monospace, SFMono-Regular, monospace;}
+    #cmd-step-message {margin: 0; color: var(--danger); font-weight: 700;}
+    #cmd-step-message:empty {display: none;}
+    .cmd-actions {display: grid; grid-template-columns: 1fr 1fr; gap: 10px;}
+    .cmd-actions .sheet-btn {min-height: 60px; font-size: 18px;}
     .chip-list {display: flex; flex-wrap: wrap; gap: 8px;}
     .chip {min-height: 40px; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 20px; background: transparent; color: var(--text-main); font-size: 14px; cursor: pointer;}
 
@@ -430,21 +452,29 @@
     <div class="sheet-body">
       <input id="commands-filter" type="search" placeholder="Buscar comando" aria-label="Buscar comando">
       <p id="commands-message" role="status"></p>
-      <div id="cmd-step" class="cmd-step" hidden>
-        <p id="cmd-step-title"></p>
-        <div id="cmd-step-chips" class="chip-list"></div>
-        <div class="panel-row">
-          <input id="cmd-step-input" type="text" aria-label="Escribir valor">
-          <button type="button" class="sheet-btn" id="cmd-step-use">Usar</button>
-        </div>
-        <div class="panel-row">
-          <button type="button" class="sheet-btn primary" id="cmd-send">Enviar</button>
-          <button type="button" class="sheet-btn" id="cmd-cancel">Cancelar</button>
-        </div>
-      </div>
       <div id="commands-grid" class="cmd-grid"></div>
     </div>
   </section>
+
+  <div id="cmd-modal" class="cmd-modal" hidden>
+    <div id="cmd-step" class="cmd-step" role="dialog" aria-modal="true" aria-labelledby="cmd-step-title" tabindex="-1">
+      <h2 id="cmd-step-title"></h2>
+      <div id="cmd-step-chips" class="chip-list"></div>
+      <div class="panel-row">
+        <input id="cmd-step-input" type="text" aria-label="Escribir valor" autocomplete="off" autocapitalize="none" spellcheck="false">
+        <button type="button" class="sheet-btn" id="cmd-step-use">Usar</button>
+      </div>
+      <label id="cmd-final-row" class="cmd-field" hidden>
+        Comando a enviar
+        <input id="cmd-final" type="text" autocomplete="off" autocapitalize="none" spellcheck="false">
+      </label>
+      <p id="cmd-step-message" role="alert"></p>
+      <div class="cmd-actions">
+        <button type="button" class="sheet-btn" id="cmd-cancel">Cancelar</button>
+        <button type="button" class="sheet-btn primary" id="cmd-send">Enviar</button>
+      </div>
+    </div>
+  </div>
 
   <section id="obs-sheet" class="sheet" aria-label="Controles OBS" hidden>
     <div class="sheet-head">
@@ -1069,6 +1099,26 @@
       }
     }
 
+    // Audio sources (microphones) follow their real mute state in OBS; the
+    // rest keep the scene visibility toggle.
+    function sourceToggleRequest(source, scene, enabled) {
+      if (source.audio) return { action: 'mute', name: source.name, muted: !enabled };
+      return { action: 'toggle_source', scene, id: source.id, enabled };
+    }
+    function paintSource(card, eyeBtn, source) {
+      const on = Boolean(source.enabled);
+      card.className = 'source-card' + (on ? '' : ' hidden-source');
+      eyeBtn.className = 'eye-btn' + (on ? ' visible' : ' hidden-source');
+      eyeBtn.setAttribute('aria-pressed', String(on));
+      if (source.audio) {
+        eyeBtn.setAttribute('aria-label', (on ? 'Silenciar ' : 'Activar ') + source.name);
+        eyeBtn.title = on ? 'Activo en OBS (tocar para silenciar)' : 'Silenciado en OBS (tocar para activar)';
+      } else {
+        eyeBtn.setAttribute('aria-label', (on ? 'Ocultar ' : 'Mostrar ') + source.name);
+        eyeBtn.title = on ? 'Visible en OBS (tocar para ocultar)' : 'Oculta en OBS (tocar para mostrar)';
+      }
+      eyeBtn.innerHTML = on ? SVG_EYE_ON : SVG_EYE_OFF;
+    }
     function renderSourcesGrid() {
       if (!sourcesGrid) return;
       const query = (sourcesFilter && sourcesFilter.value ? sourcesFilter.value : '').trim().toLowerCase();
@@ -1076,50 +1126,43 @@
       sourcesGrid.replaceChildren();
       for (const source of filtered) {
         const card = document.createElement('div');
-        card.className = 'source-card' + (source.enabled ? '' : ' hidden-source');
 
         const info = document.createElement('div');
         info.className = 'source-info';
         const name = document.createElement('strong');
         name.textContent = source.name;
         const type = document.createElement('small');
-        type.textContent = source.type ? source.type.replace(/_/g, ' ') : 'fuente';
+        type.textContent = source.audio ? 'audio' : (source.type ? source.type.replace(/_/g, ' ') : 'fuente');
         info.appendChild(name);
         info.appendChild(type);
 
         const eyeBtn = document.createElement('button');
         eyeBtn.type = 'button';
-        eyeBtn.className = 'eye-btn' + (source.enabled ? ' visible' : ' hidden-source');
-        eyeBtn.setAttribute('aria-pressed', String(source.enabled));
-        eyeBtn.setAttribute('aria-label', (source.enabled ? 'Ocultar ' : 'Mostrar ') + source.name);
-        eyeBtn.title = (source.enabled ? 'Visible en OBS (tocar para ocultar)' : 'Oculta en OBS (tocar para mostrar)');
-        eyeBtn.innerHTML = source.enabled ? SVG_EYE_ON : SVG_EYE_OFF;
+        paintSource(card, eyeBtn, source);
 
         eyeBtn.addEventListener('click', async () => {
-          const nextState = !source.enabled;
+          const previous = Boolean(source.enabled);
+          const nextState = !previous;
           source.enabled = nextState;
-          eyeBtn.className = 'eye-btn' + (nextState ? ' visible' : ' hidden-source');
-          card.className = 'source-card' + (nextState ? '' : ' hidden-source');
-          eyeBtn.setAttribute('aria-pressed', String(nextState));
-          eyeBtn.setAttribute('aria-label', (nextState ? 'Ocultar ' : 'Mostrar ') + source.name);
-          eyeBtn.title = (nextState ? 'Visible en OBS (tocar para ocultar)' : 'Oculta en OBS (tocar para mostrar)');
-          eyeBtn.innerHTML = nextState ? SVG_EYE_ON : SVG_EYE_OFF;
+          paintSource(card, eyeBtn, source);
+          // One request at a time: a double tap must not race and invert the state.
+          eyeBtn.disabled = true;
           try {
-            await obsRequest('action', {
-              action: 'toggle_source',
-              scene: currentObsScene,
-              id: source.id,
-              enabled: nextState,
-            });
-            reportSources('Fuente «' + source.name + '» ' + (nextState ? 'activada' : 'ocultada') + '.');
+            const data = await obsRequest('action', sourceToggleRequest(source, currentObsScene, nextState));
+            if (source.audio) {
+              source.muted = Boolean(data.muted);
+              source.enabled = !source.muted;
+              paintSource(card, eyeBtn, source);
+              reportSources('Audio «' + source.name + '» ' + (source.enabled ? 'activado' : 'silenciado') + '.');
+            } else {
+              reportSources('Fuente «' + source.name + '» ' + (nextState ? 'activada' : 'ocultada') + '.');
+            }
           } catch (err) {
-            source.enabled = !nextState;
-            eyeBtn.className = 'eye-btn' + (!nextState ? ' visible' : ' hidden-source');
-            card.className = 'source-card' + (!nextState ? '' : ' hidden-source');
-            eyeBtn.setAttribute('aria-pressed', String(!nextState));
-            eyeBtn.setAttribute('aria-label', (!nextState ? 'Ocultar ' : 'Mostrar ') + source.name);
-            eyeBtn.innerHTML = !nextState ? SVG_EYE_ON : SVG_EYE_OFF;
+            source.enabled = previous;
+            paintSource(card, eyeBtn, source);
             reportSources('Error: ' + err.message, true);
+          } finally {
+            eyeBtn.disabled = false;
           }
         });
 
@@ -1278,6 +1321,7 @@
         return;
       }
       if (event.key !== 'Escape') return;
+      if (cmdFlow) { cancelCommand(); return; }
       closeTextEntry();
       closeDrawPanel();
       closeSheets();
@@ -1322,6 +1366,10 @@
     const cmdStepChips = document.getElementById('cmd-step-chips');
     const cmdStepInput = document.getElementById('cmd-step-input');
     const cmdSend = document.getElementById('cmd-send');
+    const cmdModal = document.getElementById('cmd-modal');
+    const cmdFinal = document.getElementById('cmd-final');
+    const cmdFinalRow = document.getElementById('cmd-final-row');
+    const cmdStepMessage = document.getElementById('cmd-step-message');
     const AGENT_CODES = ['co', 'cl', 'ge', 'pi', 'om', 'gr', 'op', 'ex', 'be'];
     let commandsCache = [];
     let savedLists = { usuario: [], canal: [], mensaje: [] };
@@ -1404,8 +1452,10 @@
     }
     function startCommand(template) {
       cmdFlow = { template, types: placeholdersOf(template), values: [] };
-      cmdStep.hidden = false;
+      cmdStepMessage.textContent = '';
+      cmdModal.hidden = false;
       showCommandStep();
+      cmdStep.focus();
     }
     function showCommandStep() {
       const pending = cmdFlow.types[cmdFlow.values.length];
@@ -1413,9 +1463,12 @@
       cmdStepInput.value = '';
       const ready = pending === undefined;
       cmdStepInput.parentElement.hidden = ready;
+      cmdFinalRow.hidden = !ready;
       cmdSend.disabled = !ready;
       if (ready) {
-        cmdStepTitle.textContent = '¿Enviar ' + buildCommand(cmdFlow.template, cmdFlow.values) + '?';
+        // The final text stays editable so parameters can be fixed before sending.
+        cmdStepTitle.textContent = 'Enviar comando';
+        cmdFinal.value = buildCommand(cmdFlow.template, cmdFlow.values);
         return;
       }
       const labels = { usuario: 'un usuario', canal: 'un canal', mensaje: 'un mensaje', agente: 'un agente' };
@@ -1438,20 +1491,23 @@
     }
     function cancelCommand() {
       cmdFlow = null;
-      cmdStep.hidden = true;
+      cmdModal.hidden = true;
     }
     document.getElementById('cmd-step-use').addEventListener('click', () => useCommandValue(cmdStepInput.value));
     cmdStepInput.addEventListener('keydown', event => { if (event.key === 'Enter') useCommandValue(cmdStepInput.value); });
     document.getElementById('cmd-cancel').addEventListener('click', cancelCommand);
     cmdSend.addEventListener('click', async () => {
       if (!cmdFlow || cmdFlow.values.length < cmdFlow.types.length) return;
-      const final = buildCommand(cmdFlow.template, cmdFlow.values);
+      const final = cmdFinal.value.replace(/\s+/g, ' ').trim();
+      if (!final) { cmdStepMessage.textContent = 'Escribe el comando antes de enviarlo.'; return; }
+      cmdStepMessage.textContent = '';
       cmdSend.disabled = true;
       const result = await sendCommand(final);
-      reportCommands(result.message, !result.ok);
-      if (result.ok) cancelCommand();
-      else cmdSend.disabled = false;
+      // The dialog covers the panel: errors stay inside it, success closes it.
+      if (result.ok) { reportCommands(result.message); cancelCommand(); }
+      else { cmdStepMessage.textContent = result.message; cmdSend.disabled = false; }
     });
+    cmdFinal.addEventListener('keydown', event => { if (event.key === 'Enter') cmdSend.click(); });
     commandsFilter.addEventListener('input', renderCommands);
     document.getElementById('btn-commands-view').addEventListener('click', () => {
       if (openSheet(commandsSheet)) { cancelCommand(); loadCommands(); }

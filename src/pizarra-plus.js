@@ -34,6 +34,10 @@ function cleanDraw(data) {
   return clean;
 }
 
+// Audio-only OBS input kinds (microphones, desktop audio). Their scene item
+// visibility says nothing useful: what matters on air is whether they are muted.
+const AUDIO_INPUT_KIND = /^(coreaudio|wasapi|pulse|alsa|jack|oss|sndio)_|^sck_audio_capture$|^pipewire[-_]audio/;
+
 async function localObsClient() {
   const { crearClienteObsWebSocket, obtenerConfiguracionObsLocal } = await import('./obs-bridge.js');
   const cfg = obtenerConfiguracionObsLocal();
@@ -110,13 +114,19 @@ function createPizarraPlus({ enabled = false, authorize, trustedOrigin, root, cr
           await client.cambiarEscena(body.name);
           reply(res, 200, { ok: true, scene: body.name });
         } else if (body.action === 'mute') {
-          if (typeof body.name !== 'string' || !body.name || body.name.length > 256) {
+          if (typeof body.name !== 'string' || !body.name || body.name.length > 256 || (body.muted !== undefined && typeof body.muted !== 'boolean')) {
             reply(res, 400, { error: 'invalid-action' }); return true;
           }
           const state = await client.enviarPeticion('GetInputList');
           if (!(state.inputs || []).some(s => s.inputName === body.name)) { reply(res, 400, { error: 'unknown-input' }); return true; }
-          const mute = await client.toggleMute(body.name);
-          reply(res, 200, { ok: true, input: body.name, muted: Boolean(mute.inputMuted) });
+          // An explicit target state cannot invert a stale view the way a blind toggle does.
+          if (typeof body.muted === 'boolean') {
+            await client.enviarPeticion('SetInputMute', { inputName: body.name, inputMuted: body.muted });
+            reply(res, 200, { ok: true, input: body.name, muted: body.muted });
+          } else {
+            const mute = await client.toggleMute(body.name);
+            reply(res, 200, { ok: true, input: body.name, muted: Boolean(mute.inputMuted) });
+          }
         } else {
           if (typeof body.id !== 'number' || typeof body.enabled !== 'boolean') {
             reply(res, 400, { error: 'invalid-action' }); return true;
@@ -134,17 +144,21 @@ function createPizarraPlus({ enabled = false, authorize, trustedOrigin, root, cr
         const client = await obs();
         const state = await client.obtenerEscenas();
         const requestedScene = url.searchParams.get('scene') || state.currentProgramSceneName;
-        const items = await client.enviarPeticion('GetSceneItemList', { sceneName: requestedScene }).catch(() => ({ sceneItems: [] }));
-        reply(res, 200, {
-          ok: true,
-          scene: requestedScene,
-          sources: (items.sceneItems || []).map(i => ({
-            id: i.sceneItemId,
-            name: i.sourceName,
-            enabled: Boolean(i.sceneItemEnabled),
-            type: i.sourceType || '',
-          })),
-        });
+        const [items, inputList] = await Promise.all([
+          client.enviarPeticion('GetSceneItemList', { sceneName: requestedScene }).catch(() => ({ sceneItems: [] })),
+          client.enviarPeticion('GetInputList').catch(() => ({ inputs: [] })),
+        ]);
+        const audioInputs = new Set((inputList.inputs || [])
+          .filter(i => AUDIO_INPUT_KIND.test(i.unversionedInputKind || i.inputKind || ''))
+          .map(i => i.inputName));
+        const sources = await Promise.all((items.sceneItems || []).map(async i => {
+          const mute = audioInputs.has(i.sourceName) ? await client.obtenerMute(i.sourceName).catch(() => null) : null;
+          const source = { id: i.sceneItemId, name: i.sourceName, enabled: Boolean(i.sceneItemEnabled), type: i.sourceType || '', audio: Boolean(mute) };
+          // For audio the eye mirrors the real mute state, not the scene item visibility.
+          if (mute) { source.muted = Boolean(mute.inputMuted); source.enabled = !source.muted; }
+          return source;
+        }));
+        reply(res, 200, { ok: true, scene: requestedScene, sources });
       } else if (pathname === '/api/pizarra-plus/obs/state' && req.method === 'GET') {
         const client = await obs();
         const [state, inputs] = await Promise.all([client.obtenerEscenas(), client.enviarPeticion('GetInputList')]);

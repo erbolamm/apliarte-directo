@@ -21,18 +21,24 @@ test('Pencil owns the stroke; palm and other pointer cannot change or finish it'
   assert.equal(owner.begin(palm, true), true);
 });
 
-function fixture({ enabled = true, allowed = true, connected = true, drawingPort } = {}) {
+function fixture({ enabled = true, allowed = true, connected = true, drawingPort,
+  items = [{ sceneItemId: 1, sourceName: 'Webcam', sceneItemEnabled: true, sourceType: 'input' }],
+  inputs = [{ inputName: 'Real mic' }], muted = {} } = {}) {
   let created = 0;
   const calls = [];
   const client = {
     estaConectado: () => connected,
     obtenerEscenas: async () => ({ currentProgramSceneName: 'Camera', scenes: [{ sceneName: 'Camera' }, { sceneName: 'Board' }] }),
     enviarPeticion: async (req, data) => {
-      if (req === 'GetSceneItemList') return { sceneItems: [{ sceneItemId: 1, sourceName: 'Webcam', sceneItemEnabled: true, sourceType: 'input' }] };
+      if (req === 'GetSceneItemList') return { sceneItems: items };
       if (req === 'SetSceneItemEnabled') { calls.push(['toggle_source', data?.sceneItemId, data?.sceneItemEnabled]); return {}; }
-      return { inputs: [{ inputName: 'Real mic' }] };
+      if (req === 'SetInputMute') { calls.push(['set_mute', data?.inputName, data?.inputMuted]); muted[data.inputName] = data.inputMuted; return {}; }
+      return { inputs };
     },
-    obtenerMute: async () => ({ inputMuted: false }),
+    obtenerMute: async name => {
+      if (muted[name] === 'no-audio') throw new Error('input-without-audio');
+      return { inputMuted: Boolean(muted[name]) };
+    },
     toggleMute: async name => { calls.push(['mute', name]); return { inputMuted: true }; },
     cambiarEscena: async name => { calls.push(['scene', name]); },
     obtenerCaptura: async () => ({ imageData: 'data:image/jpeg;base64,AA==' }),
@@ -395,3 +401,91 @@ test('tactile scenes grid and sources sheet with eye toggle are present and star
   assert.match(html, /toggle_source/);
 });
 
+
+const audioScene = () => fixture({
+  items: [
+    { sceneItemId: 1, sourceName: 'Webcam', sceneItemEnabled: true, sourceType: 'input' },
+    { sceneItemId: 2, sourceName: 'Mic/Aux', sceneItemEnabled: true, sourceType: 'input' },
+    { sceneItemId: 3, sourceName: 'Desktop', sceneItemEnabled: false, sourceType: 'input' },
+  ],
+  inputs: [
+    { inputName: 'Webcam', inputKind: 'av_capture_input_v2', unversionedInputKind: 'av_capture_input' },
+    { inputName: 'Mic/Aux', inputKind: 'coreaudio_input_capture', unversionedInputKind: 'coreaudio_input_capture' },
+    { inputName: 'Desktop', inputKind: 'wasapi_output_capture' },
+  ],
+  muted: { 'Mic/Aux': true },
+});
+
+test('sources report the real mute state of audio inputs instead of scene visibility', async () => {
+  const f = audioScene();
+  const r = await request(f, '/api/pizarra-plus/obs/sources?scene=Camera');
+  assert.equal(r.status, 200);
+  const [webcam, mic, desktop] = r.json().sources;
+  assert.deepEqual([webcam.name, webcam.enabled, webcam.audio], ['Webcam', true, false]);
+  // Muted in OBS: the eye starts off even though the scene item is visible.
+  assert.deepEqual([mic.name, mic.enabled, mic.audio, mic.muted], ['Mic/Aux', false, true, true]);
+  // Unmuted audio stays on even when its scene item is hidden.
+  assert.deepEqual([desktop.enabled, desktop.audio, desktop.muted], [true, true, false]);
+});
+
+test('an audio-kind input whose mute state cannot be read falls back to scene visibility', async () => {
+  const f = fixture({
+    items: [{ sceneItemId: 2, sourceName: 'Mic/Aux', sceneItemEnabled: true, sourceType: 'input' }],
+    inputs: [{ inputName: 'Mic/Aux', inputKind: 'coreaudio_input_capture' }],
+    muted: { 'Mic/Aux': 'no-audio' },
+  });
+  const [mic] = (await request(f, '/api/pizarra-plus/obs/sources')).json().sources;
+  assert.deepEqual([mic.enabled, mic.audio], [true, false]);
+});
+
+test('mute action sets the requested mute state explicitly and never touches scene visibility', async () => {
+  const f = audioScene();
+  const post = body => request(f, '/api/pizarra-plus/obs/action', { method: 'POST', body });
+  const on = await post({ action: 'mute', name: 'Mic/Aux', muted: false });
+  assert.equal(on.status, 200);
+  assert.equal(on.json().muted, false);
+  let [, mic] = (await request(f, '/api/pizarra-plus/obs/sources')).json().sources;
+  assert.equal(mic.enabled, true);
+  assert.equal((await post({ action: 'mute', name: 'Mic/Aux', muted: true })).json().muted, true);
+  [, mic] = (await request(f, '/api/pizarra-plus/obs/sources')).json().sources;
+  assert.equal(mic.enabled, false);
+  assert.equal((await post({ action: 'mute', name: 'Mic/Aux', muted: 'yes' })).status, 400);
+  assert.equal((await post({ action: 'mute', name: 'Invented', muted: false })).status, 400);
+  assert.deepEqual(f.calls, [['set_mute', 'Mic/Aux', false], ['set_mute', 'Mic/Aux', true]]);
+});
+
+test('the eye of an audio source requests a mute change; other sources keep the visibility toggle', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { runInNewContext } = await import('node:vm');
+  const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
+  const ctx = {};
+  runInNewContext(html.match(/function sourceToggleRequest\([^)]*\) \{[\s\S]*?\n    \}/)[0] + ';this.build = sourceToggleRequest', ctx);
+  const mic = { id: 2, name: 'Mic/Aux', audio: true };
+  assert.deepEqual({ ...ctx.build(mic, 'Camera', true) }, { action: 'mute', name: 'Mic/Aux', muted: false });
+  assert.deepEqual({ ...ctx.build(mic, 'Camera', false) }, { action: 'mute', name: 'Mic/Aux', muted: true });
+  assert.deepEqual({ ...ctx.build({ id: 1, name: 'Webcam', audio: false }, 'Camera', false) },
+    { action: 'toggle_source', scene: 'Camera', id: 1, enabled: false });
+});
+
+test('commands open a centred modal dialog with an editable command, Send and Cancel', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
+  assert.match(html, /<div id="cmd-modal" class="cmd-modal" hidden>/);
+  assert.match(html, /\.cmd-modal\[hidden\]\s*\{display:\s*none;\}/);
+  const overlay = html.match(/\.cmd-modal\s*\{([^}]+)\}/)[1];
+  assert.match(overlay, /position:\s*fixed/);
+  assert.match(overlay, /place-items:\s*center/);
+  const dialog = html.match(/<div id="cmd-step"[^>]*>/)[0];
+  assert.match(dialog, /role="dialog"/);
+  assert.match(dialog, /aria-modal="true"/);
+  assert.match(dialog, /aria-labelledby="cmd-step-title"/);
+  // The dialog lives outside the commands sheet so it floats above every panel.
+  const sheet = html.match(/<section id="commands-sheet"[\s\S]*?<\/section>/)[0];
+  assert.doesNotMatch(sheet, /id="cmd-step"/);
+  const modal = html.match(/<div id="cmd-modal"[\s\S]*?\n  <\/div>/)[0];
+  assert.match(modal, /<input id="cmd-final"/);
+  assert.match(modal, /id="cmd-send">Enviar</);
+  assert.match(modal, /id="cmd-cancel">Cancelar</);
+  assert.match(html, /function startCommand\(template\) \{[\s\S]*?cmdModal\.hidden = false/);
+  assert.match(html, /function cancelCommand\(\) \{[\s\S]*?cmdModal\.hidden = true/);
+});
