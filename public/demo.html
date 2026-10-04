@@ -13,13 +13,13 @@
     * { box-sizing:border-box; }
     body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui,sans-serif; }
     button,select,input { font:inherit; }
-    button,select,input, .panel, .stage { border:1px solid var(--line); border-radius:0; }
-    button,select { background:var(--panel); color:var(--ink); padding:8px; cursor:pointer; }
+    button,select,input, .panel, .stage { border:1px solid var(--line); border-radius:8px; }
+    button,select { background:var(--panel); color:var(--ink); padding:8px 12px; cursor:pointer; font-weight:500; border-radius:8px; transition:border-color 0.15s ease, color 0.15s ease; }
     button:hover,button:focus-visible { border-color:var(--accent); color:var(--accent); }
     button:disabled { opacity:.5; cursor:not-allowed; }
-    input { padding:8px; background:var(--panel); color:var(--ink); min-width:0; }
-    .icon { min-width:42px; position:relative; }
-    .icon[data-tip]:hover::after,.icon[data-tip]:focus-visible::after { content:attr(data-tip); position:absolute; z-index:10; top:calc(100% + 4px); right:0; width:max-content; max-width:220px; background:var(--ink); color:var(--bg); padding:8px; pointer-events:none; animation:tip-hide 3s forwards; }
+    input { padding:8px 12px; background:var(--panel); color:var(--ink); min-width:0; border-radius:8px; }
+    .icon { min-width:42px; position:relative; border-radius:8px; }
+    .icon[data-tip]:hover::after,.icon[data-tip]:focus-visible::after { content:attr(data-tip); position:absolute; z-index:10; top:calc(100% + 4px); right:0; width:max-content; max-width:220px; background:var(--ink); color:var(--bg); padding:8px; pointer-events:none; animation:tip-hide 3s forwards; border-radius:6px; }
     @keyframes tip-hide { 0%,88% { opacity:1; } 100% { opacity:0; visibility:hidden; } }
     .wrap { max-width:1320px; margin:auto; padding:8px; }
     header,.toolbar,.controls,.chat-form,.row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -27,19 +27,23 @@
     h1 { font-size:1.2rem; margin:0; } h2 { font-size:1rem; margin:0 0 8px; }
     p { margin:8px 0; } small,.muted { color:var(--muted); }
     .layout { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:8px; margin-top:8px; }
-    .stage { background:var(--panel); min-height:560px; overflow:hidden; }
+    .stage { background:var(--panel); min-height:560px; overflow:hidden; border-radius:12px; }
     #office-3d { height:550px; display:flex; pointer-events:none; }
     #office-3d>.real-office { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
     #office-3d .office-volume { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
     #office-3d .volume-viewport { flex:1 1 auto; min-height:0; }
     #office-3d .office-roster { display:none; }
-    .panel { background:var(--panel); padding:8px; margin-bottom:8px; }
+    .panel { background:var(--panel); padding:12px; margin-bottom:10px; border-radius:12px; }
     .controls { margin:8px 0; } .controls button { flex:1 0 40px; }
-    .chat-log { height:160px; overflow:auto; border:1px solid var(--line); padding:8px; font-size:.9rem; }
-    .chat-log p { margin:0 0 6px; overflow-wrap:anywhere; }
-    .chat-form input { flex:1; }
+    .chat-log { height:160px; overflow:auto; border:1px solid var(--line); border-radius:8px; padding:10px; font-size:.9rem; background:rgba(0,0,0,0.02); }
+    html[data-theme="dark"] .chat-log { background:rgba(0,0,0,0.15); }
+    .chat-log p { margin:0 0 6px; overflow-wrap:anywhere; line-height:1.4; }
+    .chat-form { display:flex; gap:8px; margin-top:8px; }
+    .chat-form input { flex:1; border-radius:8px; }
+    .chat-form button { border-radius:8px; background:var(--accent); color:#fff; font-weight:600; border-color:var(--accent); }
+    .chat-form button:hover { opacity:0.9; color:#fff; }
     .commands { display:flex; flex-wrap:wrap; gap:8px; }
-    .commands button { font-size:.9rem; }
+    .commands button { font-size:.9rem; border-radius:6px; }
     #practiceRaceStatus { min-height:22px; }
     dialog { max-width:min(680px,95vw); max-height:90vh; overflow:auto; background:var(--panel); color:var(--ink); border:1px solid var(--line); padding:16px; }
     dialog::backdrop { background:#0009; }
@@ -55,6 +59,7 @@
   <header>
     <div><h1>ApliArte Directo · Demo pública</h1><small>Solo en tu navegador · No conecta con el directo, Twitch, OBS ni otros visitantes.</small></div>
     <div class="toolbar">
+      <a href="./landing.html" class="nav-btn-landing" style="text-decoration:none; padding:7px 14px; background:var(--accent); color:#fff; font-weight:600; font-size:0.9rem; border-radius:8px; border:1px solid var(--accent); display:inline-flex; align-items:center; gap:6px;">📖 Ver Landing e Instalación</a>
       <button id="themeToggle" class="icon" type="button" aria-label="Cambiar entre modo claro y oscuro" data-tip="Cambiar tema">☾</button>
       <button id="deployOpen" class="icon" type="button" aria-label="Abrir instrucciones de instalación" data-tip="Instalar tu propio Directo">⬇</button>
     </div>
@@ -92,6 +97,13 @@
           <p class="muted">!damas activa las casillas a1–l8. !carrera es una práctica local con los avatares reales, no una partida compartida.</p>
         </section>
       </aside>
+    </div>
+    <div style="margin-top:16px; padding:16px 20px; background:var(--panel); border:1px solid var(--line); border-radius:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+      <div>
+        <strong style="font-size:1.05rem; display:block; margin-bottom:4px;">¿Quieres tu propio estudio ApliArte Directo?</strong>
+        <span class="muted" style="font-size:0.9rem;">Consulta la guía de instalación, configuración con OBS, enlaces de descarga y donaciones en la Landing Oficial.</span>
+      </div>
+      <a href="./landing.html" style="text-decoration:none; padding:10px 18px; background:var(--accent); color:#fff; font-weight:700; border-radius:8px; white-space:nowrap; display:inline-block;">📖 Ver Landing Oficial y Descarga</a>
     </div>
     <p class="muted">El plano 3D y el diorama 2D son los del Directo real. La interacción está limitada a controles de esta página para evitar abrir paneles privados.</p>
   </main>

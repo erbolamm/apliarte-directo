@@ -32,7 +32,7 @@ jobs:
         run: |
           mkdir -p _site
           cp -r public/* _site/
-          cp public/landing.html _site/index.html
+          cp public/demo.html _site/index.html
           touch _site/.nojekyll
 
       - name: Setup Pages
