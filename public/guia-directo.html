@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<!--
+  Publicación oficial en Blogger:
+  URL Pública: https://www.apliarte.com/p/apliarte-directo.html
+  Editor Blogger: https://draft.blogger.com/blog/page/edit/6333631045951109201/1600296205695991799
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guía de Comandos, Avatares y Reglas del Directo — ApliArte</title>
+  <meta name="description" content="Guía interactiva oficial de comandos, sistema de avatares 3D, minijuegos y normas de convivencia del directo de ApliArte.">
+  <meta name="robots" content="index, follow">
+
+  <!-- Tipografía oficial ApliArte -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Abel&family=Fira+Sans+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Schema.org & Web MCP Metadata -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://directo.apliarte.com/guia-directo.html#webpage",
+        "name": "Guía de Comandos, Avatares y Reglas del Directo — ApliArte",
+        "inLanguage": "es",
+        "description": "Documentación oficial para la audiencia del directo: catálogo de comandos de Twitch, mecánica de avatares interactivos 3D, minijuegos y normas del chat.",
+        "publisher": {
+          "@type": "Organization",
+          "name": "ApliArte",
+          "url": "https://apliarte.com"
+        }
+      },
+      {
+        "@type": "ItemList",
+        "name": "Catálogo Canónico de Comandos ApliArte Directo",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "!conga", "description": "Inicia la conga festiva de avatares por la oficina" },
+          { "@type": "ListItem", "position": 2, "name": "!trabajar", "description": "Tu avatar se sienta en su escritorio a programar" },
+          { "@type": "ListItem", "position": 3, "name": "!libre", "description": "Activa paseo libre en 2D por el escenario" },
+          { "@type": "ListItem", "position": 4, "name": "!reset", "description": "Devuelve tu avatar a su sitio en la oficina" },
+          { "@type": "ListItem", "position": 5, "name": "!salta", "description": "Tu avatar salta en el sitio" },
+          { "@type": "ListItem", "position": 6, "name": "!beso", "description": "Envía un beso desde tu avatar" },
+          { "@type": "ListItem", "position": 7, "name": "!liberar", "description": "Libera tu avatar para que otro espectador pueda adoptarlo" },
+          { "@type": "ListItem", "position": 8, "name": "!sms", "description": "Envía un mensaje privado al buzón del panel de Javier" },
+          { "@type": "ListItem", "position": 9, "name": "!speak", "description": "Configura la voz de síntesis TTS de lectura del chat" },
+          { "@type": "ListItem", "position": 10, "name": "!juego", "description": "Abre la votación de minijuegos (!trofeo vs !traidor)" },
+          { "@type": "ListItem", "position": 11, "name": "!trofeo", "description": "Inicia la carrera por la copa entre avatares" },
+          { "@type": "ListItem", "position": 12, "name": "!traidor", "description": "Inicia el minijuego del traidor (solo votan avatares asignados)" },
+          { "@type": "ListItem", "position": 13, "name": "!info", "description": "Muestra la guía en pantalla durante 5 segundos" },
+          { "@type": "ListItem", "position": 14, "name": "!redes", "description": "Publica enlaces y redes sociales de ApliArte" },
+          { "@type": "ListItem", "position": 15, "name": "!repo", "description": "Enlace al repositorio abierto en GitHub" },
+          { "@type": "ListItem", "position": 16, "name": "!cafecito", "description": "Enlace de apoyo voluntario en Ko-fi" }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #131b2e;
+      --card-border: #233354;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --primary: #0284c7;
+      --primary-light: #38bdf8;
+      --accent: #f59e0b;
+      --success: #10b981;
+      --danger: #ef4444;
+      --purple: #8b5cf6;
+      --code-bg: #0b1120;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      padding: 20px 16px 60px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      padding: 30px 16px 24px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .header-tag {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: rgba(2, 132, 199, 0.15);
+      color: var(--primary-light);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    h1 {
+      font-family: 'Fira Sans Condensed', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: var(--text-muted);
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* Secciones y tarjetas */
+    section {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+
+    h2 {
+      font-family: 'Fira Sans Condensed', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--primary-light);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 1.05rem;
+      color: #fff;
+      margin: 16px 0 8px;
+      font-weight: 600;
+    }
+
+    p, li {
+      font-size: 0.92rem;
+      color: var(--text);
+    }
+
+    ul, ol {
+      padding-left: 22px;
+      margin-bottom: 12px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* Alertas y avisos */
+    .alert-box {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin: 16px 0;
+      font-size: 0.88rem;
+    }
+
+    .alert-box.info {
+      background: rgba(2, 132, 199, 0.1);
+      border-color: rgba(56, 189, 248, 0.4);
+      border-left-color: var(--primary-light);
+    }
+
+    .alert-box.success {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.4);
+      border-left-color: var(--success);
+    }
+
+    /* Cuadrícula de Avatares */
+    .avatars-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .avatar-card {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .avatar-cmd {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--primary-light);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .avatar-name {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    /* Tablas de Comandos */
+    .table-responsive {
+      overflow-x: auto;
+      margin-top: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    th {
+      background: var(--code-bg);
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.05em;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      background: var(--code-bg);
+      color: var(--primary-light);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-public { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .badge-avatar { background: rgba(2, 132, 199, 0.2); color: #38bdf8; }
+    .badge-mod { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+    /* Barra de búsqueda interactiva */
+    .search-box {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.9rem;
+      margin-bottom: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-box:focus {
+      border-color: var(--primary-light);
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 36px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    footer a {
+      color: var(--primary-light);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <span class="header-tag">ApliArte Directo · Twitch & YouTube</span>
+      <h1>Guía del Directo, Avatares y Comandos</h1>
+      <p class="subtitle">Todo lo que necesitas saber para participar en el chat, adoptar tu propio avatar 3D en el diorama y jugar a los minijuegos.</p>
+    </header>
+
+    <!-- 1. Normas de Convivencia -->
+    <section id="normas">
+      <h2>📜 1. Normas de Convivencia en el Chat</h2>
+      <ul>
+        <li><strong>Respeto y buen rollo:</strong> Tratamos a todos con amabilidad. No se toleran insultos, faltas de respeto ni conductas tóxicas.</li>
+        <li><strong>Sin spam ni mayúsculas masivas:</strong> Escribe con moderación para que la síntesis de voz (TTS) pueda leer los mensajes con fluidez sin saturar el audio.</li>
+        <li><strong>Enlaces controlados:</strong> No publiques URLs arbitrarias en el chat salvo que Javier o los moderadores las soliciten expresamente.</li>
+        <li><strong>Soberanía técnica:</strong> Este directo corre sobre software libre propio (código abierto en GitHub), sin herramientas opacas de terceros.</li>
+      </ul>
+    </section>
+
+    <!-- 2. Sistema de Avatares 3D -->
+    <section id="avatares">
+      <h2>🏢 2. Tu Avatar 3D en la Oficina</h2>
+      <p>En pantalla verás un diorama 3D interactivo con la oficina de ApliArte. Cada avatar representa a un espectador o agente en vivo.</p>
+
+      <div class="alert-box success">
+        <strong>¿Cómo adoptar tu avatar?</strong> Si ves un avatar libre, escribe su comando en el chat (por ejemplo <code>!pi</code> o <code>!co</code>). A partir de ese momento, el avatar llevará tu nombre de Twitch y reaccionará a tus mensajes.
+      </div>
+
+      <h3>Avatares Disponibles en la Oficina:</h3>
+      <div class="avatars-grid">
+        <div class="avatar-card"><span class="avatar-cmd">!pi</span><span class="avatar-name">Pi (Morado)</span></div>
+        <div class="avatar-card"><span class="avatar-cmd">!cl</span><span class="avatar-name">Claude (Naranja)</span></div>
+        <div class="avatar-card"><span class="avatar-cmd">!co</span><span class="avatar-name">Codex (Verde)</span></div>
+        <div class="avatar-card"><span class="avatar-cmd">!ge</span><span class="avatar-name">Gemini (Azul)</span></div>
+        <div class="avatar-card"><span class="avatar-cmd">!gr</span><span class="avatar-name">Grok (Rojo)</span></div>
+        <div class="avatar-card"><span class="avatar-cmd">!op</span><span class="avatar-name">OpenCode (Cyan)</span></div>
+        <div class="avatar-card"><span class="avatar-cmd">!ex</span><span class="avatar-name">Explorer (Gris)</span></div>
+        <div class="avatar-card"><span class="avatar-cmd">!ja</span><span class="avatar-name">Javier (Host)</span></div>
+      </div>
+
+      <h3>Control de tu avatar asignado:</h3>
+      <ul>
+        <li><strong>Hablar por voz (TTS):</strong> Una vez tengas avatar asignado, cualquier mensaje que escribas en el chat se leerá con la síntesis de voz y tu avatar moverá la boca.</li>
+        <li><strong>Hablar por un agente concreto:</strong> Escribe <code>!pi hola a todos</code> para que hable ese avatar específico.</li>
+        <li><strong>Moverte por la oficina:</strong> Usa las teclas de dirección en el chat: <code>!w</code> (arriba), <code>!a</code> (izquierda), <code>!s</code> (abajo), <code>!d</code> (derecha). Puedes encadenar pasos como <code>!w 3</code> o <code>!wwaass</code> (hasta 6 pasos).</li>
+        <li><strong>Paseo libre 2D:</strong> Usa <code>!libre</code> para moverte por todo el directo sin perder la propiedad del avatar.</li>
+        <li><strong>Volver a tu puesto:</strong> Escribe <code>!reset</code> o <code>!r</code> para volver a tu mesa. Con <code>!trabajar</code> tu avatar se sentará a teclear.</li>
+        <li><strong>Liberar avatar:</strong> Si te vas del directo o deseas cederlo, escribe <code>!liberar</code>.</li>
+      </ul>
+    </section>
+
+    <!-- 3. Minijuegos Interactivos -->
+    <section id="minijuegos">
+      <h2>🎮 3. Minijuegos Interactivos</h2>
+      <p>Durante la retransmisión se activan minijuegos en tiempo real en la oficina 3D:</p>
+
+      <h3>🏆 Carrera por la Copa (<code>!trofeo</code>)</h3>
+      <p>Una trepidante carrera de obstáculos en el escenario donde los avatares compiten por llegar a la meta.</p>
+
+      <h3>🔪 El Traidor / Impostor (<code>!traidor</code>)</h3>
+      <p>Un minijuego de deducción social ambientado en la sala de reuniones de la oficina. Cuatro avatares son convocados: tres son inocentes y uno es el traidor secreto asignado al azar.</p>
+      <ol>
+        <li><strong>Fase Intro:</strong> Se convocan los 4 sospechosos a la mesa de reuniones.</li>
+        <li><strong>Fase Debate:</strong> Los sospechosos discuten en el chat quién es el culpable y sus avatares lo expresan en vivo.</li>
+        <li><strong>Fase Votación:</strong> Aparece en pantalla la lista numerada (1, 2, 3...). Cada jugador escribe en el chat el número de su sospechoso.</li>
+        <li><strong>Expulsión:</strong> El más votado abandona la oficina. Si era el traidor, ¡ganan los inocentes! Si era inocente, el traidor se acerca a la victoria.</li>
+      </ol>
+
+      <div class="alert-box">
+        <strong>⚠️ REGLA FUNDAMENTAL DE VOTACIÓN:</strong>
+        <br>
+        En las partidas de minijuegos, <strong>SOLO pueden votar los usuarios del chat que tengan un avatar asignado</strong> en la oficina 3D. Los mensajes de espectadores sin avatar no se contabilizan para evitar votos anónimos o ataques coordinados. Si quieres votar en las rondas, ¡adopta un avatar libre primero!
+      </div>
+    </section>
+
+    <!-- 4. Catálogo de Comandos Públicos -->
+    <section id="comandos">
+      <h2>⚡ 4. Catálogo de Comandos Públicos</h2>
+      <p>Filtra y consulta todos los comandos disponibles para los espectadores en el chat:</p>
+
+      <input type="text" id="cmd-filter" class="search-box" placeholder="🔍 Buscar comando o descripción...">
+
+      <div class="table-responsive">
+        <table id="cmd-table">
+          <thead>
+            <tr>
+              <th>Comando</th>
+              <th>Descripción</th>
+              <th>Permiso</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>!conga</code></td>
+              <td>Inicia una conga festiva de avatares recorriendo la oficina en fila.</td>
+              <td><span class="badge badge-public">Todos</span></td>
+            </tr>
+            <tr>
+              <td><code>!trabajar</code></td>
+              <td>Tu avatar se sienta en su escritorio a programar concentrado.</td>
+              <td><span class="badge badge-avatar">Con Avatar</span></td>
+            </tr>
+            <tr>
+              <td><code>!libre</code></td>
+              <td>Activa el paseo libre 2D del avatar por toda la pantalla sin soltar la propiedad.</td>
+              <td><span class="badge badge-avatar">Con Avatar</span></td>
+            </tr>
+            <tr>
+              <td><code>!salta</code></td>
+              <td>Tu avatar da un salto de alegría en el sitio.</td>
+              <td><span class="badge badge-avatar">Con Avatar</span></td>
+            </tr>
+            <tr>
+              <td><code>!beso [agente]</code></td>
+              <td>Lanza un beso cariñoso al aire o dirigido al avatar indicado.</td>
+              <td><span class="badge badge-avatar">Con Avatar</span></td>
+            </tr>
+            <tr>
+              <td><code>!reset</code> o <code>!r</code></td>
+              <td>Cancela cualquier ruta o movimiento y devuelve tu avatar a su mesa original.</td>
+              <td><span class="badge badge-avatar">Con Avatar</span></td>
+            </tr>
+            <tr>
+              <td><code>!w</code> / <code>!a</code> / <code>!s</code> / <code>!d</code></td>
+              <td>Camina en dirección arriba (w), izquierda (a), abajo (s) o derecha (d). Admite multiplicador (ej. <code>!w 3</code>).</td>
+              <td><span class="badge badge-avatar">Con Avatar</span></td>
+            </tr>
+            <tr>
+              <td><code>!liberar</code></td>
+              <td>Suelta tu avatar para permitir que otro espectador pueda adoptarlo.</td>
+              <td><span class="badge badge-avatar">Con Avatar</span></td>
+            </tr>
+            <tr>
+              <td><code>!sms [mensaje]</code></td>
+              <td>Envía un mensaje privado discreto directamente al buzón del panel de control de Javier.</td>
+              <td><span class="badge badge-public">Todos</span></td>
+            </tr>
+            <tr>
+              <td><code>!speak -config [voz]</code></td>
+              <td>Configura la voz TTS de lectura (ejemplos: <code>es-ES 1</code>, <code>es-AR 1</code>, <code>es-MX 1</code>).</td>
+              <td><span class="badge badge-public">Todos</span></td>
+            </tr>
+            <tr>
+              <td><code>!info</code></td>
+              <td>Muestra la guía completa de comandos a pantalla completa en la retransmisión durante 5 segundos.</td>
+              <td><span class="badge badge-public">Todos</span></td>
+            </tr>
+            <tr>
+              <td><code>!redes</code></td>
+              <td>Publica los enlaces a todas las redes sociales, comunidad y canales de ApliArte.</td>
+              <td><span class="badge badge-public">Todos</span></td>
+            </tr>
+            <tr>
+              <td><code>!repo</code></td>
+              <td>Muestra el enlace al repositorio de código abierto en GitHub para revisar el código del directo.</td>
+              <td><span class="badge badge-public">Todos</span></td>
+            </tr>
+            <tr>
+              <td><code>!cafecito</code></td>
+              <td>Enlace para invitar a un café voluntario de apoyo a través de Ko-fi.</td>
+              <td><span class="badge badge-public">Todos</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 5. Comandos Exclusivos del Streamer -->
+    <section id="comandos-streamer">
+      <h2>🛡️ 5. Comandos Exclusivos del Streamer (Javier)</h2>
+      <p>Por transparencia técnica, listamos aquí los comandos que solo Javier (o moderadores autorizados) pueden ejecutar para la gestión y dirección del directo:</p>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Comando</th>
+              <th>Acción Operativa</th>
+              <th>Nivel</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>!bronca</code></td>
+              <td>Javier regaña a todos los monigotes de la oficina (animación de queja general).</td>
+              <td><span class="badge badge-mod">Streamer</span></td>
+            </tr>
+            <tr>
+              <td><code>!fiesta</code></td>
+              <td>Activa el modo fiesta total con luces de discoteca y baile en el diorama 3D.</td>
+              <td><span class="badge badge-mod">Streamer</span></td>
+            </tr>
+            <tr>
+              <td><code>!liberar todos</code></td>
+              <td>Desvincula todos los avatares ocupados y reinicia el diorama para nuevos espectadores.</td>
+              <td><span class="badge badge-mod">Streamer</span></td>
+            </tr>
+            <tr>
+              <td><code>!liberar [agente]</code></td>
+              <td>Libera forzosamente un avatar concreto si su dueño se desconectó.</td>
+              <td><span class="badge badge-mod">Streamer</span></td>
+            </tr>
+            <tr>
+              <td><code>!juego</code></td>
+              <td>Abre la votación pública entre la carrera de trofeos y el traidor impostor.</td>
+              <td><span class="badge badge-mod">Streamer</span></td>
+            </tr>
+            <tr>
+              <td><code>!trofeo</code></td>
+              <td>Inicia directamente la carrera por la copa entre los avatares presentes.</td>
+              <td><span class="badge badge-mod">Streamer</span></td>
+            </tr>
+            <tr>
+              <td><code>!traidor</code></td>
+              <td>Convoca de inmediato la partida del traidor en la sala de reuniones.</td>
+              <td><span class="badge badge-mod">Streamer</span></td>
+            </tr>
+            <tr>
+              <td><code>!tema [categoría]</code></td>
+              <td>Cambia la ambientación visual (apps, código, música, arte, andando, charlando).</td>
+              <td><span class="badge badge-mod">Streamer</span></td>
+            </tr>
+            <tr>
+              <td><code>!claro</code> / <code>!oscuro</code></td>
+              <td>Alterna la iluminación solar diurna o nocturna en la oficina 3D.</td>
+              <td><span class="badge badge-mod">Streamer</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      <p>© 2026 ApliArte / ErBolamm — Suite Soberana de Directo y Overlays 3D</p>
+      <p>
+        <a href="https://github.com/erbolamm/apliarte-directo" target="_blank" rel="noopener">GitHub</a> · 
+        <a href="https://twitch.tv/apliarte" target="_blank" rel="noopener">Twitch</a> · 
+        <a href="https://ko-fi.com/apliarte" target="_blank" rel="noopener">Ko-fi</a>
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    // Filtrado interactivo de comandos en tiempo real
+    const filterInput = document.getElementById('cmd-filter');
+    const tableRows = document.querySelectorAll('#cmd-table tbody tr');
+
+    filterInput?.addEventListener('input', () => {
+      const q = filterInput.value.toLowerCase().trim();
+      tableRows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(q) ? '' : 'none';
+      });
+    });
+  </script>
+</body>
+</html>

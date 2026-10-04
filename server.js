@@ -1448,8 +1448,7 @@ const { resolvePanelPassword, claimPanel } = require('./src/panel-claim');
 PASSWORD = resolvePanelPassword({ dataDir: DATA_DIR }).password;
 if (PASSWORD) process.env.PANEL_PASS = PASSWORD; // ws-auth reads the password from the environment
 
-// Escucha en 0.0.0.0 para admitir conexiones de Tablet vía Tailscale o red local
-const HOST = process.env.HOST || '0.0.0.0';
+const HOST = process.env.HOST || '127.0.0.1';
 
 // Private, opt-in tablet add-on. Never included in the public static webroot.
 const { createPizarraPlus } = require('./src/pizarra-plus');
@@ -2565,6 +2564,10 @@ html,body{width:100%;height:100%;overflow:hidden;
 
   if (path === '/docs' || path === '/docs/' || path === '/docs/index.html') {
     if (serveStatic(req, res, '/docs/index.html')) return;
+  }
+
+  if (path === '/guia' || path === '/guia.html' || path === '/guia-directo' || path === '/guia-directo.html') {
+    if (serveStatic(req, res, '/guia-directo.html')) return;
   }
 
   
