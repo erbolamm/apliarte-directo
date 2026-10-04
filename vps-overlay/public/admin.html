@@ -1046,6 +1046,33 @@
       transition: width 0.05s linear;
       border-radius: 7px;
     }
+    .pwd-field-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .btn-toggle-eye {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: color 0.15s ease;
+    }
+    .btn-toggle-eye:hover, .btn-toggle-eye:focus-visible {
+      color: #38bdf8;
+      outline: 2px solid #38bdf8;
+      outline-offset: 1px;
+    }
   </style>
 </head>
 <body>
@@ -1560,7 +1587,10 @@
       </div>
       <div style="margin-bottom:16px;">
         <label style="display:block; font-size:0.8rem; color:#cbd5e1; margin-bottom:4px; font-weight:600;">Token OAuth de Twitch:</label>
-        <input type="password" id="input-twitch-token" placeholder="oauth:xxxxxxxxxxxxxxxxxxxx" style="width:100%; padding:10px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.95rem;">
+        <div class="pwd-field-wrap">
+          <input type="password" id="input-twitch-token" placeholder="oauth:xxxxxxxxxxxxxxxxxxxx" style="width:100%; box-sizing:border-box; padding:10px 42px 10px 10px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.95rem;">
+          <button type="button" class="btn-toggle-eye" data-target="input-twitch-token" aria-label="Mostrar u ocultar clave" aria-pressed="false"></button>
+        </div>
         <div style="margin-top:6px; font-size:0.78rem;">
           <a href="https://twitchtokengenerator.com/" target="_blank" rel="noopener" style="color:#38bdf8; text-decoration:underline;">🔑 Generar Token en Twitch Token Generator (twitchtokengenerator.com)</a>
         </div>
@@ -1662,7 +1692,10 @@
           </div>
           <div>
             <label style="display:block; font-size:0.8rem; color:#cbd5e1; margin-bottom:4px;">Contraseña de la Sala:</label>
-            <input type="password" id="cfg-vdo-pass" placeholder="•••••••• (dejar vacío si no deseas cambiarla)" style="width:100%; box-sizing:border-box; padding:8px 10px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.88rem;">
+            <div class="pwd-field-wrap">
+              <input type="password" id="cfg-vdo-pass" placeholder="•••••••• (dejar vacío si no deseas cambiarla)" style="width:100%; box-sizing:border-box; padding:8px 38px 8px 10px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.88rem;">
+              <button type="button" class="btn-toggle-eye" data-target="cfg-vdo-pass" aria-label="Mostrar u ocultar clave" aria-pressed="false"></button>
+            </div>
           </div>
         </fieldset>
 
@@ -1675,7 +1708,10 @@
           </div>
           <div>
             <label style="display:block; font-size:0.8rem; color:#cbd5e1; margin-bottom:4px;">Token OAuth de Twitch:</label>
-            <input type="password" id="cfg-twitch-token" placeholder="•••••••• (dejar vacío si no deseas cambiarla)" style="width:100%; box-sizing:border-box; padding:8px 10px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.88rem;">
+            <div class="pwd-field-wrap">
+              <input type="password" id="cfg-twitch-token" placeholder="•••••••• (dejar vacío si no deseas cambiarla)" style="width:100%; box-sizing:border-box; padding:8px 38px 8px 10px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.88rem;">
+              <button type="button" class="btn-toggle-eye" data-target="cfg-twitch-token" aria-label="Mostrar u ocultar clave" aria-pressed="false"></button>
+            </div>
             <div style="margin-top:4px; font-size:0.75rem;">
               <a href="https://twitchtokengenerator.com/" target="_blank" rel="noopener" style="color:#38bdf8; text-decoration:underline;">🔑 Generar Token en Twitch Token Generator</a>
             </div>
@@ -1689,11 +1725,20 @@
           <label for="cfg-stream-room" style="display:block; font-size:0.8rem; color:#cbd5e1; margin-bottom:4px;">Sala VDO del mezclador</label>
           <input type="text" id="cfg-stream-room" autocomplete="off" style="width:100%; box-sizing:border-box; padding:8px 10px; margin-bottom:10px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.88rem;">
           <label for="cfg-stream-pass" style="display:block; font-size:0.8rem; color:#cbd5e1; margin-bottom:4px;">Contraseña VDO del mezclador</label>
-          <input type="password" id="cfg-stream-pass" autocomplete="new-password" placeholder="Dejar vacío para conservar la guardada" style="width:100%; box-sizing:border-box; padding:8px 10px; margin-bottom:10px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.88rem;">
+          <div class="pwd-field-wrap" style="margin-bottom:10px;">
+            <input type="password" id="cfg-stream-pass" autocomplete="new-password" placeholder="Dejar vacío para conservar la guardada" style="width:100%; box-sizing:border-box; padding:8px 38px 8px 10px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.88rem;">
+            <button type="button" class="btn-toggle-eye" data-target="cfg-stream-pass" aria-label="Mostrar u ocultar clave" aria-pressed="false"></button>
+          </div>
           <label for="cfg-stream-key" style="display:block; font-size:0.8rem; color:#cbd5e1; margin-bottom:4px;">Clave de emisión de Twitch</label>
-          <input type="password" id="cfg-stream-key" autocomplete="new-password" placeholder="Dejar vacío para conservar la guardada" style="width:100%; box-sizing:border-box; padding:8px 10px; margin-bottom:10px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.88rem;">
+          <div class="pwd-field-wrap" style="margin-bottom:10px;">
+            <input type="password" id="cfg-stream-key" autocomplete="new-password" placeholder="Dejar vacío para conservar la guardada" style="width:100%; box-sizing:border-box; padding:8px 38px 8px 10px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.88rem;">
+            <button type="button" class="btn-toggle-eye" data-target="cfg-stream-key" aria-label="Mostrar u ocultar clave" aria-pressed="false"></button>
+          </div>
           <label for="cfg-youtube-stream-key" style="display:block; font-size:0.8rem; color:#cbd5e1; margin-bottom:4px;">Clave de emisión de YouTube</label>
-          <input type="password" id="cfg-youtube-stream-key" autocomplete="new-password" placeholder="Dejar vacío para conservar la guardada" style="width:100%; box-sizing:border-box; padding:8px; margin-bottom:10px; background:#1e293b; border:1px solid #334155; border-radius:0; color:#fff; font-size:0.88rem;">
+          <div class="pwd-field-wrap" style="margin-bottom:10px;">
+            <input type="password" id="cfg-youtube-stream-key" autocomplete="new-password" placeholder="Dejar vacío para conservar la guardada" style="width:100%; box-sizing:border-box; padding:8px 38px 8px 10px; background:#1e293b; border:1px solid #334155; border-radius:0; color:#fff; font-size:0.88rem;">
+            <button type="button" class="btn-toggle-eye" data-target="cfg-youtube-stream-key" aria-label="Mostrar u ocultar clave" aria-pressed="false"></button>
+          </div>
           <p id="cfg-stream-status" role="status" style="font-size:0.76rem; color:#94a3b8; margin:0 0 10px;">Sin comprobar</p>
           <button type="button" id="btn-guardar-streaming" style="padding:8px; background:#b45309; border:1px solid #fbbf24; border-radius:0; color:#fff; font-weight:bold; cursor:pointer;">Guardar emisión</button>
         </fieldset>
@@ -1712,7 +1757,10 @@
           <legend style="color:#4ade80; font-weight:700; font-size:0.85rem; padding:0 6px;">🤖 OpenAI API (Opcional - Transcripción & IA)</legend>
           <div>
             <label style="display:block; font-size:0.8rem; color:#cbd5e1; margin-bottom:4px;">API Key de OpenAI:</label>
-            <input type="password" id="cfg-openai-key" placeholder="•••••••• (dejar vacío si no deseas cambiarla)" style="width:100%; box-sizing:border-box; padding:8px 10px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.88rem;">
+            <div class="pwd-field-wrap">
+              <input type="password" id="cfg-openai-key" placeholder="•••••••• (dejar vacío si no deseas cambiarla)" style="width:100%; box-sizing:border-box; padding:8px 38px 8px 10px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.88rem;">
+              <button type="button" class="btn-toggle-eye" data-target="cfg-openai-key" aria-label="Mostrar u ocultar clave" aria-pressed="false"></button>
+            </div>
           </div>
         </fieldset>
 
@@ -3348,6 +3396,26 @@
             btn.style.background = '#0284c7';
           }, 1500);
         }
+      });
+    });
+
+    // ─── Botones de ojo para mostrar / ocultar contraseñas y credenciales ───
+    const EYE_OPEN_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const EYE_CLOSED_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+    document.querySelectorAll('.btn-toggle-eye').forEach(btn => {
+      btn.innerHTML = EYE_OPEN_SVG;
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const targetId = btn.dataset.target;
+        const input = document.getElementById(targetId);
+        if (!input) return;
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        btn.innerHTML = isPassword ? EYE_CLOSED_SVG : EYE_OPEN_SVG;
+        btn.setAttribute('aria-label', isPassword ? 'Ocultar clave' : 'Mostrar clave');
+        btn.setAttribute('aria-pressed', isPassword ? 'true' : 'false');
       });
     });
 
