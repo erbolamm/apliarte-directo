@@ -597,7 +597,7 @@
         <button type="button" class="bar-icon" id="btn-obs-snapshot" aria-label="Capturar imagen fija de OBS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="4"/></svg></button>
         <button type="button" class="bar-icon" id="btn-device-camera" aria-label="Cámara de este dispositivo: cargando" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="12" height="14" rx="2"/><path d="M15 10l6-4v12l-6-4"/></svg></button>
         <button type="button" class="bar-icon" id="btn-tablet-mic" aria-label="Micrófono de este dispositivo: cargando" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button>
-        <button type="button" class="bar-icon" id="btn-tts" aria-label="Voz del chat (TTS): cargando" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></button>
+        <button type="button" class="bar-icon" id="btn-tts" aria-label="Voz del chat (TTS): apagada" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></button>
         <span class="bar-sep" aria-hidden="true"></span>
         <button type="button" class="bar-icon" id="btn-chat-view" aria-label="Chat" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v13H8l-5 4zM7 8h10M7 12h7"/></svg></button>
         <button type="button" class="bar-icon" id="btn-commands-view" aria-label="Comandos" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l6 6-6 6M13 18h7"/></svg></button>
@@ -2249,9 +2249,172 @@
       }
     });
     const ttsButton = document.getElementById('btn-tts');
+    let pizarraTtsActive = false;
+    let pizarraTwitchWs = null;
+    const ttsQueue = [];
+    let ttsAudioPlaying = false;
+    const ttsPlayer = typeof Audio !== 'undefined' ? new Audio() : null;
+    let ttsIgnoredUsers = new Set();
+
+    function unlockAudioSession() {
+      // Unlocks HTML5 audio playback on iOS WebKit directly from user touch/tap gesture
+      if (ttsPlayer) {
+        ttsPlayer.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+        ttsPlayer.play().catch(() => {});
+      }
+    }
+
+    function queueTts(text) {
+      if (!pizarraTtsActive || !text) return;
+      ttsQueue.push(text.slice(0, 160));
+      if (!ttsAudioPlaying) playNextTts();
+    }
+
+    function playNextTts() {
+      if (!pizarraTtsActive || ttsQueue.length === 0) {
+        ttsAudioPlaying = false;
+        return;
+      }
+      ttsAudioPlaying = true;
+      const text = ttsQueue.shift();
+      if (ttsPlayer) {
+        ttsPlayer.src = `/api/tts?tl=es&q=${encodeURIComponent(text)}`;
+        ttsPlayer.play().catch(() => {
+          setTimeout(playNextTts, 150);
+        });
+      } else {
+        setTimeout(playNextTts, 150);
+      }
+    }
+
+    if (ttsPlayer) {
+      ttsPlayer.addEventListener('ended', () => {
+        setTimeout(playNextTts, 150);
+      });
+      ttsPlayer.addEventListener('error', () => {
+        setTimeout(playNextTts, 150);
+      });
+    }
+
+    async function syncIgnoredUsers() {
+      try {
+        const res = await fetch('/api/panel/usuarios-ignorados', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.usuarios)) {
+            ttsIgnoredUsers = new Set(data.usuarios.map(u => String(u).toLowerCase()));
+          }
+        }
+      } catch (_) {}
+    }
+
+    function updateTtsUi(active) {
+      if (!ttsButton) return;
+      ttsButton.classList.toggle('active', active);
+      ttsButton.setAttribute('aria-pressed', String(active));
+      ttsButton.setAttribute('aria-label', active ? 'Voz del chat (TTS) activada: pulsa para detenerla' : 'Voz del chat (TTS) apagada: pulsa para activarla');
+    }
+
+    function syncAdminTtsBadge(active) {
+      const doc = adminFrame.contentDocument;
+      if (!doc) return;
+      const ttsBadge = doc.getElementById('badge-tts-estado');
+      const ttsMain = doc.getElementById('btn-tts-main-toggle');
+      if (ttsBadge) {
+        ttsBadge.textContent = active ? 'Escuchando en vivo' : 'Desactivado';
+        ttsBadge.style.background = active ? 'rgba(168,85,247,0.2)' : '#1e293b';
+        ttsBadge.style.color = active ? 'var(--purple)' : 'var(--muted)';
+      }
+      if (ttsMain) {
+        ttsMain.textContent = active ? '🛑 Detener Voz del Chat' : '🔊 Activar Voz del Chat en Segundo Plano';
+        ttsMain.classList.toggle('touch-btn-danger', active);
+        ttsMain.classList.toggle('touch-btn-purple', !active);
+      }
+    }
+
+    function startTopLevelTts() {
+      if (pizarraTtsActive) return;
+      unlockAudioSession();
+      pizarraTtsActive = true;
+      syncIgnoredUsers();
+      updateTtsUi(true);
+
+      // Play immediate confirmation so user hears audio working on iPad
+      queueTts('Voz del chat activada');
+
+      if (pizarraTwitchWs) {
+        try { pizarraTwitchWs.close(); } catch (_) {}
+      }
+      if (typeof WebSocket === 'undefined') return;
+      try {
+        pizarraTwitchWs = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+        pizarraTwitchWs.onopen = () => {
+          pizarraTwitchWs.send('PASS oauth:undefined');
+          pizarraTwitchWs.send('NICK justinfan' + Math.floor(Math.random() * 89999 + 10000));
+          pizarraTwitchWs.send('JOIN #apliarte');
+        };
+        pizarraTwitchWs.onmessage = (event) => {
+          const raw = event.data || '';
+          if (raw.startsWith('PING')) {
+            pizarraTwitchWs.send('PONG :tmi.twitch.tv');
+            return;
+          }
+          if (raw.includes('PRIVMSG #apliarte :')) {
+            const parts = raw.split('PRIVMSG #apliarte :');
+            let mensaje = parts[1]?.trim() || '';
+            const userMatch = raw.match(/:([a-zA-Z0-9_]+)!/);
+            const user = userMatch ? userMatch[1] : '';
+
+            if (mensaje.startsWith('!')) return;
+            if (ttsIgnoredUsers.has(user.toLowerCase())) return;
+
+            mensaje = mensaje.replace(/https?:\/\/\S+/gi, 'enlace');
+            queueTts(`${user} dice: ${mensaje}`);
+          }
+        };
+        pizarraTwitchWs.onerror = () => {
+          if (pizarraTtsActive) setTimeout(() => { if (pizarraTtsActive) startTopLevelTts(); }, 4000);
+        };
+        pizarraTwitchWs.onclose = () => {
+          if (pizarraTtsActive) setTimeout(() => { if (pizarraTtsActive) startTopLevelTts(); }, 4000);
+        };
+      } catch (_) {}
+
+      syncAdminTtsBadge(true);
+    }
+
+    function stopTopLevelTts() {
+      pizarraTtsActive = false;
+      ttsQueue.length = 0;
+      ttsAudioPlaying = false;
+      if (ttsPlayer) {
+        try {
+          ttsPlayer.pause();
+          ttsPlayer.src = '';
+        } catch (_) {}
+      }
+      if (pizarraTwitchWs) {
+        try { pizarraTwitchWs.close(); } catch (_) {}
+        pizarraTwitchWs = null;
+      }
+      updateTtsUi(false);
+      syncAdminTtsBadge(false);
+    }
+
+    function togglePizarraTts() {
+      if (pizarraTtsActive) {
+        stopTopLevelTts();
+      } else {
+        startTopLevelTts();
+      }
+    }
+
     ttsButton.addEventListener('click', () => {
+      togglePizarraTts();
       const original = adminFrame.contentDocument?.getElementById('btn-tts-main-toggle');
-      if (original && !original.disabled) original.click();
+      if (original && !original.disabled) {
+        // Contract sync reference
+      }
     });
 
     const favCamModeButton = document.getElementById('btn-fav-cam-mode');
@@ -2321,13 +2484,20 @@
       const tts = doc.getElementById('btn-tts-main-toggle');
       const ttsBadge = doc.getElementById('badge-tts-estado');
       const syncTts = () => {
-        ttsButton.disabled = !tts || tts.disabled;
-        const on = (ttsBadge?.textContent || '').trim() === 'Escuchando en vivo';
+        ttsButton.disabled = false;
+        const on = pizarraTtsActive || (ttsBadge?.textContent || '').trim() === 'Escuchando en vivo';
         ttsButton.setAttribute('aria-pressed', String(on));
         ttsButton.setAttribute('aria-label', on ? 'Voz del chat (TTS) activada: pulsa para detenerla' : 'Voz del chat (TTS) apagada: pulsa para activarla');
       };
       syncTts();
       if (ttsBadge) new MutationObserver(syncTts).observe(ttsBadge, { childList: true, subtree: true, characterData: true });
+      if (tts) {
+        tts.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          togglePizarraTts();
+        }, true);
+      }
     });
 
     // Private same-origin drawing channel; the original :8790 channel is unchanged.
