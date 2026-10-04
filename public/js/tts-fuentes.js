@@ -177,6 +177,8 @@ export function parsearComandoChat(texto) {
     if (!dicho) return null;
     return { comando: "say", agente: conAgente ? candidato : null, texto: dicho };
   }
+  // Free roaming does not release office ownership.
+  if (nombre === "libre") return { comando: "libre" };
   if (nombre === "liberar") {
     const param = resto.trim().split(/\s+/)[0]?.toLowerCase().replace(/^@/, "");
     if (!param) return { comando: "liberar" };
