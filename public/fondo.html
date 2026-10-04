@@ -502,6 +502,85 @@
     <div class="vignette"></div>
   </div>
 
+  <div id="avatar-layer" aria-hidden="true" style="position:fixed;inset:0;z-index:10;pointer-events:none;overflow:hidden;"></div>
+  <script id="avatar-overlay">
+    // Independent 2D visitors: never mutate office assignments or ownership.
+    const avatarOverlay = {
+      avatars: new Map(),
+      congaEndsAt: 0,
+      lastFrame: null,
+      bounds() {
+        return { x: Math.max(0, window.innerWidth - 48), y: Math.max(0, window.innerHeight - 48) };
+      },
+      destination() {
+        const bounds = this.bounds();
+        return { x: Math.random() * bounds.x, y: Math.random() * bounds.y };
+      },
+      command(cmd, now = performance.now()) {
+        if (!cmd || !['libre', 'conga', 'reset'].includes(cmd.comando)) return;
+        const login = String(cmd.usuario || '').trim().toLowerCase();
+        if (!login) return;
+        if (cmd.comando === 'reset') {
+          const avatar = this.avatars.get(login);
+          if (avatar) { avatar.node.remove(); this.avatars.delete(login); }
+          return;
+        }
+        if (cmd.comando === 'conga' && now >= this.congaEndsAt) {
+          if (login !== 'apliarte') return;
+          this.congaEndsAt = now + 60000;
+        }
+        let avatar = this.avatars.get(login);
+        if (!avatar) {
+          if (this.avatars.size >= 64) return;
+          const node = document.createElement('div');
+          node.textContent = '🚶 ' + login.slice(0, 25);
+          node.style.cssText = 'position:absolute;left:0;top:0;width:48px;height:48px;font:12px sans-serif;color:white;text-shadow:0 1px 3px black;overflow:hidden;';
+          document.getElementById('avatar-layer').appendChild(node);
+          const bounds = this.bounds();
+          avatar = { node, x: bounds.x / 2, y: bounds.y / 2, target: this.destination(), mode: 'free' };
+          this.avatars.set(login, avatar);
+        }
+        avatar.mode = cmd.comando === 'conga' ? 'conga' : 'free';
+      },
+      tick(now) {
+        const dt = this.lastFrame === null ? 0 : Math.min(0.1, Math.max(0, (now - this.lastFrame) / 1000));
+        this.lastFrame = now;
+        if (this.congaEndsAt && now >= this.congaEndsAt) {
+          this.congaEndsAt = 0;
+          for (const avatar of this.avatars.values()) avatar.mode = 'free';
+        }
+        const bounds = this.bounds();
+        let dancer = 0;
+        for (const avatar of this.avatars.values()) {
+          if (avatar.mode === 'conga') {
+            const angle = now / 4000 - dancer++ * 0.22;
+            avatar.x = bounds.x * (0.5 + 0.45 * Math.cos(angle));
+            avatar.y = bounds.y * (0.5 + 0.45 * Math.sin(angle));
+          } else {
+            avatar.target.x = Math.min(bounds.x, avatar.target.x);
+            avatar.target.y = Math.min(bounds.y, avatar.target.y);
+            const dx = avatar.target.x - avatar.x;
+            const dy = avatar.target.y - avatar.y;
+            const distance = Math.hypot(dx, dy);
+            const step = Math.min(distance, 100 * dt);
+            if (distance > 1) {
+              avatar.x += dx / distance * step;
+              avatar.y += dy / distance * step;
+            } else avatar.target = this.destination();
+          }
+          avatar.x = Math.max(0, Math.min(bounds.x, avatar.x));
+          avatar.y = Math.max(0, Math.min(bounds.y, avatar.y));
+          avatar.node.style.transform = `translate(${avatar.x}px, ${avatar.y}px)`;
+        }
+      },
+    };
+    function animateAvatars(now) {
+      avatarOverlay.tick(now);
+      requestAnimationFrame(animateAvatars);
+    }
+    requestAnimationFrame(animateAvatars);
+  </script>
+
   <script>
     const PALETAS = {
       apps: { primario: '#5ecef5', secundario: '#00467b', oscuro: '#0c4a6e' },
@@ -583,6 +662,8 @@
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
+            // Consume only the canonical envelope; comando_chat is a duplicate.
+            if (data && data.type === 'directo_comando') avatarOverlay.command(data.cmd);
             const cat = (data && (data.categoria || (data.tablero === 'damas' ? 'damas' : null)));
             if (cat && PALETAS[cat]) {
               aplicarPaleta(cat);

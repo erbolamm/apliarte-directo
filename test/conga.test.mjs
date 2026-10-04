@@ -295,3 +295,93 @@ test('CONGA_CIRCUIT: crosses the room walls (y=414 / y=498) only through the doo
   }
   assert.deepEqual(CONGA_CIRCUIT[0], CONGA_CIRCUIT[CONGA_CIRCUIT.length - 1]);
 });
+
+// Execute the actual 2D overlay code with a minimal DOM and controlled clock.
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+import { parsearComandoChat } from '../public/js/tts-fuentes.js';
+
+function createOverlay() {
+  const source = readFileSync(new URL('../public/fondo.html', import.meta.url), 'utf8');
+  const script = source.match(/<script id="avatar-overlay">([\s\S]*?)<\/script>/);
+  assert.ok(script, 'fondo must contain the interactive avatar layer');
+  const layer = { children: [], appendChild(node) { this.children.push(node); } };
+  const context = vm.createContext({
+    document: { getElementById: () => layer, createElement: () => ({ style: {}, textContent: '', remove() {} }) },
+    window: { innerWidth: 1920, innerHeight: 1080 },
+    Math, Map, performance: { now: () => 0 }, requestAnimationFrame() {},
+  });
+  vm.runInContext(script[1], context);
+  return { layer, run: code => vm.runInContext(code, context) };
+}
+
+test('!libre is distinct from office ownership release', () => {
+  assert.deepEqual(parsearComandoChat('!LIBRE'), { comando: 'libre' });
+  assert.deepEqual(parsearComandoChat('!liberar'), { comando: 'liberar' });
+});
+
+test('2D free roaming traverses the viewport and stays visible after resize', () => {
+  const overlay = createOverlay();
+  overlay.run("avatarOverlay.command({ comando: 'libre', usuario: 'viewer' }, 0)");
+  assert.equal(overlay.layer.children.length, 1);
+  overlay.run("avatarOverlay.avatars.get('viewer').target = { x: 1800, y: 900 }");
+  overlay.run('for (let time = 0; time <= 10000; time += 100) avatarOverlay.tick(time)');
+  assert.ok(overlay.run("avatarOverlay.avatars.get('viewer').x") > 960);
+  assert.ok(overlay.run("avatarOverlay.avatars.get('viewer').y") > 540);
+  overlay.run('window.innerWidth = 100; window.innerHeight = 80; avatarOverlay.tick(10100)');
+  assert.ok(overlay.run("avatarOverlay.avatars.get('viewer').x") <= 52);
+  assert.ok(overlay.run("avatarOverlay.avatars.get('viewer').y") <= 32);
+});
+
+test('2D conga starts with broadcaster, joins once, renders and returns to roaming', () => {
+  const overlay = createOverlay();
+  overlay.run("avatarOverlay.command({ comando: 'conga', usuario: 'viewer' }, 0)");
+  assert.equal(overlay.layer.children.length, 0, 'viewer cannot start');
+  overlay.run("avatarOverlay.command({ comando: 'conga', usuario: 'apliarte' }, 0)");
+  overlay.run("avatarOverlay.command({ comando: 'conga', usuario: 'Viewer' }, 100)");
+  overlay.run("avatarOverlay.command({ comando: 'conga', usuario: 'VIEWER' }, 200)");
+  assert.equal(overlay.layer.children.length, 2);
+  overlay.run('avatarOverlay.tick(1000)');
+  assert.match(overlay.layer.children[0].style.transform, /translate/);
+  assert.notEqual(overlay.layer.children[0].style.transform, overlay.layer.children[1].style.transform);
+  overlay.run("avatarOverlay.command({ comando: 'libre', usuario: 'viewer' }, 2000)");
+  assert.equal(overlay.run("avatarOverlay.avatars.get('viewer').mode"), 'free');
+  overlay.run('avatarOverlay.tick(61000)');
+  assert.equal(overlay.run('avatarOverlay.congaEndsAt'), 0);
+  assert.equal(overlay.run("avatarOverlay.avatars.get('apliarte').mode"), 'free');
+});
+
+test('fondo WebSocket delivers canonical commands without duplicate dancers', () => {
+  const overlay = createOverlay();
+  const source = readFileSync(new URL('../public/fondo.html', import.meta.url), 'utf8');
+  const main = source.match(/<script>([\s\S]*?)<\/script>/)[1];
+  const sockets = [];
+  const context = vm.createContext({
+    avatarOverlay: { command: cmd => overlay.run(`avatarOverlay.command(${JSON.stringify(cmd)}, 0)`) },
+    window: { location: { search: '', protocol: 'http:', host: 'localhost' } },
+    URLSearchParams,
+    document: {
+      getElementById: () => ({ style: {} }), querySelectorAll: () => [],
+      documentElement: { style: { setProperty() {} }, dataset: {}, setAttribute() {} },
+    },
+    WebSocket: class { constructor() { sockets.push(this); } },
+    setInterval() {}, setTimeout() {}, fetch: async () => ({ ok: false }),
+  });
+  vm.runInContext(main, context);
+  const send = data => sockets[0].onmessage({ data: JSON.stringify(data) });
+  send({ type: 'directo_comando', cmd: { comando: 'libre', usuario: 'viewer' } });
+  assert.equal(overlay.layer.children.length, 1);
+  send({ type: 'directo_comando', cmd: { comando: 'conga', usuario: 'apliarte' } });
+  send({ type: 'directo_comando', cmd: { comando: 'conga', usuario: 'viewer' } });
+  send({ type: 'comando_chat', comando: 'conga', usuario: 'viewer' });
+  assert.equal(overlay.layer.children.length, 2);
+  assert.equal(overlay.run("avatarOverlay.avatars.get('viewer').mode"), 'conga');
+});
+
+test('2D avatar population is bounded and labels remain plain text', () => {
+  const overlay = createOverlay();
+  overlay.run("avatarOverlay.command({ comando: 'libre', usuario: '<img src=x>' }, 0)");
+  assert.equal(overlay.layer.children[0].textContent, '🚶 <img src=x>');
+  overlay.run("for (let i = 0; i < 100; i++) avatarOverlay.command({ comando: 'libre', usuario: 'v' + i }, 0)");
+  assert.equal(overlay.layer.children.length, 64);
+});
