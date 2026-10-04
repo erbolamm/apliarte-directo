@@ -758,9 +758,7 @@
       <div id="obs-scenes-grid" class="scene-grid" role="group" aria-label="Escenas disponibles en OBS"></div>
       <button type="button" id="btn-open-sources" class="sheet-btn primary">Ver y gestionar fuentes de la escena</button>
       <div class="bar-sep" style="width: 100%; height: 1px;" aria-hidden="true"></div>
-      <div class="panel-title">Audio y captura fija</div>
-      <label>Entrada de audio de OBS <select id="obs-input" disabled></select></label>
-      <button type="button" id="btn-obs-mute" class="sheet-btn" disabled>Consultar audio de OBS</button>
+      <div class="panel-title">Captura fija de OBS</div>
       <button type="button" id="btn-obs-preview" class="sheet-btn">Mostrar captura OBS</button>
       <label>Renovar imagen <select id="obs-interval"><option value="0" selected>Solo al pulsar captura</option><option value="1000">1 s</option><option value="2000">2 s</option><option value="5000">5 s</option><option value="10000">10 s</option></select></label>
       <button type="button" id="btn-obs-refresh" class="sheet-btn">Actualizar OBS</button>
@@ -1298,10 +1296,12 @@
     }
     function updateMute(muted) {
       obsMuted = muted;
-      btnObsMute.disabled = muted === null || actionBusy;
-      const name = inputSelect.value || 'entrada';
-      btnObsMute.textContent = muted === null ? 'Audio de OBS sin estado confirmado' : (muted ? 'Activar en OBS: ' : 'Silenciar en OBS: ') + name;
-      btnObsMute.setAttribute('aria-pressed', String(muted === false));
+      if (btnObsMute) {
+        btnObsMute.disabled = muted === null || actionBusy;
+        const name = inputSelect?.value || 'entrada';
+        btnObsMute.textContent = muted === null ? 'Audio de OBS sin estado confirmado' : (muted ? 'Activar en OBS: ' : 'Silenciar en OBS: ') + name;
+        btnObsMute.setAttribute('aria-pressed', String(muted === false));
+      }
     }
     let currentObsScene = '';
     let currentObsScenes = [];
@@ -1465,16 +1465,18 @@
       if (stateBusy) return;
       stateBusy = true;
       try {
-        let data = await obsRequest('state' + (inputSelect.value ? '?input=' + encodeURIComponent(inputSelect.value) : ''));
-        populateSelect(sceneSelect, data.scenes, data.scene);
-        populateSelect(inputSelect, data.inputs, inputSelect.value || (data.inputs.includes('Mic/Aux') ? 'Mic/Aux' : data.inputs[0]));
-        if (inputSelect.value && data.muted === null) data = await obsRequest('state?input=' + encodeURIComponent(inputSelect.value));
-        updateMute(data.muted);
+        let data = await obsRequest('state' + (inputSelect?.value ? '?input=' + encodeURIComponent(inputSelect.value) : ''));
+        if (sceneSelect) populateSelect(sceneSelect, data.scenes, data.scene);
+        if (inputSelect) {
+          populateSelect(inputSelect, data.inputs, inputSelect.value || (data.inputs.includes('Mic/Aux') ? 'Mic/Aux' : data.inputs[0]));
+          if (inputSelect.value && data.muted === null) data = await obsRequest('state?input=' + encodeURIComponent(inputSelect.value));
+          updateMute(data.muted);
+        }
         renderScenesGrid(data.scenes, data.scene);
         reportObs('OBS conectado. Capturas fijas; no vídeo continuo.');
       } catch (error) {
-        sceneSelect.disabled = true;
-        inputSelect.disabled = true;
+        if (sceneSelect) sceneSelect.disabled = true;
+        if (inputSelect) inputSelect.disabled = true;
         updateMute(null);
         renderScenesGrid([], '');
         reportObs(error.message, true);
@@ -1483,8 +1485,8 @@
     async function obsAction(action, name) {
       if (actionBusy || !name) return;
       actionBusy = true;
-      sceneSelect.disabled = true;
-      btnObsMute.disabled = true;
+      if (sceneSelect) sceneSelect.disabled = true;
+      if (btnObsMute) btnObsMute.disabled = true;
       try {
         await obsRequest('action', { action, name });
         await refreshObs();
@@ -1493,12 +1495,12 @@
         reportObs(error.message, true);
       } finally {
         actionBusy = false;
-        btnObsMute.disabled = obsMuted === null;
+        if (btnObsMute) btnObsMute.disabled = obsMuted === null;
       }
     }
-    sceneSelect.addEventListener('change', () => obsAction('scene', sceneSelect.value));
-    inputSelect.addEventListener('change', refreshObs);
-    btnObsMute.addEventListener('click', () => obsAction('mute', inputSelect.value));
+    if (sceneSelect) sceneSelect.addEventListener('change', () => obsAction('scene', sceneSelect.value));
+    if (inputSelect) inputSelect.addEventListener('change', refreshObs);
+    if (btnObsMute) btnObsMute.addEventListener('click', () => obsAction('mute', inputSelect?.value));
     document.getElementById('btn-obs-refresh').addEventListener('click', refreshObs);
 
     function scheduleCapture() {
