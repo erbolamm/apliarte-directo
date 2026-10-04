@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Primeros Pasos — ApliArte Directo</title>
+  <meta name="description" content="Guía rápida para arrancar tu estudio de ApliArte Directo en tu equipo, guardar tu panel en favoritos y conectar OBS Studio.">
+
+  <!-- Tipografía oficial ApliArte -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #131b2e;
+      --card-border: #233354;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --primary: #0284c7;
+      --primary-light: #38bdf8;
+      --primary-hover: #0369a1;
+      --accent: #f59e0b;
+      --accent-hover: #d97706;
+      --success: #10b981;
+      --youtube: #ff0000;
+      --radius: 12px;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      background: rgba(2, 132, 199, 0.15);
+      color: var(--primary-light);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 0.75rem;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .step-number {
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    p { margin-bottom: 1rem; color: var(--text); }
+    p:last-child { margin-bottom: 0; }
+
+    .code-box {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      color: var(--primary-light);
+      margin: 0.75rem 0;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.4rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+
+    .btn-accent {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+    }
+    .btn-accent:hover { background: var(--accent-hover); transform: translateY(-1px); }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+    }
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--primary-light);
+      color: #fff;
+    }
+
+    .highlight-card {
+      background: linear-gradient(135deg, rgba(2, 132, 199, 0.12), rgba(245, 158, 11, 0.08));
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .youtube-card {
+      border: 1px solid rgba(255, 0, 0, 0.35);
+      background: linear-gradient(135deg, rgba(255, 0, 0, 0.08), rgba(19, 27, 46, 0.8));
+    }
+
+    .kbd {
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 4px;
+      padding: 0.15rem 0.45rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: #f1f5f9;
+      box-shadow: 0 2px 0 #0f172a;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    @media (max-width: 640px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    .os-box {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+
+    .os-title {
+      font-weight: 700;
+      color: var(--primary-light);
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    .note {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      border-left: 3px solid var(--primary-light);
+      padding-left: 0.75rem;
+      margin-top: 0.75rem;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--card-border);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    footer a {
+      color: var(--primary-light);
+      text-decoration: none;
+    }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">ApliArte Directo</div>
+      <h1>Primeros Pasos en tu Equipo</h1>
+      <p class="subtitle">Guía de arranque rápido para configurar tu estudio de streaming con avatares 3D interactivos, panel de control y OBS Studio.</p>
+    </header>
+
+    <!-- Paso 1 -->
+    <section class="card">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2>Instala Node.js LTS (solo una vez)</h2>
+      </div>
+      <p>Node.js es el motor ligero que ejecuta el servidor local de Directo en tu ordenador de forma 100% privada. Si ya lo tienes instalado, puedes pasar directamente al paso 2.</p>
+      <a href="https://nodejs.org" target="_blank" rel="noopener noreferrer" class="btn btn-outline">Descargar Node.js LTS (nodejs.org)</a>
+    </section>
+
+    <!-- Paso 2 -->
+    <section class="card">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2>Arranca el servidor con un solo clic</h2>
+      </div>
+      <p>En esta misma carpeta donde has descomprimido el proyecto, localiza el archivo correspondiente a tu sistema operativo y haz doble clic sobre él:</p>
+      <div class="grid-2">
+        <div class="os-box">
+          <div class="os-title">En Mac (macOS):</div>
+          <p>Haz doble clic en el archivo:</p>
+          <div class="code-box">Iniciar directo.command</div>
+        </div>
+        <div class="os-box">
+          <div class="os-title">En Windows:</div>
+          <p>Haz doble clic en el archivo:</p>
+          <div class="code-box">Iniciar directo.bat</div>
+        </div>
+      </div>
+      <div class="note">
+        <strong>Nota importante:</strong> La primera vez que lo arranques tardará entre 1 y 2 minutos porque descargará automáticamente los paquetes necesarios. No cierres la ventana negra de la terminal; déjala minimizada mientras estés emitiendo.
+      </div>
+    </section>
+
+    <!-- Paso 3 -->
+    <section class="card highlight-card">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <h2>Abre tu panel y guárdalo en Favoritos</h2>
+      </div>
+      <p>Una vez que el servidor esté iniciado, tu panel de control privado estará activo en tu navegador local:</p>
+      <div style="margin: 1.25rem 0;">
+        <a href="http://127.0.0.1:7979/admin" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="font-size:1.05rem; padding: 0.85rem 1.6rem;">
+          ▶ Abrir mi Panel de Control (http://127.0.0.1:7979/admin)
+        </a>
+      </div>
+      <div class="os-box" style="background: rgba(0,0,0,0.35); border-color: rgba(245, 158, 11, 0.4);">
+        <div class="os-title" style="color: var(--accent);">El truco de los creadores: añade el panel a Favoritos</div>
+        <p>Abre el enlace de arriba y pulsa en tu teclado:</p>
+        <p>
+          <span class="kbd">Cmd</span> + <span class="kbd">D</span> (en Mac) &nbsp;&bull;&nbsp;
+          <span class="kbd">Ctrl</span> + <span class="kbd">D</span> (en Windows)
+        </p>
+        <p style="margin-bottom: 0;">Guárdalo en la barra de marcadores con el nombre <strong>«Mi Directo»</strong>. A partir de ahora, tu rutina para cada emisión será exactamente:</p>
+        <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
+          <li>Doble clic en tu archivo de inicio (<code>Iniciar directo</code>).</li>
+          <li>Clic en tu favorito <strong>«Mi Directo»</strong> en el navegador.</li>
+          <li>¡A emitir y divertirte con tu comunidad!</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Paso 4 -->
+    <section class="card">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <h2>Conecta tu OBS Studio</h2>
+      </div>
+      <p>Para ver los avatares 3D, el escenario y los avisos en tu directo:</p>
+      <ol style="margin-left: 1.5rem; margin-bottom: 1rem;">
+        <li>Abre OBS Studio y ve a tu escena de emisión.</li>
+        <li>Añade una nueva fuente de tipo <strong>«Navegador»</strong> (Browser Source).</li>
+        <li>Configura los siguientes valores:
+          <ul style="margin-left: 1.5rem; margin-top: 0.35rem;">
+            <li><strong>URL:</strong> <code>http://127.0.0.1:7979/</code></li>
+            <li><strong>Ancho:</strong> <code>1920</code></li>
+            <li><strong>Alto:</strong> <code>1080</code></li>
+            <li><strong>Controlar audio vía OBS:</strong> Activado (opcional si quieres graduar el sonido desde la mesa de mezclas de OBS).</li>
+          </ul>
+        </li>
+      </ol>
+      <p>Pulsa Aceptar y ya verás la capa transparente con tus personajes y animaciones en directo.</p>
+    </section>
+
+    <!-- Vídeo Tutorial YouTube -->
+    <section class="card youtube-card">
+      <div class="step-header">
+        <div class="step-number" style="background: var(--youtube);">▶</div>
+        <h2>Vídeo Tutorial en Directo (YouTube)</h2>
+      </div>
+      <p>Javier Mateo realizará un directo monográfico explicando en vivo todo el proceso de instalación desde cero, el funcionamiento del panel de control y cómo sacarle el máximo partido a los avatares en streaming.</p>
+      <p>Cuando finalice la emisión, tendrás aquí mismo el vídeo completo grabado para repasar cualquier duda.</p>
+      <div style="margin-top: 1rem;">
+        <a href="https://www.youtube.com/@ApliArte" target="_blank" rel="noopener noreferrer" class="btn btn-accent">
+          Ver canal de ApliArte en YouTube
+        </a>
+      </div>
+    </section>
+
+    <!-- Enlaces y Documentación -->
+    <section class="card">
+      <h2>Documentación y Enlaces Útiles</h2>
+      <div style="display:flex; flex-wrap:wrap; gap: 0.75rem; margin-top: 1rem;">
+        <a href="./public/guia-directo.html" class="btn btn-outline">Guía Oficial de Comandos</a>
+        <a href="./public/demo.html" class="btn btn-outline">Probar Demo 3D Interactiva</a>
+        <a href="https://directo.apliarte.com" target="_blank" rel="noopener noreferrer" class="btn btn-outline">Web Oficial (directo.apliarte.com)</a>
+        <a href="https://github.com/erbolamm/apliarte-directo" target="_blank" rel="noopener noreferrer" class="btn btn-outline">Repositorio en GitHub</a>
+      </div>
+    </section>
+
+    <footer>
+      <p>ApliArte Directo &bull; Creado por <a href="https://github.com/erbolamm" target="_blank" rel="noopener noreferrer">Javier Mateo (ApliArte / ErBolamm)</a> &bull; Código abierto y soberano</p>
+    </footer>
+  </div>
+</body>
+</html>

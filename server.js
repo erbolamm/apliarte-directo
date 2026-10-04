@@ -2570,6 +2570,10 @@ html,body{width:100%;height:100%;overflow:hidden;
     if (serveStatic(req, res, '/guia-directo.html')) return;
   }
 
+  if (path === '/empezar' || path === '/empezar.html') {
+    if (serveStatic(req, res, '/empezar.html')) return;
+  }
+
   
   if (path.startsWith('/medios/')) {
     const rel = path.replace(/^\/medios\//, '');
