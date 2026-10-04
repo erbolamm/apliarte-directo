@@ -1333,6 +1333,10 @@
         <span>🎮 Partida !traidor</span>
         <span class="badge" id="game-badge-fase" style="background:#1e293b; color:var(--cyan);">IDLE</span>
       </div>
+
+      <div style="background:rgba(2,132,199,0.12); border:1px solid rgba(56,189,248,0.35); border-radius:6px; padding:10px 12px; margin-bottom:12px; font-size:0.8rem; color:#cbd5e1; line-height:1.45;">
+        <strong style="color:#38bdf8;">ℹ️ Regla de votación:</strong> Solo pueden votar en el chat los usuarios que tengan un <strong>avatar asignado</strong> en la oficina 3D. Los mensajes de espectadores sin avatar no se contabilizan.
+      </div>
       
       <div class="game-banner">
         <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem;">
@@ -3045,8 +3049,8 @@
       lobby_votacion: 'Lobby abierto: los espectadores adoptan avatar en el chat.',
       traidor_intro: 'Asignando traidor y preparando la ronda...',
       traidor_debate: 'Fase de debate activo: discuten quién es el traidor.',
-      traidor_votacion: 'Votación abierta: escriben el número de su sospechoso en el chat.',
-      muerte_subita: '¡Muerte súbita! 3 supervivientes votan la ronda final.',
+      traidor_votacion: 'Votación abierta: escriben el número en el chat (solo votan avatares asignados).',
+      muerte_subita: '¡Muerte súbita! 3 supervivientes votan en el chat (solo avatares asignados).',
       traidor_expulsion: 'Votación cerrada: listo para resolver la expulsión.',
       finalizado: 'Partida concluida.'
     };
@@ -3529,7 +3533,7 @@
       // Minijuegos y utilidades
       ['!juego', 'Abre votación de minijuegos (!trofeo vs !traidor)'],
       ['!trofeo', 'Inicia la carrera por la copa'],
-      ['!traidor', 'Inicia el juego del traidor impostor'],
+      ['!traidor', 'Inicia el juego del traidor impostor (solo votan usuarios con avatar asignado)'],
       ['!sms [mensaje]', 'Envía un mensaje privado al buzón de Javier'],
       ['!speak -config es-ES 1', 'Configura voz de lectura en español (España 👩)'],
       ['!speak -config es-AR 1', 'Configura voz de lectura en español (Argentina 👩)'],

@@ -3140,8 +3140,8 @@
           ? `💀 MUERTE SÚBITA · Ronda ${hub.round}`
           : `🗳️ ¿QUIÉN ES EL TRAIDOR? · Ronda ${hub.round}`;
         hubSub.textContent = hub.fase === 'muerte_subita'
-          ? 'Solo quedan 3. Escribe el número del sospechoso en el chat'
-          : 'Escribe el número del sospechoso en el chat';
+          ? 'Solo votan avatares asignados · Escribe el número del sospechoso en el chat'
+          : 'Solo votan avatares asignados · Escribe el número del sospechoso en el chat';
         hubTimer.textContent = timer;
         hubOptions.innerHTML = players.map((id, i) => {
           const votes = Number(hub.votes?.[String(i + 1)] ?? hub.votes?.[id]) || 0;
@@ -3180,11 +3180,11 @@
       hubOptions.innerHTML = '';
       if (hub.fase === 'traidor_intro') {
         hubTitle.textContent = '🔪 ¡HAY UN TRAIDOR EN LA OFICINA!';
-        hubSub.textContent = `Sospechosos: ${players.map(id => '!' + id).join(' · ')}`;
+        hubSub.textContent = `Sospechosos: ${players.map(id => '!' + id).join(' · ')} · Solo juegan quienes tengan avatar asignado`;
         hubTimer.textContent = secs ? timer : '';
       } else {
         hubTitle.textContent = `🗣️ DEBATE · Ronda ${hub.round}`;
-        hubSub.textContent = 'Habla en el chat: tu avatar lo dirá en la sala de reuniones';
+        hubSub.textContent = 'Solo hablan avatares asignados · Los sospechosos debaten en la sala';
         hubTimer.textContent = timer;
         hubOptions.innerHTML = players.map((id, i) => {
           return `<li class="hub-option"><span>${i + 1}. <code>${escapeHtml(agentLabel(id))}</code></span></li>`;

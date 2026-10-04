@@ -55,6 +55,9 @@ for (const ruta of RUTAS_PLANO) {
   test(`${ruta}: durante el traidor solo se atiende a jugadores y a Javier`, () => {
     assert.match(html, /if \(!esJugador && !esJavier\(user\)\) return;/);
   });
+  test(`${ruta}: en la votación del traidor se explicita que solo votan avatares asignados`, () => {
+    assert.match(html, /Solo votan avatares asignados · Escribe el número del sospechoso en el chat/);
+  });
 }
 
 for (const ruta of RUTAS_PLANO) {
