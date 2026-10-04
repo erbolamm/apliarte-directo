@@ -607,4 +607,37 @@ test('commands can be pinned directly to the favorites bar from the grid and the
   assert.match(html, /COMANDOS DISPONIBLES/);
 });
 
+test('command buttons and items can be edited persistently and deleted from modal and command flow', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
+
+  // Item modal has explicit delete button with danger styling
+  assert.match(html, /id="item-delete"/);
+  assert.match(html, /\.sheet-btn\.danger\s*\{color:\s*var\(--danger\)/);
+
+  // openItemModal supports edit mode and shows delete button
+  assert.match(html, /function openItemModal\(tipo\)/);
+  assert.match(html, /const isEdit = Boolean\(existingVal\)/);
+  assert.match(html, /itemDeleteBtn\.hidden = !isEdit/);
+
+  // saveItemModal handles renaming and persistent update
+  assert.match(html, /if \(itemOriginalValue && itemOriginalValue !== val\)/);
+  assert.match(html, /accion: 'quitar', comando: itemOriginalValue/);
+  assert.match(html, /accion: 'agregar', comando: val, descripcion: desc/);
+
+  // deleteItemModal deletes from server and unpins from favorites
+  assert.match(html, /async function deleteItemModal\(\)/);
+  assert.match(html, /saveFavorites\(favs\.filter\(id => id !== favKey\)\)/);
+
+  // Command modal has edit and delete buttons
+  assert.match(html, /id="btn-cmd-edit"/);
+  assert.match(html, /id="btn-cmd-delete"/);
+  assert.match(html, /btnCmdEdit\?\.addEventListener\('click'/);
+  assert.match(html, /btnCmdDelete\?\.addEventListener\('click'/);
+
+  // Commands sheet has new command button and chips include quick add
+  assert.match(html, /id="btn-sheet-add-cmd"/);
+  assert.match(html, /\+ Añadir/);
+});
+
 
