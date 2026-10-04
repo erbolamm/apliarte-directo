@@ -136,6 +136,25 @@
 .a-ring { animation: pulseRing 2s ease-out 3; }
 .a-float { animation: floaty 3s ease-in-out 3; }
 
+@keyframes punchA {
+  0%, 100% { transform: rotate(-25deg) translateX(-2px); }
+  50% { transform: rotate(45deg) translateX(8px); }
+}
+@keyframes punchB {
+  0%, 100% { transform: rotate(45deg) translateX(8px); }
+  50% { transform: rotate(-25deg) translateX(-2px); }
+}
+@keyframes brawlShake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(-3px, -2px) rotate(-4deg); }
+  50% { transform: translate(2px, 1px) rotate(3deg); }
+  75% { transform: translate(-2px, 2px) rotate(-2deg); }
+}
+
+.a-punchA { animation: punchA 0.18s ease-in-out infinite; }
+.a-punchB { animation: punchB 0.18s ease-in-out infinite; }
+.a-brawl-shake { animation: brawlShake 0.15s ease-in-out infinite; }
+
 .charHit { cursor: pointer; }
 .charBody {
   transition: transform 0.18s ease;

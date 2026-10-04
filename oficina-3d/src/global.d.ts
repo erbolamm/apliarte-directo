@@ -22,6 +22,7 @@ declare global {
    ejecutarBeso?: (senderId: AgentId, targetId: AgentId, customText?: string) => void;
    ejecutarBronca?: () => void;
    ejecutarTrabajar?: (agentId?: AgentId) => void;
+   ejecutarFiesta?: () => void;
    moverAvatar?: (id: AgentId, dx: number, dy: number, facing: number, isRear: boolean) => void;
    saltarAvatar?: (id: AgentId) => void;
    resetAvatar?: (id: AgentId) => void;

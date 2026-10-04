@@ -16,7 +16,10 @@ export type Pose =
   | "sit"
   | "present"
   | "deliver"
-  | "coffee";
+  | "coffee"
+  | "dance"
+  | "brawl"
+  | "fall";
 
 export type Slot = {
   x: number;

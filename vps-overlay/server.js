@@ -326,7 +326,9 @@ function conectarTwitchSender() {
     console.error('[TwitchIRC] Excepción al conectar:', err);
   }
 }
-conectarTwitchSender();
+if (!process.env.APLIARTE_TEST_DATA_DIR && process.env.NODE_ENV !== 'test') {
+  conectarTwitchSender();
+}
 
 async function ejecutarModeracionHelix(cmdStr) {
   const m = cmdStr.trim().match(/^(\/(?:timeout|ban|unban|untimeout|shoutout|vip|unvip|raid)|!so)\s+@?([a-zA-Z0-9_]+)(?:\s+(\d+))?/i);
@@ -2174,6 +2176,9 @@ html,body{width:100%;height:100%;overflow:hidden;
     }
     if (PASSWORD) {
       res.setHeader('Set-Cookie', `tts_auth=${PASSWORD}; Path=/; HttpOnly; SameSite=Strict`);
+    }
+    if (path === '/directo' && fs.existsSync(pathMod.join(PUBLIC_DIR, 'directo.html'))) {
+      if (serveStatic(req, res, '/directo.html')) return;
     }
     if (serveStatic(req, res, '/admin.html')) return;
   }

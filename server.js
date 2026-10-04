@@ -459,7 +459,10 @@ function conectarTwitchSender() {
     console.error('[TwitchIRC] Excepción al conectar:', err);
   }
 }
-conectarTwitchSender();
+
+if (!process.env.APLIARTE_TEST_DATA_DIR && process.env.NODE_ENV !== 'test') {
+  conectarTwitchSender();
+}
 
 function sanearComando(cmdStr) {
   if (!cmdStr || typeof cmdStr !== 'string') {
@@ -1452,10 +1455,22 @@ const HOST = process.env.HOST || '127.0.0.1';
 
 // Private, opt-in tablet add-on. Never included in the public static webroot.
 const { createPizarraPlus } = require('./src/pizarra-plus');
+function isPizarraTrustedOrigin(req) {
+  if (isTrustedWsOrigin(req)) return true;
+  const originHeader = req && req.headers && req.headers.origin;
+  if (!originHeader) return true;
+  try {
+    const u = new URL(originHeader);
+    const h = u.hostname;
+    const isLocal = h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h.endsWith('.ts.net');
+    if (isLocal && (['8791', '7979', '8790', ''].includes(u.port))) return true;
+  } catch (_) {}
+  return false;
+}
 const pizarraPlus = createPizarraPlus({
   enabled: process.env.DIRECTO_PIZARRA_PLUS !== '0',
   authorize: req => isTailscaleOrLocal(req) || isAuth(req),
-  trustedOrigin: isTrustedWsOrigin,
+  trustedOrigin: isPizarraTrustedOrigin,
   root: __dirname,
 });
 
@@ -2534,6 +2549,9 @@ html,body{width:100%;height:100%;overflow:hidden;
     }
     if (PASSWORD) {
       res.setHeader('Set-Cookie', `tts_auth=${PASSWORD}; Path=/; HttpOnly; SameSite=Strict`);
+    }
+    if (path === '/directo' && fs.existsSync(pathMod.join(PUBLIC_DIR, 'directo.html'))) {
+      if (serveStatic(req, res, '/directo.html')) return;
     }
     if (serveStatic(req, res, '/admin.html')) return;
   }

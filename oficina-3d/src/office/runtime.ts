@@ -14,6 +14,20 @@ import {
   CONGA_ADOPT_TEXT,
   countdownSecondsLeft,
 } from './conga';
+import {
+  type FiestaState,
+  emptyFiestaState,
+  startFiesta,
+  tickFiesta,
+  isFiestaActive,
+} from './fiesta';
+import {
+  type BroncaState,
+  emptyBroncaState,
+  startBronca,
+  tickBronca,
+  isBroncaActive,
+} from './bronca';
 export type Task={role:AgentId;project:string;title:string;fileName:string;priority:string};
 export type Snapshot={valid:boolean;states:Record<string,Task[]>;orchestrator:AgentId|null};
 export type Person={id:AgentId;pos:Pt;pose:Pose;facing:number;status:string;path:Pt[]|null;target:Pt;travelled:number;deliveringUntil:number;queued:number;speaking?:boolean;manualUntil?:number;isRear?:boolean;jumping?:boolean;speed?:number};
@@ -196,6 +210,10 @@ export class OfficeRuntime {
   quorumEnforced = false;
   /** !conga circuit state. Pure state machine in `./conga`. */
   congaState: CongaState = emptyCongaState('apliarte');
+  /** !fiesta celebration state. Pure state machine in `./fiesta`. */
+  fiestaState: FiestaState = emptyFiestaState();
+  /** !bronca comedic brawl state. Pure state machine in `./bronca`. */
+  broncaState: BroncaState = emptyBroncaState();
   /** Cached dancer positions, recomputed each tick. */
   private congaPositions: Map<CongaAgentId, Pt> = new Map();
   /** Last announced countdown second (0..10). */
@@ -520,7 +538,13 @@ export class OfficeRuntime {
  private move(p:Person,end:Pt,snap=false) {
   if(equal(p.target,end))return;
   p.target={...end};p.travelled=0;
-  if(snap||this.reduced){p.pos={...end};p.path=null;}else p.path=navigate(p.pos,end);
+  if(snap||this.reduced){p.pos={...end};p.path=null;}else {
+   try {
+    p.path=navigate(p.pos,end);
+   } catch (_) {
+    p.path=null;
+   }
+  }
  }
  update(raw:unknown,now:number) {
   const next=normalizeSnapshot(raw);
@@ -600,6 +624,35 @@ export class OfficeRuntime {
   this.congaPositions = this.congaState.phase === 'dancing'
     ? getCongaAgentPositions(this.congaState, now) as Map<CongaAgentId, Pt>
     : new Map();
+
+  // Fiesta tick: advance party state, handle ending transitions
+  const prevFiestaPhase = this.fiestaState.phase;
+  this.fiestaState = tickFiesta(this.fiestaState, now, dt);
+  if (prevFiestaPhase !== this.fiestaState.phase) {
+    if (this.fiestaState.phase === 'ended' || (prevFiestaPhase === 'party' && this.fiestaState.phase === 'idle')) {
+      for (const p of this.people) {
+        p.manualUntil = 0;
+        p.jumping = false;
+        p.speed = 240;
+        this.move(p, this.destination(p, now));
+      }
+    }
+  }
+
+  // Bronca tick: advance brawl state, handle ending transitions
+  const prevBroncaPhase = this.broncaState.phase;
+  this.broncaState = tickBronca(this.broncaState, now, dt);
+  if (prevBroncaPhase !== this.broncaState.phase) {
+    if (this.broncaState.phase === 'ended' || (prevBroncaPhase === 'brawl' && this.broncaState.phase === 'idle')) {
+      for (const p of this.people) {
+        p.manualUntil = 0;
+        p.jumping = false;
+        p.speed = 240;
+        this.move(p, this.destination(p, now));
+      }
+    }
+  }
+
   for(const p of this.people){
    // Conga dancers: teleport to conga position, set walk pose, apply dance bob
    if (this.congaPositions.has(p.id as CongaAgentId) && this.congaState.phase === 'dancing') {
@@ -616,6 +669,58 @@ export class OfficeRuntime {
     p.status = 'Bailando conga';
     moving = true;
     continue;
+   }
+   // Fiesta celebration: avatars run fast, alternate dancing/gaming/walking poses, and jump
+   if (this.fiestaState.phase === 'party') {
+    const fav = this.fiestaState.avatars[p.id];
+    if (fav) {
+     p.status = 'De fiesta';
+     p.jumping = fav.jumping;
+     p.speed = fav.speed;
+     if (!p.path || equal(p.pos, p.target)) {
+      this.move(p, fav.target);
+     }
+     if (p.path) {
+      p.travelled += (p.speed || 300) * dt;
+      const step = pointAt(p.path, p.travelled);
+      p.pos = step.p;
+      if (step.dir) p.facing = step.dir;
+      if (step.done) {
+       p.path = null;
+      } else {
+       moving = true;
+      }
+     }
+     p.pose = p.path ? 'walk' : fav.pose;
+     moving = true;
+     continue;
+    }
+   }
+   // Bronca brawl: avatars stampede, collide, flail and brawl
+   if (this.broncaState.phase === 'brawl') {
+    const bav = this.broncaState.avatars[p.id];
+    if (bav) {
+     p.status = 'En la bronca';
+     p.speed = bav.speed;
+     if (!p.path || equal(p.pos, p.target)) {
+      this.move(p, bav.target);
+     }
+     if (p.path) {
+      p.travelled += (p.speed || 380) * dt;
+      const step = pointAt(p.path, p.travelled);
+      p.pos = step.p;
+      if (step.dir) p.facing = step.dir;
+      if (step.done) {
+       p.path = null;
+      } else {
+       moving = true;
+      }
+     }
+     p.jumping = bav.pose === 'brawl' || bav.pose === 'fall';
+     p.pose = p.path ? (bav.pose === 'fall' ? 'fall' : 'brawl') : bav.pose;
+     moving = true;
+     continue;
+    }
    }
    if(p.manualUntil&&p.manualUntil>now){
     if(p.path){
@@ -825,7 +930,7 @@ export class OfficeRuntime {
      }
     }
    }
-   return moving||this.people.some(p=>p.deliveringUntil>now)||Boolean(this.coffeeRun)||Boolean(this.activeCinematic)||this.cinematicQueue.length>0||this.speech.size>0||Boolean(this.activeGame)||Boolean(this.hub);
+   return moving||this.fiestaState.phase==='party'||this.broncaState.phase==='brawl'||this.broncaState.phase==='ended'||this.people.some(p=>p.deliveringUntil>now)||Boolean(this.coffeeRun)||Boolean(this.activeCinematic)||this.cinematicQueue.length>0||this.speech.size>0||Boolean(this.activeGame)||Boolean(this.hub);
   }
  traerCafe(agentId?: AgentId) {
    const target = (agentId && agentId !== 'ja') ? agentId : undefined;
@@ -1027,7 +1132,7 @@ export class OfficeRuntime {
   const p=this.people.find(person=>person.id===id);
   if(!p)return;
   p.jumping=true;
-  this.say(id,'¡Boing! 🦘',now);
+  this.say(id,'¡Boing!',now);
   setTimeout(()=>{p.jumping=false;},900);
  }
  resetAgent(id:AgentId,now:number){
@@ -1038,17 +1143,16 @@ export class OfficeRuntime {
   p.manualUntil=0;
   p.isRear=false;
   this.move(p,this.baseTarget(id));
-  this.say(id,'¡De vuelta a mi puesto! 🏢',now);
+  this.say(id,'¡De vuelta a mi puesto!',now);
  }
  fiesta(now:number){
   if(this.hub)return;
-  for(const p of this.people){
-   p.manualUntil=now+12000;
-   p.pose='game';
-   p.jumping=true;
-   setTimeout(()=>{p.jumping=false;},1200);
-  }
-  this.say('ja','¡¡FIESTA EN LA OFICINA!! 🎉🕺💃',now);
+  this.fiestaState=startFiesta(this.fiestaState,now,this.people.map(p=>p.id));
+  this.say('ja','¡Fiesta en la oficina!',now);
+  this.triggerWake();
+ }
+ isFiestaActive():boolean{
+  return isFiestaActive(this.fiestaState);
  }
  trabajar(now:number,agentId?:AgentId){
   if(agentId&&roles.has(agentId)){
@@ -1070,14 +1174,13 @@ export class OfficeRuntime {
   },now);
  }
  bronca(now:number){
-  const reganador=(this.people.find(p=>p.id==='co'||p.id==='cl'||p.id==='ge')?.id??'ge') as AgentId;
-  this.enqueueCinematic({
-   type:'bronca',
-   actor1:reganador,
-   actor2:'ja',
-   text:'¡Tito, menos charla y a picar código! 😤📋',
-   speaker:reganador,
-  },now);
+  if(this.hub)return;
+  this.broncaState=startBronca(this.broncaState,now,this.people.map(p=>p.id));
+  this.say('ja','¡Batalla campal en la oficina!',now);
+  this.triggerWake();
+ }
+ isBroncaActive():boolean{
+  return isBroncaActive(this.broncaState);
  }
  beso(senderId:AgentId,targetId:AgentId,now:number,customText?:string){
   const target=targetId&&roles.has(targetId)?targetId:'ja';

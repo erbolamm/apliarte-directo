@@ -18,6 +18,8 @@ import {
   delivFront,
 } from './RoomArt';
 import { ERBOLAMM_LOGO_DATA_URI } from '../office/logo';
+import type { FiestaState } from '../office/fiesta';
+import type { BroncaState } from '../office/bronca';
 
 export const CHAR_SCALE = 0.62;
 
@@ -26,6 +28,8 @@ type Props = {
   visitor?: { id: AgentId; pos: { x: number; y: number }; arrived: boolean } | null;
   agents: Person[];
   activeGame?: ActiveGame | null;
+  fiesta?: FiestaState | null;
+  bronca?: BroncaState | null;
   selected: AgentId | null;
   onSelect: (id: AgentId | null) => void;
   hovered: AgentId | null;
@@ -345,8 +349,230 @@ function DamasBoardSvg() {
   );
 }
 
+function FiestaLayer({ fiesta }: { fiesta: FiestaState }) {
+  const { particles, discoHue } = fiesta;
+  const hue1 = discoHue;
+  const hue2 = (discoHue + 90) % 360;
+  const hue3 = (discoHue + 180) % 360;
+  const hue4 = (discoHue + 270) % 360;
+
+  return (
+    <div
+      className="fiesta-layer"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        zIndex: 50,
+      }}
+      aria-hidden="true"
+    >
+      <div
+        className="fiesta-disco-wash"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          opacity: 0.18,
+          mixBlendMode: 'screen',
+          background: `radial-gradient(circle at 18% 25%, hsl(${hue1}, 95%, 60%) 0%, transparent 45%), radial-gradient(circle at 82% 25%, hsl(${hue2}, 95%, 60%) 0%, transparent 45%), radial-gradient(circle at 25% 80%, hsl(${hue3}, 95%, 60%) 0%, transparent 45%), radial-gradient(circle at 75% 80%, hsl(${hue4}, 95%, 60%) 0%, transparent 45%), radial-gradient(circle at 50% 50%, hsl(${(hue1 + 45) % 360}, 90%, 65%) 0%, transparent 55%)`,
+          transition: 'background 0.08s linear',
+        }}
+      />
+      <svg
+        className="fiesta-particles-svg"
+        viewBox="0 0 1280 860"
+        preserveAspectRatio="xMidYMid slice"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          overflow: 'visible',
+        }}
+      >
+        {particles.map((p) => {
+          if (p.kind === 'confetti') {
+            return (
+              <rect
+                key={p.id}
+                x={-p.width / 2}
+                y={-p.height / 2}
+                width={p.width}
+                height={p.height}
+                rx={1.5}
+                fill={p.color}
+                opacity={0.92}
+                transform={`translate(${p.x}, ${p.y}) rotate(${p.rotation})`}
+              />
+            );
+          }
+          const sway = Math.sin(p.wobblePhase) * 14;
+          const h = p.height;
+          const d = `M 0,0 Q ${sway},${h * 0.25} 0,${h * 0.5} Q ${-sway},${h * 0.75} 0,${h}`;
+          return (
+            <path
+              key={p.id}
+              d={d}
+              stroke={p.color}
+              strokeWidth={p.width}
+              strokeLinecap="round"
+              fill="none"
+              opacity={0.88}
+              transform={`translate(${p.x}, ${p.y}) rotate(${p.rotation})`}
+            />
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+function starPath(size: number, points = 5): string {
+  const inner = size * 0.42;
+  const step = Math.PI / points;
+  let d = '';
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 === 0 ? size : inner;
+    const angle = i * step - Math.PI / 2;
+    const x = Math.round(r * Math.cos(angle) * 10) / 10;
+    const y = Math.round(r * Math.sin(angle) * 10) / 10;
+    d += `${i === 0 ? 'M' : 'L'} ${x},${y} `;
+  }
+  return d + 'Z';
+}
+
+function BroncaLayer({ bronca }: { bronca: BroncaState }) {
+  const { particles } = bronca;
+
+  return (
+    <div
+      className="bronca-layer"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        zIndex: 55,
+      }}
+      aria-hidden="true"
+    >
+      <svg
+        className="bronca-particles-svg"
+        viewBox="0 0 1280 860"
+        preserveAspectRatio="xMidYMid slice"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          overflow: 'visible',
+        }}
+      >
+        <defs>
+          <filter id="bronca-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2.5" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+        {particles.map((p) => {
+          if (p.opacity <= 0.01) return null;
+          if (p.kind === 'smoke') {
+            return (
+              <g
+                key={p.id}
+                transform={`translate(${p.x}, ${p.y}) rotate(${p.rotation}) scale(${p.scale})`}
+                opacity={p.opacity}
+              >
+                <ellipse cx={0} cy={0} rx={p.size} ry={p.size * 0.82} fill={p.color} stroke="#2f2620" strokeWidth={2.4} />
+                <circle cx={-p.size * 0.35} cy={-p.size * 0.25} r={p.size * 0.45} fill={p.color} />
+                <circle cx={p.size * 0.35} cy={-p.size * 0.2} r={p.size * 0.42} fill={p.color} />
+                <circle cx={0} cy={-p.size * 0.4} r={p.size * 0.45} fill={p.color} />
+                <path
+                  d={`M ${-p.size * 0.22},0 Q 0,${p.size * 0.32} ${p.size * 0.26},${-p.size * 0.1}`}
+                  stroke="#2f2620"
+                  strokeWidth={1.8}
+                  strokeLinecap="round"
+                  fill="none"
+                  opacity={0.65}
+                />
+              </g>
+            );
+          }
+          if (p.kind === 'star') {
+            return (
+              <g
+                key={p.id}
+                transform={`translate(${p.x}, ${p.y}) rotate(${p.rotation}) scale(${p.scale})`}
+                opacity={p.opacity}
+              >
+                <path
+                  d={starPath(p.size, 5)}
+                  fill={p.color}
+                  stroke="#2f2620"
+                  strokeWidth={1.8}
+                  strokeLinejoin="round"
+                />
+              </g>
+            );
+          }
+          if (p.kind === 'fire') {
+            return (
+              <g
+                key={p.id}
+                transform={`translate(${p.x}, ${p.y}) rotate(${p.rotation}) scale(${p.scale})`}
+                opacity={p.opacity}
+                filter="url(#bronca-glow)"
+              >
+                <path
+                  d={`M 0,${p.size} Q ${-p.size * 0.75},0 0,${-p.size} Q ${p.size * 0.75},0 0,${p.size} Z`}
+                  fill={p.color}
+                  stroke="#ff2200"
+                  strokeWidth={1.2}
+                />
+                <circle cx={0} cy={p.size * 0.25} r={p.size * 0.36} fill="#ffffbb" opacity={0.85} />
+              </g>
+            );
+          }
+          if (p.kind === 'spark') {
+            return (
+              <g
+                key={p.id}
+                transform={`translate(${p.x}, ${p.y}) rotate(${p.rotation}) scale(${p.scale})`}
+                opacity={p.opacity}
+              >
+                <polygon
+                  points={`0,${-p.size} ${p.size * 0.4},0 0,${p.size} ${-p.size * 0.4},0`}
+                  fill={p.color}
+                />
+              </g>
+            );
+          }
+          if (p.kind === 'line') {
+            const rad = (p.rotation * Math.PI) / 180;
+            return (
+              <line
+                key={p.id}
+                x1={p.x}
+                y1={p.y}
+                x2={p.x + Math.cos(rad) * p.size}
+                y2={p.y + Math.sin(rad) * p.size}
+                stroke={p.color}
+                strokeWidth={2.4}
+                strokeLinecap="round"
+                opacity={p.opacity}
+              />
+            );
+          }
+          return null;
+        })}
+      </svg>
+    </div>
+  );
+}
+
 export default function FloorPlan(props: Props) {
-  const { fill, visitor, agents, activeGame, selected, onSelect, hovered, onHover, mailCount = 0, motion = true, onMail } = props;
+  const { fill, visitor, agents, activeGame, fiesta, bronca, selected, onSelect, hovered, onHover, mailCount = 0, motion = true, onMail } = props;
 
   useEffect(() => {
     let disposed = false;
@@ -1068,7 +1294,12 @@ export default function FloorPlan(props: Props) {
       <div
         ref={host}
         className={`volume-viewport ${viewMode === '3d' ? 'office-3d-viewport' : 'diorama-viewport'} ${dragging ? 'is-dragging' : ''} ${locked ? 'is-locked' : ''}`}
-        style={fill ? undefined : { height: Math.max(280, scale * (viewMode === '3d' ? 970 : 860)) }}
+        style={{
+          ...(fill ? undefined : { height: Math.max(280, scale * (viewMode === '3d' ? 970 : 860)) }),
+          ...(bronca && motion && (bronca.shakeX || bronca.shakeY)
+            ? { transform: `translate(${Math.round(bronca.shakeX)}px, ${Math.round(bronca.shakeY)}px)` }
+            : {}),
+        }}
         tabIndex={0}
         aria-label={viewMode === '3d' ? 'Plano 3D interactivo' : 'Plano 2D diorama'}
         onContextMenu={(e) => e.preventDefault()}
@@ -1270,6 +1501,8 @@ export default function FloorPlan(props: Props) {
             </div>
           </div>
         )}
+        {fiesta && fiesta.phase === 'party' && <FiestaLayer fiesta={fiesta} />}
+        {bronca && (bronca.phase === 'brawl' || bronca.phase === 'ended') && <BroncaLayer bronca={bronca} />}
       </div>
     </div>
   );

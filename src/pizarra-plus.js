@@ -94,7 +94,10 @@ function createPizarraPlus({ enabled = false, authorize, trustedOrigin, root, cr
     if (assets.has(pathname)) {
       if (req.method !== 'GET') { reply(res, 405, { error: 'method-not-allowed' }); return true; }
       const [file, mime] = assets.get(pathname);
-      res.writeHead(200, { 'Content-Type': mime, 'Content-Security-Policy': "frame-ancestors 'self'" });
+      res.writeHead(200, {
+        'Content-Type': mime,
+        'Content-Security-Policy': "frame-ancestors 'self' http://127.0.0.1:* http://localhost:* http://127.0.0.1:8791 http://localhost:8791 http://127.0.0.1:7979 http://localhost:7979 https://*.ts.net http://*.ts.net",
+      });
       res.end(fs.readFileSync(path.join(root, 'private', file)));
       return true;
     }

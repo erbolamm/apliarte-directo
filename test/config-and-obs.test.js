@@ -33,6 +33,7 @@ test('resolveDataDir selecciona ruta válida y consistente', () => {
 test('loadAppConfig y saveAppConfig gestionan configuracion y permisos 0o600', () => {
   const dataDir = resolveDataDir();
   const testConfigFile = path.join(dataDir, 'config.json');
+  const rawInitial = fs.existsSync(testConfigFile) ? fs.readFileSync(testConfigFile, 'utf8') : null;
 
   const initial = loadAppConfig();
   assert.ok(initial.vdo);
@@ -64,7 +65,12 @@ test('loadAppConfig y saveAppConfig gestionan configuracion y permisos 0o600', (
     });
     assert.equal(reSaved.openai.apiKey, 'sk-test-secret-key-456');
   } finally {
-    saveAppConfig(initial);
+    if (rawInitial !== null) {
+      fs.writeFileSync(testConfigFile, rawInitial, { mode: 0o600 });
+      saveAppConfig(initial);
+    } else {
+      try { fs.unlinkSync(testConfigFile); } catch (_) {}
+    }
   }
 });
 

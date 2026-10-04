@@ -52,7 +52,27 @@ function Eyes({ agent, pose }: { agent: AgentDef; pose: Pose }) {
       </g>
     );
   }
-  const big = pose === "watch" || pose === "game";
+  if (pose === "brawl") {
+    return (
+      <g stroke={INK} strokeWidth={2} fill="none" strokeLinecap="round">
+        <path d="M-10,-69 L-3,-65" />
+        <path d="M10,-69 L3,-65" />
+        <circle cx={-6.2} cy={-65} r={2.6} fill={INK} />
+        <circle cx={6.2} cy={-65} r={2.6} fill={INK} />
+        <circle cx={-7.2} cy={-66} r={0.9} fill="#fff" />
+        <circle cx={5.2} cy={-66} r={0.9} fill="#fff" />
+      </g>
+    );
+  }
+  if (pose === "fall") {
+    return (
+      <g stroke={INK} strokeWidth={2} fill="none" strokeLinecap="round">
+        <path d="M-9,-68 L-4,-63 M-4,-68 L-9,-63" />
+        <path d="M4,-68 L9,-63 M9,-68 L4,-63" />
+      </g>
+    );
+  }
+  const big = pose === "watch" || pose === "game" || pose === "dance";
   const ry = big ? 4.6 : 3.9;
   return (
     <g className="a-blink" style={{ transformOrigin: "0px -66px" }}>
@@ -68,7 +88,16 @@ function Mouth({ agent, pose }: { agent: AgentDef; pose: Pose }) {
   if (agent.id === "op") return null;
   const y = -57.5;
   if (pose === "sleep") return <ellipse cx={0} cy={y + 1} rx={2.6} ry={3} fill={INK} opacity={0.75} />;
-  if (pose === "present" || pose === "game")
+  if (pose === "brawl") {
+    return (
+      <g>
+        <path d={`M-6,${y - 1} q6,6 12,0 q-6,-2 -12,0 z`} fill="#ffffff" stroke={INK} strokeWidth={1.6} />
+        <path d={`M-3,${y} v3 M0,${y} v4 M3,${y} v3`} stroke={INK} strokeWidth={1.2} />
+      </g>
+    );
+  }
+  if (pose === "fall") return <ellipse cx={0} cy={y + 1} rx={3} ry={3.5} fill={INK} />;
+  if (pose === "present" || pose === "game" || pose === "dance")
     return (
       <g>
         <path d={`M-4.5,${y - 1} q4.5,6 9,0 q-4.5,2.5 -9,0 z`} fill={INK} />
@@ -578,6 +607,13 @@ function AgentProps({ agent, pose }: { agent: AgentDef; pose: Pose }) {
           </g>
         </g>
       );
+    case "fall":
+      return (
+        <g transform="translate(0,-86)">
+          <path d="M-10,-4 L-8,0 L-12,2 L-8,3 L-10,7 L-6,4 L-4,8 L-3,4 L1,6 L-1,2 L3,0 L-1,-1 Z" fill="#ffd700" stroke={INK} strokeWidth={1} />
+          <path d="M8,-2 L10,2 L6,4 L10,5 L8,9 L12,6 L14,10 L15,6 L19,8 L17,4 L21,2 L17,1 Z" fill="#ffd700" stroke={INK} strokeWidth={1} />
+        </g>
+      );
     default:
       return null;
   }
@@ -660,6 +696,34 @@ export default function Character({ agent, pose, flip, selected, faded, rear }: 
         </>
       );
       break;
+    case "dance":
+      arms = (
+        <>
+          <Arm agent={agent} side={-1} angle={-130} length={17} />
+          <Arm agent={agent} side={1} angle={130} length={17} />
+        </>
+      );
+      break;
+    case "brawl":
+      arms = (
+        <>
+          <g className="a-punchA" style={{ transformOrigin: "-15px -42px" }}>
+            <Arm agent={agent} side={-1} angle={-55} length={20} />
+          </g>
+          <g className="a-punchB" style={{ transformOrigin: "15px -42px" }}>
+            <Arm agent={agent} side={1} angle={55} length={20} />
+          </g>
+        </>
+      );
+      break;
+    case "fall":
+      arms = (
+        <>
+          <Arm agent={agent} side={-1} angle={-110} length={16} />
+          <Arm agent={agent} side={1} angle={110} length={16} />
+        </>
+      );
+      break;
     default:
       arms = (
         <>
@@ -669,8 +733,8 @@ export default function Character({ agent, pose, flip, selected, faded, rear }: 
       );
   }
 
-  const bodyAnim = pose === "walk" ? "a-bob-fast" : pose === "game" ? "a-bob" : "a-breathe";
-  const headTilt = pose === "sleep" ? 13 : pose === "work" ? 4 : pose === "read" ? 8 : 0;
+  const bodyAnim = pose === "brawl" ? "a-brawl-shake" : (pose === "walk" || pose === "dance") ? "a-bob-fast" : pose === "game" ? "a-bob" : "a-breathe";
+  const headTilt = pose === "sleep" ? 13 : pose === "work" ? 4 : pose === "read" ? 8 : pose === "brawl" ? -6 : pose === "fall" ? 18 : 0;
 
   return (
     <g
@@ -687,7 +751,7 @@ export default function Character({ agent, pose, flip, selected, faded, rear }: 
           <ellipse cx={0} cy={1.5} rx={20} ry={6} fill="none" stroke={agent.color} strokeWidth={2} className="a-ring" style={{ transformOrigin: "0px 1.5px" }} />
         </g>
       )}
-      <g transform={sit ? "translate(0,5)" : undefined}><g className={bodyAnim}>
+      <g transform={sit ? "translate(0,5)" : pose === "fall" ? "translate(0,10) rotate(70)" : undefined}><g className={bodyAnim}>
         <Legs agent={agent} pose={pose} />
         {rear && pose === "work" && <RearWorkArms agent={agent}/>}
         {rear ? <RearTorso agent={agent}/> : <Torso agent={agent} />}

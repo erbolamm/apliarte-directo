@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#005fa9">
+  <title>ApliArte Directo · Oficina Operativa</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23005fa9%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2246%22%20font-size%3D%2232%22%20font-family%3D%22system-ui%2C%20-apple-system%2C%20sans-serif%22%20font-weight%3D%22bold%22%20text-anchor%3D%22middle%22%20fill%3D%22%235ecef5%22%3E%E2%96%B6%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/panel-shell.css">
+
+  <script>
+    try {
+      document.documentElement.dataset.theme =
+        localStorage.getItem("apliarte-theme") === "light" ? "light" : "dark";
+      document.documentElement.dataset.sidebar =
+        localStorage.getItem("apliarte-sidebar") === "icons" ? "icons" : "full";
+    } catch (_) {}
+  </script>
+  <style>
+    .directo-obs-bar {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--surface-sunken, #090d16);
+      border-bottom: 1px solid var(--border, #1e293b);
+      align-items: center;
+      font-size: 0.8rem;
+      flex-wrap: wrap;
+    }
+    .directo-subnav {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.6rem 1rem;
+      background: var(--surface, #0f172a);
+      border-bottom: 1px solid var(--border, #1e293b);
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .directo-frame-container {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 190px);
+      min-height: 550px;
+      background: #000;
+      border-radius: 0 0 12px 12px;
+      overflow: hidden;
+    }
+    .directo-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+    .pill-btn {
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border, #334155);
+      background: var(--surface, #1e293b);
+      color: var(--ink, #f8fafc);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .pill-btn:hover {
+      border-color: var(--cyan, #38bdf8);
+      color: var(--cyan, #38bdf8);
+    }
+    .pill-btn.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #fff;
+    }
+    .btn-obs-copy {
+      padding: 0.25rem 0.6rem;
+      font-size: 0.76rem;
+      background: rgba(56, 189, 248, 0.1);
+      border-color: rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+    }
+    .btn-obs-copy:hover {
+      background: #0284c7;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="office-sidebar" id="office-sidebar" aria-label="Navegación de ApliArte Directo">
+      <div class="sidebar-brand">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" width="28" height="28">
+          <path d="M5 32 20 5l15 27h-8l-7-13-7 13Z" fill="#005fa9"/>
+          <path d="M14 32h12l-6-11Z" fill="#5ecef5"/>
+        </svg>
+        <span><strong>Oficina ApliArte</strong><small>ApliArte Directo</small></span>
+        <button id="sidebar-toggle" class="sidebar-toggle" type="button"
+          aria-controls="office-sidebar" aria-expanded="true" aria-label="Plegar la barra lateral" data-tip="Plegar barra lateral">
+          <span class="chev" aria-hidden="true">‹</span>
+        </button>
+      </div>
+      <nav class="side-nav" aria-label="Secciones">
+        <a class="nav-card active" href="/directo" aria-current="page">
+          <span class="nav-icon" aria-hidden="true">▶</span>
+          <span class="nav-copy"><strong>Directo</strong><small>Centro de emisión</small></span>
+        </a>
+        <a class="nav-card" href="/landing.html" target="_blank" rel="noopener">
+          <span class="nav-icon" aria-hidden="true">📖</span>
+          <span class="nav-copy"><strong>Web Oficial</strong><small>directo.apliarte.com</small></span>
+        </a>
+        <a class="nav-card" href="/empezar.html" target="_blank" rel="noopener">
+          <span class="nav-icon" aria-hidden="true">🚀</span>
+          <span class="nav-copy"><strong>Primeros pasos</strong><small>Guía de instalación</small></span>
+        </a>
+        <a class="nav-card" href="/demo.html" target="_blank" rel="noopener">
+          <span class="nav-icon" aria-hidden="true">🎮</span>
+          <span class="nav-copy"><strong>Demo 3D</strong><small>Simulador OBS</small></span>
+        </a>
+      </nav>
+      <div class="sidebar-directo-control" style="padding:1rem; border-top:1px solid var(--border,#1e293b); font-size:0.75rem; color:var(--ink-muted,#94a3b8);">
+        <div>Puerto local: <strong>:7979</strong></div>
+        <div style="margin-top:4px;">Suite independiente de streaming</div>
+      </div>
+    </aside>
+    <div class="sidebar-scrim" id="sidebar-scrim" aria-hidden="true"></div>
+
+    <main class="office-content" id="office">
+      <header class="topbar">
+        <div class="brand">
+          <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" width="24" height="24">
+            <path d="M5 32 20 5l15 27h-8l-7-13-7 13Z" fill="#005fa9"/>
+            <path d="M14 32h12l-6-11Z" fill="#5ecef5"/>
+          </svg>
+          <h1>Centro de retransmisión</h1>
+        </div>
+        <span class="private-chip" style="background:#0284c7; color:#fff; font-size:0.75rem; padding:2px 8px; border-radius:4px; font-weight:700;">Local :7979</span>
+        <button id="refresh-btn" class="btn-refresh" type="button" onclick="window.location.reload()" aria-label="Actualizar vista" style="margin-left:auto; background:transparent; border:none; color:var(--ink,#fff); cursor:pointer; font-size:1.1rem; padding:4px 8px;">↻</button>
+        <button id="theme-toggle" type="button" aria-label="Cambiar tema" style="background:transparent; border:none; color:var(--ink,#fff); cursor:pointer; font-size:1.1rem; padding:4px 8px;">
+          <span id="theme-icon" aria-hidden="true">☾</span>
+        </button>
+      </header>
+
+      <section class="panel directo" id="directo" style="padding:0; background:var(--surface,#0f172a); border:1px solid var(--border,#1e293b); border-radius:12px; margin:1rem; overflow:hidden;">
+        <div class="directo-subnav">
+          <span style="font-size:0.8rem; font-weight:700; color:var(--ink-muted,#94a3b8); text-transform:uppercase;">Vistas:</span>
+          <button type="button" class="pill-btn active" id="tab-pizarra" data-url="/pizarra-plus">Pizarra táctil</button>
+          <button type="button" class="pill-btn" id="tab-cockpit" data-url="/admin">Cockpit Admin</button>
+          <button type="button" class="pill-btn" id="tab-cristal" data-url="/cristal-plus">Cristal OBS</button>
+          <button type="button" class="pill-btn" id="tab-chat" data-url="/chat.html">Chat y Control</button>
+          <button type="button" class="pill-btn" id="tab-web" data-url="/landing.html">Web y Guía</button>
+          <button type="button" class="pill-btn" id="tab-demo" data-url="/demo.html">Demo 3D</button>
+          <a id="btn-yt-studio" class="pill-btn" href="https://studio.youtube.com/livestreaming/manage" target="_blank" rel="noopener" style="margin-left:auto; text-decoration:none; font-size:0.82rem; font-weight:700; color:#ef4444; border-color:rgba(239,68,68,0.4);" title="Abrir sala de control de emisiones de YouTube Studio">Nueva emisión (YouTube) ↗</a>
+          <a id="btn-abrir-pestana" class="pill-btn" href="/pizarra-plus" target="_blank" rel="noopener" style="text-decoration:none; font-size:0.82rem;">↗ Abrir en pestaña</a>
+        </div>
+
+        <div class="directo-obs-bar">
+          <span style="font-weight:700; color:var(--cyan,#38bdf8); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Fuentes OBS:</span>
+          <button type="button" class="pill-btn btn-obs-copy" data-path="/cristal-plus" title="Copiar enlace para fuente Navegador en OBS">Cristal Pizarra Plus 📋</button>
+          <button type="button" class="pill-btn btn-obs-copy" data-path="/chat.html" title="Copiar enlace del chat transparente para OBS">Chat OBS 📋</button>
+          <button type="button" class="pill-btn btn-obs-copy" data-path="/" title="Copiar enlace del fondo/HUD 3D para OBS">Fondo 3D 📋</button>
+          <button type="button" class="pill-btn btn-obs-copy" data-path="/pizarra-plus" title="Copiar enlace para abrir en Tablet / iPad">Pizarra Tablet 📋</button>
+          <span id="obs-toast-copied" style="display:none; color:var(--green,#22c55e); font-size:0.75rem; font-weight:700; margin-left:auto;">¡Enlace copiado al portapapeles!</span>
+        </div>
+
+        <div class="directo-frame-container">
+          <iframe class="directo-frame" id="directo-frame" src="/pizarra-plus" title="Panel de Directo" allow="camera; microphone; autoplay; fullscreen"></iframe>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // 1. Alternar pestañas en el iframe
+    const directoFrame = document.getElementById("directo-frame");
+    const btnAbrirPestana = document.getElementById("btn-abrir-pestana");
+    const tabs = document.querySelectorAll(".directo-subnav button.pill-btn");
+
+    tabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        tabs.forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        const url = tab.dataset.url;
+        if (url && directoFrame) {
+          directoFrame.src = url;
+          if (btnAbrirPestana) btnAbrirPestana.href = url;
+        }
+      });
+    });
+
+    // 2. Copiar enlaces de OBS con el origen actual dinámicamente
+    document.querySelectorAll(".btn-obs-copy").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const path = btn.dataset.path || "";
+        const fullUrl = `${window.location.origin}${path}`;
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(fullUrl).then(() => {
+            const toast = document.getElementById("obs-toast-copied");
+            if (toast) {
+              toast.style.display = "inline";
+              setTimeout(() => { toast.style.display = "none"; }, 2500);
+            }
+          }).catch(() => {});
+        }
+      });
+    });
+
+    // 3. Tema claro/oscuro
+    const themeToggle = document.getElementById("theme-toggle");
+    const themeIcon = document.getElementById("theme-icon");
+    if (themeToggle) {
+      themeToggle.addEventListener("click", () => {
+        const current = document.documentElement.dataset.theme;
+        const next = current === "light" ? "dark" : "light";
+        document.documentElement.dataset.theme = next;
+        if (themeIcon) themeIcon.textContent = next === "light" ? "☼" : "☾";
+        try { localStorage.setItem("apliarte-theme", next); } catch (_) {}
+      });
+    }
+
+    // 4. Plegar barra lateral
+    const sidebarToggle = document.getElementById("sidebar-toggle");
+    const sidebar = document.getElementById("office-sidebar");
+    if (sidebarToggle && sidebar) {
+      sidebarToggle.addEventListener("click", () => {
+        const isCollapsed = sidebar.classList.toggle("collapsed");
+        try { localStorage.setItem("apliarte-sidebar", isCollapsed ? "icons" : "full"); } catch (_) {}
+      });
+    }
+
+    // 5. Enlace personalizado a YouTube Studio
+    const storedYtChannel = localStorage.getItem("apliarte_youtube_channel_id");
+    const btnYtStudio = document.getElementById("btn-yt-studio");
+    if (storedYtChannel && btnYtStudio) {
+      btnYtStudio.href = `https://studio.youtube.com/channel/${storedYtChannel}/livestreaming/manage`;
+    }
+  </script>
+</body>
+</html>

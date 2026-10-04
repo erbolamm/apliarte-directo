@@ -1094,6 +1094,8 @@
     <div class="top-actions">
       <div class="badge badge-online">🟢 ONLINE</div>
       <div class="badge badge-cat" id="badge-cat-actual">apps</div>
+      <a href="/pizarra-plus" class="badge" id="badge-pizarra-plus" style="background:#0284c7; color:#fff; text-decoration:none; cursor:pointer;" title="Abrir Pizarra Táctil Plus">🖍️ Pizarra Plus</a>
+      <a href="/landing.html" class="badge" id="badge-guia" style="background:#1e293b; color:#38bdf8; text-decoration:none; cursor:pointer;" title="Web y Guía de Directo">📖 Guía</a>
       <div class="badge badge-audio" id="badge-tts-toggle">🔊 TTS Chat</div>
       <div class="badge" id="badge-twitch-estado" style="background:#581c87; color:#e9d5ff; cursor:pointer;" data-tip="Configurar Token de Twitch">💬 Twitch Chat</div>
       <div class="badge" id="badge-config-modal-open" style="background:#0369a1; color:#e0f2fe; cursor:pointer;" data-tip="Configuración del Directo y Asistente OBS Studio">⚙️ Config & OBS</div>
@@ -1382,6 +1384,16 @@
   <!-- ════════ PESTAÑA 5: COMANDOS Y LISTAS ════════ -->
   <main class="tab-content" id="tab-comandos">
     
+    <!-- ── BARRA SELECTORA DE VISTA (CUADRÍCULA / CLÁSICA) ── -->
+    <div class="view-toggle-bar" style="display:flex; gap:8px; margin-bottom:12px;">
+      <button type="button" id="btn-vista-grid" class="touch-btn active" style="flex:1; min-height:40px; font-weight:700; font-size:0.85rem; border-radius:8px; border:none; background:#0284c7; color:#fff; cursor:pointer;">
+        🎛️ Cuadrícula Rápida
+      </button>
+      <button type="button" id="btn-vista-clasico" class="touch-btn" style="flex:1; min-height:40px; font-weight:700; font-size:0.85rem; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#94a3b8; cursor:pointer;">
+        ⚡ Lista Clásica (Acordeón)
+      </button>
+    </div>
+
     <!-- ── VISTA PRINCIPAL: CUADRÍCULA 4 COLUMNAS (REDESIGN FASE 2) ── -->
     <div id="comandos-view-grid" style="display:flex; flex-direction:column; gap:12px;">
       
@@ -1501,7 +1513,73 @@
 
     </div>
 
-    <!-- ── SUBVISTA DRILL-DOWN (SUBVISTAS CON BOTÓN ATRÁS) ── -->
+    <!-- ── VISTA CLÁSICA: ACORDEÓN Y GESTIÓN DIRECTA DE LISTAS ── -->
+    <div id="comandos-view-clasico" style="display:none; flex-direction:column; gap:12px;">
+      <!-- Formulario Crear Nuevo Comando Clásico -->
+      <fieldset style="border:1px solid #334155; border-radius:8px; padding:12px;">
+        <legend style="color:#38bdf8; font-weight:700; font-size:0.85rem; padding:0 6px;">➕ Añadir Nuevo Comando</legend>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <input type="text" id="new-cmd-name" placeholder="Ej: !os o /shoutout" style="height:38px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:6px; padding:0 10px; font-size:0.85rem;">
+          <input type="text" id="new-cmd-desc" placeholder="Descripción breve de lo que hace" style="height:38px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:6px; padding:0 10px; font-size:0.85rem;">
+          <div style="display:flex; gap:8px;">
+            <select id="new-cmd-tipo" style="flex:1; height:38px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:6px; padding:0 8px; font-size:0.85rem;">
+              <option value="usuario">👤 Requiere Usuario</option>
+              <option value="canal">📺 Requiere Canal</option>
+              <option value="mensaje">💬 Requiere Mensaje</option>
+              <option value="ninguno">⚡ Sin Parámetro</option>
+            </select>
+            <button type="button" class="touch-btn touch-btn-primary" id="btn-save-new-cmd" style="min-height:38px; padding:0 14px; font-weight:700;">+ Guardar</button>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Gestor Clásico de Listas (Usuarios, Canales, Mensajes) -->
+      <fieldset style="border:1px solid #334155; border-radius:8px; padding:12px;">
+        <legend style="color:#a855f7; font-weight:700; font-size:0.85rem; padding:0 6px;">👥 Gestión de Listas de Parámetros</legend>
+        
+        <!-- Usuarios -->
+        <div style="margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-size:0.8rem; font-weight:700; color:#cbd5e1;">👤 Usuarios (<span id="badge-count-usuarios">0</span>)</span>
+          </div>
+          <div class="chip-container" id="chips-usuarios" style="margin-bottom:6px;"></div>
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="input-add-usuario" placeholder="Añadir usuario…" style="flex:1; height:34px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; padding:0 8px; font-size:0.8rem;">
+            <button type="button" class="touch-btn touch-btn-primary" id="btn-add-usuario" style="min-height:34px; padding:0 10px; font-size:0.8rem;">+ Añadir</button>
+          </div>
+        </div>
+
+        <!-- Canales -->
+        <div style="margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-size:0.8rem; font-weight:700; color:#cbd5e1;">📺 Canales (<span id="badge-count-canales">0</span>)</span>
+          </div>
+          <div class="chip-container" id="chips-canales" style="margin-bottom:6px;"></div>
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="input-add-canal" placeholder="Añadir canal…" style="flex:1; height:34px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; padding:0 8px; font-size:0.8rem;">
+            <button type="button" class="touch-btn touch-btn-primary" id="btn-add-canal" style="min-height:34px; padding:0 10px; font-size:0.8rem;">+ Añadir</button>
+          </div>
+        </div>
+
+        <!-- Mensajes -->
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-size:0.8rem; font-weight:700; color:#cbd5e1;">💬 Mensajes Guardados (<span id="badge-count-mensajes">0</span>)</span>
+          </div>
+          <div class="saved-msg-list" id="chips-mensajes" style="margin-bottom:6px;"></div>
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="input-add-mensaje" placeholder="Añadir mensaje…" style="flex:1; height:34px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; padding:0 8px; font-size:0.8rem;">
+            <button type="button" class="touch-btn touch-btn-primary" id="btn-add-mensaje" style="min-height:34px; padding:0 10px; font-size:0.8rem;">+ Añadir</button>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Acordeón de Comandos Clásicos -->
+      <fieldset style="border:1px solid #334155; border-radius:8px; padding:12px;">
+        <legend style="color:#fbbf24; font-weight:700; font-size:0.85rem; padding:0 6px;">⚡ Listado de Comandos (Acordeón)</legend>
+        <div id="comandos-accordion-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+      </fieldset>
+    </div>
     <div id="comandos-view-drilldown" class="drilldown-container" style="display:none;">
       <div class="drilldown-header">
         <button type="button" class="drilldown-back-btn" id="btn-drilldown-back" aria-label="Volver a la cuadrícula de comandos">
@@ -1644,6 +1722,24 @@
             <code id="obs-url-vdo" style="display:block; font-size:0.8rem; color:#38bdf8; word-break:break-all; user-select:all;">...</code>
             <small style="color:#64748b; font-size:0.75rem;">Añadir en OBS como Browser Source con audio activo</small>
           </div>
+
+          <div style="background:#1e293b; padding:12px 14px; border-radius:8px; border:1px solid #334155;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-weight:700; font-size:0.9rem; color:#f1f5f9;">🖍️ Cristal Pizarra Plus (OBS)</span>
+              <button type="button" class="btn-copiar-obs" data-target="obs-url-cristal-plus" style="padding:4px 10px; background:#0284c7; border:none; border-radius:5px; color:#fff; font-size:0.8rem; cursor:pointer; font-weight:bold;">Copiar</button>
+            </div>
+            <code id="obs-url-cristal-plus" style="display:block; font-size:0.8rem; color:#38bdf8; word-break:break-all; user-select:all;">...</code>
+            <small style="color:#64748b; font-size:0.75rem;">Añadir en OBS como Browser Source (1920×1080) para mostrar el dibujo en directo</small>
+          </div>
+
+          <div style="background:#1e293b; padding:12px 14px; border-radius:8px; border:1px solid #334155;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-weight:700; font-size:0.9rem; color:#f1f5f9;">📱 Pizarra Táctil (Tablet / iPad)</span>
+              <button type="button" class="btn-copiar-obs" data-target="obs-url-pizarra-plus" style="padding:4px 10px; background:#0284c7; border:none; border-radius:5px; color:#fff; font-size:0.8rem; cursor:pointer; font-weight:bold;">Copiar</button>
+            </div>
+            <code id="obs-url-pizarra-plus" style="display:block; font-size:0.8rem; color:#38bdf8; word-break:break-all; user-select:all;">...</code>
+            <small style="color:#64748b; font-size:0.75rem;">Abrir en el navegador de tu iPad o tablet para dibujar en directo</small>
+          </div>
         </div>
 
         <div style="background:rgba(2,132,199,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:8px; padding:12px; margin-bottom:14px;">
@@ -1718,10 +1814,17 @@
             <input type="password" id="cfg-stream-key" autocomplete="new-password" placeholder="Dejar vacío para conservar la guardada" style="width:100%; box-sizing:border-box; padding:8px 38px 8px 10px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.88rem;">
             <button type="button" class="btn-toggle-eye" data-target="cfg-stream-key" aria-label="Mostrar u ocultar clave" aria-pressed="false"></button>
           </div>
-          <label for="cfg-youtube-stream-key" style="display:block; font-size:0.8rem; color:#cbd5e1; margin-bottom:4px;">Clave de emisión de YouTube</label>
-          <div class="pwd-field-wrap" style="margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <label for="cfg-youtube-stream-key" style="font-size:0.8rem; color:#cbd5e1;">Clave de emisión de YouTube</label>
+            <a id="link-yt-studio-admin" href="https://studio.youtube.com/livestreaming/manage" target="_blank" rel="noopener" style="font-size:0.78rem; color:#ef4444; font-weight:700; text-decoration:none;" title="Abrir sala de control en YouTube Studio">Nueva emisión (YouTube) ↗</a>
+          </div>
+          <div class="pwd-field-wrap" style="margin-bottom:8px;">
             <input type="password" id="cfg-youtube-stream-key" autocomplete="new-password" placeholder="Dejar vacío para conservar la guardada" style="width:100%; box-sizing:border-box; padding:8px 38px 8px 10px; background:#1e293b; border:1px solid #334155; border-radius:0; color:#fff; font-size:0.88rem;">
             <button type="button" class="btn-toggle-eye" data-target="cfg-youtube-stream-key" aria-label="Mostrar u ocultar clave" aria-pressed="false"></button>
+          </div>
+          <label for="cfg-youtube-channel-id" style="display:block; font-size:0.8rem; color:#cbd5e1; margin-bottom:4px;">ID de Canal de YouTube (opcional, para enlace directo)</label>
+          <div style="margin-bottom:10px;">
+            <input type="text" id="cfg-youtube-channel-id" placeholder="ej. UCJm9PwNnFMWn2sLBMjCiEEQ (o vacío para canal activo)" style="width:100%; box-sizing:border-box; padding:8px 10px; background:#1e293b; border:1px solid #334155; border-radius:0; color:#fff; font-size:0.88rem;">
           </div>
           <p id="cfg-stream-status" role="status" style="font-size:0.76rem; color:#94a3b8; margin:0 0 10px;">Sin comprobar</p>
           <button type="button" id="btn-guardar-streaming" style="padding:8px; background:#b45309; border:1px solid #fbbf24; border-radius:0; color:#fff; font-weight:bold; cursor:pointer;">Guardar emisión</button>
@@ -1758,75 +1861,13 @@
       <div id="seccion-clasico-content" style="display:none;">
         <div style="background:rgba(2,132,199,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:8px; padding:12px; margin-bottom:14px;">
           <h4 style="margin:0 0 6px 0; font-size:0.9rem; color:#38bdf8;">⚡ Panel Clásico de Comandos (Referencia Permanente)</h4>
-          <p style="margin:0; font-size:0.8rem; color:#cbd5e1; line-height:1.4;">
-            Panel de referencia con selectores inline y gestión directa de listas. Se mantiene siempre accesible aquí como referencia inmutable y funcional.
+          <p style="margin:0 0 10px 0; font-size:0.8rem; color:#cbd5e1; line-height:1.4;">
+            El panel clásico con selectores inline y gestión directa está accesible permanentemente y directamente en la pestaña <strong>Comandos</strong> con el selector superior para conmutar al instante.
           </p>
+          <button type="button" id="btn-modal-ir-clasico" class="touch-btn touch-btn-primary" style="min-height:38px; padding:0 14px; font-weight:700;">
+            ⚡ Abrir Lista Clásica en Pestaña Comandos
+          </button>
         </div>
-
-        <!-- Formulario Crear Nuevo Comando Clásico -->
-        <fieldset style="border:1px solid #334155; border-radius:8px; padding:12px; margin-bottom:14px;">
-          <legend style="color:#38bdf8; font-weight:700; font-size:0.85rem; padding:0 6px;">➕ Añadir Nuevo Comando</legend>
-          <div style="display:flex; flex-direction:column; gap:8px;">
-            <input type="text" id="new-cmd-name" placeholder="Ej: !os o /shoutout" style="height:38px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:6px; padding:0 10px; font-size:0.85rem;">
-            <input type="text" id="new-cmd-desc" placeholder="Descripción breve de lo que hace" style="height:38px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:6px; padding:0 10px; font-size:0.85rem;">
-            <div style="display:flex; gap:8px;">
-              <select id="new-cmd-tipo" style="flex:1; height:38px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:6px; padding:0 8px; font-size:0.85rem;">
-                <option value="usuario">👤 Requiere Usuario</option>
-                <option value="canal">📺 Requiere Canal</option>
-                <option value="mensaje">💬 Requiere Mensaje</option>
-                <option value="ninguno">⚡ Sin Parámetro</option>
-              </select>
-              <button type="button" class="touch-btn touch-btn-primary" id="btn-save-new-cmd" style="min-height:38px; padding:0 14px; font-weight:700;">+ Guardar</button>
-            </div>
-          </div>
-        </fieldset>
-
-        <!-- Gestor Clásico de Listas (Usuarios, Canales, Mensajes) -->
-        <fieldset style="border:1px solid #334155; border-radius:8px; padding:12px; margin-bottom:14px;">
-          <legend style="color:#a855f7; font-weight:700; font-size:0.85rem; padding:0 6px;">👥 Gestión de Listas de Parámetros</legend>
-          
-          <!-- Usuarios -->
-          <div style="margin-bottom:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <span style="font-size:0.8rem; font-weight:700; color:#cbd5e1;">👤 Usuarios (<span id="badge-count-usuarios">0</span>)</span>
-            </div>
-            <div class="chip-container" id="chips-usuarios" style="margin-bottom:6px;"></div>
-            <div style="display:flex; gap:6px;">
-              <input type="text" id="input-add-usuario" placeholder="Añadir usuario…" style="flex:1; height:34px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; padding:0 8px; font-size:0.8rem;">
-              <button type="button" class="touch-btn touch-btn-primary" id="btn-add-usuario" style="min-height:34px; padding:0 10px; font-size:0.8rem;">+ Añadir</button>
-            </div>
-          </div>
-
-          <!-- Canales -->
-          <div style="margin-bottom:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <span style="font-size:0.8rem; font-weight:700; color:#cbd5e1;">📺 Canales (<span id="badge-count-canales">0</span>)</span>
-            </div>
-            <div class="chip-container" id="chips-canales" style="margin-bottom:6px;"></div>
-            <div style="display:flex; gap:6px;">
-              <input type="text" id="input-add-canal" placeholder="Añadir canal…" style="flex:1; height:34px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; padding:0 8px; font-size:0.8rem;">
-              <button type="button" class="touch-btn touch-btn-primary" id="btn-add-canal" style="min-height:34px; padding:0 10px; font-size:0.8rem;">+ Añadir</button>
-            </div>
-          </div>
-
-          <!-- Mensajes -->
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <span style="font-size:0.8rem; font-weight:700; color:#cbd5e1;">💬 Mensajes Guardados (<span id="badge-count-mensajes">0</span>)</span>
-            </div>
-            <div class="saved-msg-list" id="chips-mensajes" style="margin-bottom:6px;"></div>
-            <div style="display:flex; gap:6px;">
-              <input type="text" id="input-add-mensaje" placeholder="Añadir mensaje…" style="flex:1; height:34px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; padding:0 8px; font-size:0.8rem;">
-              <button type="button" class="touch-btn touch-btn-primary" id="btn-add-mensaje" style="min-height:34px; padding:0 10px; font-size:0.8rem;">+ Añadir</button>
-            </div>
-          </div>
-        </fieldset>
-
-        <!-- Acordeón de Comandos Clásicos -->
-        <fieldset style="border:1px solid #334155; border-radius:8px; padding:12px; margin-bottom:14px;">
-          <legend style="color:#fbbf24; font-weight:700; font-size:0.85rem; padding:0 6px;">⚡ Listado de Comandos (Acordeón)</legend>
-          <div id="comandos-accordion-list" style="display:flex; flex-direction:column; gap:8px;"></div>
-        </fieldset>
       </div>
     </div>
   </div>
@@ -3315,6 +3356,8 @@
     const obsUrlChat = document.getElementById('obs-url-chat');
     const obsUrlPlano = document.getElementById('obs-url-plano');
     const obsUrlVdo = document.getElementById('obs-url-vdo');
+    const obsUrlCristalPlus = document.getElementById('obs-url-cristal-plus');
+    const obsUrlPizarraPlus = document.getElementById('obs-url-pizarra-plus');
 
     const cfgVdoRoom = document.getElementById('cfg-vdo-room');
     const cfgVdoStream = document.getElementById('cfg-vdo-stream');
@@ -3359,6 +3402,13 @@
         if (cfgStreamRoom) cfgStreamRoom.value = state.vdoRoom || '';
         if (cfgStreamStatus) cfgStreamStatus.textContent =
           `Clave Twitch: ${state.hasTwitchStreamKey ? 'guardada' : 'pendiente'} · Clave YouTube: ${state.hasYoutubeStreamKey ? 'guardada' : 'pendiente'} · Contraseña VDO: ${state.hasVdoPassword ? 'guardada' : 'pendiente'}`;
+        const savedChannel = localStorage.getItem('apliarte_youtube_channel_id') || '';
+        const cfgYtChannel = document.getElementById('cfg-youtube-channel-id');
+        const linkYtAdmin = document.getElementById('link-yt-studio-admin');
+        if (cfgYtChannel && !cfgYtChannel.value) cfgYtChannel.value = savedChannel;
+        if (linkYtAdmin && savedChannel) {
+          linkYtAdmin.href = `https://studio.youtube.com/channel/${savedChannel}/livestreaming/manage`;
+        }
         cargarDestinosEmision();
       } catch (_) {
         if (cfgStreamStatus) cfgStreamStatus.textContent = 'No se pudo consultar la configuración de emisión';
@@ -3371,6 +3421,16 @@
       if (cfgStreamPass?.value.trim()) payload.vdoPassword = cfgStreamPass.value.trim();
       if (cfgStreamKey?.value.trim()) payload.twitchStreamKey = cfgStreamKey.value.trim();
       if (cfgYoutubeStreamKey?.value.trim()) payload.youtubeStreamKey = cfgYoutubeStreamKey.value.trim();
+      const cfgYtChannel = document.getElementById('cfg-youtube-channel-id');
+      if (cfgYtChannel) {
+        const val = cfgYtChannel.value.trim();
+        if (val) localStorage.setItem('apliarte_youtube_channel_id', val);
+        else localStorage.removeItem('apliarte_youtube_channel_id');
+        const linkYtAdmin = document.getElementById('link-yt-studio-admin');
+        if (linkYtAdmin) {
+          linkYtAdmin.href = val ? `https://studio.youtube.com/channel/${val}/livestreaming/manage` : 'https://studio.youtube.com/livestreaming/manage';
+        }
+      }
       try {
         const res = await fetch('/api/panel/streaming', {
           method: 'POST', credentials: 'same-origin',
@@ -3436,6 +3496,8 @@
           if (obsUrlChat) obsUrlChat.textContent = obs.chat || `${window.location.origin}/chat.html`;
           if (obsUrlPlano) obsUrlPlano.textContent = obs.plano || `${window.location.origin}/plano?transparente=1`;
           if (obsUrlVdo) obsUrlVdo.textContent = obs.vdoCamView || '...';
+          if (obsUrlCristalPlus) obsUrlCristalPlus.textContent = `${window.location.origin}/cristal-plus`;
+          if (obsUrlPizarraPlus) obsUrlPizarraPlus.textContent = `${window.location.origin}/pizarra-plus`;
 
           // Actualizar campos de formulario
           if (cfgVdoRoom && cfg.vdo?.room) cfgVdoRoom.value = cfg.vdo.room;
@@ -4248,6 +4310,7 @@
             <div class="cmd-custom-msg-row">
               <input type="text" class="cmd-custom-msg-input" placeholder="Otro usuario…" data-cmd="${escapeHtml(cmdName)}">
               <button type="button" class="touch-btn touch-btn-primary btn-custom-msg-send" data-cmd="${escapeHtml(cmdName)}">🚀 Enviar</button>
+              <button type="button" class="touch-btn btn-custom-msg-copy" data-cmd="${escapeHtml(cmdName)}">📋 Copiar</button>
             </div>
           `;
         } else if (paramType === 'canal') {
@@ -4264,6 +4327,7 @@
             <div class="cmd-custom-msg-row">
               <input type="text" class="cmd-custom-msg-input" placeholder="Otro canal…" data-cmd="${escapeHtml(cmdName)}">
               <button type="button" class="touch-btn touch-btn-primary btn-custom-msg-send" data-cmd="${escapeHtml(cmdName)}">🚀 Enviar</button>
+              <button type="button" class="touch-btn btn-custom-msg-copy" data-cmd="${escapeHtml(cmdName)}">📋 Copiar</button>
             </div>
           `;
         } else if (paramType === 'mensaje') {
@@ -4284,6 +4348,7 @@
             <div class="cmd-custom-msg-row">
               <input type="text" class="cmd-custom-msg-input" placeholder="O escribe otro mensaje…" data-cmd="${escapeHtml(cmdName)}">
               <button type="button" class="touch-btn touch-btn-primary btn-custom-msg-send" data-cmd="${escapeHtml(cmdName)}">🚀 Enviar</button>
+              <button type="button" class="touch-btn btn-custom-msg-copy" data-cmd="${escapeHtml(cmdName)}">📋 Copiar</button>
             </div>
           `;
         } else if (paramType === 'agente') {
@@ -4426,6 +4491,23 @@
           });
         });
 
+        bodyEl.querySelectorAll('.btn-custom-msg-copy').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const baseCmd = btn.dataset.cmd;
+            const inp = btn.closest('.cmd-custom-msg-row')?.querySelector('.cmd-custom-msg-input');
+            let customVal = inp ? inp.value.trim() : '';
+            if (paramType === 'usuario') {
+              customVal = customVal.replace(/^@+/, '');
+            } else if (paramType === 'canal') {
+              customVal = customVal.replace(/^[#@]+/, '');
+            }
+            const finalCmd = baseCmd.replace(/\[(usuario|canal|mensaje)\]/, customVal);
+            copyToClipboard(finalCmd);
+          });
+        });
+
         bodyEl.querySelectorAll('.cmd-custom-msg-input').forEach(inp => {
           inp.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -4447,14 +4529,59 @@
       });
     }
 
-    function cerrarDrillDown() {
+    function activarVistaComandos(modo) {
       const gridView = document.getElementById('comandos-view-grid');
+      const clasicoView = document.getElementById('comandos-view-clasico');
+      const drillView = document.getElementById('comandos-view-drilldown');
+      const btnGrid = document.getElementById('btn-vista-grid');
+      const btnClasico = document.getElementById('btn-vista-clasico');
+
+      const esClasico = modo === 'clasico';
+      if (drillView) drillView.style.display = 'none';
+      if (gridView) gridView.style.display = esClasico ? 'none' : 'flex';
+      if (clasicoView) clasicoView.style.display = esClasico ? 'flex' : 'none';
+
+      if (btnGrid) {
+        btnGrid.classList.toggle('active', !esClasico);
+        btnGrid.style.background = !esClasico ? '#0284c7' : '#1e293b';
+        btnGrid.style.color = !esClasico ? '#fff' : '#94a3b8';
+        btnGrid.style.border = !esClasico ? 'none' : '1px solid #334155';
+      }
+      if (btnClasico) {
+        btnClasico.classList.toggle('active', esClasico);
+        btnClasico.style.background = esClasico ? '#0284c7' : '#1e293b';
+        btnClasico.style.color = esClasico ? '#fff' : '#94a3b8';
+        btnClasico.style.border = esClasico ? 'none' : '1px solid #334155';
+      }
+
+      try {
+        localStorage.setItem('directo_comandos_vista_modo', esClasico ? 'clasico' : 'grid');
+      } catch (_) {}
+
+      if (esClasico) {
+        renderComandosAccordion();
+        renderChips();
+      } else {
+        renderComandosGrid();
+      }
+    }
+
+    function cerrarDrillDown() {
       const drillView = document.getElementById('comandos-view-drilldown');
       if (drillView) drillView.style.display = 'none';
-      if (gridView) gridView.style.display = 'flex';
+      const modo = localStorage.getItem('directo_comandos_vista_modo') || 'grid';
+      activarVistaComandos(modo);
       const bodyEl = document.getElementById('drilldown-body');
       if (bodyEl) bodyEl.innerHTML = '';
     }
+
+    document.getElementById('btn-vista-grid')?.addEventListener('click', () => activarVistaComandos('grid'));
+    document.getElementById('btn-vista-clasico')?.addEventListener('click', () => activarVistaComandos('clasico'));
+    document.getElementById('btn-modal-ir-clasico')?.addEventListener('click', () => {
+      cerrarModalPanelConfig();
+      cambiarPestana('tab-comandos');
+      activarVistaComandos('clasico');
+    });
 
     document.getElementById('btn-drilldown-back')?.addEventListener('click', cerrarDrillDown);
     document.getElementById('btn-grid-add-cmd')?.addEventListener('click', () => abrirDrillDown({ tipo: 'nuevo_comando' }));
@@ -4522,6 +4649,12 @@
                       aria-label="Enviar comando con este mensaje personalizado"
                       data-tip="Enviar comando con el texto escrito al chat">
                 🚀 Enviar
+              </button>
+              <button type="button" class="touch-btn btn-custom-msg-copy"
+                      data-cmd="${escapeHtml(cmdName)}"
+                      aria-label="Copiar comando con este mensaje personalizado"
+                      data-tip="Copiar comando con el texto escrito">
+                📋
               </button>
             </div>
             <div style="display:flex; justify-content:flex-end; margin-top:4px;">
@@ -4690,6 +4823,20 @@
         });
       });
 
+      // Copiar comando con mensaje personalizado en acordeón clásico
+      container.querySelectorAll('.btn-custom-msg-copy').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const baseCmd = btn.dataset.cmd;
+          const parent = btn.closest('.cmd-custom-msg-row');
+          const input = parent?.querySelector('.cmd-custom-msg-input');
+          const customVal = input ? input.value.trim() : '';
+          const finalCmd = baseCmd.replace(/\[(usuario|canal|mensaje)\]/, customVal);
+          copyToClipboard(finalCmd);
+        });
+      });
+
       // Enter en input de mensaje personalizado envía directamente
       container.querySelectorAll('.cmd-custom-msg-input').forEach(inp => {
         inp.addEventListener('keydown', (e) => {
@@ -4801,6 +4948,8 @@
     document.querySelectorAll('[data-tip]').forEach(attachIconHelp);
 
     // Pintado inicial vacío: el contenido llega solo desde el servidor (cargarListas)
+    const modoGuardado = localStorage.getItem('directo_comandos_vista_modo') || 'grid';
+    if (modoGuardado === 'clasico') activarVistaComandos('clasico');
     renderChips();
     renderComandosGrid();
 
