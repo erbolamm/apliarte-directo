@@ -2,7 +2,7 @@
 
 > **Sovereign live broadcasting suite and interactive 3D overlays for streaming with Docker.**
 > 
-> 🌐 **Landing Page**: [directo.apliarte.com](https://directo.apliarte.com) · 📖 **Guía Oficial de Comandos y Avatares**: [apliarte.com/p/apliarte-directo.html](https://www.apliarte.com/p/apliarte-directo.html) · 🚀 **Versión v1.0.0**
+> 🌐 **Landing Page**: [directo.apliarte.com](https://directo.apliarte.com) · 📖 **Guía Oficial de Comandos y Avatares**: [directo.apliarte.com/guia-directo.html](https://directo.apliarte.com/guia-directo.html) · 🚀 **Versión v1.0.0**
 
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](./docker-compose.yml)
 [![Node.js](https://img.shields.io/badge/Node.js-22_LTS-339933?logo=node.js&logoColor=white)](./package.json)
@@ -194,7 +194,7 @@ Herramienta gratuita y open source. Si te ahorra tiempo, tu apoyo ayuda a manten
 | Ko-fi | [ko-fi.com/C0C11TWR1K](https://ko-fi.com/C0C11TWR1K) |
 | Twitch Tip | [streamelements.com/apliarte/tip](https://streamelements.com/apliarte/tip) |
 
-🌐 [Sitio Oficial y Landing](https://directo.apliarte.com) · 📖 [Guía de Comandos](https://www.apliarte.com/p/apliarte-directo.html) · 📦 [GitHub](https://github.com/erbolamm/apliarte-directo)
+🌐 [Sitio Oficial y Landing](https://directo.apliarte.com) · 📖 [Guía de Comandos](https://directo.apliarte.com/guia-directo.html) · 📦 [GitHub](https://github.com/erbolamm/apliarte-directo)
 
 ## Licencia
 MIT — © 2026 ApliArte
