@@ -200,6 +200,10 @@
       color: var(--primary);
       transform: translateY(-2px);
     }
+    .btn-sm {
+      padding: 6px 14px;
+      font-size: 0.88rem;
+    }
 
     /* Hero Section */
     .hero {
@@ -488,6 +492,7 @@
       </a>
       <div class="nav-actions">
         <a href="./demo.html" class="nav-link">🔴 Demo</a>
+        <a href="https://www.apliarte.com/p/apliarte-directo.html" class="nav-link" target="_blank" rel="noopener">Guía de Comandos</a>
         <a href="./docs/index.html" class="nav-link">Documentación web</a>
         <a href="#architecture" class="nav-link">Arquitectura</a>
         <a href="#quickstart" class="nav-link">Instalación</a>
@@ -508,6 +513,7 @@
         <div class="hero-ctas">
           <a href="https://github.com/erbolamm/apliarte-directo/archive/refs/heads/main.zip" class="btn btn-primary">⬇ Descargar ZIP</a>
           <button class="copy-btn" type="button" data-copy="https://github.com/erbolamm/apliarte-directo/archive/refs/heads/main.zip" data-tip="Copiado" aria-label="Copiar enlace del ZIP">⧉</button>
+          <a href="https://www.apliarte.com/p/apliarte-directo.html" class="btn btn-secondary" target="_blank" rel="noopener">📖 Guía de Comandos</a>
           <a href="http://127.0.0.1:7979/admin" class="btn btn-secondary" target="_blank" rel="noopener noreferrer">▶ Abrir mi Directo instalado</a>
           <a href="./demo.html" class="btn btn-secondary">🔴 Probar la demo</a>
         </div>
@@ -574,9 +580,9 @@
     <section class="container guide-section" id="vps">
       <h2 class="section-title">Avanzado: en tu VPS</h2>
       <div class="guide-row">
-        <p>El instalador de un comando para VPS KVM Ubuntu/Debian (por ejemplo, Hostinger) está preparado, pero <strong>todavía no está aprobado para uso público</strong>. Espera a que Javier publique una versión revisada y el hash <code>RELEASE_COMMIT_SHA</code>; no ejecutes este ejemplo hoy. ¿Aún no tienes VPS? Puedes contratarlo en <a href="https://hostinger.es?REFERRALCODE=APLIARTE" target="_blank" rel="noopener sponsored">Hostinger con el enlace de ApliArte</a> (enlace de afiliado).</p>
-        <p>Cuando exista una versión aprobada, revisa primero la URL y el script. En el terminal SSH del VPS, el comando documentado es:</p>
-        <div class="copy-line"><code>curl -fsSL https://raw.githubusercontent.com/erbolamm/apliarte-directo/RELEASE_COMMIT_SHA/deploy/provision.sh | sudo bash -s -- --ref RELEASE_COMMIT_SHA</code><button class="copy-btn" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/erbolamm/apliarte-directo/RELEASE_COMMIT_SHA/deploy/provision.sh | sudo bash -s -- --ref RELEASE_COMMIT_SHA" data-tip="Copiado" aria-label="Copiar ejemplo de instalación VPS no aprobado">⧉</button></div>
+        <p>Para emitir 24/7 sin depender de tu ordenador personal, puedes alojar ApliArte Directo en un servidor en la nube. La opción recomendada y probada es un VPS KVM en <a href="https://hostinger.es?REFERRALCODE=APLIARTE" target="_blank" rel="noopener sponsored">Hostinger con el enlace de ApliArte</a> (enlace de afiliado, 1 vCPU y 2 GB RAM son suficientes para la suite).</p>
+        <p>El instalador automatizado para VPS KVM Ubuntu/Debian se ejecuta mediante el script de despliegue usando el commit aprobado <code>RELEASE_COMMIT_SHA</code>. En el terminal SSH del VPS, el comando documentado es:</p>
+        <div class="copy-line"><code>curl -fsSL https://raw.githubusercontent.com/erbolamm/apliarte-directo/RELEASE_COMMIT_SHA/deploy/provision.sh | sudo bash -s -- --ref RELEASE_COMMIT_SHA</code><button class="copy-btn" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/erbolamm/apliarte-directo/RELEASE_COMMIT_SHA/deploy/provision.sh | sudo bash -s -- --ref RELEASE_COMMIT_SHA" data-tip="Copiado" aria-label="Copiar comando de instalación VPS">⧉</button></div>
         <p>Sustituye ambas apariciones del marcador por el mismo hash aprobado de 40 caracteres. Sin dominio, el acceso es privado por túnel SSH; con <code>--domain</code> se expondría también el panel, por lo que requiere revisión de seguridad. Lee la <a href="https://github.com/erbolamm/apliarte-directo/blob/main/DOCUMENTATION/INSTALL-VPS.md">guía VPS completa</a> antes de hacer nada.</p>
       </div>
     </section>
@@ -596,7 +602,7 @@
           <span class="pillar-icon">🎮</span>
           <h3>Diorama 3D Three.js</h3>
           <p>
-            Capa 3D con avatares, sincronización labial, minijuegos de chat y avisos en tiempo real.
+            Capa 3D con avatares, sincronización labial, minijuegos de chat y avisos en tiempo real. Consulta la <a href="https://www.apliarte.com/p/apliarte-directo.html" target="_blank" rel="noopener">guía completa de comandos y avatares</a>.
           </p>
         </div>
 
@@ -669,31 +675,36 @@
     </section>
 
     <section class="container" aria-label="Comunidad y apoyo" style="margin-top:1.5rem;">
-      <h2 class="section-title">Comunidad y apoyo</h2>
+      <h2 class="section-title">Comunidad y donaciones</h2>
+      <p style="text-align:center; max-width:680px; margin:0 auto 1.5rem; color:var(--text-muted);">
+        ApliArte Directo es 100% gratuito y de código abierto. Si te resulta útil o te ahorra tiempo, tu apoyo ayuda a mantener el desarrollo y los servidores.
+      </p>
       <div class="hero-ctas" style="justify-content:center;">
-        <a class="btn btn-secondary" href="https://github.com/erbolamm/apliarte-directo/issues" target="_blank" rel="noopener noreferrer">🐛 Issues</a>
         <a class="btn btn-secondary" href="https://github.com/sponsors/erbolamm" target="_blank" rel="noopener noreferrer">❤️ GitHub Sponsors</a>
+        <a class="btn btn-secondary" href="https://paypal.me/erbolamm" target="_blank" rel="noopener noreferrer">💳 PayPal</a>
         <a class="btn btn-secondary" href="https://ko-fi.com/C0C11TWR1K" target="_blank" rel="noopener noreferrer">☕ Ko-fi</a>
-        <a class="btn btn-secondary" href="https://www.twitch.tv/apliarte" target="_blank" rel="noopener noreferrer">🔴 Ver mi directo</a>
+        <a class="btn btn-secondary" href="https://streamelements.com/apliarte/tip" target="_blank" rel="noopener noreferrer">🎁 StreamElements Tip</a>
+        <a class="btn btn-secondary" href="https://www.twitch.tv/apliarte" target="_blank" rel="noopener noreferrer">🔴 Ver directo en Twitch</a>
+        <a class="btn btn-secondary" href="https://github.com/erbolamm/apliarte-directo/issues" target="_blank" rel="noopener noreferrer">🐛 Issues</a>
       </div>
-      <p style="text-align:center; margin-top:1rem;">Comparte <strong>directo.apliarte.com</strong>:</p>
-      <div class="hero-ctas" style="justify-content:center;">
-        <a href="https://x.com/intent/post?url=https%3A%2F%2Fdirecto.apliarte.com" target="_blank" rel="noopener noreferrer">X</a>
-        <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fdirecto.apliarte.com" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-        <a href="https://api.whatsapp.com/send?text=https%3A%2F%2Fdirecto.apliarte.com" target="_blank" rel="noopener noreferrer">WhatsApp</a>
-        <a href="https://t.me/share/url?url=https%3A%2F%2Fdirecto.apliarte.com" target="_blank" rel="noopener noreferrer">Telegram</a>
-        <a href="https://www.reddit.com/submit?url=https%3A%2F%2Fdirecto.apliarte.com" target="_blank" rel="noopener noreferrer">Reddit</a>
-        <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fdirecto.apliarte.com" target="_blank" rel="noopener noreferrer">Facebook</a>
-        <a href="mailto:?subject=ApliArte%20Directo&amp;body=https%3A%2F%2Fdirecto.apliarte.com">Email</a>
+      <p style="text-align:center; margin-top:2rem; margin-bottom:0.75rem;">Comparte <strong>directo.apliarte.com</strong>:</p>
+      <div class="hero-ctas" style="justify-content:center; gap:8px;">
+        <a class="btn btn-secondary btn-sm" href="https://x.com/intent/post?url=https%3A%2F%2Fdirecto.apliarte.com" target="_blank" rel="noopener noreferrer">𝕏 Post</a>
+        <a class="btn btn-secondary btn-sm" href="https://api.whatsapp.com/send?text=https%3A%2F%2Fdirecto.apliarte.com" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+        <a class="btn btn-secondary btn-sm" href="https://t.me/share/url?url=https%3A%2F%2Fdirecto.apliarte.com" target="_blank" rel="noopener noreferrer">Telegram</a>
+        <a class="btn btn-secondary btn-sm" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fdirecto.apliarte.com" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a class="btn btn-secondary btn-sm" href="https://www.reddit.com/submit?url=https%3A%2F%2Fdirecto.apliarte.com" target="_blank" rel="noopener noreferrer">Reddit</a>
+        <a class="btn btn-secondary btn-sm" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fdirecto.apliarte.com" target="_blank" rel="noopener noreferrer">Facebook</a>
+        <a class="btn btn-secondary btn-sm" href="mailto:?subject=ApliArte%20Directo&amp;body=https%3A%2F%2Fdirecto.apliarte.com">Email</a>
       </div>
     </section>
 
     <!-- Strict Privacy & Governance Notice -->
     <section class="container">
       <div class="governance-callout">
-        <h3>🔒 Privacidad y revisión pública</h3>
+        <h3>🔒 Privacidad y soberanía técnica</h3>
         <p>
-          La demo pública no se conecta a tu Twitch, OBS ni panel privado. La publicación del proyecto aún requiere una revisión de seguridad final.
+          La demo pública no se conecta a tu Twitch, OBS ni panel privado. La suite se ejecuta de forma soberana en tu propio equipo o en tu servidor privado sin telemetría ni intermediarios.
         </p>
       </div>
     </section>
@@ -703,7 +714,7 @@
   <footer>
     <div class="container footer-content">
       <div class="footer-author">
-        ApliArte Directo &bull; Creado por <a href="https://github.com/erbolamm" target="_blank" rel="noopener noreferrer">Javier Mateo (ApliArte / ErBolamm)</a>
+        ApliArte Directo &bull; Creado por <a href="https://github.com/erbolamm" target="_blank" rel="noopener noreferrer">Javier Mateo (ApliArte / ErBolamm)</a> &bull; <a href="https://www.apliarte.com/p/apliarte-directo.html" target="_blank" rel="noopener">Guía Oficial de Comandos</a>
       </div>
       <div class="footer-license">
         Licencia MIT &bull; Diseño ApliArte Brand Kit.

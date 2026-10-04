@@ -10,7 +10,7 @@ test('public landing offers honest local launch, install steps and community lin
   assert.match(html, /docker compose up -d/);
   assert.match(html, /git pull --ff-only/);
   assert.match(html, /no puede arrancar Docker ni detectar un clon local/);
-  for (const link of ['/issues', '/fork', 'github.com/sponsors/erbolamm', 'ko-fi.com/', 'twitch.tv/apliarte']) {
+  for (const link of ['/issues', '/fork', 'github.com/sponsors/erbolamm', 'paypal.me/erbolamm', 'ko-fi.com/', 'twitch.tv/apliarte', 'streamelements.com/apliarte/tip']) {
     assert.ok(html.includes(link), `missing ${link}`);
   }
   for (const service of ['x.com/intent', 'linkedin.com/sharing', 'whatsapp.com/send', 't.me/share', 'reddit.com/submit', 'facebook.com/sharer', 'mailto:']) {

@@ -57,3 +57,10 @@ test('Landing Page: explains how to recover a forgotten panel password', () => {
   assert.match(html, /¿Olvidaste la contraseña del panel\?/);
   assert.match(html, /data\/panel-auth\.json/);
 });
+
+test('Landing Page: links to the official Guide on Blogger', () => {
+  const html = fs.readFileSync(landingHtmlPath, 'utf8');
+  assert.match(html, /https:\/\/www\.apliarte\.com\/p\/apliarte-directo\.html/, 'Must link to official Blogger guide');
+  assert.match(html, /Guía de Comandos/, 'Must include readable label for the guide');
+});
+

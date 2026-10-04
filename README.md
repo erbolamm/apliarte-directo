@@ -2,7 +2,7 @@
 
 > **Sovereign live broadcasting suite and interactive 3D overlays for streaming with Docker.**
 > 
-> 🔒 **Publication gate**: This checkout is being prepared for a public release, but is **not yet approved for publication**. Never expose the admin panel, credentials, OBS control or a live broadcast on the public demo domain. See [Publication Readiness](./DOCUMENTATION/PUBLICATION-READINESS.md).
+> 🌐 **Landing Page**: [directo.apliarte.com](https://directo.apliarte.com) · 📖 **Guía Oficial de Comandos y Avatares**: [apliarte.com/p/apliarte-directo.html](https://www.apliarte.com/p/apliarte-directo.html) · 🚀 **Versión v1.0.0**
 
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](./docker-compose.yml)
 [![Node.js](https://img.shields.io/badge/Node.js-22_LTS-339933?logo=node.js&logoColor=white)](./package.json)
@@ -146,6 +146,58 @@ npm test
 
 ---
 
-## 📄 License
+## Autor
+Javier Mateo (ApliArte) — github.com/erbolamm
 
-This project is licensed under the **MIT** license. See the [LICENSE](./LICENSE) file for details.
+## 💬 Una nota personal del autor / A personal note from the author
+ℹ️ Nota: El texto siguiente es un mensaje personal del autor, escrito en varios idiomas para que pueda leerlo gente de todo el mundo. Esto no implica que el proyecto tenga soporte funcional completo en esos idiomas.
+
+ℹ️ Note: The text below is a personal message from the author, written in several languages so people around the world can read it. This does not imply full multilingual feature support in those languages.
+
+<details>
+<summary>🇪🇸 Español</summary>
+ApliArte Directo es una suite integral de emisión y overlays 3D interactivos con Three.js diseñada para que cualquier creador de contenido pueda emitir a Twitch y YouTube sin depender de herramientas de terceros ni servicios privativos. Todo corre en tu propio equipo con un doble clic, o en un servidor VPS en la nube.
+</details>
+
+<details>
+<summary>🇬🇧 English</summary>
+ApliArte Directo is a sovereign live broadcasting and interactive 3D overlay suite designed for streamers to broadcast to Twitch and YouTube without relying on third-party opaque software. Everything runs locally with a double click or on your own VPS server in the cloud.
+</details>
+
+<details>
+<summary>🇧🇷 Português</summary>
+ApliArte Directo é uma suíte soberana de transmissão ao vivo e overlays 3D interativos desenvolvida para streamers transmitirem na Twitch e no YouTube com total privacidade e independência.
+</details>
+
+<details>
+<summary>🇫🇷 Français</summary>
+ApliArte Directo est une suite souveraine de diffusion en direct et d'overlays 3D interactifs conçue pour permettre aux créateurs de diffuser sur Twitch et YouTube en toute indépendance.
+</details>
+
+<details>
+<summary>🇩🇪 Deutsch</summary>
+ApliArte Directo ist eine souveräne Live-Streaming-Suite mit interaktiven 3D-Overlays für Twitch und YouTube, die unabhängig und datenschutzfreundlich auf dem eigenen Rechner oder VPS läuft.
+</details>
+
+<details>
+<summary>🇮🇹 Italiano</summary>
+ApliArte Directo è una suite sovrana per live streaming con overlay 3D interattivi progettata per trasmettere su Twitch e YouTube in totale indipendenza.
+</details>
+
+## 💖 Apoya el proyecto
+Herramienta gratuita y open source. Si te ahorra tiempo, tu apoyo ayuda a mantener el desarrollo y la infraestructura.
+
+| Plataforma | Enlace |
+|-----------|--------|
+| GitHub Sponsors | [github.com/sponsors/erbolamm](https://github.com/sponsors/erbolamm) |
+| PayPal | [paypal.me/erbolamm](https://paypal.me/erbolamm) |
+| Ko-fi | [ko-fi.com/C0C11TWR1K](https://ko-fi.com/C0C11TWR1K) |
+| Twitch Tip | [streamelements.com/apliarte/tip](https://streamelements.com/apliarte/tip) |
+
+🌐 [Sitio Oficial y Landing](https://directo.apliarte.com) · 📖 [Guía de Comandos](https://www.apliarte.com/p/apliarte-directo.html) · 📦 [GitHub](https://github.com/erbolamm/apliarte-directo)
+
+## Licencia
+MIT — © 2026 ApliArte
+
+## About
+ApliArte Directo — Suite soberana de emisión y overlays 3D interactivos para streaming con Docker, Three.js y panel de control web móvil.
