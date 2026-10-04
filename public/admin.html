@@ -1499,27 +1499,6 @@
         </div>
       </section>
 
-      <!-- Elementos ocultos para compatibilidad con scripts/tests -->
-      <div id="comandos-accordion-list" style="display:none;"></div>
-      <div style="display:none;">
-        <input type="text" id="new-cmd-name">
-        <input type="text" id="new-cmd-desc">
-        <select id="new-cmd-tipo"><option value="ninguno">ninguno</option></select>
-        <button id="btn-save-new-cmd"></button>
-        <span id="badge-count-usuarios">0</span>
-        <span id="badge-count-canales">0</span>
-        <span id="badge-count-mensajes">0</span>
-        <div id="chips-usuarios"></div>
-        <div id="chips-canales"></div>
-        <div id="chips-mensajes"></div>
-        <input id="input-add-usuario">
-        <button id="btn-add-usuario"></button>
-        <input id="input-add-canal">
-        <button id="btn-add-canal"></button>
-        <input id="input-add-mensaje">
-        <button id="btn-add-mensaje"></button>
-      </div>
-
     </div>
 
     <!-- ── SUBVISTA DRILL-DOWN (SUBVISTAS CON BOTÓN ATRÁS) ── -->
@@ -1620,6 +1599,7 @@
       <div style="display:flex; gap:8px; margin-bottom:18px;">
         <button type="button" id="tab-btn-obs" style="flex:1; padding:10px; border-radius:8px; border:none; background:#0284c7; color:#fff; font-weight:700; cursor:pointer;">🎥 Asistente OBS Studio</button>
         <button type="button" id="tab-btn-cred" style="flex:1; padding:10px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#94a3b8; font-weight:700; cursor:pointer;">🔑 Credenciales & Red</button>
+        <button type="button" id="tab-btn-clasico" style="flex:1; padding:10px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#94a3b8; font-weight:700; cursor:pointer;">⚡ Comandos Clásicos</button>
       </div>
 
       <!-- SECCIÓN 1: ASISTENTE OBS STUDIO -->
@@ -1772,6 +1752,81 @@
           <button type="button" id="btn-cancelar-modal-config" style="padding:10px 16px; background:#334155; border:none; border-radius:6px; color:#cbd5e1; cursor:pointer;">Cancelar</button>
           <button type="button" id="btn-guardar-panel-config" style="padding:10px 20px; background:#0284c7; border:none; border-radius:6px; color:#fff; font-weight:bold; cursor:pointer;">💾 Guardar Configuración</button>
         </div>
+      </div>
+
+      <!-- SECCIÓN 3: COMANDOS CLÁSICOS (REFERENCIA PERMANENTE) -->
+      <div id="seccion-clasico-content" style="display:none;">
+        <div style="background:rgba(2,132,199,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:8px; padding:12px; margin-bottom:14px;">
+          <h4 style="margin:0 0 6px 0; font-size:0.9rem; color:#38bdf8;">⚡ Panel Clásico de Comandos (Referencia Permanente)</h4>
+          <p style="margin:0; font-size:0.8rem; color:#cbd5e1; line-height:1.4;">
+            Panel de referencia con selectores inline y gestión directa de listas. Se mantiene siempre accesible aquí como referencia inmutable y funcional.
+          </p>
+        </div>
+
+        <!-- Formulario Crear Nuevo Comando Clásico -->
+        <fieldset style="border:1px solid #334155; border-radius:8px; padding:12px; margin-bottom:14px;">
+          <legend style="color:#38bdf8; font-weight:700; font-size:0.85rem; padding:0 6px;">➕ Añadir Nuevo Comando</legend>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <input type="text" id="new-cmd-name" placeholder="Ej: !os o /shoutout" style="height:38px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:6px; padding:0 10px; font-size:0.85rem;">
+            <input type="text" id="new-cmd-desc" placeholder="Descripción breve de lo que hace" style="height:38px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:6px; padding:0 10px; font-size:0.85rem;">
+            <div style="display:flex; gap:8px;">
+              <select id="new-cmd-tipo" style="flex:1; height:38px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:6px; padding:0 8px; font-size:0.85rem;">
+                <option value="usuario">👤 Requiere Usuario</option>
+                <option value="canal">📺 Requiere Canal</option>
+                <option value="mensaje">💬 Requiere Mensaje</option>
+                <option value="ninguno">⚡ Sin Parámetro</option>
+              </select>
+              <button type="button" class="touch-btn touch-btn-primary" id="btn-save-new-cmd" style="min-height:38px; padding:0 14px; font-weight:700;">+ Guardar</button>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Gestor Clásico de Listas (Usuarios, Canales, Mensajes) -->
+        <fieldset style="border:1px solid #334155; border-radius:8px; padding:12px; margin-bottom:14px;">
+          <legend style="color:#a855f7; font-weight:700; font-size:0.85rem; padding:0 6px;">👥 Gestión de Listas de Parámetros</legend>
+          
+          <!-- Usuarios -->
+          <div style="margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span style="font-size:0.8rem; font-weight:700; color:#cbd5e1;">👤 Usuarios (<span id="badge-count-usuarios">0</span>)</span>
+            </div>
+            <div class="chip-container" id="chips-usuarios" style="margin-bottom:6px;"></div>
+            <div style="display:flex; gap:6px;">
+              <input type="text" id="input-add-usuario" placeholder="Añadir usuario…" style="flex:1; height:34px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; padding:0 8px; font-size:0.8rem;">
+              <button type="button" class="touch-btn touch-btn-primary" id="btn-add-usuario" style="min-height:34px; padding:0 10px; font-size:0.8rem;">+ Añadir</button>
+            </div>
+          </div>
+
+          <!-- Canales -->
+          <div style="margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span style="font-size:0.8rem; font-weight:700; color:#cbd5e1;">📺 Canales (<span id="badge-count-canales">0</span>)</span>
+            </div>
+            <div class="chip-container" id="chips-canales" style="margin-bottom:6px;"></div>
+            <div style="display:flex; gap:6px;">
+              <input type="text" id="input-add-canal" placeholder="Añadir canal…" style="flex:1; height:34px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; padding:0 8px; font-size:0.8rem;">
+              <button type="button" class="touch-btn touch-btn-primary" id="btn-add-canal" style="min-height:34px; padding:0 10px; font-size:0.8rem;">+ Añadir</button>
+            </div>
+          </div>
+
+          <!-- Mensajes -->
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span style="font-size:0.8rem; font-weight:700; color:#cbd5e1;">💬 Mensajes Guardados (<span id="badge-count-mensajes">0</span>)</span>
+            </div>
+            <div class="saved-msg-list" id="chips-mensajes" style="margin-bottom:6px;"></div>
+            <div style="display:flex; gap:6px;">
+              <input type="text" id="input-add-mensaje" placeholder="Añadir mensaje…" style="flex:1; height:34px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff; padding:0 8px; font-size:0.8rem;">
+              <button type="button" class="touch-btn touch-btn-primary" id="btn-add-mensaje" style="min-height:34px; padding:0 10px; font-size:0.8rem;">+ Añadir</button>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Acordeón de Comandos Clásicos -->
+        <fieldset style="border:1px solid #334155; border-radius:8px; padding:12px; margin-bottom:14px;">
+          <legend style="color:#fbbf24; font-weight:700; font-size:0.85rem; padding:0 6px;">⚡ Listado de Comandos (Acordeón)</legend>
+          <div id="comandos-accordion-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </fieldset>
       </div>
     </div>
   </div>
@@ -3251,8 +3306,10 @@
 
     const tabBtnObs = document.getElementById('tab-btn-obs');
     const tabBtnCred = document.getElementById('tab-btn-cred');
+    const tabBtnClasico = document.getElementById('tab-btn-clasico');
     const seccionObsContent = document.getElementById('seccion-obs-content');
     const seccionCredContent = document.getElementById('seccion-cred-content');
+    const seccionClasicoContent = document.getElementById('seccion-clasico-content');
 
     const obsUrlFondo = document.getElementById('obs-url-fondo');
     const obsUrlChat = document.getElementById('obs-url-chat');
@@ -3328,23 +3385,43 @@
       } catch (_) { showToast('❌ No se pudo guardar la emisión'); }
     });
 
-    function alternarPestanaModalConfig(esObs) {
+    function alternarPestanaModalConfig(pestana) {
+      let target = pestana;
+      if (typeof pestana === 'boolean') target = pestana ? 'obs' : 'cred';
+      const esObs = target === 'obs';
+      const esCred = target === 'cred';
+      const esClasico = target === 'clasico';
+
       if (tabBtnObs) {
         tabBtnObs.style.background = esObs ? '#0284c7' : '#1e293b';
         tabBtnObs.style.color = esObs ? '#fff' : '#94a3b8';
         tabBtnObs.style.border = esObs ? 'none' : '1px solid #334155';
       }
       if (tabBtnCred) {
-        tabBtnCred.style.background = !esObs ? '#0284c7' : '#1e293b';
-        tabBtnCred.style.color = !esObs ? '#fff' : '#94a3b8';
-        tabBtnCred.style.border = !esObs ? 'none' : '1px solid #334155';
+        tabBtnCred.style.background = esCred ? '#0284c7' : '#1e293b';
+        tabBtnCred.style.color = esCred ? '#fff' : '#94a3b8';
+        tabBtnCred.style.border = esCred ? 'none' : '1px solid #334155';
       }
+      if (tabBtnClasico) {
+        tabBtnClasico.style.background = esClasico ? '#0284c7' : '#1e293b';
+        tabBtnClasico.style.color = esClasico ? '#fff' : '#94a3b8';
+        tabBtnClasico.style.border = esClasico ? 'none' : '1px solid #334155';
+      }
+
       if (seccionObsContent) seccionObsContent.style.display = esObs ? 'block' : 'none';
-      if (seccionCredContent) seccionCredContent.style.display = !esObs ? 'block' : 'none';
+      if (seccionCredContent) seccionCredContent.style.display = esCred ? 'block' : 'none';
+      if (seccionClasicoContent) {
+        seccionClasicoContent.style.display = esClasico ? 'block' : 'none';
+        if (esClasico) {
+          renderComandosAccordion();
+          renderChips();
+        }
+      }
     }
 
-    tabBtnObs?.addEventListener('click', () => alternarPestanaModalConfig(true));
-    tabBtnCred?.addEventListener('click', () => alternarPestanaModalConfig(false));
+    tabBtnObs?.addEventListener('click', () => alternarPestanaModalConfig('obs'));
+    tabBtnCred?.addEventListener('click', () => alternarPestanaModalConfig('cred'));
+    tabBtnClasico?.addEventListener('click', () => alternarPestanaModalConfig('clasico'));
 
     async function cargarPanelConfig() {
       try {
@@ -4159,20 +4236,13 @@
         let optionsHtml = '';
         if (paramType === 'usuario') {
           optionsHtml = `
-            <div style="margin-bottom:8px; font-size:0.8rem; font-weight:700; color:var(--muted);">USUARIOS GUARDADOS:</div>
+            <div style="margin-bottom:8px; font-size:0.8rem; font-weight:700; color:var(--muted);">USUARIOS GUARDADOS (1 TOQUE ENVÍA):</div>
             <div class="drilldown-wrap">
               ${usuariosList.length === 0 ? '<div style="color:var(--muted); font-style:italic; padding:6px 0;">No hay usuarios guardados.</div>' : usuariosList.map(u => `
-                <button type="button" class="drilldown-chip-btn btn-chip-param" data-cmd="${escapeHtml(cmdName)}" data-val="@${escapeHtml(u)}">
+                <button type="button" class="drilldown-chip-btn btn-chip-param" data-cmd="${escapeHtml(cmdName)}" data-val="${escapeHtml(u)}">
                   @${escapeHtml(u)}
                 </button>
               `).join('')}
-            </div>
-            <div class="drilldown-confirm-box" id="drilldown-confirm-box" style="display:none;">
-              <div class="drilldown-confirm-title">¿Enviar <strong id="confirm-cmd-text" style="color:var(--cyan); font-family:ui-monospace, SFMono-Regular, monospace;"></strong> al chat?</div>
-              <div class="drilldown-confirm-actions">
-                <button type="button" class="touch-btn touch-btn-primary" id="btn-drill-confirm-send" style="min-height:44px; flex:1; font-weight:700;">🚀 Enviar</button>
-                <button type="button" class="touch-btn" id="btn-drill-confirm-cancel" style="min-height:44px; flex:1; background:#334155; color:#fff;">Cancelar</button>
-              </div>
             </div>
             <div style="margin-top:14px; font-size:0.8rem; font-weight:700; color:var(--muted);">O ESCRIBE OTRO USUARIO:</div>
             <div class="cmd-custom-msg-row">
@@ -4182,20 +4252,13 @@
           `;
         } else if (paramType === 'canal') {
           optionsHtml = `
-            <div style="margin-bottom:8px; font-size:0.8rem; font-weight:700; color:var(--muted);">CANALES GUARDADOS:</div>
+            <div style="margin-bottom:8px; font-size:0.8rem; font-weight:700; color:var(--muted);">CANALES GUARDADOS (1 TOQUE ENVÍA):</div>
             <div class="drilldown-wrap">
               ${canalesList.length === 0 ? '<div style="color:var(--muted); font-style:italic; padding:6px 0;">No hay canales guardados.</div>' : canalesList.map(c => `
                 <button type="button" class="drilldown-chip-btn btn-chip-param" data-cmd="${escapeHtml(cmdName)}" data-val="${escapeHtml(c)}">
                   📺 ${escapeHtml(c)}
                 </button>
               `).join('')}
-            </div>
-            <div class="drilldown-confirm-box" id="drilldown-confirm-box" style="display:none;">
-              <div class="drilldown-confirm-title">¿Enviar <strong id="confirm-cmd-text" style="color:var(--cyan); font-family:ui-monospace, SFMono-Regular, monospace;"></strong> al chat?</div>
-              <div class="drilldown-confirm-actions">
-                <button type="button" class="touch-btn touch-btn-primary" id="btn-drill-confirm-send" style="min-height:44px; flex:1; font-weight:700;">🚀 Enviar</button>
-                <button type="button" class="touch-btn" id="btn-drill-confirm-cancel" style="min-height:44px; flex:1; background:#334155; color:#fff;">Cancelar</button>
-              </div>
             </div>
             <div style="margin-top:14px; font-size:0.8rem; font-weight:700; color:var(--muted);">O ESCRIBE OTRO CANAL:</div>
             <div class="cmd-custom-msg-row">
@@ -4226,20 +4289,13 @@
         } else if (paramType === 'agente') {
           const agentes = ['ge', 'cl', 'co', 'pi', 'om', 'gr', 'op', 'ex', 'be', 'todos'];
           optionsHtml = `
-            <div style="margin-bottom:8px; font-size:0.8rem; font-weight:700; color:var(--muted);">SELECCIONA AGENTE / AVATAR:</div>
+            <div style="margin-bottom:8px; font-size:0.8rem; font-weight:700; color:var(--muted);">SELECCIONA AGENTE / AVATAR (1 TOQUE ENVÍA):</div>
             <div class="drilldown-wrap">
               ${agentes.map(ag => `
                 <button type="button" class="drilldown-chip-btn btn-chip-param" data-cmd="${escapeHtml(cmdName)}" data-val="${ag}">
                   ${ag}
                 </button>
               `).join('')}
-            </div>
-            <div class="drilldown-confirm-box" id="drilldown-confirm-box" style="display:none;">
-              <div class="drilldown-confirm-title">¿Enviar <strong id="confirm-cmd-text" style="color:var(--cyan); font-family:ui-monospace, SFMono-Regular, monospace;"></strong> al chat?</div>
-              <div class="drilldown-confirm-actions">
-                <button type="button" class="touch-btn touch-btn-primary" id="btn-drill-confirm-send" style="min-height:44px; flex:1; font-weight:700;">🚀 Enviar</button>
-                <button type="button" class="touch-btn" id="btn-drill-confirm-cancel" style="min-height:44px; flex:1; background:#334155; color:#fff;">Cancelar</button>
-              </div>
             </div>
           `;
         }
@@ -4258,68 +4314,32 @@
           if (await quitarComandoPanel(cmdName)) cerrarDrillDown();
         });
 
-        // Confirmación rápida en 2 pasos para chips de parámetros (Wrap)
-        let pendingCmdToSend = '';
-        const confirmBox = document.getElementById('drilldown-confirm-box');
-        const confirmTextEl = document.getElementById('confirm-cmd-text');
-        const confirmSendBtn = document.getElementById('btn-drill-confirm-send');
-        const confirmCancelBtn = document.getElementById('btn-drill-confirm-cancel');
-
-        function deseleccionarChips() {
-          bodyEl.querySelectorAll('.btn-chip-param').forEach(c => c.classList.remove('selected'));
-          pendingCmdToSend = '';
-          if (confirmBox) confirmBox.style.display = 'none';
-        }
-
+        // Envío directo a 1 toque para pastillas de parámetros (Wrap)
         bodyEl.querySelectorAll('.btn-chip-param').forEach(btn => {
-          btn.addEventListener('click', (e) => {
+          btn.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
+            if (btn.disabled) return;
             const baseCmd = btn.dataset.cmd;
-            const val = btn.dataset.val || '';
+            let val = (btn.dataset.val || '').trim();
+            if (paramType === 'usuario') {
+              val = val.replace(/^@+/, '');
+            } else if (paramType === 'canal') {
+              val = val.replace(/^[#@]+/, '');
+            }
             const finalCmd = baseCmd.replace(/\[(usuario|canal|mensaje|agente)\]/, val);
-
-            if (btn.classList.contains('selected')) {
-              deseleccionarChips();
-              return;
-            }
-
-            bodyEl.querySelectorAll('.btn-chip-param').forEach(c => c.classList.remove('selected'));
-            btn.classList.add('selected');
-            pendingCmdToSend = finalCmd;
-            if (confirmTextEl) confirmTextEl.textContent = finalCmd;
-            if (confirmBox) {
-              confirmBox.style.display = 'flex';
-              confirmBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-          });
-        });
-
-        if (confirmSendBtn) {
-          confirmSendBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            if (!pendingCmdToSend || confirmSendBtn.disabled) return;
-            const cmd = pendingCmdToSend;
-            confirmSendBtn.disabled = true;
-            confirmSendBtn.style.opacity = '0.6';
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
             try {
-              await enviarComando(cmd);
-              deseleccionarChips();
+              await enviarComando(finalCmd);
             } finally {
               setTimeout(() => {
-                confirmSendBtn.disabled = false;
-                confirmSendBtn.style.opacity = '1';
+                btn.disabled = false;
+                btn.style.opacity = '1';
               }, 1200);
             }
           });
-        }
-
-        if (confirmCancelBtn) {
-          confirmCancelBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            deseleccionarChips();
-          });
-        }
+        });
 
         // Listeners para botones 1-toque en drilldown (compatibilidad)
         bodyEl.querySelectorAll('.btn-acc-send').forEach(btn => {
@@ -4328,7 +4348,12 @@
             e.stopPropagation();
             if (btn.disabled) return;
             const baseCmd = btn.dataset.cmd;
-            const val = btn.dataset.val || '';
+            let val = (btn.dataset.val || '').trim();
+            if (paramType === 'usuario') {
+              val = val.replace(/^@+/, '');
+            } else if (paramType === 'canal') {
+              val = val.replace(/^[#@]+/, '');
+            }
             const finalCmd = baseCmd.replace(/\[(usuario|canal|mensaje|agente)\]/, val);
             btn.disabled = true;
             btn.style.opacity = '0.6';
@@ -4379,8 +4404,13 @@
             if (btn.disabled) return;
             const baseCmd = btn.dataset.cmd;
             const inp = btn.closest('.cmd-custom-msg-row')?.querySelector('.cmd-custom-msg-input');
-            const customVal = inp ? inp.value.trim() : '';
+            let customVal = inp ? inp.value.trim() : '';
             if (!customVal) { showToast('⚠️ Escribe un texto antes de enviar'); return; }
+            if (paramType === 'usuario') {
+              customVal = customVal.replace(/^@+/, '');
+            } else if (paramType === 'canal') {
+              customVal = customVal.replace(/^[#@]+/, '');
+            }
             const finalCmd = baseCmd.replace(/\[(usuario|canal|mensaje)\]/, customVal);
             btn.disabled = true;
             btn.style.opacity = '0.6';

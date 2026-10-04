@@ -58,16 +58,17 @@ test('admin.html conserva los presets, pero solo se anaden con el boton explicit
   assert.match(publicAdminHtml, /renderChips\(\);\s*renderComandosGrid\(\);\s*\/\/\s*── Polling/);
 });
 
-test('admin.html implementa disposicion Wrap y confirmacion en 2 pasos para parametros', () => {
+test('admin.html implementa disposicion Wrap y envio directo a 1 toque para parametros', () => {
   assert.match(publicAdminHtml, /\.drilldown-wrap\s*\{\s*display:\s*flex;\s*flex-wrap:\s*wrap;/);
   assert.match(publicAdminHtml, /\.drilldown-chip-btn\s*\{/);
-  assert.match(publicAdminHtml, /\.drilldown-confirm-box\s*\{/);
-  assert.match(publicAdminHtml, /id="drilldown-confirm-box"/);
-  assert.match(publicAdminHtml, /id="confirm-cmd-text"/);
-  assert.match(publicAdminHtml, /id="btn-drill-confirm-send"/);
-  assert.match(publicAdminHtml, /id="btn-drill-confirm-cancel"/);
-  assert.match(publicAdminHtml, /USUARIOS GUARDADOS:/);
-  assert.match(publicAdminHtml, /CANALES GUARDADOS:/);
-  assert.doesNotMatch(publicAdminHtml, /USUARIOS GUARDADOS \(1 TOQUE ENVÍA\):/);
-  assert.doesNotMatch(publicAdminHtml, /CANALES GUARDADOS \(1 TOQUE ENVÍA\):/);
+  assert.match(publicAdminHtml, /USUARIOS GUARDADOS \(1 TOQUE ENVÍA\):/);
+  assert.match(publicAdminHtml, /CANALES GUARDADOS \(1 TOQUE ENVÍA\):/);
+  assert.doesNotMatch(publicAdminHtml, /id="drilldown-confirm-box"/);
 });
+
+test('admin.html ofrece pestana de comandos clasicos como referencia permanente en modal de configuracion', () => {
+  assert.match(publicAdminHtml, /id="tab-btn-clasico"/);
+  assert.match(publicAdminHtml, /id="seccion-clasico-content"/);
+  assert.match(publicAdminHtml, /id="comandos-accordion-list"/);
+});
+
