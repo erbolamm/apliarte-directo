@@ -586,3 +586,25 @@ test('draw panel includes a close button in panel-head that hides the panel', as
   assert.match(html, /document\.getElementById\('btn-draw-close'\)\?\.addEventListener\('click',\s*\(\)\s*=>\s*\{[\s\S]*?closeDrawPanel\(\)/);
 });
 
+test('commands can be pinned directly to the favorites bar from the grid and the modal', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
+
+  // Star toggle button in command modal header
+  assert.match(html, /id="btn-cmd-fav-toggle"/);
+  assert.match(html, /function updateCmdModalFavButton\(name\)/);
+  assert.match(html, /function toggleCommandFavorite\(name\)/);
+
+  // Grid creates a star button for each command item
+  assert.match(html, /starBtn\.className = 'cmd-star-btn'/);
+  assert.match(html, /toggleCommandFavorite\(name\)/);
+
+  // Top favorites bar renders dynamic command buttons with cmd: prefix
+  assert.match(html, /id\.startsWith\('cmd:'\)/);
+  assert.match(html, /Comando \$\{cmdName\}|Comando '\s*\+\s*cmdName/);
+
+  // Favorites manager modal lists available commands
+  assert.match(html, /COMANDOS DISPONIBLES/);
+});
+
+

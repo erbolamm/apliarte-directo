@@ -239,8 +239,8 @@
 
     .cmd-grid {display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;}
     .cmd-btn {
-      min-height: 48px; padding: 10px 14px; text-align: left;
-      display: flex; align-items: center; justify-content: flex-start;
+      min-height: 48px; padding: 10px 12px; text-align: left;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
       background: rgba(0, 0, 0, 0.04); color: var(--text-main);
       border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer;
       touch-action: manipulation;
@@ -255,6 +255,20 @@
       border-color: var(--accent);
     }
     .cmd-btn strong {font-size: 14px; font-family: ui-monospace, SFMono-Regular, monospace; overflow-wrap: anywhere; word-break: break-word;}
+    .cmd-star-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; padding: 0; margin-left: auto;
+      border: none; background: transparent; color: var(--text-muted);
+      border-radius: 6px; cursor: pointer; flex-shrink: 0;
+      touch-action: manipulation;
+      transition: color 0.15s ease, transform 0.15s ease;
+    }
+    .cmd-star-btn svg {width: 18px; height: 18px;}
+    .cmd-star-btn:hover {color: #eab308; transform: scale(1.15);}
+    .cmd-star-btn.is-fav {color: #eab308;}
+    .cmd-star-btn.is-fav svg {fill: #eab308; stroke: #ca8a04;}
+    #btn-cmd-fav-toggle.is-fav {color: #eab308;}
+    #btn-cmd-fav-toggle.is-fav svg {fill: #eab308; stroke: #ca8a04;}
     .cmd-step-desc {
       margin: 0; font-size: 14px; color: var(--text-muted); line-height: 1.45;
       padding: 8px 12px; background: rgba(0, 0, 0, 0.04);
@@ -691,7 +705,10 @@
     <div id="cmd-step" class="cmd-step" role="dialog" aria-modal="true" aria-labelledby="cmd-step-title" tabindex="-1">
       <div class="panel-head" style="border: none; padding: 0;">
         <h2 id="cmd-step-title" style="margin: 0;"></h2>
-        <button type="button" class="bar-icon panel-close" id="btn-cmd-modal-close" aria-label="Cerrar comando"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button type="button" class="bar-icon" id="btn-cmd-fav-toggle" aria-label="Añadir este comando a favoritos" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+          <button type="button" class="bar-icon panel-close" id="btn-cmd-modal-close" aria-label="Cerrar comando"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
       </div>
       <p id="cmd-step-desc" class="cmd-step-desc" hidden></p>
       <div id="cmd-step-prompt" class="cmd-step-prompt" hidden></div>
@@ -1626,7 +1643,7 @@
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed) && parsed.length > 0) {
             const validIds = new Set(CORE_FAVORITES.map(f => f.id));
-            const filtered = parsed.filter(id => validIds.has(id));
+            const filtered = parsed.filter(id => validIds.has(id) || (typeof id === 'string' && id.startsWith('cmd:')));
             if (filtered.length > 0) return filtered;
           }
         }
@@ -1641,6 +1658,32 @@
         store.setItem('pizarra_plus_favoritos_v1', JSON.stringify(list));
       } catch (_) {}
       renderFavoritesBar(list);
+    }
+
+    function toggleCommandFavorite(name) {
+      if (!name) return;
+      const cmdId = 'cmd:' + name;
+      const list = getSavedFavorites();
+      const idx = list.indexOf(cmdId);
+      if (idx >= 0) {
+        list.splice(idx, 1);
+      } else {
+        list.push(cmdId);
+      }
+      saveFavorites(list);
+      renderCommands();
+      if (cmdFlow && cmdFlow.template === name) {
+        updateCmdModalFavButton(name);
+      }
+    }
+
+    function updateCmdModalFavButton(name) {
+      const btn = document.getElementById('btn-cmd-fav-toggle');
+      if (!btn || !name) return;
+      const isFav = getSavedFavorites().includes('cmd:' + name);
+      btn.classList.toggle('is-fav', isFav);
+      btn.setAttribute('aria-pressed', String(isFav));
+      btn.setAttribute('aria-label', isFav ? 'Quitar comando de favoritos' : 'Añadir comando a favoritos');
     }
 
     function openFavModal() {
@@ -1671,6 +1714,7 @@
       if (type === 'plus-msg') return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" y1="8" x2="12" y2="14"/><line x1="9" y1="11" x2="15" y2="11"/></svg>';
       if (type === 'plus-cmd') return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>';
       if (type === 'trash') return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+      if (type === 'cmd-star') return '<svg viewBox="0 0 24 24" fill="#eab308" stroke="#ca8a04" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
       return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
     }
 
@@ -1708,6 +1752,40 @@
         row.addEventListener('click', () => btn.click());
         favOptionsList.appendChild(row);
       });
+
+      if (commandsCache && commandsCache.length > 0) {
+        const sep = document.createElement('div');
+        sep.style.cssText = 'font-weight: 700; font-size: 13px; color: var(--text-muted); margin-top: 12px; margin-bottom: 4px; letter-spacing: 0.5px;';
+        sep.textContent = 'COMANDOS DISPONIBLES';
+        favOptionsList.appendChild(sep);
+
+        commandsCache.forEach(item => {
+          const name = Array.isArray(item) ? String(item[0] ?? '') : String(item ?? '');
+          const desc = Array.isArray(item) ? String(item[1] ?? '') : '';
+          if (!name) return;
+          const cmdFavId = 'cmd:' + name;
+          const isPinned = currentFavs.has(cmdFavId);
+          const row = document.createElement('div');
+          row.className = 'fav-option-item';
+          row.innerHTML = `
+            <div class="fav-option-info">
+              <span class="fav-option-title" style="font-family: ui-monospace, SFMono-Regular, monospace;">${name}</span>
+              <span class="fav-option-desc">${desc && desc !== '—' ? desc : 'Comando de chat'}</span>
+            </div>
+            <button type="button" class="fav-toggle-btn ${isPinned ? 'pinned' : ''}" data-id="${cmdFavId}" aria-pressed="${isPinned}">
+              ${isPinned ? 'Fijado' : 'Fijar'}
+            </button>
+          `;
+          const btn = row.querySelector('.fav-toggle-btn');
+          btn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            toggleCommandFavorite(name);
+            renderFavOptions();
+          });
+          row.addEventListener('click', () => btn.click());
+          favOptionsList.appendChild(row);
+        });
+      }
     }
 
     function renderFavoritesBar(activeIds) {
@@ -1722,11 +1800,31 @@
 
       activeIds.forEach(id => {
         if (id === 'cam-mode' || id === 'black-screen') return;
+        if (typeof id === 'string' && id.startsWith('cmd:')) {
+          const cmdName = id.slice(4);
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'bar-icon fav-btn fav-dynamic-btn';
+          b.setAttribute('data-fav-id', id);
+          b.setAttribute('aria-label', 'Comando ' + cmdName);
+          b.innerHTML = `${getFavIconSvg('cmd-star')}<span class="fav-label">${cmdName}</span>`;
+          b.addEventListener('click', async () => {
+            if (!commandsCache || commandsCache.length === 0) {
+              await loadCommands().catch(() => {});
+            }
+            const meta = commandsCache.find(c => (Array.isArray(c) ? c[0] : c) === cmdName);
+            const desc = meta ? (Array.isArray(meta) ? meta[1] : '') : '';
+            startCommand(cmdName, desc);
+          });
+          favItemsContainer.appendChild(b);
+          return;
+        }
         const meta = CORE_FAVORITES.find(c => c.id === id);
         if (!meta) return;
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'bar-icon fav-btn fav-dynamic-btn';
+        b.setAttribute('data-fav-id', id);
         b.setAttribute('aria-label', meta.title);
         b.innerHTML = `${getFavIconSvg(meta.icon)}<span class="fav-label">${meta.title}</span>`;
         b.addEventListener('click', () => {
@@ -2058,6 +2156,7 @@
         const name = Array.isArray(item) ? String(item[0] ?? '') : String(item ?? '');
         const desc = Array.isArray(item) ? String(item[1] ?? '') : '';
         if (!name || (filter && !(name + ' ' + desc).toLowerCase().includes(filter))) continue;
+        const isFav = getSavedFavorites().includes('cmd:' + name);
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'cmd-btn';
@@ -2065,6 +2164,18 @@
         const strong = document.createElement('strong');
         strong.textContent = name;
         button.append(strong);
+
+        const starBtn = document.createElement('button');
+        starBtn.type = 'button';
+        starBtn.className = 'cmd-star-btn' + (isFav ? ' is-fav' : '');
+        starBtn.setAttribute('aria-label', isFav ? `Quitar ${name} de favoritos` : `Añadir ${name} a favoritos`);
+        starBtn.innerHTML = getFavIconSvg(isFav ? 'cmd-star' : 'star');
+        starBtn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          toggleCommandFavorite(name);
+        });
+        button.append(starBtn);
+
         button.addEventListener('click', () => startCommand(name, desc));
         commandsGrid.appendChild(button);
       }
@@ -2077,6 +2188,7 @@
         cmdStepDesc.textContent = cleanDesc;
         cmdStepDesc.hidden = !cleanDesc;
       }
+      updateCmdModalFavButton(template);
       cmdModal.hidden = false;
       showCommandStep();
       cmdStep.focus();
@@ -2122,6 +2234,12 @@
       cmdModal.hidden = true;
     }
     btnCmdModalClose?.addEventListener('click', cancelCommand);
+    const btnCmdFavToggle = document.getElementById('btn-cmd-fav-toggle');
+    btnCmdFavToggle?.addEventListener('click', () => {
+      if (cmdFlow && cmdFlow.template) {
+        toggleCommandFavorite(cmdFlow.template);
+      }
+    });
     cmdModal?.addEventListener('click', event => {
       if (event.target === cmdModal) cancelCommand();
     });
