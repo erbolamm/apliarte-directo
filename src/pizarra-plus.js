@@ -7,7 +7,8 @@ function privateHost(req) {
   try {
     const host = new URL('http://' + req.headers.host).hostname;
     return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' ||
-      host.endsWith('.ts.net') || /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}$/.test(host);
+      host.endsWith('.ts.net') || /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}$/.test(host) ||
+      /^192\.168\.\d{1,3}\.\d{1,3}$/.test(host) || /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host);
   } catch (_) { return false; }
 }
 

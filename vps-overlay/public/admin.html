@@ -2141,7 +2141,12 @@
       const pushUrl = `https://vdo.ninja/?push=${encodeURIComponent(camaraConfig.streamId)}&room=${encodeURIComponent(camaraConfig.room)}${passParam}&webcam&facing=user&videobitrate=${preset.bitrate}&width=${preset.width}&height=${preset.height}&framerate=${preset.fps}&autostart&cleanoutput&noaudio`;
 
       if (cameraPushIframe) {
-        cameraPushIframe.src = pushUrl;
+        if (window.self === window.top) {
+          cameraPushIframe.src = pushUrl;
+        } else {
+          cameraPushIframe.dataset.pushUrl = pushUrl;
+          cameraPushIframe.src = 'about:blank';
+        }
       }
       if (cameraPushContainer) {
         cameraPushContainer.style.display = 'block';
@@ -2178,8 +2183,11 @@
       if (!mobileCamaraActiva && camaraModoAdmin !== 'camara') return;
 
       // Desmontar el iframe libera inmediatamente el sensor de la cámara en el teléfono
-      if (cameraPushIframe && !mobileMicroActivo) {
-        cameraPushIframe.src = 'about:blank';
+      if (cameraPushIframe) {
+        cameraPushIframe.removeAttribute('data-push-url');
+        if (!mobileMicroActivo) {
+          cameraPushIframe.src = 'about:blank';
+        }
       }
       if (cameraPushContainer) {
         cameraPushContainer.style.display = 'none';

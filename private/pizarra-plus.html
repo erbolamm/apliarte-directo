@@ -791,6 +791,7 @@
       <button type="button" class="bar-icon" id="btn-settings-close" aria-label="Cerrar ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <button type="button" class="bar-icon" id="btn-camera-preview-close" aria-label="Ocultar la vista de cámara, sin apagarla"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <iframe id="camera-push-iframe" title="Emisión de cámara de este dispositivo" src="" allow="camera; microphone; autoplay; fullscreen" style="width:100%; height:100%; border:0; display:none; background:#000;"></iframe>
     <iframe id="admin-frame" title="Panel Admin completo" data-src="/admin" allow="camera; microphone; autoplay; fullscreen"></iframe>
   </div>
 
@@ -2149,6 +2150,7 @@
     const settingsButton = document.getElementById('btn-settings');
     let settingsOpen = false;
     let cameraPreviewHidden = false;
+    const cameraPushIframe = document.getElementById('camera-push-iframe');
     function syncAdminDock() {
       const doc = adminFrame.contentDocument;
       const camera = doc?.getElementById('camera-push-container');
@@ -2158,6 +2160,23 @@
       adminDock.classList.toggle('settings', settingsOpen);
       adminDock.classList.toggle('camera-dock', showCamera);
       if (doc?.body && doc.body.classList.contains('plus-camera-only') !== showCamera) doc.body.classList.toggle('plus-camera-only', showCamera);
+      if (typeof cameraPushIframe !== 'undefined' && cameraPushIframe) {
+        if (showCamera) {
+          cameraPushIframe.style.display = 'block';
+          if (adminFrame) adminFrame.style.display = 'none';
+          const nestedIframe = doc?.getElementById('camera-push-iframe');
+          const pushUrl = nestedIframe?.dataset?.pushUrl || nestedIframe?.src;
+          if (pushUrl && pushUrl !== 'about:blank' && cameraPushIframe.src !== pushUrl) {
+            cameraPushIframe.src = pushUrl;
+          }
+        } else {
+          cameraPushIframe.style.display = 'none';
+          if (adminFrame) adminFrame.style.display = 'block';
+          if (!cameraActive && cameraPushIframe.src && cameraPushIframe.src !== 'about:blank') {
+            cameraPushIframe.src = 'about:blank';
+          }
+        }
+      }
     }
     function closeSettings() {
       if (!settingsOpen) return;

@@ -350,12 +350,7 @@ test('Overlay plano.html: setModoCamara es estrictamente idempotente y no recarg
     }
     modoActual = normalizado;
     llamadasActualizarLabel++;
-    if (modoActual === 'camara') {
-      opacity = videoRecibido ? '1' : '0';
-    } else {
-      videoRecibido = false;
-      opacity = '0';
-    }
+    opacity = (modoActual === 'camara') ? '1' : '0';
     return true;
   }
 
@@ -363,7 +358,7 @@ test('Overlay plano.html: setModoCamara es estrictamente idempotente y no recarg
   const cambio1 = setModoCamara('camara');
   assert.equal(cambio1, true);
   assert.equal(modoActual, 'camara');
-  assert.equal(opacity, '0', 'Iframe permanece transparente/oculto antes de que llegue vídeo real');
+  assert.equal(opacity, '1', 'Iframe pasa a opacidad 1 para reproducir el stream');
   assert.equal(llamadasActualizarLabel, 1);
 
   // 2. Llamadas repetidas con 'camara' no deben mutar nada
@@ -373,20 +368,14 @@ test('Overlay plano.html: setModoCamara es estrictamente idempotente y no recarg
   assert.equal(cambio3, false);
   assert.equal(llamadasActualizarLabel, 1, 'No debe haber nuevas llamadas a actualizar DOM/labels');
 
-  // 3. Llegada de vídeo de VDO.Ninja vía window.message
-  videoRecibido = true;
-  if (modoActual === 'camara') opacity = '1';
-  assert.equal(opacity, '1', 'Una vez confirmado el vídeo real, la opacidad pasa a 1');
-
-  // 4. Conmutar a monigote
+  // 3. Conmutar a monigote
   const cambio4 = setModoCamara('monigote');
   assert.equal(cambio4, true);
   assert.equal(modoActual, 'monigote');
-  assert.equal(opacity, '0');
-  assert.equal(videoRecibido, false);
+  assert.equal(opacity, '0', 'Iframe se oculta en modo monigote');
   assert.equal(llamadasActualizarLabel, 2);
 
-  // 5. Repetir monigote: ignorado
+  // 4. Repetir monigote: ignorado
   const cambio5 = setModoCamara('monigote');
   assert.equal(cambio5, false);
   assert.equal(llamadasActualizarLabel, 2);

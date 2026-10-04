@@ -3293,25 +3293,29 @@
     const jaAvatarCamBox = document.getElementById('ja-avatar-cam-box');
 
     function actualizarVisibilidadCamaraYMonigote() {
-      const tieneVideo = Boolean(videoCamaraRecibido && modoCamaraActual === 'camara');
+      const esCamara = modoCamaraActual === 'camara';
       if (cameraIframe) {
-        cameraIframe.style.opacity = tieneVideo ? '1' : '0';
-        cameraIframe.style.pointerEvents = tieneVideo ? 'auto' : 'none';
+        cameraIframe.style.opacity = esCamara ? '1' : '0';
+        cameraIframe.style.pointerEvents = esCamara ? 'auto' : 'none';
       }
       if (jaAvatarCamBox) {
-        jaAvatarCamBox.classList.toggle('mini-pip', tieneVideo);
+        jaAvatarCamBox.classList.toggle('mini-pip', esCamara);
       }
     }
 
     function setModoCamara(modo) {
       const normalizado = (modo === 'camara' || modo === 'on' || modo === true) ? 'camara' : 'monigote';
-      if (normalizado === modoCamaraActual) {
-        return; // Idempotente: si el modo ya coincide, no hacer nada ni recargar
+      if (normalizado === modoCamaraActual && cameraIframe && cameraIframe.src && cameraIframe.src !== 'about:blank' && cameraIframe.src !== window.location.href) {
+        return; // Idempotente: si el modo ya coincide y tiene src, no hacer nada ni recargar
       }
       modoCamaraActual = normalizado;
 
       if (cameraEl) {
         cameraEl.classList.remove('hidden');
+      }
+
+      if (modoCamaraActual === 'camara' && cameraIframe && (!cameraIframe.src || cameraIframe.src === 'about:blank' || cameraIframe.src === window.location.href)) {
+        initCameraOverlay();
       }
 
       actualizarVisibilidadCamaraYMonigote();
@@ -3375,6 +3379,7 @@
           if (cameraIframe && cameraIframe.src !== targetUrl) {
             cameraIframe.src = targetUrl;
           }
+          actualizarVisibilidadCamaraYMonigote();
           return;
         }
         const res = await fetch('/api/directo/camara/config', { cache: 'no-store' });
@@ -3383,9 +3388,10 @@
           if (data.viewUrl && cameraIframe && cameraIframe.src !== data.viewUrl) {
             cameraIframe.src = data.viewUrl;
           }
-          if (data.modo && data.modo !== modoCamaraActual) {
+          if (data.modo) {
             setModoCamara(data.modo);
           }
+          actualizarVisibilidadCamaraYMonigote();
         }
       } catch (err) {
         console.warn('Config cámara overlay:', err);
