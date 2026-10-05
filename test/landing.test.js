@@ -64,3 +64,15 @@ test('Landing Page: links to the official Guide on repository', () => {
   assert.match(html, /Guía de Comandos/, 'Must include readable label for the guide');
 });
 
+test('Landing Page: includes complete SEO package (OpenGraph, Twitter Cards, Schema.org)', () => {
+  const html = fs.readFileSync(landingHtmlPath, 'utf8');
+  assert.match(html, /<meta\s+property="og:type"\s+content="website"/i);
+  assert.match(html, /<meta\s+property="og:image"\s+content="https:\/\/directo\.apliarte\.com\/og-image\.jpg"/i);
+  assert.match(html, /<meta\s+name="twitter:card"\s+content="summary_large_image"/i);
+  assert.match(html, /<meta\s+name="twitter:creator"\s+content="@erbolamm"/i);
+  assert.match(html, /application\/ld\+json/i);
+  assert.match(html, /"SoftwareApplication"/i);
+  assert.match(html, /"WebSite"/i);
+});
+
+

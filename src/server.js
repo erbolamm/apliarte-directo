@@ -14,6 +14,7 @@ import {
   mkdirSync,
   readdirSync,
   statSync,
+  copyFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -192,9 +193,33 @@ if (!ok) {
   process.exit(1);
 }
 
-const archivoRespaldo = configuracion.respaldo
-  ? resolve(RAIZ, configuracion.respaldo)
-  : null;
+const carpetaVideos = join(RAIZ, "medios", "videos");
+const rutaConfigRespaldo = join(RAIZ, "data", "respaldo-config.json");
+
+function obtenerRespaldoActivo() {
+  try {
+    if (existsSync(rutaConfigRespaldo)) {
+      const cfg = JSON.parse(readFileSync(rutaConfigRespaldo, "utf8"));
+      if (cfg?.archivo && existsSync(join(carpetaVideos, cfg.archivo))) {
+        return cfg.archivo;
+      }
+    }
+  } catch (_) {}
+  return "pausa-tecnica.mp4";
+}
+
+function resolverArchivoRespaldo() {
+  const activo = obtenerRespaldoActivo();
+  const rutaDirecta = join(carpetaVideos, activo);
+  if (existsSync(rutaDirecta)) return rutaDirecta;
+  if (configuracion.respaldo) {
+    const rutaConf = resolve(RAIZ, configuracion.respaldo);
+    if (existsSync(rutaConf)) return rutaConf;
+  }
+  return null;
+}
+
+const archivoRespaldo = resolverArchivoRespaldo();
 const tieneRespaldo = Boolean(archivoRespaldo && existsSync(archivoRespaldo));
 if (configuracion.respaldo && !tieneRespaldo) {
   console.log(
@@ -346,7 +371,7 @@ async function pasarARespaldo() {
               if (revision !== revisionEntrada || cerrando) break;
               const pid = await procesos.arrancarRespaldo({
                 destino,
-                archivo: archivoRespaldo,
+                archivo: resolverArchivoRespaldo() || archivoRespaldo,
                 entorno: process.env,
                 alSalir: (motivo) => {
                   centro.procesoFallo(destino.nombre, motivo);
@@ -574,9 +599,7 @@ app.post("/api/destino/:nombre/detener", async (req, res) => {
 // Rutas y test en panel-rutas.js: no volver a escribirlas a mano aquí.
 app.use(crearRutasPanel(join(RAIZ, "data")));
 
-// ─── Vídeos manuales ──────────────────────────────────────────────────────────
-const carpetaVideos = join(RAIZ, "medios", "videos");
-
+// ─── Vídeos manuales y de respaldo ─────────────────────────────────────────
 let colaVideos = [];
 
 app.get("/api/videos", (_req, res) => {
@@ -585,7 +608,7 @@ app.get("/api/videos", (_req, res) => {
     if (existsSync(carpetaVideos)) {
       archivos = readdirSync(carpetaVideos)
         .filter(
-          (f) => f.endsWith(".mp4") || f.endsWith(".mkv") || f.endsWith(".mov"),
+          (f) => !f.startsWith(".") && (f.endsWith(".mp4") || f.endsWith(".mkv") || f.endsWith(".mov") || f.endsWith(".webm")),
         )
         .map((f) => {
           const stats = statSync(join(carpetaVideos, f));
@@ -599,7 +622,37 @@ app.get("/api/videos", (_req, res) => {
   res.json({
     archivos,
     reproduciendo: centro.instantanea().archivoManual,
+    respaldoActivo: obtenerRespaldoActivo(),
   });
+});
+
+app.get("/api/videos/respaldo", (_req, res) => {
+  res.json({
+    ok: true,
+    activo: obtenerRespaldoActivo(),
+    ruta: configuracion.respaldo || "medios/respaldo.mp4",
+  });
+});
+
+app.post("/api/videos/respaldo/seleccionar", (req, res) => {
+  const { archivo } = req.body || {};
+  if (!archivo || typeof archivo !== "string" || archivo.includes("..") || archivo.includes("/") || archivo.includes("\\")) {
+    return res.status(400).json({ ok: false, error: "Nombre de archivo invalido" });
+  }
+  const rutaOrigen = join(carpetaVideos, archivo);
+  if (!existsSync(rutaOrigen)) {
+    return res.status(404).json({ ok: false, error: "El video no existe en medios/videos/" });
+  }
+  try {
+    const destinoCanonico = resolve(RAIZ, configuracion.respaldo || "medios/respaldo.mp4");
+    copyFileSync(rutaOrigen, destinoCanonico);
+    if (!existsSync(join(RAIZ, "data"))) mkdirSync(join(RAIZ, "data"), { recursive: true });
+    writeFileSync(rutaConfigRespaldo, JSON.stringify({ archivo, actualizadoEn: Date.now() }, null, 2), "utf8");
+    anotar(`Video de corte OBS actualizado a: ${archivo}`);
+    res.json({ ok: true, activo: archivo });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 app.get("/api/videos/cola", (_req, res) => res.json({ cola: colaVideos }));

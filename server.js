@@ -1618,13 +1618,30 @@ const server = http.createServer((req, res) => {
   // Rutas de Vídeos y Lista de Espera (Cockpit y Panel Local)
   if (path.startsWith('/api/videos')) {
     cors(res);
-    const MEDIOS_VIDEOS = '/app/medios/videos';
+    const MEDIOS_DIR = fs.existsSync('/app/medios') ? '/app/medios' : pathMod.join(__dirname, 'medios');
+    const MEDIOS_VIDEOS = pathMod.join(MEDIOS_DIR, 'videos');
+    const ARCHIVO_RESPALDO_CANONICO = pathMod.join(MEDIOS_DIR, 'respaldo.mp4');
+    const DATA_DIR = fs.existsSync('/app/data') ? '/app/data' : pathMod.join(__dirname, 'data');
+    const CONFIG_RESPALDO_PATH = pathMod.join(DATA_DIR, 'respaldo-config.json');
+
+    function obtenerRespaldoActivoLocal() {
+      try {
+        if (fs.existsSync(CONFIG_RESPALDO_PATH)) {
+          const cfg = JSON.parse(fs.readFileSync(CONFIG_RESPALDO_PATH, 'utf8'));
+          if (cfg?.archivo && fs.existsSync(pathMod.join(MEDIOS_VIDEOS, cfg.archivo))) {
+            return cfg.archivo;
+          }
+        }
+      } catch (_) {}
+      return 'pausa-tecnica.mp4';
+    }
+
     if (path === '/api/videos' && req.method === 'GET') {
       let archivos = [];
       try {
         if (fs.existsSync(MEDIOS_VIDEOS)) {
           archivos = fs.readdirSync(MEDIOS_VIDEOS)
-            .filter(f => !f.startsWith('.') && (f.endsWith('.mp4') || f.endsWith('.mkv') || f.endsWith('.webm')))
+            .filter(f => !f.startsWith('.') && (f.endsWith('.mp4') || f.endsWith('.mkv') || f.endsWith('.webm') || f.endsWith('.mov')))
             .map(f => {
               const stat = fs.statSync(pathMod.join(MEDIOS_VIDEOS, f));
               return { archivo: f, tamanoMb: +(stat.size / 1024 / 1024).toFixed(1) };
@@ -1635,8 +1652,46 @@ const server = http.createServer((req, res) => {
       return res.end(JSON.stringify({
         archivos,
         reproduciendo: videoEnAntena,
-        cola: videoCola
+        cola: videoCola,
+        respaldoActivo: obtenerRespaldoActivoLocal()
       }));
+    }
+    if (path === '/api/videos/respaldo' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({
+        ok: true,
+        activo: obtenerRespaldoActivoLocal(),
+        ruta: 'medios/respaldo.mp4'
+      }));
+    }
+    if (path === '/api/videos/respaldo/seleccionar' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => { body += c; });
+      req.on('end', () => {
+        try {
+          const datos = JSON.parse(body || '{}');
+          const archivo = datos.archivo;
+          if (!archivo || typeof archivo !== 'string' || archivo.includes('..') || archivo.includes('/') || archivo.includes('\\')) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ ok: false, error: 'Nombre de archivo inválido' }));
+          }
+          const rutaOrigen = pathMod.join(MEDIOS_VIDEOS, archivo);
+          if (!fs.existsSync(rutaOrigen)) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ ok: false, error: 'El vídeo no existe en medios/videos/' }));
+          }
+          fs.copyFileSync(rutaOrigen, ARCHIVO_RESPALDO_CANONICO);
+          if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+          fs.writeFileSync(CONFIG_RESPALDO_PATH, JSON.stringify({ archivo, actualizadoEn: Date.now() }, null, 2), 'utf8');
+          console.log(`[RespaldoOBS] Vídeo de corte OBS actualizado a: ${archivo}`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ ok: true, activo: archivo }));
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ ok: false, error: e.message }));
+        }
+      });
+      return;
     }
     if (path === '/api/videos/cola' && req.method === 'GET') {
       res.writeHead(200, { 'Content-Type': 'application/json' });

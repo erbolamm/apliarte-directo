@@ -1191,6 +1191,17 @@
         Previsualiza vídeos en el móvil con audio, emítelos en OBS o agrégalos a la lista de espera.
       </div>
 
+      <!-- Banner de Vídeo de Respaldo por Corte -->
+      <div id="admin-video-respaldo-box" style="margin-bottom:12px; padding:10px; background:rgba(234,179,8,0.12); border-radius:10px; border:1px solid rgba(234,179,8,0.35);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:8px; flex-wrap:wrap;">
+          <span style="font-size:0.8rem; font-weight:700; color:#facc15;">🛡️ Vídeo de Corte OBS (Bucle activo)</span>
+          <span id="badge-video-respaldo-activo" style="font-size:0.75rem; font-weight:700; color:#fff; background:#854d0e; padding:2px 8px; border-radius:6px;">pausa-tecnica.mp4</span>
+        </div>
+        <div style="font-size:0.75rem; color:#e2e8f0; line-height:1.35;">
+          Si OBS pierde conexión o se corta la señal, el centro de emisión emitirá automáticamente este vídeo en bucle infinito hacia Twitch y YouTube. Pulsa «🛡️ Fijar corte» en cualquier vídeo o añade tus propios archivos MP4 en <code>medios/videos/</code>.
+        </div>
+      </div>
+
       <div id="admin-video-preview-box" style="display:none; margin-bottom:12px; padding:10px; background:#0f172a; border-radius:10px; border:1px solid var(--cyan);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <span style="font-size:0.8rem; font-weight:700; color:var(--cyan);" id="admin-preview-title">👁️ Vista previa</span>
@@ -2443,6 +2454,10 @@
         const d = await r.json();
         const archivos = d.archivos || [];
         if (badgeVideosCount) badgeVideosCount.textContent = archivos.length;
+        const badgeRespaldo = document.getElementById('badge-video-respaldo-activo');
+        if (badgeRespaldo && d.respaldoActivo) {
+          badgeRespaldo.textContent = d.respaldoActivo;
+        }
         if (!adminVideosLista) return;
 
         if (archivos.length === 0) {
@@ -2455,6 +2470,7 @@
           const item = document.createElement('div');
           item.style.cssText = 'background:#1e293b; padding:10px; border-radius:8px; border:1px solid var(--card-border); display:flex; flex-direction:column; gap:6px;';
           const esActivo = d.reproduciendo && d.reproduciendo === v.archivo;
+          const esRespaldo = (d.respaldoActivo === v.archivo) || (!d.respaldoActivo && v.archivo === 'pausa-tecnica.mp4');
 
           item.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -2465,6 +2481,9 @@
               <button type="button" class="touch-btn btn-admin-ver" style="flex:1; min-height:34px; padding:2px 8px; font-size:0.75rem;">👁️ Ver</button>
               <button type="button" class="touch-btn ${esActivo ? 'touch-btn-danger' : 'touch-btn-primary'} btn-admin-emitir" style="flex:1; min-height:34px; padding:2px 8px; font-size:0.75rem;">
                 ${esActivo ? '⏹️ Detener' : '🚀 Emitir'}
+              </button>
+              <button type="button" class="touch-btn btn-admin-respaldo" style="flex:1.2; min-height:34px; padding:2px 8px; font-size:0.75rem; ${esRespaldo ? 'background:#15803d; border-color:#22c55e; color:#fff;' : 'background:#334155; color:#cbd5e1;'}">
+                ${esRespaldo ? '🛡️ Corte activo' : '🛡️ Fijar corte'}
               </button>
               <button type="button" class="touch-btn btn-admin-encolar" style="min-height:34px; padding:2px 8px; font-size:0.75rem;">➕ Encolar</button>
             </div>
@@ -2492,6 +2511,24 @@
               consultarAdminCola();
             } catch (err) {
               showToast('Error al emitir vídeo');
+            }
+          });
+
+          item.querySelector('.btn-admin-respaldo')?.addEventListener('click', async () => {
+            try {
+              const res = await fetch('/api/videos/respaldo/seleccionar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ archivo: v.archivo })
+              });
+              if (res.ok) {
+                showToast(`🛡️ Fijado como vídeo de corte: ${v.archivo}`);
+                cargarAdminVideos();
+              } else {
+                showToast('Error al fijar vídeo de corte');
+              }
+            } catch (_) {
+              showToast('Error de conexión');
             }
           });
 

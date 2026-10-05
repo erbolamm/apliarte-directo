@@ -52,6 +52,15 @@
     @media(max-width:800px) { .layout { grid-template-columns:1fr; } .stage { min-height:420px; } #office-3d { height:410px; } }
     /* The demo has its own view controls; the office toolbar (EN VIVO, inbox, task search) does nothing here. */
     #office-3d .camera-tools { display: none; }
+    .support-strip { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:10px 14px; background:var(--panel); border:1px solid var(--line); border-radius:10px; margin-bottom:8px; font-size:0.9rem; }
+    .support-links { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .btn-support-pill { text-decoration:none; padding:6px 12px; border-radius:6px; font-weight:600; font-size:0.85rem; display:inline-flex; align-items:center; gap:5px; border:1px solid var(--line); color:var(--ink); background:var(--panel); transition:all 0.15s ease; }
+    .btn-support-pill:hover { border-color:var(--accent); color:var(--accent); }
+    .btn-support-pill.kofi:hover { border-color:#ff5e5b; color:#ff5e5b; }
+    .btn-support-pill.paypal:hover { border-color:#0070ba; color:#0070ba; }
+    .btn-support-pill.sponsors:hover { border-color:#ea4aaa; color:#ea4aaa; }
+    .btn-support-pill.highlight { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .btn-support-pill.highlight:hover { opacity:0.9; color:#fff; }
   </style>
   <script defer src="./office-3d.js?v=385f4b7629"></script>
 </head>
@@ -59,12 +68,27 @@
   <header>
     <div><h1>ApliArte Directo · Demo pública</h1><small>Solo en tu navegador · No conecta con el directo, Twitch, OBS ni otros visitantes.</small></div>
     <div class="toolbar">
-      <a href="./landing.html" class="nav-btn-landing" style="text-decoration:none; padding:7px 14px; background:var(--accent); color:#fff; font-weight:600; font-size:0.9rem; border-radius:8px; border:1px solid var(--accent); display:inline-flex; align-items:center; gap:6px;">📖 Ver Landing e Instalación</a>
+      <a href="https://github.com/erbolamm/apliarte-directo/releases/latest" target="_blank" rel="noopener noreferrer" class="btn-support-pill highlight" style="text-decoration:none;">📥 Descargar ZIP</a>
+      <a href="./landing.html" class="nav-btn-landing" style="text-decoration:none; padding:7px 14px; background:var(--panel); color:var(--ink); font-weight:600; font-size:0.9rem; border-radius:8px; border:1px solid var(--line); display:inline-flex; align-items:center; gap:6px;">📖 Ver Landing</a>
       <button id="themeToggle" class="icon" type="button" aria-label="Cambiar entre modo claro y oscuro" data-tip="Cambiar tema">☾</button>
       <button id="deployOpen" class="icon" type="button" aria-label="Abrir instrucciones de instalación" data-tip="Instalar tu propio Directo">⬇</button>
     </div>
   </header>
   <main class="wrap">
+    <div class="support-strip" role="region" aria-label="Apoyo al proyecto y donaciones">
+      <div style="display:flex; align-items:center; gap:6px;">
+        <strong>❤️ Apoya ApliArte Directo:</strong>
+        <span class="muted">Software 100% libre e independiente</span>
+      </div>
+      <div class="support-links">
+        <a href="https://ko-fi.com/C0C11TWR1K" target="_blank" rel="noopener noreferrer" class="btn-support-pill kofi" title="Donar un café en Ko-fi">☕ Ko-fi</a>
+        <a href="https://paypal.me/erbolamm" target="_blank" rel="noopener noreferrer" class="btn-support-pill paypal" title="Donar por PayPal">💳 PayPal</a>
+        <a href="https://github.com/sponsors/erbolamm" target="_blank" rel="noopener noreferrer" class="btn-support-pill sponsors" title="Patrocinar en GitHub Sponsors">❤️ Sponsors</a>
+        <a href="https://streamelements.com/apliarte/tip" target="_blank" rel="noopener noreferrer" class="btn-support-pill" title="Propina en StreamElements">🎁 Stream Tip</a>
+        <a href="https://www.twitch.tv/apliarte" target="_blank" rel="noopener noreferrer" class="btn-support-pill" title="Canal oficial de Twitch">🔴 Twitch</a>
+        <a href="./landing.html" class="btn-support-pill" title="Guía completa e instalación">📖 Guía completa</a>
+      </div>
+    </div>
     <div class="layout">
       <section class="stage" aria-label="Plano real de ApliArte Directo">
         <div id="office-3d" data-fill="1"></div>
@@ -99,14 +123,27 @@
           <div id="commands" class="commands"></div>
           <p class="muted">!damas activa las casillas a1–l8. !carrera es una práctica local con los avatares reales, no una partida compartida.</p>
         </section>
+        <section class="panel" style="border: 1px solid var(--accent); background: rgba(0, 95, 169, 0.04);">
+          <h2 style="margin:0 0 6px; color:var(--accent); font-size:0.95rem;">❤️ Apoya este proyecto</h2>
+          <p class="muted" style="font-size:0.85rem; margin-bottom:10px;">ApliArte Directo es gratuito y de código abierto. Tu apoyo directo ayuda a mantener el desarrollo independiente y los directos:</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+            <a href="https://ko-fi.com/C0C11TWR1K" target="_blank" rel="noopener noreferrer" class="btn-support-pill kofi" style="justify-content:center;">☕ Ko-fi</a>
+            <a href="https://paypal.me/erbolamm" target="_blank" rel="noopener noreferrer" class="btn-support-pill paypal" style="justify-content:center;">💳 PayPal</a>
+            <a href="https://github.com/sponsors/erbolamm" target="_blank" rel="noopener noreferrer" class="btn-support-pill sponsors" style="justify-content:center;">❤️ Sponsors</a>
+            <a href="https://streamelements.com/apliarte/tip" target="_blank" rel="noopener noreferrer" class="btn-support-pill" style="justify-content:center;">🎁 Stream Tip</a>
+          </div>
+        </section>
       </aside>
     </div>
     <div style="margin-top:16px; padding:16px 20px; background:var(--panel); border:1px solid var(--line); border-radius:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
       <div>
         <strong style="font-size:1.05rem; display:block; margin-bottom:4px;">¿Quieres tu propio estudio ApliArte Directo?</strong>
-        <span class="muted" style="font-size:0.9rem;">Consulta la guía de instalación, configuración con OBS, enlaces de descarga y donaciones en la Landing Oficial.</span>
+        <span class="muted" style="font-size:0.9rem;">Instálalo en tu ordenador con un ZIP y doble clic. Conéctalo a OBS y Twitch sin usar Docker.</span>
       </div>
-      <a href="./landing.html" style="text-decoration:none; padding:10px 18px; background:var(--accent); color:#fff; font-weight:700; border-radius:8px; white-space:nowrap; display:inline-block;">📖 Ver Landing Oficial y Descarga</a>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <a href="https://github.com/erbolamm/apliarte-directo/releases/latest" target="_blank" rel="noopener noreferrer" style="text-decoration:none; padding:10px 18px; background:var(--accent); color:#fff; font-weight:700; border-radius:8px; white-space:nowrap; display:inline-block;">📥 Descargar Suite v1.0.0</a>
+        <a href="./landing.html" style="text-decoration:none; padding:10px 18px; background:var(--panel); color:var(--ink); border:1px solid var(--line); font-weight:700; border-radius:8px; white-space:nowrap; display:inline-block;">📖 Ver Landing y Donaciones</a>
+      </div>
     </div>
     <p class="muted">El plano 3D y el diorama 2D son los del Directo real. La interacción está limitada a controles de esta página para evitar abrir paneles privados.</p>
   </main>

@@ -113,9 +113,7 @@ const CODIGO_DE_HOY = "ESCRIBE-AQUI";   // ← cambia esto y guarda
 
 1. En la escena, **+** → **Fuente de navegador** → nombre, por ejemplo «Código de hoy».
 2. Marca **Archivo local** y elige:
-   `codigo-de-hoy.html` (en la raíz de este proyecto)
-   O, sin marcar esa casilla, pega la URL:
-   `file:///ruta/a/apliarte-directo/codigo-de-hoy.html`
+   `public/codigo-de-hoy.html` (o usa la URL local `http://127.0.0.1:7979/codigo-de-hoy.html` si el servidor está en marcha)
 3. Ancho **1920**, alto **1080**.
 4. Tras cambiar el valor, pulsa **Actualizar** en las propiedades de la fuente. El texto cambia sin
    reiniciar OBS.
