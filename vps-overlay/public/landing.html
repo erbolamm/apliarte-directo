@@ -316,7 +316,124 @@
       justify-content: center;
       gap: 16px;
       flex-wrap: wrap;
-      margin-bottom: 48px;
+      margin-bottom: 32px;
+    }
+
+    /* Hero Preview & Interactive Demo Frame */
+    .hero-preview-container {
+      max-width: 1040px;
+      margin: 28px auto 16px;
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 12px 36px rgba(0, 95, 169, 0.12);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+    }
+    [data-theme="dark"] .hero-preview-container {
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+      border-color: rgba(94, 206, 245, 0.25);
+    }
+    .preview-browser-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--surface-elevated);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .browser-dots {
+      display: flex;
+      gap: 6px;
+    }
+    .browser-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #ff5f56;
+    }
+    .browser-dot:nth-child(2) { background: #ffbd2e; }
+    .browser-dot:nth-child(3) { background: #27c93f; }
+    .browser-title {
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .preview-screen {
+      position: relative;
+      cursor: pointer;
+      overflow: hidden;
+      background: #141622;
+      display: block;
+      line-height: 0;
+    }
+    .preview-screen img {
+      width: 100%;
+      height: auto;
+      display: block;
+      transition: transform 0.3s ease, filter 0.3s ease;
+    }
+    .preview-screen:hover img {
+      transform: scale(1.015);
+      filter: brightness(0.92);
+    }
+    .preview-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: rgba(0, 30, 60, 0.45);
+      backdrop-filter: blur(2px);
+      transition: background 0.2s ease;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+      line-height: 1.4;
+    }
+    .preview-screen:hover .preview-overlay {
+      background: rgba(0, 30, 60, 0.25);
+    }
+    .preview-play-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 28px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      box-shadow: 0 6px 20px rgba(0, 95, 169, 0.4);
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    .preview-screen:hover .preview-play-btn {
+      transform: scale(1.06);
+      background: var(--primary-deep);
+    }
+    .preview-hint {
+      font-size: 0.95rem;
+      color: #fdfdfd;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    }
+    .hero-demo-iframe {
+      width: 100%;
+      height: 640px;
+      border: none;
+      display: block;
+      background: var(--bg);
+    }
+    @media (max-width: 800px) {
+      .hero-demo-iframe { height: 500px; }
+      .preview-play-btn { font-size: 0.95rem; padding: 10px 20px; }
+      .browser-title { font-size: 0.78rem; }
     }
 
     /* Pillars / Highlights */
@@ -583,6 +700,31 @@
           <a href="./demo.html" class="btn btn-secondary">🔴 Probar la demo</a>
         </div>
         <p class="guide-note">«Abrir mi Directo» funciona solo si ya lo has arrancado en este equipo. Esta página no arranca la aplicación por sí sola.</p>
+
+        <!-- Preview Mockup Card & Live Demo Embed Trigger -->
+        <div class="hero-preview-container" id="hero-preview-box">
+          <div class="preview-browser-bar">
+            <div class="browser-dots">
+              <span class="browser-dot"></span>
+              <span class="browser-dot"></span>
+              <span class="browser-dot"></span>
+            </div>
+            <div class="browser-title" id="browser-title-text">ApliArte Directo · Estudio 3D y Avatares en Vivo</div>
+            <div class="browser-actions">
+              <a href="./demo.html" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" id="btn-fullscreen-demo" style="text-decoration:none; padding:4px 10px; font-size:0.78rem;">⛶ Pantalla completa</a>
+            </div>
+          </div>
+          <div class="preview-screen" id="preview-screen" role="button" tabindex="0" aria-label="Haz clic para activar la demo interactiva 3D de ApliArte Directo">
+            <picture>
+              <source srcset="./preview-demo.webp" type="image/webp">
+              <img src="./preview-demo.jpg" alt="Captura de ApliArte Directo con diorama 3D, avatares y chat" width="1400" height="789" loading="eager">
+            </picture>
+            <div class="preview-overlay" id="preview-overlay">
+              <span class="preview-play-btn">▶ Clic para probar la Demo 3D interactiva</span>
+              <span class="preview-hint">Carga el diorama en vivo en tu navegador (sin instalar nada)</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -845,6 +987,31 @@
         document.documentElement.setAttribute('data-theme', saved);
         updateThemeUI(saved);
       } catch (_) {}
+    })();
+
+    // Interactive Demo Launcher on Hero Preview Click
+    (function initDemoLauncher() {
+      const previewScreen = document.getElementById('preview-screen');
+      if (!previewScreen) return;
+      function activateDemo() {
+        const titleText = document.getElementById('browser-title-text');
+        const iframe = document.createElement('iframe');
+        iframe.src = './demo.html';
+        iframe.className = 'hero-demo-iframe';
+        iframe.title = 'Demo interactiva en vivo de ApliArte Directo';
+        iframe.setAttribute('allow', 'autoplay');
+        previewScreen.replaceWith(iframe);
+        if (titleText) {
+          titleText.innerHTML = '🔴 ApliArte Directo · Demo interactiva en vivo (activa)';
+        }
+      }
+      previewScreen.addEventListener('click', activateDemo);
+      previewScreen.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          activateDemo();
+        }
+      });
     })();
   </script>
 </body>
