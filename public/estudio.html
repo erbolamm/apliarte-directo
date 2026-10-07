@@ -180,6 +180,12 @@
       font-size: 1rem; /* 16px keeps iOS from zooming on focus */
     }
 
+    details.tailscale { border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
+    details.tailscale > summary { min-height: var(--touch); display: flex; align-items: center; padding: 0 var(--gap); font-weight: 600; cursor: pointer; }
+    details.tailscale > div { padding: 0 var(--gap) var(--gap); }
+    /* Tailscale not found on this machine: greyed out and it does not open. */
+    details.tailscale[data-active="false"] { opacity: 0.45; }
+    details.tailscale[data-active="false"] > summary { cursor: not-allowed; }
     .source { display: grid; gap: 0.25rem; padding: var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
     .source-head { display: flex; align-items: center; gap: var(--gap); }
     .source-head h3 { font-size: 0.9rem; margin-right: auto; }
@@ -457,6 +463,16 @@
         <h2 id="sources-title">Fuentes para OBS Studio</h2>
         <p class="hint">Añade cada dirección en OBS como fuente «Navegador». Las direcciones se forman con la dirección desde la que has abierto esta página.</p>
         <div id="obs-sources" class="card" style="border:0; padding:0; background:transparent;"></div>
+      </section>
+
+      <section class="card" aria-labelledby="network-title">
+        <h2 id="network-title">Abrir en otro dispositivo</h2>
+        <p class="hint" id="network-status" role="status">Buscando las direcciones de este equipo…</p>
+        <div id="network-lan" class="groups"></div>
+        <details class="tailscale" id="tailscale-details" data-active="false">
+          <summary id="tailscale-summary">Tailscale</summary>
+          <div id="tailscale-body" class="groups"></div>
+        </details>
       </section>
 
       <button type="button" class="btn btn-primary btn-start" id="btn-arrancar-estudio" disabled aria-describedby="start-hint">▶ Arrancar Estudio</button>
@@ -1133,6 +1149,87 @@
       } finally {
         button.disabled = false;
       }
+    }
+
+    // ── Links for other devices ──────────────────────────────────────────
+    // GET /api/panel/red returns this machine's addresses on the local
+    // network and its Tailscale address. A page cannot find them by itself.
+    function linkCard(id, title, url, note) {
+      const card = document.createElement('div');
+      card.className = 'source';
+      const head = document.createElement('div');
+      head.className = 'source-head';
+      const heading = document.createElement('h3');
+      heading.textContent = title;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn';
+      button.dataset.action = 'copy';
+      button.dataset.target = id;
+      button.textContent = 'Copiar';
+      button.setAttribute('aria-label', `Copiar la dirección: ${title}`);
+      head.append(heading, button);
+      const code = document.createElement('code');
+      code.id = id;
+      code.tabIndex = 0;
+      code.textContent = url;
+      card.append(head, code);
+      if (note) {
+        const hint = document.createElement('p');
+        hint.className = 'hint';
+        hint.textContent = note;
+        card.appendChild(hint);
+      }
+      return card;
+    }
+    function setTailscale(active, summary) {
+      const details = $('tailscale-details');
+      details.dataset.active = String(active);
+      details.setAttribute('aria-disabled', String(!active));
+      if (!active) details.open = false;
+      $('tailscale-summary').textContent = summary;
+    }
+    const HTTP_ONLY_NOTE = 'Dirección http: sirve para ver y manejar el panel, pero el navegador del otro dispositivo no deja usar ahí su cámara ni su micrófono.';
+    async function loadNetwork() {
+      const status = $('network-status');
+      const lanList = $('network-lan');
+      const tailscaleBody = $('tailscale-body');
+      lanList.replaceChildren();
+      tailscaleBody.replaceChildren();
+      let data;
+      try {
+        const response = await fetch('/api/panel/red', { cache: 'no-store', credentials: 'same-origin' });
+        if (!response.ok) throw new Error(String(response.status));
+        data = await response.json();
+      } catch (error) {
+        status.textContent = error.message === '404'
+          ? 'El servidor que está en marcha es anterior a esta función: reinícialo para ver aquí las direcciones.'
+          : 'No se pudieron consultar las direcciones de este equipo.';
+        setTailscale(false, 'Tailscale · no se pudo comprobar');
+        return;
+      }
+      const port = data.port;
+      const lan = Array.isArray(data.lan) ? data.lan : [];
+      if (lan.length === 0) {
+        status.textContent = 'Este equipo no está conectado a ninguna red local.';
+      } else if (data.lanReachable === false) {
+        status.textContent = 'El servidor solo atiende a este equipo, así que estas direcciones todavía no funcionan desde otro dispositivo. Arráncalo abierto a la red (HOST=0.0.0.0) para usarlas.';
+      } else {
+        status.textContent = 'Ábrela en la tableta o en cualquier dispositivo conectado a la misma wifi.';
+      }
+      lan.forEach((ip, index) => {
+        lanList.appendChild(linkCard(`network-lan-${index}`, `Misma wifi · ${ip}`, `http://${ip}:${port}/estudio`, HTTP_ONLY_NOTE));
+      });
+      const tailscale = data.tailscale || {};
+      if (!tailscale.active || !tailscale.url) {
+        setTailscale(false, 'Tailscale · no detectado en este equipo');
+        return;
+      }
+      setTailscale(true, 'Tailscale · activo');
+      const secure = tailscale.url.startsWith('https://');
+      tailscaleBody.appendChild(linkCard('network-tailscale', 'Desde cualquier sitio con Tailscale', `${tailscale.url}/estudio`,
+        secure ? 'Dirección segura (https): ahí sí funcionan la cámara y el micrófono del otro dispositivo. Ese dispositivo también necesita Tailscale.'
+          : HTTP_ONLY_NOTE + ' Ese dispositivo también necesita Tailscale.'));
     }
 
     // ── OBS sources ──────────────────────────────────────────────────────
@@ -4242,6 +4339,11 @@
       if (draftRestored) showToast('Recuperado lo que habías escrito. Pulsa «Guardar credenciales».');
 
       renderObsSources();
+      // A greyed-out Tailscale block stays closed.
+      $('tailscale-summary').addEventListener('click', (event) => {
+        if ($('tailscale-details').dataset.active !== 'true') event.preventDefault();
+      });
+      loadNetwork();
     }
 
     init();

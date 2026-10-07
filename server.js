@@ -6,6 +6,7 @@ const { WebSocketServer } = require('ws');
 const { parseWsAuth, parseWsPanelCookie, isTrustedWsOrigin, decideWsRole, canReceive, canSend } = require('./src/ws-auth');
 const { handleStreamingConfig } = require('./src/streaming-config');
 const { handleCentreStatus, handleFinalizarEmision } = require('./src/centro-status');
+const { handleRedLocal } = require('./src/red-local');
 
 // Local, gitignored launch settings (data/directo.local.json → {"env": {...}}).
 // Applied as defaults so every launcher (npm run directo, erbolamm directo on,
@@ -1520,6 +1521,10 @@ const server = http.createServer((req, res) => {
   if (path === '/api/panel/destinos') {
     return handleCentreStatus(req, res, isAuth, { port: Number(process.env.CENTRO_PANEL_PORT || 8790) });
   }
+  // Read-only: addresses other devices can use to open this panel.
+  if (path === '/api/panel/red') {
+    return handleRedLocal(req, res, isAuth, { port: PORT, host: HOST });
+  }
   if (path === '/api/panel/emision/finalizar' && req.method === 'POST') {
     return handleFinalizarEmision(req, res, isAuth, { port: Number(process.env.CENTRO_PANEL_PORT || 8790) });
   }
@@ -2644,6 +2649,10 @@ html,body{width:100%;height:100%;overflow:hidden;
       if (serveStatic(req, res, '/directo.html')) return;
     }
     if (serveStatic(req, res, '/admin.html')) return;
+  }
+
+  if (path === '/estudio') {
+    if (serveStatic(req, res, '/estudio.html')) return;
   }
 
   if (path === '/plano' || path === '/plano.html' || path === '/overlay') {
