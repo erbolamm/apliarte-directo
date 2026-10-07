@@ -200,6 +200,21 @@
     .stage-canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
     #drawing-canvas { touch-action: none; cursor: crosshair; }
     #preview-canvas { pointer-events: none; }
+    /* Live state of the one-tap toggles. Amber, because red is reserved. */
+    .icon-btn.live { background: var(--warn); border-color: var(--warn); color: var(--black); }
+    .camera-box {
+      position: fixed;
+      left: var(--gap);
+      bottom: calc(var(--touch) + 3 * var(--gap) + env(safe-area-inset-bottom));
+      z-index: 14;
+      width: min(240px, 45vw);
+      aspect-ratio: 16 / 9;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--black);
+    }
+    .camera-box iframe { width: 100%; height: 100%; border: 0; display: block; }
     .toolbar-sep { width: 1px; align-self: stretch; background: var(--line); }
     .toolbar-status { align-self: center; color: var(--text-muted); font-size: 0.8rem; }
     .icon-btn.active { border-color: var(--brand-strong); color: var(--brand-strong); }
@@ -386,7 +401,7 @@
         <button type="button" class="btn btn-danger" id="btn-apagar-estudio" data-action="open-shutdown">Apagar</button>
       </div>
     </header>
-    <p class="notice mock-banner" id="studio-mock-note">En construcción. Ya funcionan la pizarra, «Apagar» y la pantalla negra; faltan la cámara, el micrófono, la voz del chat, los comandos y los ajustes.</p>
+    <p class="notice mock-banner" id="studio-mock-note">En construcción. Ya funcionan la pizarra, la cámara, el micrófono, la voz del chat, «Apagar» y la pantalla negra; faltan el chat, los comandos, las escenas de OBS y los ajustes.</p>
     <main class="stage">
       <div class="stage-canvas" id="canvas-container" hidden>
         <canvas id="drawing-canvas"></canvas>
@@ -401,6 +416,10 @@
       <button type="button" class="icon-btn" id="btn-undo" aria-label="Deshacer" data-tip="Deshace el último trazo."></button>
       <button type="button" class="icon-btn" id="btn-redo" aria-label="Rehacer" data-tip="Rehace el último trazo deshecho."></button>
       <button type="button" class="icon-btn" id="btn-clear" aria-pressed="false" aria-label="Limpiar todo el dibujo" data-tip="Borra todo el dibujo. Hay que tocarlo dos veces seguidas."></button>
+      <span class="toolbar-sep" aria-hidden="true"></span>
+      <button type="button" class="icon-btn" id="btn-device-camera" aria-pressed="false" aria-label="Cámara de este dispositivo: apagada" data-tip="Emite la cámara de este dispositivo a OBS. Otro toque vuelve al monigote."></button>
+      <button type="button" class="icon-btn" id="btn-tablet-mic" aria-pressed="false" aria-label="Micrófono de este dispositivo: silenciado" data-tip="Envía el micrófono de este dispositivo a OBS. Otro toque lo silencia."></button>
+      <button type="button" class="icon-btn" id="btn-tts" aria-pressed="false" aria-label="Voz del chat (TTS) apagada: pulsa para activarla" data-tip="Lee en voz alta los mensajes del chat. Otro toque la detiene."></button>
       <span class="toolbar-sep" aria-hidden="true"></span>
       <button type="button" class="icon-btn" id="btn-pantalla-negra" data-action="black-screen" aria-label="Pantalla negra de ahorro" data-tip="Pone la pantalla en negro para ahorrar batería sin cortar el directo. Toca la pantalla para volver."></button>
       <button type="button" class="icon-btn" data-action="open-settings" aria-label="Abrir ajustes" data-tip="Abre los ajustes del estudio."></button>
@@ -428,6 +447,10 @@
       </div>
       <label class="draw-check"><input id="allow-touch" type="checkbox"> Dibujar también con el dedo</label>
     </section>
+
+    <div class="camera-box" id="camera-push-container" hidden>
+      <iframe id="camera-push-iframe" src="about:blank" title="Cámara de este dispositivo" allow="camera; microphone; autoplay; fullscreen"></iframe>
+    </div>
 
     <div class="text-entry" id="text-entry" hidden>
       <input id="text-entry-input" type="text" maxlength="120" autocomplete="off" aria-label="Texto para la pizarra">
@@ -486,6 +509,10 @@
       gear: '<circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
       close: '<path d="M6 6l12 12M18 6L6 18"/>',
       screenOff: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M5 6l14 9"/>',
+      // One-tap toggle icons, taken unchanged from pizarra-plus.
+      liveCamera: "<rect x=\"3\" y=\"5\" width=\"12\" height=\"14\" rx=\"2\"/><path d=\"M15 10l6-4v12l-6-4\"/>",
+      liveMic: "<rect x=\"9\" y=\"2\" width=\"6\" height=\"12\" rx=\"3\"/><path d=\"M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8\"/>",
+      liveTts: "<path d=\"M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12\"/>",
       // Whiteboard icons, taken unchanged from pizarra-plus.
       boardDraw: "<path d=\"M4 20l4-1L20 7l-3-3L5 16zM14 7l3 3\"/>",
       boardUndo: "<path d=\"M3 7v6h6\"/><path d=\"M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13\"/>",
@@ -1479,6 +1506,290 @@
       board.connect = connectBoard;
     }
 
+    // ── Panel socket ─────────────────────────────────────────────────────
+    // The same /ws the old panel uses: it carries the microphone audio and
+    // the camera start/stop orders, and reports camera mode changes back.
+    const panel = { ws: null, started: false, onCameraMode: null };
+    const panelSocketOpen = () => Boolean(panel.ws && panel.ws.readyState === WebSocket.OPEN);
+    function panelSend(payload) {
+      if (!panelSocketOpen()) return false;
+      try { panel.ws.send(JSON.stringify(payload)); return true; } catch (_) { return false; }
+    }
+    function connectPanelSocket() {
+      panel.started = true;
+      if (panel.ws && (panel.ws.readyState === WebSocket.OPEN || panel.ws.readyState === WebSocket.CONNECTING)) return;
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const token = new URLSearchParams(window.location.search).get('token') || '';
+        const socket = new WebSocket(`${protocol}//${window.location.host}/ws${token ? `?token=${encodeURIComponent(token)}` : ''}`);
+        panel.ws = socket;
+        socket.onmessage = (event) => {
+          let data;
+          try { data = JSON.parse(event.data); } catch (_) { return; }
+          if (data && data.type === 'camara_modo' && data.modo && panel.onCameraMode) panel.onCameraMode(data.modo);
+        };
+        socket.onclose = () => { setTimeout(connectPanelSocket, 2000); };
+        socket.onerror = () => { try { socket.close(); } catch (_) { /* already closed */ } };
+      } catch (_) { /* retried on the next visibility change */ }
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (panel.started && document.visibilityState === 'visible') connectPanelSocket();
+    });
+
+    // Same request as enviarComando() in the old panel, without its toasts.
+    function sendPanelCommand(command, extras) {
+      return fetch('/api/directo/comando', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comando: command, usuario: 'ja', ...extras })
+      }).catch(() => {});
+    }
+
+    function setLiveButton(button, live, label) {
+      button.classList.toggle('live', live);
+      button.setAttribute('aria-pressed', String(live));
+      button.setAttribute('aria-label', label);
+    }
+
+    // ── Microphone ───────────────────────────────────────────────────────
+    // Ported from toggleMicroMobile(): raw PCM in 4096-sample blocks sent
+    // as base64 JSON over the panel socket. Gain, noise gate and echo
+    // settings are read from the keys the old panel writes.
+    const mic = { active: false, stream: null, context: null, processor: null };
+    const micSetting = (key, fallback) => {
+      try { const value = localStorage.getItem(key); return value === null ? fallback : value; } catch (_) { return fallback; }
+    };
+    async function toggleMicrophone() {
+      const button = $('btn-tablet-mic');
+      if (!mic.active) {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showToast('Este navegador no permite usar el micrófono aquí (hace falta HTTPS o localhost)');
+          return;
+        }
+        try {
+          const denoise = micSetting('erbolamm_micro_denoise', 'true') !== 'false';
+          const echo = micSetting('erbolamm_micro_eco', 'true') !== 'false';
+          mic.stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: echo, noiseSuppression: denoise, autoGainControl: true }
+          });
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          mic.context = new AudioContextClass();
+          if (mic.context.state === 'suspended') await mic.context.resume();
+          const source = mic.context.createMediaStreamSource(mic.stream);
+          mic.processor = mic.context.createScriptProcessor(4096, 1, 1);
+          source.connect(mic.processor);
+          // Muted output keeps the processor running without feeding the speaker.
+          const muteGain = mic.context.createGain();
+          muteGain.gain.value = 0;
+          mic.processor.connect(muteGain);
+          muteGain.connect(mic.context.destination);
+
+          const sampleRate = mic.context.sampleRate;
+          mic.processor.onaudioprocess = (event) => {
+            if (!mic.active) return;
+            const input = event.inputBuffer.getChannelData(0);
+            let peak = 0;
+            for (let i = 0; i < input.length; i++) {
+              const amplitude = Math.abs(input[i]);
+              if (amplitude > peak) peak = amplitude;
+            }
+            // Silence is dropped so it does not load the network or OBS.
+            const gateOn = micSetting('erbolamm_micro_denoise', 'true') !== 'false';
+            if (peak < 0.001 || (gateOn && peak < 0.005)) return;
+            const gain = Math.max(0.5, Math.min(3.0, parseFloat(micSetting('erbolamm_micro_gain', '1.5')) || 1.5));
+            const samples = new Int16Array(input.length);
+            for (let i = 0; i < input.length; i++) {
+              const sample = Math.max(-1, Math.min(1, input[i] * gain));
+              samples[i] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+            }
+            if (!panelSocketOpen()) return;
+            const bytes = new Uint8Array(samples.buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+            panelSend({ type: 'voz_pcm', pcm: btoa(binary), sampleRate });
+          };
+
+          mic.active = true;
+          panelSend({ type: 'micro_start' });
+          setLiveButton(button, true, 'Micrófono de este dispositivo: en directo. Toca para silenciar');
+          showToast('Micrófono en antena');
+        } catch (error) {
+          stopMicrophoneHardware();
+          showToast('Error micrófono: ' + (error.message || error));
+        }
+        return;
+      }
+      mic.active = false;
+      panelSend({ type: 'micro_stop' });
+      stopMicrophoneHardware();
+      setLiveButton(button, false, 'Micrófono de este dispositivo: silenciado');
+      showToast('Micrófono silenciado');
+    }
+    function stopMicrophoneHardware() {
+      if (mic.processor) { try { mic.processor.disconnect(); } catch (_) { /* gone */ } mic.processor = null; }
+      if (mic.stream) { mic.stream.getTracks().forEach((track) => track.stop()); mic.stream = null; }
+      if (mic.context) { try { mic.context.close(); } catch (_) { /* gone */ } mic.context = null; }
+    }
+
+    // ── Camera ───────────────────────────────────────────────────────────
+    // Ported from iniciarCamaraMobile()/detenerCamaraMobile(): the device
+    // camera is pushed through a VDO.Ninja page in an iframe and OBS is
+    // told to switch between the camera and the avatar.
+    const CAMERA_PRESETS = {
+      low: { width: 320, height: 240, fps: 15, bitrate: 250, desc: '320×240 @ 15fps' },
+      med: { width: 640, height: 360, fps: 24, bitrate: 600, desc: '640×360 @ 24fps' },
+      high: { width: 1280, height: 720, fps: 30, bitrate: 1500, desc: '1280×720 @ 30fps' }
+    };
+    const camera = { active: false, mode: 'monigote', config: { room: 'erbolammapliarte', streamId: 'ja_cam_directo', password: '' } };
+    function cameraPushUrl() {
+      const preset = CAMERA_PRESETS[micSetting('erbolamm_cam_preset', 'low')] || CAMERA_PRESETS.low;
+      const facing = micSetting('erbolamm_cam_facing', 'user');
+      const deviceId = micSetting('erbolamm_cam_device_id', '');
+      const { room, streamId, password } = camera.config;
+      const passParam = password ? `&password=${encodeURIComponent(password)}` : '';
+      const facingParam = facing === 'back' || facing === 'environment' ? '&facing=back' : '&facing=user';
+      const deviceParam = deviceId ? `&videodevice=${encodeURIComponent(deviceId)}` : '';
+      return {
+        preset,
+        url: `https://vdo.ninja/?push=${encodeURIComponent(streamId)}&room=${encodeURIComponent(room)}${passParam}&webcam${facingParam}${deviceParam}&videobitrate=${preset.bitrate}&width=${preset.width}&height=${preset.height}&framerate=${preset.fps}&autostart&cleanoutput&noaudio`
+      };
+    }
+    function refreshCameraButton() {
+      const on = camera.active || camera.mode === 'camara';
+      setLiveButton($('btn-device-camera'), on, on
+        ? 'Cámara de este dispositivo: emitiendo. Toca para volver al monigote'
+        : 'Cámara de este dispositivo: apagada');
+    }
+    function startCamera() {
+      const { preset, url } = cameraPushUrl();
+      $('camera-push-iframe').src = url;
+      $('camera-push-container').hidden = false;
+      camera.active = true;
+      camera.mode = 'camara';
+      refreshCameraButton();
+      // One order only: the socket if open, the HTTP command otherwise.
+      if (!panelSend({ type: 'camara_start' })) sendPanelCommand('!cam camara', { modo: 'camara' });
+      showToast(`Cámara emitiendo (${preset.desc})`);
+    }
+    function stopCamera(reason, fromRemote = false) {
+      if (!camera.active && camera.mode !== 'camara') return;
+      // Unloading the iframe releases the camera sensor at once.
+      $('camera-push-iframe').src = 'about:blank';
+      $('camera-push-container').hidden = true;
+      camera.active = false;
+      camera.mode = 'monigote';
+      refreshCameraButton();
+      // Only a local action is reported, so remote changes do not echo.
+      if (!fromRemote && !panelSend({ type: 'camara_stop' })) sendPanelCommand('!cam monigote', { modo: 'monigote' });
+      showToast(reason ? `Monigote activado (${reason})` : 'Monigote activado');
+    }
+    async function loadCameraConfig() {
+      try {
+        const response = await fetch('/api/directo/camara/config', { cache: 'no-store' });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.room) camera.config.room = data.room;
+        if (data.streamId) camera.config.streamId = data.streamId;
+        if (data.password !== undefined) camera.config.password = data.password;
+        if (data.modo && data.modo !== camera.mode) {
+          camera.mode = data.modo;
+          refreshCameraButton();
+        }
+      } catch (_) { /* defaults stay */ }
+    }
+    panel.onCameraMode = (mode) => {
+      if (mode === 'monigote' && camera.active) { stopCamera('modo monigote activado', true); return; }
+      camera.mode = mode;
+      refreshCameraButton();
+    };
+
+    // ── Chat voice (TTS) ─────────────────────────────────────────────────
+    // Ported from pizarra-plus: reads the public Twitch chat anonymously
+    // and plays each message through the server's /api/tts.
+    const TTS_CHANNEL = 'apliarte';
+    const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+    const tts = { active: false, socket: null, queue: [], playing: false, ignored: new Set(), player: new Audio() };
+    function playNextTts() {
+      if (!tts.active || tts.queue.length === 0) { tts.playing = false; return; }
+      tts.playing = true;
+      tts.player.src = `/api/tts?tl=es&q=${encodeURIComponent(tts.queue.shift())}`;
+      tts.player.play().catch(() => setTimeout(playNextTts, 150));
+    }
+    function queueTts(text) {
+      if (!tts.active || !text) return;
+      tts.queue.push(text.slice(0, 160));
+      if (!tts.playing) playNextTts();
+    }
+    tts.player.addEventListener('ended', () => setTimeout(playNextTts, 150));
+    tts.player.addEventListener('error', () => setTimeout(playNextTts, 150));
+    async function loadIgnoredUsers() {
+      try {
+        const response = await fetch('/api/panel/usuarios-ignorados', { cache: 'no-store' });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (Array.isArray(data.usuarios)) tts.ignored = new Set(data.usuarios.map((user) => String(user).toLowerCase()));
+      } catch (_) { /* nobody ignored */ }
+    }
+    function connectTtsChat() {
+      if (tts.socket) { try { tts.socket.close(); } catch (_) { /* gone */ } }
+      const retry = () => { if (tts.active) setTimeout(() => { if (tts.active) connectTtsChat(); }, 4000); };
+      try {
+        const socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+        tts.socket = socket;
+        const marker = `PRIVMSG #${TTS_CHANNEL} :`;
+        socket.onopen = () => {
+          socket.send('PASS oauth:undefined');
+          socket.send('NICK justinfan' + Math.floor(Math.random() * 89999 + 10000));
+          socket.send(`JOIN #${TTS_CHANNEL}`);
+        };
+        socket.onmessage = (event) => {
+          const raw = event.data || '';
+          if (raw.startsWith('PING')) { socket.send('PONG :tmi.twitch.tv'); return; }
+          if (!raw.includes(marker)) return;
+          let message = (raw.split(marker)[1] || '').trim();
+          const userMatch = raw.match(/:([a-zA-Z0-9_]+)!/);
+          const user = userMatch ? userMatch[1] : '';
+          if (message.startsWith('!') || tts.ignored.has(user.toLowerCase())) return;
+          message = message.replace(/https?:\/\/\S+/gi, 'enlace');
+          queueTts(`${user} dice: ${message}`);
+        };
+        socket.onerror = () => { if (tts.socket === socket) retry(); };
+        socket.onclose = () => { if (tts.socket === socket) retry(); };
+      } catch (_) { retry(); }
+    }
+    function toggleTts() {
+      const button = $('btn-tts');
+      if (tts.active) {
+        tts.active = false;
+        tts.queue.length = 0;
+        tts.playing = false;
+        try { tts.player.pause(); tts.player.removeAttribute('src'); } catch (_) { /* idle */ }
+        if (tts.socket) { const socket = tts.socket; tts.socket = null; try { socket.close(); } catch (_) { /* gone */ } }
+        setLiveButton(button, false, 'Voz del chat (TTS) apagada: pulsa para activarla');
+        return;
+      }
+      // Playing inside the tap unlocks audio on iOS.
+      tts.player.src = SILENT_WAV;
+      tts.player.play().catch(() => {});
+      tts.active = true;
+      loadIgnoredUsers();
+      setLiveButton(button, true, 'Voz del chat (TTS) activada: pulsa para detenerla');
+      queueTts('Voz del chat activada');
+      connectTtsChat();
+    }
+
+    function initLiveControls() {
+      $('btn-device-camera').innerHTML = icon('liveCamera');
+      $('btn-tablet-mic').innerHTML = icon('liveMic');
+      $('btn-tts').innerHTML = icon('liveTts');
+      $('btn-device-camera').addEventListener('click', () => {
+        if (camera.active || camera.mode === 'camara') stopCamera('apagada desde el estudio');
+        else startCamera();
+      });
+      $('btn-tablet-mic').addEventListener('click', toggleMicrophone);
+      $('btn-tts').addEventListener('click', toggleTts);
+    }
+
     // ── Shutdown: clean end of the broadcast ─────────────────────────────
     // Same request and messages as finalizarEmision() in the old panel,
     // with a dialog instead of the browser's confirm() and alert().
@@ -1521,6 +1832,7 @@
         hideAllSecrets();
         // The board joins the shared drawing socket only once the studio opens.
         if (board.ready && !board.ws) board.connect();
+        if (!panel.started) { connectPanelSocket(); loadCameraConfig(); }
       }
     }
 
@@ -1650,6 +1962,7 @@
       bindTips();
       bindBlackScreen();
       initBoard();
+      initLiveControls();
 
       document.addEventListener('click', (event) => {
         const button = event.target.closest('[data-action]');
