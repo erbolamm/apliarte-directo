@@ -216,6 +216,10 @@
     }
     /* Hidden preview keeps the iframe alive so the camera keeps sending. */
     .camera-box.minimized { width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .meter { flex: 1; min-width: 140px; height: 12px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--surface); }
+    .meter-bar { height: 100%; width: 0; background: var(--brand-strong); }
+    .video-card { display: grid; gap: 0.25rem; padding: var(--gap); border: 1px solid var(--line); border-radius: var(--radius); }
+    .video-card small { color: var(--text-muted); }
     .settings-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
     .settings-row .btn[aria-pressed="true"] { border-color: var(--brand-strong); color: var(--brand-strong); }
     .settings-panel select { min-height: var(--touch); padding: 0 var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 1rem; max-width: 100%; }
@@ -449,7 +453,7 @@
         <button type="button" class="btn btn-danger" id="btn-apagar-estudio" data-action="open-shutdown">Apagar</button>
       </div>
     </header>
-    <p class="notice mock-banner" id="studio-mock-note">En construcción. Faltan la pestaña «Escenario y Avatares 3D», los minijuegos, el medidor de volumen, la configuración de la voz del chat y la captura fija de OBS como fondo del lienzo.</p>
+    <p class="notice mock-banner" id="studio-mock-note">En construcción. Faltan los mensajes SMS, los avatares, los minijuegos, la configuración de la voz del chat y la captura fija de OBS como fondo del lienzo.</p>
     <main class="stage">
       <div class="stage-canvas" id="canvas-container" hidden>
         <canvas id="drawing-canvas"></canvas>
@@ -1695,7 +1699,7 @@
     // Ported from toggleMicroMobile(): raw PCM in 4096-sample blocks sent
     // as base64 JSON over the panel socket. Gain, noise gate and echo
     // settings are read from the keys the old panel writes.
-    const mic = { active: false, stream: null, context: null, processor: null };
+    const mic = { active: false, stream: null, context: null, processor: null, analyser: null };
     const micSetting = (key, fallback) => {
       try { const value = localStorage.getItem(key); return value === null ? fallback : value; } catch (_) { return fallback; }
     };
@@ -1716,6 +1720,9 @@
           mic.context = new AudioContextClass();
           if (mic.context.state === 'suspended') await mic.context.resume();
           const source = mic.context.createMediaStreamSource(mic.stream);
+          mic.analyser = mic.context.createAnalyser();
+          mic.analyser.fftSize = 256;
+          source.connect(mic.analyser);
           mic.processor = mic.context.createScriptProcessor(4096, 1, 1);
           source.connect(mic.processor);
           // Muted output keeps the processor running without feeding the speaker.
@@ -1769,6 +1776,7 @@
       if (mic.processor) { try { mic.processor.disconnect(); } catch (_) { /* gone */ } mic.processor = null; }
       if (mic.stream) { mic.stream.getTracks().forEach((track) => track.stop()); mic.stream = null; }
       if (mic.context) { try { mic.context.close(); } catch (_) { /* gone */ } mic.context = null; }
+      mic.analyser = null;
     }
 
     // ── Camera ───────────────────────────────────────────────────────────
@@ -2618,7 +2626,35 @@
           rerender('audio');
         }, Math.abs(value - gain) < 0.05);
       });
-      settingsNote(panel, 'Falta por traer del panel antiguo: el medidor de volumen y la configuración de canal y voz del chat.');
+      settingsHeading(panel, 'Nivel del micrófono');
+      const meterRow = settingsRow(panel);
+      const meter = document.createElement('div');
+      meter.className = 'meter';
+      const bar = document.createElement('div');
+      bar.className = 'meter-bar';
+      meter.appendChild(bar);
+      const level = document.createElement('output');
+      level.textContent = '-∞ dB';
+      meterRow.append(meter, level);
+      // Same RMS-to-decibel scale as the old panel; stops when the tab changes.
+      const drawMeter = () => {
+        if (!meter.isConnected) return;
+        if (mic.active && mic.analyser) {
+          const data = new Uint8Array(mic.analyser.frequencyBinCount);
+          mic.analyser.getByteTimeDomainData(data);
+          let sum = 0;
+          for (let i = 0; i < data.length; i++) { const value = (data[i] - 128) / 128; sum += value * value; }
+          const decibels = Math.round(20 * Math.log10(Math.max(Math.sqrt(sum / data.length), 0.0001)));
+          bar.style.width = Math.max(0, Math.min(100, Math.round(((decibels + 50) / 50) * 100))) + '%';
+          level.textContent = decibels <= -48 ? '-∞ dB' : `${decibels} dB`;
+        } else {
+          bar.style.width = '0%';
+          level.textContent = mic.active ? '-∞ dB' : 'Micrófono apagado';
+        }
+        requestAnimationFrame(drawMeter);
+      };
+      drawMeter();
+      settingsNote(panel, 'Falta por traer del panel antiguo: la configuración de canal y voz del chat.');
     };
 
     settingsRenderers.system = (panel) => {
@@ -2773,6 +2809,116 @@
       });
     }
 
+    // ── Stage tab: diorama theme and videos ──────────────────────────────
+    // Ported from the old panel: /api/categoria and /api/videos.
+    const STAGE_CATEGORIES = [['apps', 'Apps'], ['musica', 'Música'], ['arte', 'Arte'], ['andando', 'Andando'], ['charlando', 'Charlando']];
+    const stage = { loaded: false, category: 'apps', mode: 'dark', videos: [], playing: '', backup: '', queue: [], error: '' };
+    const stageTabOpen = () => $('settings-dialog').open && $('settings-tab-stage').getAttribute('aria-selected') === 'true';
+    async function loadStage() {
+      stage.error = '';
+      try {
+        const [categoryResponse, videosResponse, queueResponse] = await Promise.all([
+          fetch('/api/categoria', { cache: 'no-store' }),
+          fetch('/api/videos', { cache: 'no-store' }),
+          fetch('/api/videos/cola', { cache: 'no-store' })
+        ]);
+        if (categoryResponse.ok) {
+          const data = await categoryResponse.json();
+          stage.category = data.categoria || 'apps';
+          stage.mode = data.modo || 'dark';
+        }
+        if (videosResponse.ok) {
+          const data = await videosResponse.json();
+          stage.videos = Array.isArray(data.archivos) ? data.archivos : [];
+          stage.playing = data.reproduciendo || '';
+          stage.backup = data.respaldoActivo || '';
+        } else {
+          stage.error = 'No se pudo consultar la lista de vídeos.';
+        }
+        if (queueResponse.ok) {
+          const data = await queueResponse.json();
+          stage.queue = Array.isArray(data.cola) ? data.cola : [];
+        }
+      } catch (_) {
+        stage.error = 'Sin conexión con el servidor.';
+      }
+      stage.loaded = true;
+      if (stageTabOpen()) selectSettingsTab('stage');
+    }
+    async function stagePost(url, body, okMessage, errorMessage) {
+      try {
+        const response = await fetch(url, body
+          ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+          : { method: 'POST' });
+        showToast(response.ok ? okMessage : errorMessage);
+      } catch (_) {
+        showToast('Error de conexión');
+      }
+      await loadStage();
+    }
+    settingsRenderers.stage = (panel) => {
+      if (!stage.loaded) {
+        settingsNote(panel, 'Cargando escenario…');
+        loadStage();
+        return;
+      }
+      settingsHeading(panel, 'Tema del diorama');
+      const categories = settingsRow(panel);
+      STAGE_CATEGORIES.forEach(([id, label]) => {
+        settingsButton(categories, label, () => stagePost('/api/categoria', { categoria: id }, `Tema: ${label}`, 'No se pudo cambiar el tema'), stage.category === id);
+      });
+      const light = stage.mode === 'light';
+      settingsButton(settingsRow(panel), light ? 'Diorama en modo claro' : 'Diorama en modo oscuro',
+        () => stagePost('/api/categoria', { modo: light ? 'dark' : 'light' }, light ? 'Diorama en modo oscuro' : 'Diorama en modo claro', 'No se pudo cambiar el modo'));
+
+      const videosHead = settingsRow(panel);
+      const heading = document.createElement('h3');
+      heading.textContent = `Vídeos (${stage.videos.length})`;
+      heading.style.marginRight = 'auto';
+      videosHead.appendChild(heading);
+      settingsButton(videosHead, 'Actualizar', () => loadStage());
+      if (stage.error) settingsNote(panel, stage.error);
+      if (stage.queue.length > 0) {
+        const queue = document.createElement('div');
+        queue.className = 'video-card';
+        const title = document.createElement('strong');
+        title.textContent = 'Cola de emisión';
+        queue.appendChild(title);
+        stage.queue.forEach((entry, index) => {
+          const line = document.createElement('small');
+          line.textContent = `${index + 1}. ${entry.archivo}`;
+          queue.appendChild(line);
+        });
+        settingsButton(queue, 'Vaciar la cola', () => stagePost('/api/videos/cola/limpiar', null, 'Cola de vídeos vaciada', 'No se pudo vaciar la cola'));
+        panel.appendChild(queue);
+      }
+      if (stage.videos.length === 0 && !stage.error) settingsNote(panel, 'No hay vídeos subidos en medios/videos/.');
+      stage.videos.forEach((video) => {
+        const name = video.archivo;
+        const playing = stage.playing === name;
+        const isBackup = stage.backup === name || (!stage.backup && name === 'pausa-tecnica.mp4');
+        const card = document.createElement('div');
+        card.className = 'video-card';
+        const title = document.createElement('strong');
+        title.textContent = name;
+        const size = document.createElement('small');
+        size.textContent = `${video.tamanoMb || 0} MB` + (playing ? ' · emitiendo ahora' : '');
+        card.append(title, size);
+        const actions = document.createElement('div');
+        actions.className = 'settings-row';
+        const path = '/api/videos/' + encodeURIComponent(name);
+        settingsButton(actions, playing ? 'Detener' : 'Emitir', () => (playing
+          ? stagePost('/api/videos/detener', null, `Detenido: ${name}`, 'Error al detener el vídeo')
+          : stagePost(path + '/reproducir', null, `Emitiendo: ${name}`, 'Error al emitir el vídeo')), playing);
+        settingsButton(actions, isBackup ? 'Corte activo' : 'Fijar corte',
+          () => stagePost('/api/videos/respaldo/seleccionar', { archivo: name }, `Fijado como vídeo de corte: ${name}`, 'Error al fijar vídeo de corte'), isBackup);
+        settingsButton(actions, 'Encolar', () => stagePost(path + '/encolar', null, `Encolado: ${name}`, 'Error al encolar el vídeo'));
+        card.appendChild(actions);
+        panel.appendChild(card);
+      });
+      settingsNote(panel, 'Falta por traer del panel antiguo: la vista previa de cada vídeo, los mensajes SMS y los avatares.');
+    };
+
     let commandsTabLoaded = false;
     settingsRenderers.commands = (panel) => {
       if (!commandsTabLoaded) {
@@ -2901,7 +3047,7 @@
       'copy': handleCopy,
       'toggle-theme': toggleTheme,
       'toggle-secret': (button) => setSecretVisible(button, button.getAttribute('aria-pressed') !== 'true'),
-      'open-settings': () => { commandsTabLoaded = false; $('settings-dialog').showModal(); selectSettingsTab(SETTINGS_TABS[0].id); },
+      'open-settings': () => { commandsTabLoaded = false; stage.loaded = false; $('settings-dialog').showModal(); selectSettingsTab(SETTINGS_TABS[0].id); },
       'close-settings': () => $('settings-dialog').close(),
       'toggle-group': (button) => {
         setGroupEnabled(button.closest('.group'), button.getAttribute('aria-checked') !== 'true');
