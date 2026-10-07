@@ -197,6 +197,7 @@
       background: var(--surface);
       overflow: hidden;
     }
+    .stage-canvas img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
     .stage-canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
     #drawing-canvas { touch-action: none; cursor: crosshair; }
     #preview-canvas { pointer-events: none; }
@@ -468,9 +469,10 @@
         <button type="button" class="btn btn-danger" id="btn-apagar-estudio" data-action="open-shutdown">Apagar</button>
       </div>
     </header>
-    <p class="notice mock-banner" id="studio-mock-note">En construcción. Faltan los mensajes SMS, los avatares, los minijuegos, la vista previa de los vídeos y la captura fija de OBS como fondo del lienzo.</p>
+    <p class="notice mock-banner" id="studio-mock-note">Panel nuevo en pruebas: todo lo del panel antiguo está traído, pero aún no se ha probado en un directo real.</p>
     <main class="stage">
       <div class="stage-canvas" id="canvas-container" hidden>
+        <img id="obs-preview-bg" alt="Captura fija de OBS" hidden>
         <canvas id="drawing-canvas"></canvas>
         <canvas id="preview-canvas"></canvas>
       </div>
@@ -552,6 +554,14 @@
         <div class="scenes-grid" id="obs-scenes-grid"></div>
         <select id="obs-input" aria-label="Entrada de audio de OBS" disabled></select>
         <button type="button" class="btn" id="btn-obs-mute" aria-pressed="false" disabled>Audio de OBS sin estado confirmado</button>
+        <button type="button" class="btn" id="btn-obs-preview" aria-pressed="false">Mostrar captura OBS</button>
+        <select id="obs-interval" aria-label="Cada cuánto se renueva la captura de OBS">
+          <option value="0" selected>Solo al pulsar captura</option>
+          <option value="1000">1 s</option>
+          <option value="2000">2 s</option>
+          <option value="5000">5 s</option>
+          <option value="10000">10 s</option>
+        </select>
         <button type="button" class="btn" id="btn-open-sources">Ver fuentes de la escena activa</button>
         <div id="sources-section" class="groups" hidden>
           <h3 id="sources-title">Fuentes</h3>
@@ -2928,7 +2938,42 @@
         reportSources(error.message, true);
       } finally { obs.sourcesBusy = false; }
     }
+    // Still capture of OBS behind the whiteboard: single images, never video.
+    const obsPreview = { active: false, busy: false, timer: 0 };
+    function scheduleObsCapture() {
+      clearTimeout(obsPreview.timer);
+      obsPreview.timer = 0;
+      const interval = Number($('obs-interval').value);
+      if (obsPreview.active && !document.hidden && interval > 0) obsPreview.timer = setTimeout(captureObs, interval);
+    }
+    async function captureObs() {
+      if (!obsPreview.active || document.hidden || obsPreview.busy) return;
+      obsPreview.busy = true;
+      try {
+        const data = await obsRequest('screenshot');
+        if (obsPreview.active && !document.hidden) $('obs-preview-bg').src = data.image;
+        reportObs('Imagen OBS actualizada.');
+      } catch (error) {
+        reportObs(error.name === 'AbortError' ? 'OBS no responde.' : error.message, true);
+      } finally {
+        obsPreview.busy = false;
+        scheduleObsCapture();
+      }
+    }
+    function setObsPreview(visible) {
+      obsPreview.active = visible;
+      const button = $('btn-obs-preview');
+      button.setAttribute('aria-pressed', String(visible));
+      button.textContent = visible ? 'Ocultar captura OBS' : 'Mostrar captura OBS';
+      $('obs-preview-bg').hidden = !visible;
+      clearTimeout(obsPreview.timer);
+      if (visible) captureObs(); else $('obs-preview-bg').removeAttribute('src');
+    }
+
     function initObs() {
+      $('btn-obs-preview').addEventListener('click', () => setObsPreview(!obsPreview.active));
+      $('obs-interval').addEventListener('change', scheduleObsCapture);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden && obsPreview.active) captureObs(); });
       $('btn-obs-menu').innerHTML = icon('sheetObs');
       $('btn-obs-menu').addEventListener('click', () => {
         if (openSheet('obs-sheet')) refreshObs();
@@ -2998,6 +3043,8 @@
       { id: 'tts', label: 'Voz del chat' },
       { id: 'stage', label: 'Escenario y Avatares 3D' },
       { id: 'commands', label: 'Comandos' },
+      { id: 'sms', label: 'Mensajes SMS' },
+      { id: 'games', label: 'Juegos' },
       { id: 'system', label: 'Apariencia y Sistema' }
     ];
     // Phase 4 registers one render function per tab id here.
@@ -3515,10 +3562,170 @@
         settingsButton(actions, isBackup ? 'Corte activo' : 'Fijar corte',
           () => stagePost('/api/videos/respaldo/seleccionar', { archivo: name }, `Fijado como vídeo de corte: ${name}`, 'Error al fijar vídeo de corte'), isBackup);
         settingsButton(actions, 'Encolar', () => stagePost(path + '/encolar', null, `Encolado: ${name}`, 'Error al encolar el vídeo'));
+        settingsButton(actions, 'Ver', () => {
+          const open = card.querySelector('video');
+          if (open) { open.pause(); open.remove(); return; }
+          const player = document.createElement('video');
+          player.controls = true;
+          player.playsInline = true;
+          player.style.width = '100%';
+          player.src = '/medios/videos/' + encodeURIComponent(name);
+          card.appendChild(player);
+          player.play().catch(() => {});
+        });
         card.appendChild(actions);
         panel.appendChild(card);
       });
-      settingsNote(panel, 'Falta por traer del panel antiguo: la vista previa de cada vídeo, los mensajes SMS y los avatares.');
+    };
+
+    // ── SMS mailbox and chat game tabs ───────────────────────────────────
+    // Ported from the old panel: /api/directo/sms and /api/directo/juego.
+    // Destructive actions ask for a second press instead of a browser dialog.
+    function armedButton(row, label, armedLabel, action) {
+      let armedAt = 0;
+      const button = settingsButton(row, label, () => {
+        if (Date.now() - armedAt > 3500) {
+          armedAt = Date.now();
+          button.textContent = armedLabel;
+          setTimeout(() => { if (button.isConnected && armedAt && Date.now() - armedAt >= 3500) { armedAt = 0; button.textContent = label; } }, 3600);
+          return;
+        }
+        armedAt = 0;
+        button.textContent = label;
+        action();
+      });
+      return button;
+    }
+    const tabOpen = (id) => $('settings-dialog').open && $(`settings-tab-${id}`).getAttribute('aria-selected') === 'true';
+
+    const sms = { loaded: false, messages: [], error: '' };
+    async function loadSms() {
+      sms.error = '';
+      try {
+        const response = await fetch('/api/directo/sms', { cache: 'no-store' });
+        if (response.ok) sms.messages = (await response.json()).mensajes || [];
+        else sms.error = 'No se pudo consultar el buzón.';
+      } catch (_) { sms.error = 'Sin conexión con el servidor.'; }
+      sms.loaded = true;
+      if (tabOpen('sms')) selectSettingsTab('sms');
+    }
+    async function smsPost(url, body, okMessage) {
+      try {
+        const response = await fetch(url, body
+          ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+          : { method: 'POST' });
+        showToast(response.ok ? okMessage : 'No se pudo completar');
+      } catch (_) { showToast('Error de conexión'); }
+      await loadSms();
+    }
+    settingsRenderers.sms = (panel) => {
+      if (!sms.loaded) { settingsNote(panel, 'Cargando buzón…'); loadSms(); return; }
+      const head = settingsRow(panel);
+      const heading = document.createElement('h3');
+      heading.textContent = `Mensajes SMS (${sms.messages.length})`;
+      heading.style.marginRight = 'auto';
+      head.appendChild(heading);
+      settingsButton(head, 'Actualizar', () => loadSms());
+      if (sms.messages.length > 0) armedButton(head, 'Vaciar buzón', 'Pulsa otra vez para vaciar', () => smsPost('/api/directo/sms/limpiar', null, 'Buzón vaciado'));
+      if (sms.error) settingsNote(panel, sms.error);
+      if (sms.messages.length === 0 && !sms.error) settingsNote(panel, 'El buzón está vacío.');
+      sms.messages.forEach((message) => {
+        const card = document.createElement('div');
+        card.className = 'video-card';
+        const top = document.createElement('div');
+        top.className = 'settings-row';
+        const user = document.createElement('strong');
+        user.textContent = '@' + (message.usuario || 'anónimo');
+        user.style.marginRight = 'auto';
+        const time = document.createElement('small');
+        time.textContent = new Date(message.fecha || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        top.append(user, time);
+        const text = document.createElement('div');
+        text.textContent = message.texto;
+        text.style.overflowWrap = 'anywhere';
+        card.append(top, text);
+        armedButton(settingsRow(card), 'Eliminar', 'Pulsa otra vez para eliminar', () => smsPost('/api/directo/sms/borrar', { id: message.id }, 'Mensaje eliminado'));
+        panel.appendChild(card);
+      });
+    };
+
+    const GAME_PHASES = {
+      idle: 'Sin partida activa. Abre el lobby o usa Modo Prueba.',
+      lobby_votacion: 'Lobby abierto: los espectadores adoptan avatar en el chat.',
+      traidor_intro: 'Asignando traidor y preparando la ronda...',
+      traidor_debate: 'Fase de debate activo: discuten quién es el traidor.',
+      traidor_votacion: 'Votación abierta: escriben el número en el chat (solo votan avatares asignados).',
+      muerte_subita: '¡Muerte súbita! 3 supervivientes votan en el chat (solo avatares asignados).',
+      traidor_expulsion: 'Votación cerrada: listo para resolver la expulsión.',
+      finalizado: 'Partida concluida.'
+    };
+    const game = { loaded: false, state: {}, secret: null, timer: 0 };
+    async function loadGame() {
+      try {
+        const [publicResponse, privateResponse] = await Promise.all([
+          fetch('/api/directo/juego/estado', { cache: 'no-store' }),
+          fetch('/api/directo/juego/privado-javier', { cache: 'no-store' })
+        ]);
+        if (publicResponse.ok) game.state = await publicResponse.json();
+        if (privateResponse.ok) game.secret = (await privateResponse.json()).traidorSecreto || null;
+      } catch (_) { /* keep the last known state */ }
+      game.loaded = true;
+      if (tabOpen('games')) selectSettingsTab('games');
+    }
+    async function gamePost(action, okMessage) {
+      try {
+        const response = await fetch('/api/directo/juego/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const data = await response.json().catch(() => ({}));
+        showToast(response.ok ? okMessage : (data.error || 'Error'));
+      } catch (_) { showToast('Error de conexión en juego'); }
+      await loadGame();
+    }
+    function gameResult(state) {
+      if (state.ganador === 'inocentes') return '¡Victoria de los inocentes! El traidor ha sido descubierto y eliminado.';
+      if (state.ganador === 'traidor') return '¡Victoria del traidor! Sobrevivió y eliminó al pueblo.';
+      if (state.ultimoExpulsadoDuenio && state.ultimoExpulsadoEraTraidor === false) return `¡Era inocente! @${state.ultimoExpulsadoDuenio} fue expulsado pero no era el traidor.`;
+      if (state.ultimoExpulsadoDuenio && state.ultimoExpulsadoEraTraidor === true) return `¡Era el traidor! @${state.ultimoExpulsadoDuenio} ha sido expulsado.`;
+      return '';
+    }
+    settingsRenderers.games = (panel) => {
+      if (!game.loaded) { settingsNote(panel, 'Cargando partida…'); loadGame(); return; }
+      // The countdown and the votes change by themselves: refresh while open.
+      clearTimeout(game.timer);
+      game.timer = setTimeout(() => { if (tabOpen('games')) loadGame(); }, 2000);
+      const state = game.state;
+      const phase = state.fase || 'idle';
+      settingsHeading(panel, 'Partida !traidor');
+      settingsNote(panel, 'Solo pueden votar en el chat los usuarios con un avatar asignado en la oficina 3D.');
+      const status = document.createElement('div');
+      status.className = 'video-card';
+      const line = document.createElement('strong');
+      line.textContent = `${phase.toUpperCase()} · Ronda ${state.rondaTraidor || 0} · ${Math.round((state.tiempoRestanteMs || 0) / 1000)} s`;
+      const description = document.createElement('div');
+      description.textContent = GAME_PHASES[phase] || phase;
+      status.append(line, description);
+      const result = gameResult(state);
+      if (result) { const banner = document.createElement('strong'); banner.textContent = result; status.appendChild(banner); }
+      const secret = document.createElement('small');
+      secret.textContent = game.secret ? `Traidor asignado: @${game.secret.twitchUser} (avatar ${game.secret.avatarId})` : 'Sin traidor asignado actualmente.';
+      status.appendChild(secret);
+      panel.appendChild(status);
+
+      const controls = settingsRow(panel);
+      settingsButton(controls, 'Abrir lobby (60 s)', () => gamePost('lobby', 'Lobby abierto'));
+      settingsButton(controls, 'Iniciar !traidor', () => gamePost('iniciar-traidor', 'Partida iniciada'));
+      settingsButton(controls, 'Modo prueba (4 bots)', () => gamePost('probar-traidor', 'Partida de prueba iniciada con 4 bots'));
+      settingsButton(controls, 'Forzar votación', () => gamePost('avanzar', 'Votación abierta'));
+      settingsButton(controls, 'Simular votos', () => gamePost('voto-simulado', 'Votos simulados emitidos'));
+      settingsButton(controls, 'Expulsar / resolver', () => gamePost('avanzar', 'Fase avanzada'));
+      settingsButton(controls, 'Repetir votación', () => gamePost('repetir-votacion', 'Votación repetida'));
+      armedButton(controls, 'Cerrar partida', 'Pulsa otra vez para cerrar', () => gamePost('reiniciar', 'Partida cerrada'));
+
+      settingsHeading(panel, 'Votos y jugadores vivos');
+      const alive = state.duenosVivos || state.jugadoresVivos || [];
+      settingsNote(panel, alive.length > 0 ? `Jugadores vivos (${alive.length}): ` + alive.map((name, index) => `${index + 1}. @${name}`).join(', ') : 'Jugadores: ninguno');
+      const votes = Object.entries(state.votos || {}).map(([option, count]) => `Opción ${option}: ${count} votos`).join(' · ');
+      const detail = Object.entries(state.votosDetalle || {}).map(([user, option]) => `@${user} → ${option}`).join(', ');
+      settingsNote(panel, 'Votos: ' + (votes || 'ninguno') + (detail ? '. Detalle: ' + detail : ''));
     };
 
     let commandsTabLoaded = false;
@@ -3575,7 +3782,6 @@
       section('Usuarios', 'usuario', commands.lists.usuario.map((value) => [String(value), '']));
       section('Canales', 'canal', commands.lists.canal.map((value) => [String(value), '']));
       section('Mensajes', 'mensaje', commands.lists.mensaje.map((value) => [String(value), '']));
-      settingsNote(panel, 'Falta por traer del panel antiguo: los minijuegos del chat.');
       applyFilter();
     };
 
@@ -3667,7 +3873,7 @@
       'copy': handleCopy,
       'toggle-theme': toggleTheme,
       'toggle-secret': (button) => setSecretVisible(button, button.getAttribute('aria-pressed') !== 'true'),
-      'open-settings': () => { commandsTabLoaded = false; stage.loaded = false; $('settings-dialog').showModal(); selectSettingsTab(SETTINGS_TABS[0].id); },
+      'open-settings': () => { commandsTabLoaded = false; stage.loaded = false; sms.loaded = false; game.loaded = false; $('settings-dialog').showModal(); selectSettingsTab(SETTINGS_TABS[0].id); },
       'close-settings': () => $('settings-dialog').close(),
       'toggle-group': (button) => {
         setGroupEnabled(button.closest('.group'), button.getAttribute('aria-checked') !== 'true');
