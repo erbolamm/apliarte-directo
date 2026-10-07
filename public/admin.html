@@ -1390,24 +1390,63 @@
     <section class="card">
       <div class="card-title">
         <span>🔊 Audio TTS en Segundo Plano</span>
-        <span class="badge" id="badge-tts-estado" style="background:#1e293b; color:var(--muted);">Desactivado</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <span class="badge" id="badge-tts-estado" style="background:#1e293b; color:var(--muted);">Desactivado</span>
+          <span class="badge" id="badge-tts-bg" style="background:#1e293b; color:var(--muted); font-size:0.7rem;">Apoyo 2º plano detenido</span>
+        </div>
       </div>
       <div class="card-subtitle">
-        Escucha a los espectadores y los mensajes de Twitch leídos en voz alta sin cortes al cambiar de pestaña.
-      </div>
-      
-      <div style="margin-bottom:8px; padding:6px 10px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:8px; font-size:0.78rem; color:#4ade80;">
-        🛡️ <strong>Filtro de adopción:</strong> Solo leen usuarios con avatar activo en el diorama (prioridad suscriptores/VIPs).
+        Lee en voz alta los mensajes de Twitch sin cortes al cambiar de pestaña o apagar pantalla.
       </div>
 
-      <button type="button" class="touch-btn touch-btn-purple" id="btn-tts-main-toggle">
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:140px;">
+          <label for="tts-canal" style="font-size:0.8rem; color:var(--muted); white-space:nowrap;">Canal:</label>
+          <input type="text" id="tts-canal" value="apliarte" style="flex:1; height:36px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:6px; padding:0 8px; font-size:0.85rem;">
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:180px;">
+          <label for="tts-voz" style="font-size:0.8rem; color:var(--muted); white-space:nowrap;">Voz:</label>
+          <select id="tts-voz" style="flex:1; height:36px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:6px; padding:0 8px; font-size:0.82rem;">
+            <option value="">Automática (por usuario)</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="button" class="touch-btn touch-btn-purple" id="btn-tts-main-toggle" style="min-height:46px; font-size:0.95rem; font-weight:700;">
         🔊 Activar Voz del Chat en Segundo Plano
       </button>
-      <div style="display:flex; align-items:center; gap:10px; font-size:0.8rem; color:var(--muted); margin-top:8px;">
+
+      <div style="display:flex; align-items:center; gap:10px; font-size:0.8rem; color:var(--muted); margin:10px 0 8px;">
         <label for="tts-speed" style="white-space:nowrap;">Velocidad:</label>
-        <input type="range" id="tts-speed" min="0.7" max="1.6" step="0.1" value="1.0" style="flex:1; accent-color:var(--purple);">
-        <span id="tts-speed-val">1.0x</span>
+        <input type="range" id="tts-speed" min="0.5" max="2.0" step="0.1" value="1.0" style="flex:1; accent-color:var(--purple);">
+        <span id="tts-speed-val" style="min-width:32px; font-weight:bold;">1.0x</span>
       </div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:6px; margin-bottom:10px; font-size:0.78rem;">
+        <label style="display:flex; align-items:center; gap:6px; color:#cbd5e1; cursor:pointer;">
+          <input type="checkbox" id="tts-opt-sonido" checked style="accent-color:var(--purple);"> 🔔 Sonido de aviso
+        </label>
+        <label style="display:flex; align-items:center; gap:6px; color:#cbd5e1; cursor:pointer;">
+          <input type="checkbox" id="tts-opt-comandos" checked style="accent-color:var(--purple);"> 🚫 Omitir comandos (!like, !so...)
+        </label>
+        <label style="display:flex; align-items:center; gap:6px; color:#cbd5e1; cursor:pointer;">
+          <input type="checkbox" id="tts-opt-emojis" checked style="accent-color:var(--purple);"> 😀 Omitir emojis
+        </label>
+        <label style="display:flex; align-items:center; gap:6px; color:#cbd5e1; cursor:pointer;">
+          <input type="checkbox" id="tts-opt-enlaces" checked style="accent-color:var(--purple);"> 🔗 No leer URLs ("enlace")
+        </label>
+      </div>
+
+      <div style="margin-top:6px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size:0.75rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Registro de Voz en Directo</span>
+          <button type="button" id="btn-limpiar-tts-registro" style="background:transparent; border:none; color:var(--muted); font-size:0.72rem; cursor:pointer; padding:2px 4px;">Limpiar</button>
+        </div>
+        <div id="tts-registro" style="height:140px; overflow-y:auto; background:#0b0f19; border:1px solid var(--card-border); border-radius:6px; padding:6px 10px; font-size:0.78rem; font-family:ui-monospace, monospace; line-height:1.45; color:#e2e8f0;">
+          <div style="color:var(--muted); font-style:italic;">Esperando activación del audio TTS...</div>
+        </div>
+      </div>
+      <audio id="audio-aviso-tts" src="/sonidos/aviso-mensaje.mp3" preload="auto"></audio>
     </section>
 
     <!-- Usuarios Silenciados en TTS -->
@@ -2999,19 +3038,29 @@
     });
 
     // ══════════════════════════════════════════════════════════════════════════
-    // AUDIO TTS PERSISTENTE EN SEGUNDO PLANO (CVTalk + Filtro Avatares)
+    // AUDIO TTS PERSISTENTE EN SEGUNDO PLANO (Motor tts-twitch + cola + voces)
     // ══════════════════════════════════════════════════════════════════════════
     let ttsActivo = false;
     let twitchWs = null;
-    let serverOwners = {};
     const vocesUsuarios = new Map();
     let usuariosSilenciados = new Set();
+    const colaTts = [];
 
     const badgeTtsToggle = document.getElementById('badge-tts-toggle');
     const badgeTtsEstado = document.getElementById('badge-tts-estado');
+    const badgeTtsBg = document.getElementById('badge-tts-bg');
     const btnTtsMain = document.getElementById('btn-tts-main-toggle');
+    const ttsCanalInput = document.getElementById('tts-canal');
+    const ttsVozSelect = document.getElementById('tts-voz');
     const ttsSpeedInput = document.getElementById('tts-speed');
     const ttsSpeedVal = document.getElementById('tts-speed-val');
+    const ttsOptSonido = document.getElementById('tts-opt-sonido');
+    const ttsOptComandos = document.getElementById('tts-opt-comandos');
+    const ttsOptEmojis = document.getElementById('tts-opt-emojis');
+    const ttsOptEnlaces = document.getElementById('tts-opt-enlaces');
+    const ttsRegistro = document.getElementById('tts-registro');
+    const btnLimpiarTtsRegistro = document.getElementById('btn-limpiar-tts-registro');
+    const audioAvisoTts = document.getElementById('audio-aviso-tts');
     const inputSilenciar = document.getElementById('input-silenciar-usuario');
     const btnSilenciar = document.getElementById('btn-silenciar-usuario');
     const chipsSilenciados = document.getElementById('chips-silenciados');
@@ -3021,19 +3070,142 @@
       if (ttsSpeedVal) ttsSpeedVal.textContent = ttsSpeedInput.value + 'x';
     });
 
-    // ── Cargar / Guardar Voces y Bloqueos ──
-    async function syncServerOwners() {
-      try {
-        const res = await fetch('/api/directo/comando', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          serverOwners = data.duenos || {};
+    // ── Motor TTS en Segundo Plano (Silent Audio Loop + Worker + Watchdog) ──
+    function crearTtsBackground({ bombear, estado, aviso = () => {}, env = globalThis }) {
+      let activo = false, actual = null, audio = null, worker = null, timer = null;
+      let generacion = 0, audioOk = false;
+      const urls = [];
+      const synth = env.speechSynthesis;
+      const ahora = () => env.performance.now();
+      const url = (blob) => {
+        const value = env.URL.createObjectURL(blob);
+        urls.push(value);
+        return value;
+      };
+      const pintar = () => {
+        if (!estado) return;
+        if (!activo) {
+          estado('Apoyo 2º plano detenido');
+        } else if (audioOk && worker) {
+          estado('🟢 Apoyo 2º plano activo');
+        } else {
+          estado('🟠 Apoyo 2º plano limitado');
         }
-      } catch (_) {}
-    }
-    syncServerOwners();
-    setInterval(syncServerOwners, 3000);
+      };
 
+      function finalizar(turno, cancelar = false) {
+        if (actual !== turno) return;
+        actual = null;
+        turno.u.onend = turno.u.onerror = null;
+        if (cancelar && synth) { try { synth.cancel(); } catch (_) {} }
+      }
+
+      function tick() {
+        if (!activo) return;
+        const turno = actual;
+        if (turno) {
+          const t = ahora();
+          if (t - turno.inicio >= turno.limite) {
+            finalizar(turno, true);
+            aviso('⚠️ Voz sin finalizar: descartada por timeout.');
+          } else if (t - turno.ultimoDespertar >= 12000) {
+            turno.ultimoDespertar = t;
+            if (synth) { try { synth.pause(); synth.resume(); } catch (_) {} }
+          }
+        }
+        if (!actual) bombear();
+      }
+
+      function fallback() {
+        if (worker) worker.terminate();
+        worker = null;
+        if (timer === null) timer = env.setInterval(tick, 250);
+        pintar();
+      }
+
+      function iniciar() {
+        if (activo) return;
+        activo = true;
+        const sesion = ++generacion;
+        try {
+          worker = new env.Worker(url(new env.Blob([
+            "setInterval(() => postMessage('tick'), 250);",
+          ], { type: 'application/javascript' })));
+          worker.onmessage = () => { if (sesion === generacion) tick(); };
+          worker.onerror = () => { if (activo && sesion === generacion) fallback(); };
+        } catch (_) { fallback(); }
+        try {
+          const buffer = new ArrayBuffer(16044);
+          const view = new DataView(buffer);
+          const texto = (offset, value) => [...value].forEach((c, i) => view.setUint8(offset + i, c.charCodeAt(0)));
+          texto(0, 'RIFF'); view.setUint32(4, 16036, true); texto(8, 'WAVE');
+          texto(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+          view.setUint16(22, 1, true); view.setUint32(24, 8000, true);
+          view.setUint32(28, 16000, true); view.setUint16(32, 2, true);
+          view.setUint16(34, 16, true); texto(36, 'data'); view.setUint32(40, 16000, true);
+          audio = new env.Audio(url(new env.Blob([buffer], { type: 'audio/wav' })));
+          audio.loop = true;
+          audio.volume = 0.01;
+          const media = audio;
+          const limitado = () => {
+            if (sesion !== generacion || !activo) return;
+            audioOk = false; pintar();
+          };
+          media.onerror = media.onpause = limitado;
+          media.onplaying = () => {
+            if (sesion !== generacion || !activo) return;
+            audioOk = true; pintar();
+          };
+          Promise.resolve(media.play()).catch(limitado);
+        } catch (_) { audioOk = false; }
+        pintar();
+      }
+
+      function detener() {
+        activo = false;
+        ++generacion;
+        if (actual) finalizar(actual);
+        if (synth) { try { synth.cancel(); } catch (_) {} }
+        if (worker) worker.terminate();
+        worker = null;
+        if (timer !== null) env.clearInterval(timer);
+        timer = null;
+        if (audio) {
+          audio.onplaying = audio.onpause = audio.onerror = null;
+          audio.pause(); audio.removeAttribute('src'); audio.load();
+        }
+        audio = null; audioOk = false;
+        urls.splice(0).forEach(value => env.URL.revokeObjectURL(value));
+        pintar();
+      }
+
+      function hablar(u) {
+        if (!activo || actual || !synth) return false;
+        const inicio = ahora();
+        const limite = Math.min(300000, Math.max(45000,
+          u.text.length * 200 / Math.max(0.5, Number(u.rate) || 1) + 15000));
+        const turno = { u, inicio, ultimoDespertar: inicio, limite };
+        actual = turno;
+        u.onend = u.onerror = () => finalizar(turno);
+        try { synth.speak(u); } catch (_) { finalizar(turno, true); }
+        return true;
+      }
+
+      return { iniciar, detener, hablar, tick, get ocupado() { return actual !== null; } };
+    }
+
+    const backgroundTts = crearTtsBackground({
+      bombear: procesarColaTts,
+      estado: texto => {
+        if (badgeTtsBg) {
+          badgeTtsBg.textContent = texto;
+          badgeTtsBg.style.color = texto.includes('activo') ? '#4ade80' : 'var(--muted)';
+        }
+      },
+      aviso: pintarTtsAviso,
+    });
+
+    // ── Cargar / Guardar Voces y Bloqueos (Contrato Servidor y Local) ──
     async function syncVoces() {
       try {
         const guardadas = localStorage.getItem('directo_tts_voces_v1');
@@ -3129,6 +3301,216 @@
       showToast(`🔇 @${val} silenciado de TTS`);
     });
 
+    function guardarVoces(notificarServidor = true) {
+      try {
+        const obj = Object.fromEntries(vocesUsuarios.entries());
+        localStorage.setItem('directo_tts_voces_v1', JSON.stringify(obj));
+        if (notificarServidor) {
+          fetch('/api/panel/voces', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accion: 'fusionar', voces: obj }),
+          }).catch(() => {});
+        }
+      } catch (_) {}
+    }
+
+    // ── Voces Automáticas y Preferencias ──
+    const NOMBRES_FEMENINOS = [
+      'mónica','monica','paulina','marisol','isabela','flo','sandy','shelley','grandma','lucía','lucia','elvira','conchita','esperanza','penélope','penelope',
+      'dalia','elena','salome','salomé','laura','helena','victoria','carmen','clara','paloma','zira','samantha','sabina','karen','female'
+    ];
+    const NOMBRES_MASCULINOS = [
+      'jorge','diego','eddy','reed','rocko','grandpa','juan','pablo','enrique','carlos','miguel','fred',
+      'alvaro','álvaro','gonzalo','tomas','tomás','alberto','raul','raúl','mateo','manuel','david','antonio','male'
+    ];
+
+    function hashUsuario(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash);
+    }
+
+    function asignarVozAutomatica(usuario) {
+      if (!usuario || !('speechSynthesis' in window)) return null;
+      const uLower = usuario.toLowerCase();
+      if (vocesUsuarios.has(uLower)) return vocesUsuarios.get(uLower);
+
+      const todas = window.speechSynthesis.getVoices();
+      if (todas.length === 0) return null;
+
+      const poolEs = todas.filter(v => v.lang.toLowerCase().startsWith('es'));
+      const pool = poolEs.length > 0 ? poolEs : todas;
+      const elegida = pool[hashUsuario(uLower) % pool.length];
+      const esFem = NOMBRES_FEMENINOS.some(n => elegida.name.toLowerCase().includes(n));
+      const pref = {
+        lang: elegida.lang,
+        slot: esFem ? 1 : 2,
+        name: elegida.name,
+        auto: true,
+      };
+      vocesUsuarios.set(uLower, pref);
+      guardarVoces(true);
+      pintarTtsAviso(`🎲 Asignada voz a ${usuario}: ${elegida.name} (${elegida.lang})`);
+      return pref;
+    }
+
+    function vozParaPreferencia(pref) {
+      if (!pref || !('speechSynthesis' in window)) return null;
+      const todas = window.speechSynthesis.getVoices();
+      if (todas.length === 0) return null;
+
+      if (pref.name) {
+        const exacta = todas.find(v => v.name === pref.name);
+        if (exacta) return exacta;
+      }
+
+      const candidatas = todas.filter(v => v.lang.toLowerCase().startsWith((pref.lang || 'es').toLowerCase()));
+      if (candidatas.length === 0) return null;
+      const esFemenino = (v) => NOMBRES_FEMENINOS.some(n => v.name.toLowerCase().includes(n));
+      const esMasculino = (v) => NOMBRES_MASCULINOS.some(n => v.name.toLowerCase().includes(n));
+      if (pref.slot === 1) return candidatas.find(esFemenino) || candidatas[0];
+      return candidatas.find(esMasculino) || candidatas[Math.min(1, candidatas.length - 1)];
+    }
+
+    function cargarVocesNavegador() {
+      if (!('speechSynthesis' in window) || !ttsVozSelect) return;
+      const voces = window.speechSynthesis.getVoices();
+      const actuales = new Set([...ttsVozSelect.options].map(o => o.value));
+      for (const v of voces) {
+        const id = `${v.name}|${v.lang}`;
+        if (actuales.has(id)) continue;
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = `${v.name} (${v.lang})`;
+        ttsVozSelect.append(opt);
+      }
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = cargarVocesNavegador;
+      cargarVocesNavegador();
+    }
+
+    // ── Sanitización y Limpieza de Mensajes ──
+    const RE_EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{2190}-\u{21FF}️]/gu;
+    const RE_URL = /\bhttps?:\/\/\S+/gi;
+
+    function limpiarParaVoz(texto) {
+      let limpio = String(texto || '');
+      if (ttsOptEnlaces && ttsOptEnlaces.checked) limpio = limpio.replace(RE_URL, 'enlace');
+      if (ttsOptEmojis && ttsOptEmojis.checked) limpio = limpio.replace(RE_EMOJI, '');
+      return limpio.replace(/\s+/g, ' ').trim();
+    }
+
+    // ── Registro Visual Seguro en Tiempo Real ──
+    function pintarTtsAviso(texto) {
+      if (!ttsRegistro) return;
+      const p = document.createElement('div');
+      p.style.marginBottom = '3px';
+      p.style.color = 'var(--muted)';
+      p.style.fontStyle = 'italic';
+      p.textContent = texto;
+      ttsRegistro.append(p);
+      recortarTtsRegistro();
+    }
+
+    function pintarTtsChat(nombre, texto, omitido = false) {
+      if (!ttsRegistro) return;
+      const p = document.createElement('div');
+      p.style.marginBottom = '3px';
+      if (omitido) {
+        p.style.color = 'var(--muted)';
+        p.style.fontStyle = 'italic';
+      }
+      const u = document.createElement('span');
+      u.style.fontWeight = '700';
+      u.style.color = omitido ? 'var(--muted)' : 'var(--accent, #38bdf8)';
+      u.textContent = `@${nombre}: `;
+      const t = document.createTextNode(texto + (omitido ? ' (omitido)' : ''));
+      p.append(u, t);
+      ttsRegistro.append(p);
+      recortarTtsRegistro();
+    }
+
+    function recortarTtsRegistro() {
+      if (!ttsRegistro) return;
+      ttsRegistro.scrollTop = ttsRegistro.scrollHeight;
+      while (ttsRegistro.childElementCount > 80) {
+        ttsRegistro.firstElementChild.remove();
+      }
+    }
+
+    // ── Cola Secuencial de Mensajes TTS ──
+    function encolarTts(texto, usuario) {
+      colaTts.push({ texto, usuario: usuario ? usuario.toLowerCase() : null });
+      procesarColaTts();
+    }
+
+    function procesarColaTts() {
+      if (!ttsActivo || backgroundTts.ocupado || colaTts.length === 0) return;
+      if (!('speechSynthesis' in window)) return;
+
+      const { texto, usuario } = colaTts.shift();
+      const u = new SpeechSynthesisUtterance(texto);
+      u.rate = parseFloat(ttsSpeedInput?.value || '1.0');
+
+      let pref = usuario ? vocesUsuarios.get(usuario) : null;
+      if (!pref && usuario) {
+        pref = asignarVozAutomatica(usuario);
+      }
+      const vozPreferida = vozParaPreferencia(pref);
+      if (vozPreferida) {
+        u.voice = vozPreferida;
+        u.lang = vozPreferida.lang;
+      } else if (ttsVozSelect && ttsVozSelect.value) {
+        const [nombre, lang] = ttsVozSelect.value.split('|');
+        const voces = window.speechSynthesis.getVoices();
+        const voz = voces.find(v => v.name === nombre && v.lang === lang);
+        if (voz) u.voice = voz;
+      }
+      if (pref) {
+        u.pitch = (pref.slot === 2) ? 0.85 : 1.15;
+      }
+      backgroundTts.hablar(u);
+    }
+
+    // ── Parser de IRC de Twitch ──
+    function parsearIrc(raw) {
+      let buffer = raw;
+      const tags = {};
+      if (buffer.startsWith('@')) {
+        const i = buffer.indexOf(' ');
+        if (i !== -1) {
+          for (const par of buffer.slice(1, i).split(';')) {
+            const [k, v = ''] = par.split('=');
+            if (k) tags[k] = v;
+          }
+          buffer = buffer.slice(i + 1);
+        }
+      }
+      let usuario = null;
+      if (buffer.startsWith(':')) {
+        const i = buffer.indexOf(' ');
+        if (i !== -1) {
+          const prefijo = buffer.slice(1, i);
+          buffer = buffer.slice(i + 1);
+          const bang = prefijo.indexOf('!');
+          usuario = bang !== -1 ? prefijo.slice(0, bang) : prefijo;
+        }
+      }
+      let trailing = null;
+      const ti = buffer.indexOf(' :');
+      if (ti !== -1) {
+        trailing = buffer.slice(ti + 2);
+        buffer = buffer.slice(0, ti);
+      }
+      const comando = buffer.split(' ')[0] || '';
+      return { tags, comando, trailing, usuario };
+    }
+
     function actualizarUIAudio(activo) {
       ttsActivo = activo;
       if (badgeTtsToggle) {
@@ -3150,129 +3532,182 @@
       }
     }
 
-    function speakText(texto, usuario = null) {
-      if (!('speechSynthesis' in window)) return;
-      const u = new SpeechSynthesisUtterance(texto);
-      u.rate = parseFloat(ttsSpeedInput?.value || '1.0');
+    function iniciarTwitchTTS() {
+      if (ttsActivo) return;
+      ttsActivo = true;
+      backgroundTts.iniciar();
 
-      const pref = usuario ? vocesUsuarios.get(usuario.toLowerCase()) : null;
-      const targetLang = pref?.lang || 'es-ES';
-      const targetSlot = pref?.slot || 1;
+      if (ttsCanalInput) ttsCanalInput.disabled = true;
 
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        const langVoices = voices.filter(v => v.lang.toLowerCase().startsWith(targetLang.toLowerCase()));
-        const NOMBRES_FEMENINOS = ['helena', 'laura', 'monica', 'paulina', 'lucia', 'conchita', 'maria', 'rosa', 'carmen', 'victoria', 'elvira', 'soledad', 'zira', 'samantha', 'sabina', 'karen', 'female'];
-        const NOMBRES_MASCULINOS = ['pablo', 'jorge', 'diego', 'enrique', 'carlos', 'manuel', 'antonio', 'david', 'raul', 'miguel', 'alvaro', 'mateo', 'male'];
-
-        let matchedVoice = null;
-        if (langVoices.length > 0) {
-          if (targetSlot === 1) {
-            matchedVoice = langVoices.find(v => NOMBRES_FEMENINOS.some(n => v.name.toLowerCase().includes(n))) || langVoices[0];
-          } else {
-            matchedVoice = langVoices.find(v => NOMBRES_MASCULINOS.some(n => v.name.toLowerCase().includes(n))) || langVoices[Math.min(1, langVoices.length - 1)];
-          }
-        } else {
-          matchedVoice = voices.find(v => v.lang.toLowerCase().startsWith('es'));
-        }
-
-        if (matchedVoice) {
-          u.voice = matchedVoice;
-          u.lang = matchedVoice.lang;
-        } else {
-          u.lang = targetLang;
-        }
-      } else {
-        u.lang = targetLang;
+      // Desbloqueo de síntesis de voz en Safari/iOS al interactuar
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+        } catch (_) {}
+      }
+      if (audioAvisoTts) {
+        audioAvisoTts.volume = 0.4;
       }
 
-      u.pitch = (targetSlot === 2) ? 0.85 : 1.15;
-      window.speechSynthesis.speak(u);
-    }
+      const canal = (ttsCanalInput?.value || 'apliarte').trim().toLowerCase().replace(/^#/, '');
+      try { localStorage.setItem('directo_tts_canal_v1', canal); } catch (_) {}
 
-    function iniciarTwitchTTS() {
       if (twitchWs) {
         try { twitchWs.close(); } catch (_) {}
       }
+
       try {
         twitchWs = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
         twitchWs.onopen = () => {
+          twitchWs.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
           twitchWs.send('PASS oauth:undefined');
           twitchWs.send('NICK justinfan' + Math.floor(Math.random() * 89999 + 10000));
-          twitchWs.send('JOIN #apliarte');
+          twitchWs.send(`JOIN #${canal}`);
           actualizarUIAudio(true);
-          showToast('🔊 Audio TTS conectado a #apliarte');
-          speakText('Conectado al chat de ApliArte');
+          pintarTtsAviso(`Conectado al chat de Twitch (#${canal}).`);
+          showToast(`🔊 TTS conectado a #${canal}`);
+          encolarTts(`Conectado al chat de ${canal}`);
         };
+
         twitchWs.onmessage = (event) => {
           const raw = event.data || '';
-          if (raw.startsWith('PING')) {
-            twitchWs.send('PONG :tmi.twitch.tv');
-            return;
-          }
-          if (raw.includes('PRIVMSG #apliarte :')) {
-            const parts = raw.split('PRIVMSG #apliarte :');
-            const mensaje = parts[1]?.trim() || '';
-            const userMatch = raw.match(/:([a-zA-Z0-9_]+)!/);
-            const user = userMatch ? userMatch[1] : '';
+          for (const line of String(raw).split('\r\n')) {
+            if (!line) continue;
+            if (line.startsWith('PING')) {
+              twitchWs.send('PONG :tmi.twitch.tv');
+              continue;
+            }
+            const { tags, comando, trailing, usuario } = parsearIrc(line);
+            if (comando !== 'PRIVMSG' || !trailing) continue;
 
-            // 1. Detectar comando CVTalk !speak -config <lang> <slot>
-            const mSpeak = mensaje.match(/^!speak\s+-config\s+([a-z]{2}(?:-[a-z]{2,4})?)\s+([12])\b/i);
-            if (mSpeak) {
-              const lang = mSpeak[1];
-              const slot = parseInt(mSpeak[2], 10);
-              const config = { lang, slot };
-              vocesUsuarios.set(user.toLowerCase(), config);
-              try {
-                const obj = Object.fromEntries(vocesUsuarios.entries());
-                localStorage.setItem('directo_tts_voces_v1', JSON.stringify(obj));
-                fetch('/api/panel/voces', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ accion: 'guardar', usuario: user, voz: config })
-                }).catch(() => {});
-              } catch (_) {}
-              showToast(`🎙️ Voz de @${user}: ${lang} (Voz ${slot})`);
-              speakText(`Voz de ${user} configurada en ${lang}`, user);
-              return;
+            const nombre = tags['display-name'] || usuario || 'alguien';
+            const uNorm = (usuario || '').toLowerCase();
+            const dispNorm = (tags['display-name'] || '').toLowerCase();
+
+            // 1. Usuarios silenciados (bots y lista negra)
+            if (usuariosSilenciados.has(uNorm) || usuariosSilenciados.has(dispNorm)) {
+              pintarTtsChat(nombre, trailing, true);
+              continue;
             }
 
-            // Ignorar comandos bot regulares si empiezan por !
-            if (mensaje.startsWith('!')) return;
+            // 2. Comando !speak -config <lang> <slot>
+            const mSpeak = trailing.match(/^!speak\s+-config\s+([a-z]{2}(?:-[a-z]{2,4})?)\s+([12])\b/i);
+            if (mSpeak && usuario) {
+              const lang = mSpeak[1];
+              const slot = parseInt(mSpeak[2], 10);
+              const config = { lang, slot, name: null, auto: false };
+              vocesUsuarios.set(uNorm, config);
+              guardarVoces(true);
+              pintarTtsAviso(`🎙️ ${nombre} eligió voz ${lang} #${slot} (guardada)`);
+              showToast(`🎙️ Voz de @${nombre}: ${lang} #${slot}`);
+              encolarTts(`Voz de ${nombre} configurada`, usuario);
+              continue;
+            }
 
-            // 2. Comprobar si el usuario está silenciado en la lista negra
-            if (usuariosSilenciados.has(user.toLowerCase())) return;
+            // 3. Omitir comandos (!so, !like...)
+            const esComando = /^[!/.]\S+/.test(trailing.trim());
+            if (esComando && ttsOptComandos && ttsOptComandos.checked) {
+              pintarTtsChat(nombre, trailing, true);
+              continue;
+            }
 
-            // 3. Reproducir mensaje con la voz personalizada del usuario
-            speakText(`${user} dice: ${mensaje}`, user);
+            pintarTtsChat(nombre, trailing, false);
+
+            // Sonido de aviso
+            if (ttsOptSonido && ttsOptSonido.checked && audioAvisoTts) {
+              audioAvisoTts.currentTime = 0;
+              audioAvisoTts.play().catch(() => {});
+            }
+
+            // Encolar mensaje para TTS
+            const limpio = limpiarParaVoz(trailing);
+            if (limpio) {
+              encolarTts(`${nombre} dice: ${limpio}`, usuario);
+            }
           }
         };
+
         twitchWs.onerror = () => {
-          actualizarUIAudio(false);
+          pintarTtsAviso('⚠️ Error en la conexión WebSocket de Twitch.');
         };
         twitchWs.onclose = () => {
-          actualizarUIAudio(false);
+          if (ttsActivo) {
+            pintarTtsAviso('Desconectado del chat de Twitch.');
+          }
         };
       } catch (e) {
+        detenerTwitchTTS();
         showToast('Error al iniciar audio TTS');
       }
     }
 
     function detenerTwitchTTS() {
+      ttsActivo = false;
       if (twitchWs) {
+        twitchWs.onopen = twitchWs.onmessage = twitchWs.onerror = twitchWs.onclose = null;
         try { twitchWs.close(); } catch (_) {}
         twitchWs = null;
       }
+      backgroundTts.detener();
+      colaTts.length = 0;
       if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
+        try { window.speechSynthesis.cancel(); } catch (_) {}
       }
+      if (ttsCanalInput) ttsCanalInput.disabled = false;
       actualizarUIAudio(false);
+      pintarTtsAviso('Audio TTS detenido.');
       showToast('🔈 Audio TTS detenido');
     }
 
     btnTtsMain?.addEventListener('click', () => {
       if (ttsActivo) detenerTwitchTTS();
       else iniciarTwitchTTS();
+    });
+
+    badgeTtsToggle?.addEventListener('click', () => {
+      if (ttsActivo) detenerTwitchTTS();
+      else iniciarTwitchTTS();
+    });
+
+    btnLimpiarTtsRegistro?.addEventListener('click', () => {
+      if (!ttsRegistro) return;
+      ttsRegistro.replaceChildren();
+      pintarTtsAviso('Registro limpiado.');
+    });
+
+    // Guardar preferencias en localStorage
+    ttsOptSonido?.addEventListener('change', () => {
+      try { localStorage.setItem('directo_tts_sonido_aviso_v1', ttsOptSonido.checked); } catch (_) {}
+    });
+    ttsOptComandos?.addEventListener('change', () => {
+      try { localStorage.setItem('directo_tts_omitir_comandos_v1', ttsOptComandos.checked); } catch (_) {}
+    });
+    ttsOptEmojis?.addEventListener('change', () => {
+      try { localStorage.setItem('directo_tts_omitir_emojis_v1', ttsOptEmojis.checked); } catch (_) {}
+    });
+    ttsOptEnlaces?.addEventListener('change', () => {
+      try { localStorage.setItem('directo_tts_omitir_enlaces_v1', ttsOptEnlaces.checked); } catch (_) {}
+    });
+
+    // Restaurar preferencias guardadas
+    try {
+      const gCanal = localStorage.getItem('directo_tts_canal_v1');
+      if (gCanal && ttsCanalInput) ttsCanalInput.value = gCanal;
+      const gSonido = localStorage.getItem('directo_tts_sonido_aviso_v1');
+      if (gSonido !== null && ttsOptSonido) ttsOptSonido.checked = gSonido === 'true';
+      const gCmd = localStorage.getItem('directo_tts_omitir_comandos_v1');
+      if (gCmd !== null && ttsOptComandos) ttsOptComandos.checked = gCmd === 'true';
+      const gEmoji = localStorage.getItem('directo_tts_omitir_emojis_v1');
+      if (gEmoji !== null && ttsOptEmojis) ttsOptEmojis.checked = gEmoji === 'true';
+      const gEnlaces = localStorage.getItem('directo_tts_omitir_enlaces_v1');
+      if (gEnlaces !== null && ttsOptEnlaces) ttsOptEnlaces.checked = gEnlaces === 'true';
+    } catch (_) {}
+
+    window.addEventListener('pagehide', () => {
+      if (ttsActivo) detenerTwitchTTS();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (backgroundTts) backgroundTts.tick();
     });
 
     // ── Fila de Controles de Reproducción y Chat ──
