@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,7 +14,15 @@
       --panel: #090d16;
       --text: #f1f5f9;
       --muted: #94a3b8;
+      --on-brand: #ffffff;
       --font: Inter, "DejaVu Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    /* Follows the light or dark mode of the stream, like the other layers. */
+    html[data-theme="light"] {
+      --brand-strong: #005fa9;
+      --panel: #ffffff;
+      --text: #1e293b;
+      --muted: #5b6b82;
     }
     html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
     body { font-family: var(--font); color: var(--text); }
@@ -33,6 +41,7 @@
       opacity: 0;
       transform: translateY(3vh);
       transition: opacity 0.35s ease, transform 0.35s ease;
+      color: var(--text);
     }
     .message.visible { opacity: 1; transform: none; }
     .avatar {
@@ -44,6 +53,7 @@
       display: grid;
       place-items: center;
       background: var(--brand);
+      color: var(--on-brand);
       font-size: 6vh;
       font-weight: 700;
     }
@@ -67,6 +77,7 @@
   (() => {
     'use strict';
     const POLL_MS = 1500;
+    const THEME_POLL_MS = 3000;
     const message = document.getElementById('message');
     const avatar = document.getElementById('avatar');
     const user = document.getElementById('user');
@@ -108,6 +119,19 @@
       } catch (_) { /* server restarting: try again on the next tick */ }
       setTimeout(poll, POLL_MS);
     }
+    // The stream's mode is the one set in the panel (Escenario → modo del
+    // diorama); an unknown answer keeps the current look.
+    async function pollTheme() {
+      try {
+        const response = await fetch('/api/categoria', { cache: 'no-store' });
+        if (response.ok) {
+          const mode = (await response.json()).modo;
+          if (mode === 'light' || mode === 'dark') document.documentElement.dataset.theme = mode;
+        }
+      } catch (_) { /* keep the current look */ }
+      setTimeout(pollTheme, THEME_POLL_MS);
+    }
+    pollTheme();
     poll();
   })();
   </script>
