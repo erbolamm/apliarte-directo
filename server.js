@@ -1815,6 +1815,24 @@ const server = http.createServer((req, res) => {
     }
   }
 
+  // ── URLs de Fuentes OBS para Panel y Oficina (/api/panel/obs-urls) ─────────
+  if (path === '/api/panel/obs-urls' && req.method === 'GET') {
+    cors(res);
+    const cfg = loadAppConfig();
+    const obs = getObsUrls(req, cfg);
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify({
+      fondo: obs.fondo,
+      chat: obs.chat,
+      plano: obs.plano,
+      planoSilenciado: obs.planoSilenciado,
+      camara: obs.camara,
+      microObs: obs.microObs,
+      vdoCamView: obs.vdoCamView,
+      baseUrl: obs.baseUrl
+    }));
+  }
+
   // ── Configuración Visual y Asistente OBS (/api/panel/config) ──────────────
   if (path === '/api/panel/config') {
     cors(res);
