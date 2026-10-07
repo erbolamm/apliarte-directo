@@ -255,6 +255,9 @@
     .source-info { display: grid; margin-right: auto; min-width: 0; overflow-wrap: anywhere; }
     .source-info small { color: var(--text-muted); }
     .sheet-body select { width: 100%; min-height: var(--touch); padding: 0 var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 1rem; }
+    .list-row { display: flex; align-items: center; gap: var(--gap); padding: 0.25rem var(--gap); border: 1px solid var(--line); border-radius: var(--radius); }
+    .list-row span { margin-right: auto; min-width: 0; overflow-wrap: anywhere; }
+    .list-row small { display: block; color: var(--text-muted); }
     .chips { display: flex; flex-wrap: wrap; gap: var(--gap); }
     .chip { min-height: 36px; padding: 0 0.75rem; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); cursor: pointer; }
     .input-row { display: flex; gap: var(--gap); }
@@ -446,7 +449,7 @@
         <button type="button" class="btn btn-danger" id="btn-apagar-estudio" data-action="open-shutdown">Apagar</button>
       </div>
     </header>
-    <p class="notice mock-banner" id="studio-mock-note">En construcción. En Ajustes faltan «Escenario y Avatares 3D» y «Comandos de Bot y Listas» (añadir, editar o borrar comandos); también la captura fija de OBS como fondo del lienzo.</p>
+    <p class="notice mock-banner" id="studio-mock-note">En construcción. Faltan la pestaña «Escenario y Avatares 3D», los minijuegos, el medidor de volumen, la configuración de la voz del chat y la captura fija de OBS como fondo del lienzo.</p>
     <main class="stage">
       <div class="stage-canvas" id="canvas-container" hidden>
         <canvas id="drawing-canvas"></canvas>
@@ -585,6 +588,23 @@
       <div class="confirm-actions">
         <button type="button" class="btn" id="cmd-cancel">Cancelar</button>
         <button type="button" class="btn btn-primary" id="cmd-send" disabled>Enviar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="confirm" id="item-dialog" aria-labelledby="item-title">
+    <div class="confirm-body">
+      <h2 id="item-title"></h2>
+      <input id="item-main" type="text" autocomplete="off" aria-labelledby="item-title">
+      <div id="item-command-extra" class="confirm-body" hidden>
+        <div class="chips" id="item-param-chips"></div>
+        <input id="item-desc" type="text" autocomplete="off" placeholder="Descripción (opcional)" aria-label="Descripción del comando">
+      </div>
+      <p class="hint" id="item-message" role="status"></p>
+      <div class="confirm-actions">
+        <button type="button" class="btn" id="item-delete" hidden>Eliminar</button>
+        <button type="button" class="btn" id="item-cancel">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="item-save">Guardar</button>
       </div>
     </div>
   </dialog>
@@ -2123,6 +2143,15 @@
         chip.addEventListener('click', () => useCommandValue(value));
         chips.appendChild(chip);
       });
+      if (pending !== 'agente') {
+        const add = document.createElement('button');
+        add.type = 'button';
+        add.className = 'chip';
+        add.style.borderStyle = 'dashed';
+        add.textContent = '+ Añadir ' + (labels[pending] || pending);
+        add.addEventListener('click', () => openItem(pending));
+        chips.appendChild(add);
+      }
       $('cmd-step-input').focus();
     }
     function useCommandValue(value) {
@@ -2608,6 +2637,182 @@
       settingsButton(settingsRow(panel), 'Abrir la pantalla de credenciales', () => { $('settings-dialog').close(); showView('welcome'); });
     };
 
+    // ── Commands and lists editor ────────────────────────────────────────
+    // Ported from the item dialog of pizarra-plus: the server owns the
+    // commands and the user, channel and message lists.
+    const ITEM_LABELS = { comando: 'comando', usuario: 'usuario', canal: 'canal', mensaje: 'mensaje' };
+    const item = { type: 'comando', original: '', deleteArmedAt: 0 };
+    async function postPanel(url, body) {
+      const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || ('El servidor respondió ' + response.status + '.'));
+      return data;
+    }
+    function itemMessage(text, error = false) {
+      $('item-message').textContent = text;
+      $('item-message').dataset.kind = error ? 'error' : 'info';
+    }
+    function openItem(type, value = '', desc = '') {
+      item.type = type;
+      item.original = value;
+      item.deleteArmedAt = 0;
+      const editing = Boolean(value);
+      $('item-title').textContent = (editing ? 'Editar ' : 'Añadir ') + ITEM_LABELS[type];
+      $('item-main').value = value;
+      $('item-desc').value = desc && desc !== '—' ? desc : '';
+      $('item-command-extra').hidden = type !== 'comando';
+      $('item-delete').hidden = !editing;
+      $('item-main').placeholder = type === 'comando' ? '!comando [usuario]'
+        : (type === 'mensaje' ? 'Texto del mensaje' : 'Nombre, o varios separados por comas');
+      itemMessage('');
+      $('item-dialog').showModal();
+      $('item-main').focus();
+    }
+    function closeItem() {
+      if ($('item-dialog').open) $('item-dialog').close();
+    }
+    // Refreshes whatever is on screen after the server confirmed a change.
+    async function afterItemChange() {
+      await loadCommands();
+      if (commands.flow && $('cmd-dialog').open) showCommandStep();
+      if ($('settings-dialog').open && $('settings-tab-commands').getAttribute('aria-selected') === 'true') selectSettingsTab('commands');
+    }
+    async function saveItem() {
+      const raw = $('item-main').value.trim();
+      if (!raw) { itemMessage('Por favor escribe un valor.', true); return; }
+      $('item-save').disabled = true;
+      $('item-delete').disabled = true;
+      itemMessage('Guardando…');
+      try {
+        if (item.type === 'comando') {
+          const desc = $('item-desc').value.trim() || '—';
+          if (item.original && item.original !== raw) {
+            await postPanel('/api/panel/comandos-bot', { accion: 'quitar', comando: item.original });
+            const favorites = getFavorites();
+            const index = favorites.indexOf('cmd:' + item.original);
+            if (index >= 0) { favorites[index] = 'cmd:' + raw; saveFavorites(favorites); }
+          }
+          await postPanel('/api/panel/comandos-bot', { accion: 'agregar', comando: raw, descripcion: desc });
+        } else {
+          const names = item.type === 'mensaje' || item.original
+            ? [item.type === 'mensaje' ? raw : raw.replace(/^@/, '')]
+            : raw.split(/[\s,]+/).map((name) => name.replace(/^@/, '').trim()).filter(Boolean);
+          if (item.original && item.original !== names[0]) {
+            await postPanel('/api/panel/lista', { tipo: item.type, accion: 'quitar', valor: item.original });
+          }
+          // One request per name, in order: the list file is rewritten each time.
+          for (const name of names) {
+            await postPanel('/api/panel/lista', { tipo: item.type, accion: 'agregar', valor: name });
+          }
+        }
+        await afterItemChange();
+        closeItem();
+        showToast(item.original ? 'Modificado correctamente' : 'Guardado correctamente');
+      } catch (error) {
+        itemMessage('No se pudo guardar: ' + error.message, true);
+      } finally {
+        $('item-save').disabled = false;
+        $('item-delete').disabled = false;
+      }
+    }
+    async function deleteItem() {
+      if (!item.original) return;
+      const now = Date.now();
+      if (now - item.deleteArmedAt > 3500) {
+        item.deleteArmedAt = now;
+        itemMessage('Pulsa Eliminar de nuevo para confirmar.', true);
+        return;
+      }
+      item.deleteArmedAt = 0;
+      $('item-save').disabled = true;
+      $('item-delete').disabled = true;
+      itemMessage('Eliminando…');
+      try {
+        if (item.type === 'comando') {
+          await postPanel('/api/panel/comandos-bot', { accion: 'quitar', comando: item.original });
+          const favorites = getFavorites();
+          if (favorites.includes('cmd:' + item.original)) saveFavorites(favorites.filter((id) => id !== 'cmd:' + item.original));
+        } else {
+          await postPanel('/api/panel/lista', { tipo: item.type, accion: 'quitar', valor: item.original });
+        }
+        await afterItemChange();
+        closeItem();
+        showToast('Eliminado');
+      } catch (error) {
+        itemMessage('No se pudo eliminar: ' + error.message, true);
+      } finally {
+        $('item-save').disabled = false;
+        $('item-delete').disabled = false;
+      }
+    }
+    function initItems() {
+      const chips = $('item-param-chips');
+      [['[usuario]', 'Usuario'], ['[canal]', 'Canal'], ['[mensaje]', 'Mensaje'], ['[agente]', 'Agente'], ['clear', 'Sin parámetro']].forEach(([token, label]) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chip';
+        chip.textContent = label;
+        chip.addEventListener('click', () => {
+          const input = $('item-main');
+          if (token === 'clear') input.value = input.value.replace(/\[(usuario|canal|mensaje|agente)\]/g, '').replace(/\s+/g, ' ').trim();
+          else if (!input.value.includes(token)) input.value = (input.value.trim() + ' ' + token).trim();
+          input.focus();
+        });
+        chips.appendChild(chip);
+      });
+      $('item-save').addEventListener('click', saveItem);
+      $('item-delete').addEventListener('click', deleteItem);
+      $('item-cancel').addEventListener('click', closeItem);
+      $('item-main').addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        if (item.type === 'comando' && !$('item-desc').value) $('item-desc').focus(); else saveItem();
+      });
+      $('item-desc').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') { event.preventDefault(); saveItem(); }
+      });
+    }
+
+    let commandsTabLoaded = false;
+    settingsRenderers.commands = (panel) => {
+      if (!commandsTabLoaded) {
+        commandsTabLoaded = true;
+        settingsNote(panel, 'Cargando comandos y listas…');
+        loadCommands().then(() => {
+          if ($('settings-tab-commands').getAttribute('aria-selected') === 'true') selectSettingsTab('commands');
+        });
+        return;
+      }
+      const section = (title, type, entries) => {
+        const head = settingsRow(panel);
+        const heading = document.createElement('h3');
+        heading.textContent = title;
+        heading.style.marginRight = 'auto';
+        head.appendChild(heading);
+        settingsButton(head, 'Añadir', () => openItem(type));
+        if (entries.length === 0) settingsNote(panel, 'Vacío.');
+        entries.forEach(([value, desc]) => {
+          const row = document.createElement('div');
+          row.className = 'list-row';
+          const text = document.createElement('span');
+          text.textContent = value;
+          if (desc && desc !== '—') {
+            const small = document.createElement('small');
+            small.textContent = desc;
+            text.appendChild(small);
+          }
+          row.appendChild(text);
+          settingsButton(row, 'Editar', () => openItem(type, value, desc));
+          panel.appendChild(row);
+        });
+      };
+      section('Comandos del bot', 'comando', commands.cache.map((entry) => (Array.isArray(entry) ? [String(entry[0] ?? ''), String(entry[1] ?? '')] : [String(entry ?? ''), ''])).filter(([name]) => name));
+      section('Usuarios', 'usuario', commands.lists.usuario.map((value) => [String(value), '']));
+      section('Canales', 'canal', commands.lists.canal.map((value) => [String(value), '']));
+      section('Mensajes', 'mensaje', commands.lists.mensaje.map((value) => [String(value), '']));
+      settingsNote(panel, 'Falta por traer del panel antiguo: los minijuegos del chat.');
+    };
+
     function selectSettingsTab(id) {
       const tab = SETTINGS_TABS.find((entry) => entry.id === id) || SETTINGS_TABS[0];
       document.querySelectorAll('.settings-tab').forEach((button) => {
@@ -2696,7 +2901,7 @@
       'copy': handleCopy,
       'toggle-theme': toggleTheme,
       'toggle-secret': (button) => setSecretVisible(button, button.getAttribute('aria-pressed') !== 'true'),
-      'open-settings': () => $('settings-dialog').showModal(),
+      'open-settings': () => { commandsTabLoaded = false; $('settings-dialog').showModal(); selectSettingsTab(SETTINGS_TABS[0].id); },
       'close-settings': () => $('settings-dialog').close(),
       'toggle-group': (button) => {
         setGroupEnabled(button.closest('.group'), button.getAttribute('aria-checked') !== 'true');
@@ -2725,6 +2930,7 @@
       initLiveControls();
       initSheets();
       initObs();
+      initItems();
 
       document.addEventListener('click', (event) => {
         const button = event.target.closest('[data-action]');
