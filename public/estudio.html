@@ -64,7 +64,7 @@
       border-bottom: 1px solid var(--line);
       background: var(--surface);
     }
-    .brand { display: flex; align-items: center; gap: var(--gap); margin-right: auto; min-width: 0; }
+    .brand { display: flex; align-items: center; gap: var(--gap); flex: 1 1 0; min-width: 0; }
     .brand-icon {
       display: grid;
       place-items: center;
@@ -77,10 +77,10 @@
       font-size: 0.8rem;
       flex: none;
     }
-    .brand-name { font-weight: 700; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-name { min-width: 0; font-weight: 700; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .brand-name span { color: var(--brand-strong); }
     /* Reserved for the single shutdown button (#btn-apagar-estudio, phase 3). */
-    .app-bar-actions { display: flex; align-items: center; gap: var(--gap); }
+    .app-bar-actions { display: flex; align-items: center; gap: var(--gap); flex: none; }
 
     /* ── Buttons ───────────────────────────────────────────────────────── */
     .btn {
@@ -181,7 +181,7 @@
     .source code { font-family: var(--mono); font-size: 0.8rem; color: var(--code); word-break: break-all; user-select: all; -webkit-user-select: all; }
 
     /* ── Studio (state 2, shell only in phase 1) ───────────────────────── */
-    .studio { display: grid; grid-template-rows: auto auto 1fr auto; min-height: 100dvh; }
+    .studio { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; min-height: 100dvh; }
     .stage { display: grid; place-items: center; padding: var(--gap); min-height: 0; }
     .stage-canvas {
       width: min(100%, calc((100dvh - 190px) * 16 / 9));
@@ -222,7 +222,7 @@
     .settings-head h2 { font-size: 1rem; margin-right: auto; }
     .settings-body { display: grid; grid-template-columns: 200px 1fr; min-height: 0; }
     .settings-tabs { display: flex; flex-direction: column; gap: 0.25rem; padding: var(--gap); border-right: 1px solid var(--line); background: var(--surface); overflow: auto; }
-    .settings-tab { justify-content: flex-start; border-color: transparent; background: transparent; font-weight: 500; }
+    .settings-tab { justify-content: flex-start; text-align: left; border-color: transparent; background: transparent; font-weight: 500; }
     .settings-tab[aria-selected="true"] { border-color: var(--brand-strong); color: var(--brand-strong); font-weight: 600; }
     .settings-panel { padding: var(--gap); overflow: auto; display: grid; gap: var(--gap); align-content: start; }
     @media (max-width: 640px) {
