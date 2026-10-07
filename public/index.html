@@ -2929,6 +2929,11 @@ const cmd = parsearComandoChat(text);
         if (!obsVoiceGainNode) {
           obsVoiceGainNode = obsVoiceAudioCtx.createGain();
           obsVoiceGainNode.gain.value = 2.4; // Ganancia aumentada para volumen potente en directo
+          const urlParams = new URLSearchParams(window.location.search);
+          const sinRetorno = urlParams.has('noaudio') || urlParams.get('audio') === '0' || window.self !== window.top;
+          if (sinRetorno) {
+            obsVoiceGainNode.gain.value = 0;
+          }
           obsVoiceGainNode.connect(obsVoiceAudioCtx.destination);
         }
         const binaryStr = atob(base64Pcm);

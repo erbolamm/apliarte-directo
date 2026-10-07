@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApliArte Directo - Receptor de Micrófono OBS</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    body.transparent {
+      background: transparent !important;
+      padding: 0;
+    }
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 1.5rem;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+    body.transparent .card {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border-color: rgba(51, 65, 85, 0.6);
+      margin: 10px;
+      padding: 1rem;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: #334155;
+      color: #94a3b8;
+    }
+    .badge.live {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+    .badge.live .dot {
+      background: #ef4444;
+      animation: pulse 1.2s infinite;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #94a3b8;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.2); }
+    }
+    .meter-container {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      height: 24px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 0.75rem;
+    }
+    .meter-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #22c55e 60%, #eab308 85%, #ef4444 100%);
+      transition: width 0.05s ease-out;
+    }
+    .meter-scale {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 6px;
+      align-items: center;
+      font-size: 0.65rem;
+      color: rgba(255, 255, 255, 0.4);
+      pointer-events: none;
+      font-family: monospace;
+    }
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      margin-bottom: 1rem;
+      font-family: monospace;
+    }
+    .note {
+      font-size: 0.8rem;
+      line-height: 1.45;
+      color: #94a3b8;
+      border-top: 1px solid #334155;
+      padding-top: 0.85rem;
+    }
+    .note strong {
+      color: #38bdf8;
+    }
+    .btn-unlock {
+      display: none;
+      width: 100%;
+      padding: 0.6rem;
+      background: #0284c7;
+      color: #fff;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="header">
+      <h1 class="title">🎙️ Micrófono OBS</h1>
+      <span class="badge" id="badge-status">
+        <span class="dot"></span>
+        <span id="text-status">En espera</span>
+      </span>
+    </div>
+
+    <button type="button" class="btn-unlock" id="btn-unlock">🔊 Activar audio en el navegador</button>
+
+    <div class="meter-container" aria-label="Nivel de audio del micrófono">
+      <div class="meter-bar" id="meter-bar"></div>
+      <div class="meter-scale">
+        <span>-48dB</span>
+        <span>-24dB</span>
+        <span>-12dB</span>
+        <span>-6dB</span>
+        <span>0dB</span>
+      </div>
+    </div>
+
+    <div class="stats">
+      <span id="stat-sample-rate">Freq: -- kHz</span>
+      <span id="stat-packets">Paquetes: 0</span>
+      <span id="stat-latency">Buffer: 0ms</span>
+    </div>
+
+    <div class="note">
+      <strong>Instrucciones OBS Studio:</strong> Añade esta URL como <em>Fuente de Navegador</em> y marca la casilla <strong>«Controlar audio vía OBS»</strong>. Aparecerá en el mezclador de audio de OBS para control de volumen y filtros sin reproducirse por los altavoces de tu Mac.
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('transparent') || urlParams.get('transparente') === '1') {
+      document.body.classList.add('transparent');
+    }
+
+    let audioCtx = null;
+    let gainNode = null;
+    let nextPlayTime = 0;
+    let packetCount = 0;
+    let activeTimer = null;
+
+    const badgeStatus = document.getElementById('badge-status');
+    const textStatus = document.getElementById('text-status');
+    const meterBar = document.getElementById('meter-bar');
+    const statSampleRate = document.getElementById('stat-sample-rate');
+    const statPackets = document.getElementById('stat-packets');
+    const statLatency = document.getElementById('stat-latency');
+    const btnUnlock = document.getElementById('btn-unlock');
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return false;
+        audioCtx = new AudioContextClass();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      if (!gainNode && audioCtx) {
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = 2.4;
+        gainNode.connect(audioCtx.destination);
+      }
+      if (audioCtx && audioCtx.state === 'running') {
+        btnUnlock.style.display = 'none';
+      }
+      return true;
+    }
+
+    btnUnlock.addEventListener('click', () => {
+      initAudio();
+    });
+
+    // Intentar inicialización automática
+    document.addEventListener('DOMContentLoaded', () => {
+      initAudio();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        btnUnlock.style.display = 'block';
+      }
+    });
+    window.addEventListener('click', () => initAudio(), { once: true });
+
+    function reproducirPCM(base64Pcm, sampleRate) {
+      if (!initAudio()) return;
+
+      try {
+        const binaryStr = atob(base64Pcm);
+        const len = binaryStr.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+        const int16 = new Int16Array(bytes.buffer);
+        const float32 = new Float32Array(int16.length);
+        let sumSq = 0;
+        let peak = 0;
+
+        for (let i = 0; i < int16.length; i++) {
+          const val = int16[i] / (int16[i] < 0 ? 0x8000 : 0x7FFF);
+          float32[i] = val;
+          const abs = Math.abs(val);
+          if (abs > peak) peak = abs;
+          sumSq += val * val;
+        }
+
+        const audioBuf = audioCtx.createBuffer(1, float32.length, sampleRate || 24000);
+        audioBuf.copyToChannel(float32, 0);
+
+        const src = audioCtx.createBufferSource();
+        src.buffer = audioBuf;
+        src.connect(gainNode);
+
+        const now = audioCtx.currentTime;
+        if (nextPlayTime - now > 0.5 || nextPlayTime < now) {
+          nextPlayTime = now + 0.04;
+        }
+        src.start(nextPlayTime);
+        nextPlayTime += audioBuf.duration;
+
+        packetCount++;
+        statPackets.textContent = `Paquetes: ${packetCount}`;
+        statSampleRate.textContent = `Freq: ${(sampleRate || 24000) / 1000} kHz`;
+        const bufferMs = Math.max(0, Math.round((nextPlayTime - now) * 1000));
+        statLatency.textContent = `Buffer: ${bufferMs}ms`;
+
+        // Actualizar VU-metro
+        const percent = Math.min(100, Math.round(peak * 100));
+        meterBar.style.width = `${percent}%`;
+
+        // Indicador activo
+        badgeStatus.classList.add('live');
+        textStatus.textContent = 'En antena';
+
+        clearTimeout(activeTimer);
+        activeTimer = setTimeout(() => {
+          badgeStatus.classList.remove('live');
+          textStatus.textContent = 'En espera';
+          meterBar.style.width = '0%';
+        }, 1200);
+
+      } catch (err) {
+        console.error('Error al reproducir PCM:', err);
+      }
+    }
+
+    let ws = null;
+    function conectarWs() {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host || '127.0.0.1:7979';
+      const wsUrl = `${proto}//${host}/ws`;
+
+      try {
+        ws = new WebSocket(wsUrl);
+        ws.onmessage = async (event) => {
+          let raw = event.data;
+          if (raw instanceof Blob) raw = await raw.text();
+          try {
+            const data = JSON.parse(raw);
+            if (data.type === 'voz_pcm' && data.pcm) {
+              reproducirPCM(data.pcm, data.sampleRate);
+            }
+            if (data.type === 'micro_start') {
+              badgeStatus.classList.add('live');
+              textStatus.textContent = 'En antena';
+            }
+            if (data.type === 'micro_stop') {
+              badgeStatus.classList.remove('live');
+              textStatus.textContent = 'En espera';
+              meterBar.style.width = '0%';
+            }
+          } catch (_) {}
+        };
+        ws.onclose = () => {
+          setTimeout(conectarWs, 3000);
+        };
+        ws.onerror = () => {
+          try { ws.close(); } catch (_) {}
+        };
+      } catch (e) {
+        setTimeout(conectarWs, 5000);
+      }
+    }
+
+    conectarWs();
+  </script>
+</body>
+</html>

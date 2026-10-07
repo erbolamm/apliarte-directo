@@ -45,3 +45,10 @@ test('plano.html reproduce voz_pcm con ganancia potente y anima boca según RMS 
   assert.match(planoHtml, /rms\s*>=\s*0\.02/);
   assert.doesNotMatch(planoHtml, /animarBocaJa\(300\)/, 'plano.html no debe forzar 300s de boca continua en micro_start');
 });
+
+test('plano.html silencia retorno de audio local si se especifica noaudio o si esta en iframe', () => {
+  assert.match(planoHtml, /urlParams\.has\(['"]noaudio['"]\)/);
+  assert.match(planoHtml, /window\.self\s*!==\s*window\.top/);
+  assert.match(planoHtml, /obsVoiceGainNode\.gain\.value\s*=\s*0/);
+});
+

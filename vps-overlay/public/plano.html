@@ -1686,10 +1686,11 @@
 
   <!-- Script bundle de la oficina 3D -->
   <script src="/office-3d.js?v=385f4b7629"></script>
+  <script src="/js/conga-musica.js?v=20261003c"></script>
 
   <!-- Lógica interactiva: Paleta de colores, Twitch IRC, adopción y fondo transparente -->
   <script type="module">
-    import { parsearComandoChat, parsearIrcTwitch, AGENTES_OFICINA, filtrarMensajeDuranteVotacion } from '/js/tts-fuentes.js?v=20260926-2040';
+    import { parsearComandoChat, parsearIrcTwitch, AGENTES_OFICINA, filtrarMensajeDuranteVotacion } from '/js/tts-fuentes.js?v=20261003-conga';
 
     const PALETAS = {
       apps: { primario: '#5ecef5', secundario: '#00467b', oscuro: '#030a16' },
@@ -2855,7 +2856,7 @@
                 }
               }
             } else if (office?.runtime) {
-              office.runtime.applyCommand(cmd, performance.now());
+              office.runtime.applyCommand({ ...cmd, usuario: cmd.usuario ?? user }, performance.now());
               if (!office?.isCinematicActive?.()) {
                 const spk = office.runtime.speaker(cmd.agente);
                 safeFocusAgent(spk, 5000, false);
@@ -3457,6 +3458,11 @@
         if (!obsVoiceGainNode) {
           obsVoiceGainNode = obsVoiceAudioCtx.createGain();
           obsVoiceGainNode.gain.value = 2.4; // Ganancia aumentada para volumen potente en directo
+          const urlParams = new URLSearchParams(window.location.search);
+          const sinRetorno = urlParams.has('noaudio') || urlParams.get('audio') === '0' || window.self !== window.top;
+          if (sinRetorno) {
+            obsVoiceGainNode.gain.value = 0;
+          }
           obsVoiceGainNode.connect(obsVoiceAudioCtx.destination);
         }
         const binaryStr = atob(base64Pcm);

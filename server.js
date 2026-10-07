@@ -386,6 +386,8 @@ function getObsUrls(req, cfg) {
     fondo: `${baseUrl}/fondo.html`,
     chat: `${baseUrl}/chat.html`,
     plano: `${baseUrl}/plano?transparente=1`, // OBS mode: no controls, avatar column, !contexto
+    planoSilenciado: `${baseUrl}/plano?transparente=1&noaudio=1`,
+    microObs: `${baseUrl}/micro-obs.html`,
     vdoCamPush: `https://vdo.ninja/?push=${encodeURIComponent(stream)}&room=${encodeURIComponent(room)}${passQuery}&webcam&autostart`,
     vdoCamView: `https://vdo.ninja/?view=${encodeURIComponent(stream)}&room=${encodeURIComponent(room)}${passQuery}&solo&cleanoutput&transparent&autoplay=1&cover=1&buffer=350&sync=0&videobitrate=1500&codec=h264&api`,
     baseUrl
