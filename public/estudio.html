@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="light dark">
+  <title>ApliArte Directo · Estudio</title>
+  <style>
+    /* ── Design tokens ─────────────────────────────────────────────────────
+       Single source for every colour in this file. Light is the default
+       theme; [data-theme="dark"] overrides the surface tokens only. */
+    :root {
+      --brand: #005fa9;
+      --brand-strong: #0284c7;
+      --on-brand: #ffffff;
+      --warn: #e8955e;
+
+      --bg: #ffffff;
+      --surface: #f8fafc;
+      --text: #1e293b;
+      --text-muted: #5b6b82;
+      --line: #d5dde8;
+      --code: #005fa9;
+
+      --gap: 0.5rem;
+      --radius: 8px;
+      --touch: 44px;
+      --font: Inter, "DejaVu Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    [data-theme="dark"] {
+      --bg: #090d16;
+      --surface: #131b2e;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --line: #25324a;
+      --code: #5ecef5;
+    }
+
+    /* ── Base ──────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      background: var(--bg);
+      color: var(--text);
+      font: 400 1rem/1.45 var(--font);
+    }
+    [hidden] { display: none !important; }
+    h1, h2, h3, p { margin: 0; }
+    button, input { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--brand-strong); outline-offset: 2px; }
+
+    /* ── App bar (shared by both states) ───────────────────────────────── */
+    .app-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--gap);
+      min-height: 50px;
+      padding: var(--gap);
+      padding-top: max(var(--gap), env(safe-area-inset-top));
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .brand { display: flex; align-items: center; gap: var(--gap); margin-right: auto; min-width: 0; }
+    .brand-icon {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius);
+      background: var(--brand);
+      color: var(--on-brand);
+      font-weight: 700;
+      font-size: 0.8rem;
+      flex: none;
+    }
+    .brand-name { font-weight: 700; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-name span { color: var(--brand-strong); }
+    /* Reserved for the single shutdown button (#btn-apagar-estudio, phase 3). */
+    .app-bar-actions { display: flex; align-items: center; gap: var(--gap); }
+
+    /* ── Buttons ───────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--gap);
+      min-height: var(--touch);
+      padding: 0 1rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--bg);
+      cursor: pointer;
+      font-weight: 600;
+      touch-action: manipulation;
+    }
+    .btn-primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+    .btn-primary:hover:not(:disabled) { background: var(--brand-strong); border-color: var(--brand-strong); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-start { width: 100%; min-height: 56px; font-size: 1.1rem; }
+    .icon-btn {
+      display: inline-grid;
+      place-items: center;
+      width: var(--touch);
+      height: var(--touch);
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--bg);
+      cursor: pointer;
+      flex: none;
+      touch-action: manipulation;
+    }
+    .icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .icon-btn[aria-pressed="true"] { border-color: var(--brand-strong); color: var(--brand-strong); }
+
+    /* ── Welcome (state 1) ─────────────────────────────────────────────── */
+    .welcome { max-width: 760px; margin: 0 auto; padding: var(--gap); display: grid; gap: var(--gap); }
+    .welcome-title { font-size: clamp(1.3rem, 4vw, 1.9rem); line-height: 1.2; padding: var(--gap) 0; }
+    .welcome-title a { color: var(--brand-strong); text-decoration: none; }
+    .card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: var(--gap); display: grid; gap: var(--gap); }
+    .card > h2 { font-size: 1rem; }
+    .hint { color: var(--text-muted); font-size: 0.85rem; }
+    .notice { border-left: 3px solid var(--warn); padding-left: var(--gap); font-size: 0.85rem; }
+
+    .field { display: grid; gap: 0.25rem; }
+    .field label { font-size: 0.85rem; font-weight: 600; }
+    .field .tag { font-weight: 400; color: var(--text-muted); }
+    .field-row { display: flex; gap: var(--gap); }
+    .field input {
+      flex: 1;
+      min-width: 0;
+      min-height: var(--touch);
+      padding: 0 var(--gap);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--bg);
+      font-family: var(--mono);
+      font-size: 1rem; /* 16px keeps iOS from zooming on focus */
+    }
+    .field[data-missing="true"] input { border-color: var(--warn); }
+
+    .source { display: grid; gap: 0.25rem; padding: var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
+    .source-head { display: flex; align-items: center; gap: var(--gap); }
+    .source-head h3 { font-size: 0.9rem; margin-right: auto; }
+    .source code { font-family: var(--mono); font-size: 0.8rem; color: var(--code); word-break: break-all; user-select: all; -webkit-user-select: all; }
+
+    /* ── Studio (state 2, shell only in phase 1) ───────────────────────── */
+    .studio { display: grid; grid-template-rows: auto 1fr auto; min-height: 100dvh; }
+    .stage { display: grid; place-items: center; padding: var(--gap); min-height: 0; }
+    .stage-canvas {
+      width: min(100%, calc((100dvh - 140px) * 16 / 9));
+      aspect-ratio: 16 / 9;
+      display: grid;
+      place-items: center;
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text-muted);
+      text-align: center;
+      padding: var(--gap);
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--gap);
+      padding: var(--gap);
+      padding-bottom: max(var(--gap), env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    /* ── Settings dialog (lateral tabs, filled in phase 4) ─────────────── */
+    dialog.settings {
+      width: min(880px, 100vw - 1rem);
+      height: min(620px, 100dvh - 1rem);
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+    }
+    dialog.settings::backdrop { background: rgba(9, 13, 22, 0.6); }
+    .settings-frame { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+    .settings-head { display: flex; align-items: center; gap: var(--gap); padding: var(--gap); border-bottom: 1px solid var(--line); }
+    .settings-head h2 { font-size: 1rem; margin-right: auto; }
+    .settings-body { display: grid; grid-template-columns: 200px 1fr; min-height: 0; }
+    .settings-tabs { display: flex; flex-direction: column; gap: 0.25rem; padding: var(--gap); border-right: 1px solid var(--line); background: var(--surface); overflow: auto; }
+    .settings-tab { justify-content: flex-start; border-color: transparent; background: transparent; font-weight: 500; }
+    .settings-tab[aria-selected="true"] { border-color: var(--brand-strong); color: var(--brand-strong); font-weight: 600; }
+    .settings-panel { padding: var(--gap); overflow: auto; display: grid; gap: var(--gap); align-content: start; }
+    @media (max-width: 640px) {
+      .settings-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      .settings-tabs { flex-direction: row; border-right: 0; border-bottom: 1px solid var(--line); }
+      .settings-tab { white-space: nowrap; }
+    }
+
+    /* ── Feedback ──────────────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(1rem + env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      max-width: calc(100vw - 1rem);
+      padding: var(--gap) 1rem;
+      border-radius: var(--radius);
+      background: var(--text);
+      color: var(--bg);
+      font-size: 0.9rem;
+      z-index: 20;
+    }
+    .tip {
+      position: fixed;
+      z-index: 30;
+      max-width: 240px;
+      padding: 0.25rem var(--gap);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.8rem;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═════════════ State 1: welcome and pre-launch check ═════════════ -->
+  <div id="view-welcome">
+    <header class="app-bar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">AD</div>
+        <div class="brand-name">APLIARTE <span>DIRECTO</span></div>
+      </div>
+      <div class="app-bar-actions">
+        <button type="button" class="icon-btn" data-action="toggle-theme" aria-label="Cambiar entre modo claro y modo oscuro" data-tip="Cambia entre modo claro y modo oscuro."></button>
+      </div>
+    </header>
+
+    <main class="welcome">
+      <h1 class="welcome-title">Bienvenido a ApliArte Directo, by <a href="https://apliarte.com" target="_blank" rel="noopener">apliarte.com</a></h1>
+
+      <section class="card" aria-labelledby="credentials-title">
+        <h2 id="credentials-title">Paso 0 · Credenciales</h2>
+        <p class="notice" id="credentials-notice">Fase 1: estos campos todavía no se guardan ni se envían al servidor. La comprobación real de claves llega en la fase 2.</p>
+        <form id="credentials-form" autocomplete="off" novalidate>
+          <div class="card" style="border:0; padding:0; background:transparent;">
+            <div class="field" data-credential="twitchStreamKey" data-required="true">
+              <label for="cred-twitch-key">Clave de emisión de Twitch <span class="tag">(obligatoria)</span></label>
+              <div class="field-row">
+                <input id="cred-twitch-key" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+                <button type="button" class="icon-btn" data-action="toggle-secret" data-target="cred-twitch-key" aria-pressed="false" aria-label="Mostrar la clave de emisión de Twitch" data-tip="Muestra u oculta la clave escrita."></button>
+              </div>
+            </div>
+            <div class="field" data-credential="youtubeStreamKey" data-required="false">
+              <label for="cred-youtube-key">Clave de emisión de YouTube <span class="tag">(opcional)</span></label>
+              <div class="field-row">
+                <input id="cred-youtube-key" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+                <button type="button" class="icon-btn" data-action="toggle-secret" data-target="cred-youtube-key" aria-pressed="false" aria-label="Mostrar la clave de emisión de YouTube" data-tip="Muestra u oculta la clave escrita."></button>
+              </div>
+            </div>
+            <div class="field" data-credential="apiToken" data-required="true">
+              <label for="cred-api-token">Token de API <span class="tag">(obligatorio)</span></label>
+              <div class="field-row">
+                <input id="cred-api-token" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+                <button type="button" class="icon-btn" data-action="toggle-secret" data-target="cred-api-token" aria-pressed="false" aria-label="Mostrar el token de API" data-tip="Muestra u oculta el token escrito."></button>
+              </div>
+            </div>
+            <button type="submit" class="btn" id="btn-save-credentials" disabled>Guardar credenciales</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="sources-title">
+        <h2 id="sources-title">Fuentes para OBS Studio</h2>
+        <p class="hint">Añade cada dirección en OBS como fuente «Navegador» de 1920×1080.</p>
+        <div class="source">
+          <div class="source-head">
+            <h3>Capa 3D (1920×1080)</h3>
+            <button type="button" class="btn" data-action="copy" data-target="obs-url-plano">Copiar</button>
+          </div>
+          <code id="obs-url-plano" tabindex="0"></code>
+        </div>
+        <div class="source">
+          <div class="source-head">
+            <h3>Cámara</h3>
+            <button type="button" class="btn" data-action="copy" data-target="obs-url-camara">Copiar</button>
+          </div>
+          <code id="obs-url-camara" tabindex="0"></code>
+        </div>
+      </section>
+
+      <button type="button" class="btn btn-primary btn-start" id="btn-arrancar-estudio" disabled>▶ Arrancar Estudio</button>
+      <p class="hint" id="start-hint" role="status"></p>
+    </main>
+  </div>
+
+  <!-- ═════════════ State 2: studio shell (engine arrives in phase 3) ═════════════ -->
+  <div id="view-studio" class="studio" hidden>
+    <header class="app-bar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">AD</div>
+        <div class="brand-name">APLIARTE <span>DIRECTO</span></div>
+      </div>
+      <div class="app-bar-actions" id="studio-actions">
+        <button type="button" class="btn" data-action="back-to-welcome">Volver</button>
+      </div>
+    </header>
+    <main class="stage">
+      <div class="stage-canvas" id="studio-stage">Lienzo 16:9 de la pizarra · se integra en la fase 3</div>
+    </main>
+    <footer class="toolbar" id="studio-toolbar">
+      <button type="button" class="icon-btn" data-action="open-settings" aria-label="Abrir ajustes" data-tip="Abre los ajustes del estudio."></button>
+    </footer>
+  </div>
+
+  <!-- ═════════════ Settings: lateral tabs (content arrives in phase 4) ═════════════ -->
+  <dialog class="settings" id="settings-dialog" aria-labelledby="settings-title">
+    <div class="settings-frame">
+      <div class="settings-head">
+        <h2 id="settings-title">Ajustes</h2>
+        <button type="button" class="icon-btn" data-action="close-settings" aria-label="Cerrar ajustes" data-tip="Cierra los ajustes."></button>
+      </div>
+      <div class="settings-body">
+        <div class="settings-tabs" role="tablist" aria-orientation="vertical" id="settings-tabs"></div>
+        <div class="settings-panel" role="tabpanel" id="settings-panel" tabindex="0"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <div class="tip" id="tip" role="tooltip" hidden></div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const $ = (id) => document.getElementById(id);
+
+    // ── Icons ────────────────────────────────────────────────────────────
+    const ICONS = {
+      eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+      eyeOff: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
+      sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>',
+      moon: '<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/>',
+      gear: '<circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
+      close: '<path d="M6 6l12 12M18 6L6 18"/>'
+    };
+    const icon = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
+
+    // ── Toast ────────────────────────────────────────────────────────────
+    let toastTimer = 0;
+    function showToast(message) {
+      const toast = $('toast');
+      toast.textContent = message;
+      toast.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toast.hidden = true; }, 2600);
+    }
+
+    // ── Clipboard: async API first, execCommand fallback, manual last ────
+    // The async Clipboard API only exists in secure contexts (HTTPS or
+    // localhost). A tablet reaching the panel over plain HTTP on the LAN
+    // gets the synchronous fallback, which must run inside the click.
+    function copyWithExecCommand(text) {
+      // Inside a modal <dialog> the rest of the page is inert, so the
+      // helper textarea has to live in the dialog to be focusable.
+      const host = document.querySelector('dialog[open]') || document.body;
+      const previousFocus = document.activeElement;
+      const selection = document.getSelection();
+      const previousRange = selection && selection.rangeCount ? selection.getRangeAt(0) : null;
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.setAttribute('aria-hidden', 'true');
+      textarea.style.cssText = 'position:fixed;top:0;left:-9999px;width:1px;height:1px;opacity:0;font-size:16px;';
+      host.appendChild(textarea);
+
+      let copied = false;
+      try {
+        textarea.focus({ preventScroll: true });
+        textarea.select();
+        textarea.setSelectionRange(0, text.length);
+        copied = document.execCommand('copy');
+      } catch (_) {
+        copied = false;
+      }
+      textarea.remove();
+
+      if (selection && previousRange) {
+        selection.removeAllRanges();
+        selection.addRange(previousRange);
+      }
+      if (previousFocus && typeof previousFocus.focus === 'function') {
+        previousFocus.focus({ preventScroll: true });
+      }
+      return copied;
+    }
+
+    async function copyText(text) {
+      if (!text) return false;
+      if (window.isSecureContext && navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch (_) { /* permission denied or unfocused document: fall through */ }
+      }
+      return copyWithExecCommand(text);
+    }
+
+    function selectElementText(element) {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const selection = document.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    async function handleCopy(button) {
+      const source = $(button.dataset.target);
+      const text = source ? source.textContent.trim() : '';
+      if (await copyText(text)) {
+        showToast('Copiado al portapapeles');
+        return;
+      }
+      // Both mechanisms failed: leave the text selected for a manual copy.
+      if (source) selectElementText(source);
+      showToast('No se pudo copiar. El texto queda seleccionado: cópialo a mano.');
+    }
+
+    // ── Theme (light by default, remembered per browser) ─────────────────
+    const THEME_KEY = 'apliarte_theme';
+    function readStoredTheme() {
+      try { return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'; } catch (_) { return 'light'; }
+    }
+    function applyTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll('[data-action="toggle-theme"]').forEach((button) => {
+        button.innerHTML = icon(theme === 'dark' ? 'sun' : 'moon');
+        button.setAttribute('aria-pressed', String(theme === 'dark'));
+      });
+    }
+    function toggleTheme() {
+      const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      try { localStorage.setItem(THEME_KEY, next); } catch (_) { /* private mode */ }
+      applyTheme(next);
+    }
+
+    // ── Secret fields: eye toggle ────────────────────────────────────────
+    function setSecretVisible(button, visible) {
+      const input = $(button.dataset.target);
+      if (!input) return;
+      input.type = visible ? 'text' : 'password';
+      button.innerHTML = icon(visible ? 'eyeOff' : 'eye');
+      button.setAttribute('aria-pressed', String(visible));
+      const label = button.getAttribute('aria-label') || '';
+      button.setAttribute('aria-label', label.replace(/^(Mostrar|Ocultar)/, visible ? 'Ocultar' : 'Mostrar'));
+    }
+    function hideAllSecrets() {
+      document.querySelectorAll('[data-action="toggle-secret"]').forEach((button) => setSecretVisible(button, false));
+    }
+
+    // ── Step 0: readiness ────────────────────────────────────────────────
+    // Phase 1 derives readiness from what is typed in this page only.
+    // Phase 2 replaces readCredentialState() with the server's saved state
+    // and wires saveCredentials(); nothing else here needs to change.
+    function readCredentialState() {
+      const state = {};
+      document.querySelectorAll('[data-credential]').forEach((field) => {
+        state[field.dataset.credential] = {
+          required: field.dataset.required === 'true',
+          present: field.querySelector('input').value.trim().length > 0
+        };
+      });
+      return state;
+    }
+    function missingRequired(state) {
+      return Object.keys(state).filter((key) => state[key].required && !state[key].present);
+    }
+    function refreshReadiness() {
+      const state = readCredentialState();
+      const missing = missingRequired(state);
+      document.querySelectorAll('[data-credential]').forEach((field) => {
+        field.dataset.missing = String(missing.includes(field.dataset.credential));
+      });
+      $('btn-arrancar-estudio').disabled = missing.length > 0;
+      $('start-hint').textContent = missing.length > 0
+        ? 'Rellena las credenciales obligatorias para poder arrancar.'
+        : '';
+    }
+
+    // ── OBS sources ──────────────────────────────────────────────────────
+    function renderObsSources(obs) {
+      const origin = window.location.origin;
+      $('obs-url-plano').textContent = obs.plano || `${origin}/plano?transparente=1`;
+      $('obs-url-camara').textContent = obs.camara || `${origin}/camara.html`;
+    }
+    async function loadObsSources() {
+      renderObsSources({});
+      try {
+        const response = await fetch('/api/panel/config', { cache: 'no-store', credentials: 'same-origin' });
+        if (!response.ok) return;
+        const data = await response.json();
+        renderObsSources(data.obs || {});
+      } catch (_) { /* offline or static hosting: origin-based URLs stay */ }
+    }
+
+    // ── Views ────────────────────────────────────────────────────────────
+    function showView(name) {
+      $('view-welcome').hidden = name !== 'welcome';
+      $('view-studio').hidden = name !== 'studio';
+      if (name === 'studio') hideAllSecrets();
+    }
+
+    // ── Settings: lateral tabs ───────────────────────────────────────────
+    const SETTINGS_TABS = [
+      { id: 'credentials', label: 'Credenciales y APIs' },
+      { id: 'camera', label: 'Cámara y Vídeo' },
+      { id: 'audio', label: 'Audio y Filtros' },
+      { id: 'stage', label: 'Escenario y Avatares 3D' },
+      { id: 'commands', label: 'Comandos de Bot y Listas' },
+      { id: 'system', label: 'Apariencia y Sistema' }
+    ];
+    // Phase 4 registers one render function per tab id here.
+    const settingsRenderers = {};
+
+    function selectSettingsTab(id) {
+      const tab = SETTINGS_TABS.find((entry) => entry.id === id) || SETTINGS_TABS[0];
+      document.querySelectorAll('.settings-tab').forEach((button) => {
+        const selected = button.dataset.tab === tab.id;
+        button.setAttribute('aria-selected', String(selected));
+        button.tabIndex = selected ? 0 : -1;
+      });
+      const panel = $('settings-panel');
+      panel.setAttribute('aria-labelledby', `settings-tab-${tab.id}`);
+      panel.replaceChildren();
+      const render = settingsRenderers[tab.id];
+      if (render) {
+        render(panel);
+        return;
+      }
+      const heading = document.createElement('h3');
+      heading.textContent = tab.label;
+      const note = document.createElement('p');
+      note.className = 'hint';
+      note.textContent = 'Esta sección se construye en la fase 4.';
+      panel.append(heading, note);
+    }
+    function buildSettingsTabs() {
+      const list = $('settings-tabs');
+      SETTINGS_TABS.forEach((tab) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn settings-tab';
+        button.id = `settings-tab-${tab.id}`;
+        button.dataset.tab = tab.id;
+        button.setAttribute('role', 'tab');
+        button.setAttribute('aria-controls', 'settings-panel');
+        button.textContent = tab.label;
+        list.appendChild(button);
+      });
+      list.addEventListener('click', (event) => {
+        const button = event.target.closest('.settings-tab');
+        if (button) selectSettingsTab(button.dataset.tab);
+      });
+      list.addEventListener('keydown', (event) => {
+        const keys = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
+        if (!(event.key in keys)) return;
+        event.preventDefault();
+        const current = SETTINGS_TABS.findIndex((tab) => `settings-tab-${tab.id}` === document.activeElement.id);
+        const next = SETTINGS_TABS[(current + keys[event.key] + SETTINGS_TABS.length) % SETTINGS_TABS.length];
+        selectSettingsTab(next.id);
+        $(`settings-tab-${next.id}`).focus();
+      });
+      selectSettingsTab(SETTINGS_TABS[0].id);
+    }
+
+    // ── Help bubble after 3 seconds of hover or keyboard focus ───────────
+    const TIP_DELAY_MS = 3000;
+    let tipTimer = 0;
+    function hideTip() {
+      clearTimeout(tipTimer);
+      $('tip').hidden = true;
+    }
+    function scheduleTip(target) {
+      hideTip();
+      tipTimer = setTimeout(() => {
+        const tip = $('tip');
+        tip.textContent = target.dataset.tip;
+        tip.hidden = false;
+        const box = target.getBoundingClientRect();
+        const size = tip.getBoundingClientRect();
+        const above = box.top - size.height - 6;
+        tip.style.top = `${above >= 4 ? above : box.bottom + 6}px`;
+        tip.style.left = `${Math.max(4, Math.min(window.innerWidth - size.width - 4, box.left + box.width / 2 - size.width / 2))}px`;
+      }, TIP_DELAY_MS);
+    }
+    function bindTips() {
+      const enter = (event) => {
+        const target = event.target.closest ? event.target.closest('[data-tip]') : null;
+        if (target) scheduleTip(target);
+      };
+      document.addEventListener('mouseover', enter);
+      document.addEventListener('focusin', enter);
+      document.addEventListener('mouseout', hideTip);
+      document.addEventListener('focusout', hideTip);
+      document.addEventListener('pointerdown', hideTip);
+    }
+
+    // ── Actions ──────────────────────────────────────────────────────────
+    const ACTIONS = {
+      'copy': handleCopy,
+      'toggle-theme': toggleTheme,
+      'toggle-secret': (button) => setSecretVisible(button, button.getAttribute('aria-pressed') !== 'true'),
+      'open-settings': () => $('settings-dialog').showModal(),
+      'close-settings': () => $('settings-dialog').close(),
+      'back-to-welcome': () => showView('welcome')
+    };
+
+    function init() {
+      applyTheme(readStoredTheme());
+      hideAllSecrets();
+      document.querySelectorAll('[data-action="open-settings"]').forEach((button) => { button.innerHTML = icon('gear'); });
+      document.querySelectorAll('[data-action="close-settings"]').forEach((button) => { button.innerHTML = icon('close'); });
+      buildSettingsTabs();
+      bindTips();
+
+      document.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-action]');
+        if (!button || button.disabled) return;
+        const action = ACTIONS[button.dataset.action];
+        if (action) action(button);
+      });
+
+      $('credentials-form').addEventListener('submit', (event) => event.preventDefault());
+      $('credentials-form').addEventListener('input', refreshReadiness);
+      $('btn-arrancar-estudio').addEventListener('click', () => {
+        if (missingRequired(readCredentialState()).length === 0) showView('studio');
+      });
+
+      refreshReadiness();
+      loadObsSources();
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>
