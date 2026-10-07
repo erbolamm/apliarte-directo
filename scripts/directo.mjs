@@ -78,7 +78,7 @@ async function main() {
   const hayFfmpeg = spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' }).status === 0;
 
   let abierto = false;
-  arrancar('capa', ['server.js'], { PORT: String(PUERTO) }, (linea) => {
+  arrancar('capa', ['server.js'], { PORT: String(PUERTO), HOST: process.env.HOST || '0.0.0.0' }, (linea) => {
     const enlace = extraerEnlaceReclamacion(linea);
     if (enlace && !abierto) { abierto = true; abrir(`http://127.0.0.1:${PUERTO}${enlace}`); }
   });

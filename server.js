@@ -1465,7 +1465,7 @@ function isPizarraTrustedOrigin(req) {
   try {
     const u = new URL(originHeader);
     const h = u.hostname;
-    const isLocal = h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h.endsWith('.ts.net');
+    const isLocal = h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h.endsWith('.ts.net') || /^192\.168\.\d+\.\d+$/.test(h) || /^10\.\d+\.\d+\.\d+$/.test(h);
     if (isLocal && (['8791', '7979', '8790', ''].includes(u.port))) return true;
   } catch (_) {}
   return false;

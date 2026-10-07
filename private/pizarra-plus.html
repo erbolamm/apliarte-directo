@@ -61,6 +61,26 @@
       background: transparent !important;
     }
 
+    #canvas-container.board-hidden {
+      display: none !important;
+    }
+
+    #board-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 20px;
+      margin: auto;
+      text-align: center;
+      color: var(--text-muted);
+      border: 1px dashed var(--border-color);
+      border-radius: 12px;
+      max-width: 440px;
+      gap: 12px;
+      background: var(--panel-bg);
+    }
+
     #obs-preview-bg {
       position: absolute;
       inset: 0;
@@ -598,7 +618,13 @@
           <span class="fav-label">+ Favoritos</span>
         </button>
       </nav>
-      <div id="canvas-container">
+      <div id="board-placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 44px; height: 44px; color: var(--accent);" aria-hidden="true"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h10"/></svg>
+        <div style="font-weight: 700; font-size: 15px; color: var(--text-main);">Centro de Control Táctil</div>
+        <div style="font-size: 13px;">La pizarra táctil se inicia desactivada para facilitar el control de cámara, micrófono y comandos. Toca el botón de pizarra para abrir el lienzo de dibujo.</div>
+        <button type="button" class="sheet-btn primary" id="btn-activate-board" style="min-height: 42px; padding: 0 18px; font-weight: 700; margin-top: 4px;">Abrir Pizarra de Dibujo</button>
+      </div>
+      <div id="canvas-container" class="board-hidden">
         <img id="obs-preview-bg" alt="Vista previa OBS" />
         <canvas id="drawing-canvas"></canvas>
         <canvas id="preview-canvas"></canvas>
@@ -611,6 +637,7 @@
         <button type="button" class="bar-icon danger" id="btn-clear" aria-label="Limpiar todo el dibujo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
         <span class="bar-sep" aria-hidden="true"></span>
         <button type="button" class="bar-icon" id="btn-obs-snapshot" aria-label="Capturar imagen fija de OBS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="4"/></svg></button>
+        <button type="button" class="bar-icon" id="btn-toggle-board" aria-label="Lienzo de dibujo en reposo. Toca para activar" aria-pressed="false" title="Mostrar/Ocultar lienzo de pizarra"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></button>
         <button type="button" class="bar-icon" id="btn-device-camera" aria-label="Cámara de este dispositivo: cargando" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="12" height="14" rx="2"/><path d="M15 10l6-4v12l-6-4"/></svg></button>
         <button type="button" class="bar-icon" id="btn-tablet-mic" aria-label="Micrófono de este dispositivo: cargando" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button>
         <button type="button" class="bar-icon" id="btn-tts" aria-label="Voz del chat (TTS): apagada" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg></button>
@@ -709,6 +736,98 @@
     </div>
   </section>
 
+  <section id="camera-sheet" class="sheet" aria-label="Control de Cámara" hidden>
+    <div class="sheet-head">
+      <h2>Control de Cámara</h2>
+      <button type="button" class="bar-icon sheet-close" id="btn-camera-sheet-close" aria-label="Cerrar control de cámara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="sheet-body">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 10px 14px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px;">
+        <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Emisión a OBS:</span>
+        <span id="pizarra-cam-badge" style="font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 6px; background: var(--panel-bg); border: 1px solid var(--border-color);">Monigote OBS</span>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+        <button type="button" id="btn-pizarra-cam-toggle" class="sheet-btn primary" style="flex: 1; min-height: 48px; font-size: 15px; font-weight: 700;">Activar Cámara</button>
+        <button type="button" id="btn-pizarra-cam-stop" class="sheet-btn danger" style="flex: 1; min-height: 48px; font-size: 15px; font-weight: 700; display: none;">Apagar Cámara</button>
+      </div>
+
+      <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Orientación de Cámara:</div>
+      <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+        <button type="button" id="btn-pizarra-cam-front" class="sheet-btn primary" style="flex: 1; min-height: 44px; font-weight: 700;">Frontal (Selfie)</button>
+        <button type="button" id="btn-pizarra-cam-back" class="sheet-btn" style="flex: 1; min-height: 44px; font-weight: 700;">Trasera (Local)</button>
+        <button type="button" id="btn-pizarra-cam-switch" class="sheet-btn" style="min-height: 44px; padding: 0 14px; font-size: 16px;" title="Conmutar rápida entre frontal y trasera">🔄</button>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding: 10px 14px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px;">
+        <label for="pizarra-cam-quality" style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Calidad Vídeo:</label>
+        <select id="pizarra-cam-quality" style="background: var(--panel-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 12px; font-size: 13px; font-weight: 600;">
+          <option value="low">Baja (~320×240 @ 15fps · 250 kbps)</option>
+          <option value="med">Media (~640×360 @ 24fps · 600 kbps)</option>
+          <option value="high">Alta (~1280×720 @ 30fps · 1.5 Mbps)</option>
+        </select>
+      </div>
+
+      <div id="pizarra-cam-preview-box" style="display: none; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color);">
+          <span style="font-size: 11px; font-weight: 700; color: #ef4444;">VISTA PREVIA LOCAL</span>
+          <button type="button" id="btn-pizarra-cam-preview-toggle" class="sheet-btn" style="min-height: 28px; padding: 2px 8px; font-size: 11px;">Ocultar Preview</button>
+        </div>
+        <div id="pizarra-cam-preview-wrapper" style="width: 100%; height: 200px; background: #000;">
+          <iframe id="pizarra-cam-preview-iframe" src="" allow="camera; microphone; autoplay; fullscreen" style="width: 100%; height: 100%; border: none; display: block;"></iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="mic-sheet" class="sheet" aria-label="Control de Micrófono" hidden>
+    <div class="sheet-head">
+      <h2>Control de Micrófono</h2>
+      <button type="button" class="bar-icon sheet-close" id="btn-mic-sheet-close" aria-label="Cerrar control de micrófono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="sheet-body">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 10px 14px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px;">
+        <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Estado del Micrófono:</span>
+        <span id="pizarra-mic-badge" style="font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 6px; background: var(--panel-bg); border: 1px solid var(--border-color);">Silenciado</span>
+      </div>
+
+      <button type="button" id="btn-pizarra-mic-toggle" class="sheet-btn primary" style="width: 100%; min-height: 48px; font-size: 15px; font-weight: 700; margin-bottom: 14px;">Activar Micrófono</button>
+
+      <div style="margin-bottom: 14px; padding: 12px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 11px; font-weight: 700; color: var(--text-muted);">
+          <span>NIVEL DE ENTRADA (VÚMETRO)</span>
+          <span id="pizarra-vumetro-db" style="font-family: monospace; color: var(--accent);">-∞ dB</span>
+        </div>
+        <div style="height: 14px; background: var(--border-color); border-radius: 7px; overflow: hidden;">
+          <div id="pizarra-vumetro-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #22c55e 60%, #eab308 85%, #ef4444 100%); transition: width 0.05s ease;"></div>
+        </div>
+      </div>
+
+      <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Filtros de Audio (Tiempo Real):</div>
+      <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+        <button type="button" id="btn-pizarra-denoise" class="sheet-btn primary" style="flex: 1; min-height: 40px; font-size: 13px; font-weight: 700;">Silenciar Ruido: ON</button>
+        <button type="button" id="btn-pizarra-eco" class="sheet-btn primary" style="flex: 1; min-height: 40px; font-size: 13px; font-weight: 700;">Cancelar Eco: ON</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+          <span style="font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Ganancia de Voz:</span>
+          <span id="pizarra-gain-val" style="font-family: monospace; font-weight: 700; color: var(--accent);">1.5x (+3.5 dB)</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 11px; color: var(--text-muted);">0.5x</span>
+          <input type="range" id="pizarra-gain-slider" min="0.5" max="3.0" step="0.1" value="1.5" style="flex: 1; accent-color: var(--accent); cursor: pointer;">
+          <span style="font-size: 11px; color: var(--text-muted);">3.0x</span>
+        </div>
+        <div style="display: flex; gap: 6px; margin-top: 2px;">
+          <button type="button" class="sheet-btn btn-pizarra-gain" data-gain="0.8" style="flex: 1; min-height: 30px; font-size: 12px;">Baja (0.8x)</button>
+          <button type="button" class="sheet-btn primary btn-pizarra-gain" data-gain="1.5" style="flex: 1; min-height: 30px; font-size: 12px; font-weight: 700;">Normal (1.5x)</button>
+          <button type="button" class="sheet-btn btn-pizarra-gain" data-gain="2.2" style="flex: 1; min-height: 30px; font-size: 12px;">Alta (2.2x)</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <div id="cmd-modal" class="cmd-modal" hidden>
     <div id="cmd-step" class="cmd-step" role="dialog" aria-modal="true" aria-labelledby="cmd-step-title" tabindex="-1">
       <div class="panel-head" style="border: none; padding: 0;">
@@ -763,8 +882,16 @@
       <div class="cmd-input-row" style="margin-top: 10px;">
         <input id="item-input-main" type="text" placeholder="" autocomplete="off" autocapitalize="none" spellcheck="false">
       </div>
-      <div id="item-cmd-extra" class="cmd-input-row" style="margin-top: 8px; display: none;">
+      <div id="item-cmd-extra" class="cmd-input-row" style="margin-top: 8px; display: none; flex-direction: column; gap: 8px;">
         <input id="item-input-desc" type="text" placeholder="Descripción breve del comando (opcional)" autocomplete="off" spellcheck="false">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Parámetros del comando:</div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <button type="button" class="sheet-btn btn-cmd-param-chip" data-token="[usuario]" style="font-size: 12px; padding: 4px 8px;">+ [usuario]</button>
+          <button type="button" class="sheet-btn btn-cmd-param-chip" data-token="[canal]" style="font-size: 12px; padding: 4px 8px;">+ [canal]</button>
+          <button type="button" class="sheet-btn btn-cmd-param-chip" data-token="[mensaje]" style="font-size: 12px; padding: 4px 8px;">+ [mensaje]</button>
+          <button type="button" class="sheet-btn btn-cmd-param-chip" data-token="clear" style="font-size: 12px; padding: 4px 8px;">Sin parámetros</button>
+        </div>
+        <p style="font-size: 11px; color: var(--text-muted); margin: 0;">Toca para añadir comodines al comando sin tener que escribir corchetes.</p>
       </div>
       <p id="item-modal-message" role="alert" style="margin-top: 6px; font-size: 13px;"></p>
       <div class="cmd-actions" style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
@@ -2064,6 +2191,9 @@
           if (Array.isArray(data.valores)) {
             savedLists[activeItemType] = data.valores;
           }
+          if (cmdFlow && cmdModal && !cmdModal.hidden) {
+            showCommandStep();
+          }
           setTimeout(closeItemModal, 500);
         }
       } catch (err) {
@@ -2091,17 +2221,59 @@
       if (e.key === 'Enter') saveItemModal();
     });
 
+    document.querySelectorAll('.btn-cmd-param-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const token = btn.dataset.token;
+        if (!itemInputMain) return;
+        if (token === 'clear') {
+          itemInputMain.value = itemInputMain.value.replace(/\[(usuario|canal|mensaje|agente)\]/g, '').replace(/\s+/g, ' ').trim();
+        } else {
+          if (!itemInputMain.value.includes(token)) {
+            itemInputMain.value = (itemInputMain.value.trim() + ' ' + token).trim();
+          }
+        }
+        itemInputMain.focus();
+      });
+    });
+
+    // ── Board Activation & Reposo Toggle ──
+    let boardActive = false;
+    const canvasContainerEl = document.getElementById('canvas-container');
+    const boardPlaceholderEl = document.getElementById('board-placeholder');
+    const btnToggleBoardEl = document.getElementById('btn-toggle-board');
+    const btnActivateBoardEl = document.getElementById('btn-activate-board');
+
+    function setBoardActive(active) {
+      boardActive = !!active;
+      if (canvasContainerEl) canvasContainerEl.classList.toggle('board-hidden', !boardActive);
+      if (boardPlaceholderEl) boardPlaceholderEl.style.display = boardActive ? 'none' : 'flex';
+      if (btnToggleBoardEl) {
+        btnToggleBoardEl.classList.toggle('active', boardActive);
+        btnToggleBoardEl.setAttribute('aria-pressed', String(boardActive));
+        btnToggleBoardEl.setAttribute('aria-label', boardActive ? 'Lienzo de dibujo activo. Toca para ocultar' : 'Lienzo de dibujo en reposo. Toca para activar');
+      }
+      if (boardActive && typeof resizeCanvas === 'function') {
+        resizeCanvas();
+      }
+    }
+    btnToggleBoardEl?.addEventListener('click', () => setBoardActive(!boardActive));
+    btnActivateBoardEl?.addEventListener('click', () => setBoardActive(true));
+
     renderFavoritesBar(getSavedFavorites());
 
     // ── Panels: one open at a time; each control is a single icon ──
     const chatSheet = document.getElementById('chat-sheet');
     const commandsSheet = document.getElementById('commands-sheet');
     const obsSheet = document.getElementById('obs-sheet');
+    const cameraSheet = document.getElementById('camera-sheet');
+    const micSheet = document.getElementById('mic-sheet');
     const sheetButtons = new Map([
       [chatSheet, document.getElementById('btn-chat-view')],
       [commandsSheet, document.getElementById('btn-commands-view')],
       [obsSheet, document.getElementById('btn-obs-menu')],
       [sourcesSheet, document.getElementById('btn-obs-menu')],
+      [cameraSheet, document.getElementById('btn-device-camera')],
+      [micSheet, document.getElementById('btn-tablet-mic')],
     ]);
     function closeDrawPanel() {
       if (drawPanel.hidden) return;
@@ -2519,29 +2691,209 @@
 
     const tabletMicButton = document.getElementById('btn-tablet-mic');
     tabletMicButton.addEventListener('click', () => {
-      const original = adminFrame.contentDocument?.getElementById('btn-micro-toggle');
-      if (original && !original.disabled) original.click();
+      if (openSheet(micSheet)) syncPizarraMicUi();
     });
     const cameraCaptureButton = document.getElementById('btn-device-camera');
     cameraCaptureButton.addEventListener('click', () => {
+      if (openSheet(cameraSheet)) syncPizarraCamUi();
+    });
+
+    // ── Camera Sheet UI & Sync ──
+    function syncPizarraCamUi() {
       const doc = adminFrame.contentDocument;
-      const stop = doc?.getElementById('btn-apagar-camara');
-      const start = doc?.getElementById('btn-toggle-camara-modo');
-      const cameraContainer = doc?.getElementById('camera-push-container');
+      if (!doc) return;
+      const start = doc.getElementById('btn-toggle-camara-modo');
+      const stop = doc.getElementById('btn-apagar-camara');
+      const cameraContainer = doc.getElementById('camera-push-container');
       const isCapturing = !!cameraContainer && cameraContainer.style.display !== 'none';
-      if (isCapturing && cameraPreviewHidden) {
-        // First tap brings the preview back; it never stops the camera by surprise.
-        cameraPreviewHidden = false;
-        syncAdminDock();
-        syncCameraButton();
-        return;
+
+      const badge = document.getElementById('pizarra-cam-badge');
+      const btnToggle = document.getElementById('btn-pizarra-cam-toggle');
+      const btnStop = document.getElementById('btn-pizarra-cam-stop');
+      const previewBox = document.getElementById('pizarra-cam-preview-box');
+      const previewIframe = document.getElementById('pizarra-cam-preview-iframe');
+
+      if (badge) {
+        badge.textContent = isCapturing ? '🔴 Emitiendo a OBS' : 'Monigote OBS';
+        badge.style.color = isCapturing ? '#ef4444' : 'var(--text-muted)';
       }
-      const original = isCapturing ? stop : start;
+      if (btnToggle) btnToggle.style.display = isCapturing ? 'none' : 'block';
+      if (btnStop) btnStop.style.display = isCapturing ? 'block' : 'none';
+
+      const labelFacing = doc.getElementById('label-camara-activa')?.textContent || '';
+      const isBack = labelFacing.toLowerCase().includes('trasera');
+      const btnFront = document.getElementById('btn-pizarra-cam-front');
+      const btnBack = document.getElementById('btn-pizarra-cam-back');
+      if (btnFront) btnFront.classList.toggle('primary', !isBack);
+      if (btnBack) btnBack.classList.toggle('primary', isBack);
+
+      const calidadSelect = doc.getElementById('select-camara-calidad');
+      const pizCalidadSelect = document.getElementById('pizarra-cam-quality');
+      if (calidadSelect && pizCalidadSelect && !pizCalidadSelect.matches(':focus')) {
+        pizCalidadSelect.value = calidadSelect.value;
+      }
+
+      if (previewBox && previewIframe) {
+        previewBox.style.display = isCapturing && !cameraPreviewHidden ? 'block' : 'none';
+        if (isCapturing) {
+          const nestedIframe = doc.getElementById('camera-push-iframe');
+          const pushUrl = nestedIframe?.dataset?.pushUrl || nestedIframe?.src;
+          if (pushUrl && pushUrl !== 'about:blank' && previewIframe.src !== pushUrl) {
+            previewIframe.src = pushUrl;
+          }
+        } else if (previewIframe.src && previewIframe.src !== 'about:blank') {
+          previewIframe.src = 'about:blank';
+        }
+      }
+    }
+
+    document.getElementById('btn-pizarra-cam-toggle')?.addEventListener('click', () => {
+      const doc = adminFrame.contentDocument;
+      const original = doc?.getElementById('btn-toggle-camara-modo');
       if (original && !original.disabled) {
         cameraPreviewHidden = false;
         original.click();
+        setTimeout(syncPizarraCamUi, 300);
       }
     });
+    document.getElementById('btn-pizarra-cam-stop')?.addEventListener('click', () => {
+      const doc = adminFrame.contentDocument;
+      const original = doc?.getElementById('btn-apagar-camara');
+      if (original && !original.disabled) {
+        original.click();
+        setTimeout(syncPizarraCamUi, 300);
+      }
+    });
+    document.getElementById('btn-pizarra-cam-front')?.addEventListener('click', () => {
+      const doc = adminFrame.contentDocument;
+      doc?.getElementById('btn-cam-facing-user')?.click();
+      setTimeout(syncPizarraCamUi, 200);
+    });
+    document.getElementById('btn-pizarra-cam-back')?.addEventListener('click', () => {
+      const doc = adminFrame.contentDocument;
+      doc?.getElementById('btn-cam-facing-back')?.click();
+      setTimeout(syncPizarraCamUi, 200);
+    });
+    document.getElementById('btn-pizarra-cam-switch')?.addEventListener('click', () => {
+      const doc = adminFrame.contentDocument;
+      doc?.getElementById('btn-cam-switch-toggle')?.click();
+      setTimeout(syncPizarraCamUi, 200);
+    });
+    document.getElementById('pizarra-cam-quality')?.addEventListener('change', (e) => {
+      const doc = adminFrame.contentDocument;
+      const sel = doc?.getElementById('select-camara-calidad');
+      if (sel) {
+        sel.value = e.target.value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    document.getElementById('btn-pizarra-cam-preview-toggle')?.addEventListener('click', () => {
+      const previewWrapper = document.getElementById('pizarra-cam-preview-wrapper');
+      const btn = document.getElementById('btn-pizarra-cam-preview-toggle');
+      if (!previewWrapper || !btn) return;
+      const hidden = previewWrapper.style.display === 'none';
+      previewWrapper.style.display = hidden ? 'block' : 'none';
+      btn.textContent = hidden ? 'Ocultar Preview' : 'Mostrar Preview';
+    });
+
+    // ── Mic Sheet UI & Sync ──
+    function syncPizarraMicUi() {
+      const doc = adminFrame.contentDocument;
+      if (!doc) return;
+      const micBtn = doc.getElementById('btn-micro-toggle');
+      const micBadge = doc.getElementById('badge-micro-estado');
+      const denoiseBtn = doc.getElementById('btn-toggle-micro-denoise');
+      const ecoBtn = doc.getElementById('btn-toggle-micro-eco');
+      const gainSlider = doc.getElementById('slider-micro-gain');
+      const gainVal = doc.getElementById('label-micro-gain-val');
+      const vumetroBar = doc.getElementById('vumetro-bar');
+      const vumetroDb = doc.getElementById('vumetro-db');
+
+      const isLive = (micBadge?.textContent || '').includes('EN VIVO') || (micBtn?.classList.contains('touch-btn-danger'));
+      const badge = document.getElementById('pizarra-mic-badge');
+      const toggle = document.getElementById('btn-pizarra-mic-toggle');
+      if (badge) {
+        badge.textContent = isLive ? '🔴 Micrófono en Directo' : 'Silenciado';
+        badge.style.color = isLive ? '#ef4444' : 'var(--text-muted)';
+      }
+      if (toggle) {
+        toggle.textContent = isLive ? 'Silenciar Micrófono' : 'Activar Micrófono';
+        toggle.classList.toggle('danger', isLive);
+        toggle.classList.toggle('primary', !isLive);
+      }
+
+      const pDenoise = document.getElementById('btn-pizarra-denoise');
+      if (pDenoise && denoiseBtn) {
+        pDenoise.textContent = denoiseBtn.textContent.trim();
+        pDenoise.classList.toggle('primary', denoiseBtn.classList.contains('touch-btn-primary'));
+      }
+      const pEco = document.getElementById('btn-pizarra-eco');
+      if (pEco && ecoBtn) {
+        pEco.textContent = ecoBtn.textContent.trim();
+        pEco.classList.toggle('primary', ecoBtn.classList.contains('touch-btn-primary'));
+      }
+
+      const pGainSlider = document.getElementById('pizarra-gain-slider');
+      const pGainVal = document.getElementById('pizarra-gain-val');
+      if (pGainSlider && gainSlider && !pGainSlider.matches(':focus')) {
+        pGainSlider.value = gainSlider.value;
+      }
+      if (pGainVal && gainVal) {
+        pGainVal.textContent = gainVal.textContent;
+      }
+
+      const pBar = document.getElementById('pizarra-vumetro-bar');
+      const pDb = document.getElementById('pizarra-vumetro-db');
+      if (pBar && vumetroBar) pBar.style.width = vumetroBar.style.width || '0%';
+      if (pDb && vumetroDb) pDb.textContent = vumetroDb.textContent || '-∞ dB';
+    }
+
+    document.getElementById('btn-pizarra-mic-toggle')?.addEventListener('click', () => {
+      const doc = adminFrame.contentDocument;
+      const original = doc?.getElementById('btn-micro-toggle');
+      if (original && !original.disabled) original.click();
+      setTimeout(syncPizarraMicUi, 250);
+    });
+    document.getElementById('btn-pizarra-denoise')?.addEventListener('click', () => {
+      const doc = adminFrame.contentDocument;
+      doc?.getElementById('btn-toggle-micro-denoise')?.click();
+      setTimeout(syncPizarraMicUi, 100);
+    });
+    document.getElementById('btn-pizarra-eco')?.addEventListener('click', () => {
+      const doc = adminFrame.contentDocument;
+      doc?.getElementById('btn-toggle-micro-eco')?.click();
+      setTimeout(syncPizarraMicUi, 100);
+    });
+    document.getElementById('pizarra-gain-slider')?.addEventListener('input', (e) => {
+      const doc = adminFrame.contentDocument;
+      const slider = doc?.getElementById('slider-micro-gain');
+      if (slider) {
+        slider.value = e.target.value;
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+        slider.dispatchEvent(new Event('change', { bubbles: true }));
+        syncPizarraMicUi();
+      }
+    });
+    document.querySelectorAll('.btn-pizarra-gain').forEach(b => {
+      b.addEventListener('click', () => {
+        const val = b.dataset.gain;
+        const doc = adminFrame.contentDocument;
+        const preset = doc?.querySelector(`.btn-gain-preset[data-gain="${val}"]`);
+        if (preset) {
+          preset.click();
+          setTimeout(syncPizarraMicUi, 100);
+        }
+      });
+    });
+
+    setInterval(() => {
+      if (micSheet && !micSheet.hidden) {
+        syncPizarraMicUi();
+      }
+      if (cameraSheet && !cameraSheet.hidden) {
+        syncPizarraCamUi();
+      }
+    }, 150);
     const ttsButton = document.getElementById('btn-tts');
     let pizarraTtsActive = false;
     let pizarraTwitchWs = null;
