@@ -220,6 +220,8 @@
     .meter-bar { height: 100%; width: 0; background: var(--brand-strong); }
     .video-card { display: grid; gap: 0.25rem; padding: var(--gap); border: 1px solid var(--line); border-radius: var(--radius); }
     .video-card small { color: var(--text-muted); }
+    .tts-log { max-height: 180px; overflow: auto; padding: var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); font-size: 0.85rem; display: grid; gap: 0.2rem; }
+    .tts-log .skipped { color: var(--text-muted); font-style: italic; }
     .settings-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
     .settings-row .btn[aria-pressed="true"] { border-color: var(--brand-strong); color: var(--brand-strong); }
     .settings-panel select { min-height: var(--touch); padding: 0 var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 1rem; max-width: 100%; }
@@ -466,7 +468,7 @@
         <button type="button" class="btn btn-danger" id="btn-apagar-estudio" data-action="open-shutdown">Apagar</button>
       </div>
     </header>
-    <p class="notice mock-banner" id="studio-mock-note">En construcción. Faltan los mensajes SMS, los avatares, los minijuegos, la configuración de la voz del chat y la captura fija de OBS como fondo del lienzo.</p>
+    <p class="notice mock-banner" id="studio-mock-note">En construcción. Faltan los mensajes SMS, los avatares, los minijuegos, la vista previa de los vídeos y la captura fija de OBS como fondo del lienzo.</p>
     <main class="stage">
       <div class="stage-canvas" id="canvas-container" hidden>
         <canvas id="drawing-canvas"></canvas>
@@ -1888,78 +1890,564 @@
     };
 
     // ── Chat voice (TTS) ─────────────────────────────────────────────────
-    // Ported from pizarra-plus: reads the public Twitch chat anonymously
-    // and plays each message through the server's /api/tts.
-    const TTS_CHANNEL = 'apliarte';
+    // Full engine ported from the old panel: reads the public Twitch chat
+    // anonymously and speaks it with the device voices (one voice per user,
+    // speed, filters, muted users, log). The simpler server voice from
+    // pizarra-plus (/api/tts) stays available as a second engine.
+    const TTS_KEYS = {
+      channel: 'directo_tts_canal_v1', sound: 'directo_tts_sonido_aviso_v1', skipCommands: 'directo_tts_omitir_comandos_v1',
+      skipEmojis: 'directo_tts_omitir_emojis_v1', skipLinks: 'directo_tts_omitir_enlaces_v1', voices: 'directo_tts_voces_v1',
+      muted: 'directo_tts_usuarios_ignorados_v1', voice: 'apliarte_estudio_tts_voz', speed: 'apliarte_estudio_tts_speed', engine: 'apliarte_estudio_tts_motor'
+    };
     const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-    const tts = { active: false, socket: null, queue: [], playing: false, ignored: new Set(), player: new Audio() };
-    function playNextTts() {
-      if (!tts.active || tts.queue.length === 0) { tts.playing = false; return; }
-      tts.playing = true;
-      tts.player.src = `/api/tts?tl=es&q=${encodeURIComponent(tts.queue.shift())}`;
-      tts.player.play().catch(() => setTimeout(playNextTts, 150));
+    const FEMALE_VOICE_NAMES = ['mónica', 'monica', 'paulina', 'marisol', 'isabela', 'flo', 'sandy', 'shelley', 'grandma', 'lucía', 'lucia', 'elvira', 'conchita', 'esperanza', 'penélope', 'penelope',
+      'dalia', 'elena', 'salome', 'salomé', 'laura', 'helena', 'victoria', 'carmen', 'clara', 'paloma', 'zira', 'samantha', 'sabina', 'karen', 'female'];
+    const MALE_VOICE_NAMES = ['jorge', 'diego', 'eddy', 'reed', 'rocko', 'grandpa', 'juan', 'pablo', 'enrique', 'carlos', 'miguel', 'fred',
+      'alvaro', 'álvaro', 'gonzalo', 'tomas', 'tomás', 'alberto', 'raul', 'raúl', 'mateo', 'manuel', 'david', 'antonio', 'male'];
+    const RE_EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{2190}-\u{21FF}️]/gu;
+    const RE_URL = /\bhttps?:\/\/\S+/gi;
+    const hasSpeech = 'speechSynthesis' in window;
+    const ttsFlag = (key) => micSetting(TTS_KEYS[key], 'true') !== 'false';
+    const ttsChannel = () => (micSetting(TTS_KEYS.channel, 'apliarte') || 'apliarte').trim().toLowerCase().replace(/^#/, '') || 'apliarte';
+    const ttsSpeed = () => Math.max(0.5, Math.min(2.0, parseFloat(micSetting(TTS_KEYS.speed, '1.0')) || 1.0));
+    const ttsEngine = () => (!hasSpeech || micSetting(TTS_KEYS.engine, 'device') === 'server' ? 'server' : 'device');
+    const tts = {
+      active: false, socket: null, queue: [], userVoices: new Map(), muted: new Set(), log: [],
+      background: 'Apoyo 2º plano detenido', onLog: null, onStatus: null,
+      player: new Audio(), serverPlaying: false, alert: new Audio('/sonidos/aviso-mensaje.mp3')
+    };
+    tts.alert.preload = 'auto';
+    tts.alert.volume = 0.4;
+
+    function ttsLog(entry) {
+      tts.log.push(entry);
+      if (tts.log.length > 80) tts.log.shift();
+      if (tts.onLog) tts.onLog();
     }
-    function queueTts(text) {
-      if (!tts.active || !text) return;
-      tts.queue.push(text.slice(0, 160));
-      if (!tts.playing) playNextTts();
+    const ttsNotice = (text) => ttsLog({ text });
+    const ttsChatLine = (user, text, skipped) => ttsLog({ user, text, skipped });
+
+    // Keeps speech going while the tab is in the background: a worker tick,
+    // a near-silent audio loop and a watchdog for utterances that never end.
+    function createBackgroundSpeech({ pump, status, notice }) {
+      let active = false, current = null, audio = null, worker = null, timer = null;
+      let generation = 0, audioOk = false;
+      const urls = [];
+      const synth = window.speechSynthesis;
+      const objectUrl = (blob) => { const value = URL.createObjectURL(blob); urls.push(value); return value; };
+      const paint = () => status(!active ? 'Apoyo 2º plano detenido' : (audioOk && worker ? 'Apoyo 2º plano activo' : 'Apoyo 2º plano limitado'));
+      function finish(turn, cancel = false) {
+        if (current !== turn) return;
+        current = null;
+        turn.utterance.onend = turn.utterance.onerror = null;
+        if (cancel && synth) { try { synth.cancel(); } catch (_) { /* idle */ } }
+      }
+      function tick() {
+        if (!active) return;
+        const turn = current;
+        if (turn) {
+          const now = performance.now();
+          if (now - turn.start >= turn.limit) {
+            finish(turn, true);
+            notice('Voz sin finalizar: descartada por tiempo.');
+          } else if (now - turn.lastWake >= 12000) {
+            turn.lastWake = now;
+            if (synth) { try { synth.pause(); synth.resume(); } catch (_) { /* idle */ } }
+          }
+        }
+        if (!current) pump();
+      }
+      function fallbackTimer() {
+        if (worker) worker.terminate();
+        worker = null;
+        if (timer === null) timer = setInterval(tick, 250);
+        paint();
+      }
+      function start() {
+        if (active) return;
+        active = true;
+        const session = ++generation;
+        try {
+          worker = new Worker(objectUrl(new Blob(["setInterval(() => postMessage('tick'), 250);"], { type: 'application/javascript' })));
+          worker.onmessage = () => { if (session === generation) tick(); };
+          worker.onerror = () => { if (active && session === generation) fallbackTimer(); };
+        } catch (_) { fallbackTimer(); }
+        try {
+          // One second of silence as a WAV, looped at almost no volume.
+          const buffer = new ArrayBuffer(16044);
+          const view = new DataView(buffer);
+          const text = (offset, value) => [...value].forEach((char, i) => view.setUint8(offset + i, char.charCodeAt(0)));
+          text(0, 'RIFF'); view.setUint32(4, 16036, true); text(8, 'WAVE');
+          text(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+          view.setUint16(22, 1, true); view.setUint32(24, 8000, true);
+          view.setUint32(28, 16000, true); view.setUint16(32, 2, true);
+          view.setUint16(34, 16, true); text(36, 'data'); view.setUint32(40, 16000, true);
+          audio = new Audio(objectUrl(new Blob([buffer], { type: 'audio/wav' })));
+          audio.loop = true;
+          audio.volume = 0.01;
+          const limited = () => { if (session === generation && active) { audioOk = false; paint(); } };
+          audio.onerror = audio.onpause = limited;
+          audio.onplaying = () => { if (session === generation && active) { audioOk = true; paint(); } };
+          Promise.resolve(audio.play()).catch(limited);
+        } catch (_) { audioOk = false; }
+        paint();
+      }
+      function stop() {
+        active = false;
+        ++generation;
+        if (current) finish(current);
+        if (synth) { try { synth.cancel(); } catch (_) { /* idle */ } }
+        if (worker) worker.terminate();
+        worker = null;
+        if (timer !== null) clearInterval(timer);
+        timer = null;
+        if (audio) {
+          audio.onplaying = audio.onpause = audio.onerror = null;
+          audio.pause(); audio.removeAttribute('src'); audio.load();
+        }
+        audio = null; audioOk = false;
+        urls.splice(0).forEach((value) => URL.revokeObjectURL(value));
+        paint();
+      }
+      function speak(utterance) {
+        if (!active || current || !synth) return false;
+        const start = performance.now();
+        const limit = Math.min(300000, Math.max(45000, utterance.text.length * 200 / Math.max(0.5, Number(utterance.rate) || 1) + 15000));
+        const turn = { utterance, start, lastWake: start, limit };
+        current = turn;
+        utterance.onend = utterance.onerror = () => finish(turn);
+        try { synth.speak(utterance); } catch (_) { finish(turn, true); }
+        return true;
+      }
+      return { start, stop, speak, get busy() { return current !== null; } };
     }
-    tts.player.addEventListener('ended', () => setTimeout(playNextTts, 150));
-    tts.player.addEventListener('error', () => setTimeout(playNextTts, 150));
-    async function loadIgnoredUsers() {
+    const backgroundSpeech = createBackgroundSpeech({
+      pump: () => pumpTtsQueue(),
+      status: (text) => { tts.background = text; if (tts.onStatus) tts.onStatus(); },
+      notice: ttsNotice
+    });
+
+    // Per-user voices and muted users: local copy plus the server lists.
+    function saveUserVoices() {
+      const voices = Object.fromEntries(tts.userVoices.entries());
+      storeSetting(TTS_KEYS.voices, JSON.stringify(voices));
+      fetch('/api/panel/voces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accion: 'fusionar', voces: voices }) }).catch(() => {});
+    }
+    async function loadUserVoices() {
+      const merge = (voices) => Object.entries(voices || {}).forEach(([user, voice]) => { if (user && voice) tts.userVoices.set(user.toLowerCase(), voice); });
+      try { merge(JSON.parse(micSetting(TTS_KEYS.voices, '{}'))); } catch (_) { /* none stored */ }
+      try {
+        const response = await fetch('/api/panel/voces', { cache: 'no-store' });
+        if (response.ok) merge((await response.json()).voces);
+      } catch (_) { /* local only */ }
+    }
+    function saveMutedUsers() {
+      const users = [...tts.muted];
+      storeSetting(TTS_KEYS.muted, JSON.stringify(users));
+      fetch('/api/panel/usuarios-ignorados', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accion: 'sobrescribir', usuarios: users }) }).catch(() => {});
+    }
+    async function loadMutedUsers() {
+      try {
+        const stored = JSON.parse(micSetting(TTS_KEYS.muted, '[]'));
+        if (Array.isArray(stored)) stored.forEach((user) => tts.muted.add(String(user).toLowerCase()));
+      } catch (_) { /* none stored */ }
       try {
         const response = await fetch('/api/panel/usuarios-ignorados', { cache: 'no-store' });
-        if (!response.ok) return;
-        const data = await response.json();
-        if (Array.isArray(data.usuarios)) tts.ignored = new Set(data.usuarios.map((user) => String(user).toLowerCase()));
-      } catch (_) { /* nobody ignored */ }
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data.usuarios)) data.usuarios.forEach((user) => tts.muted.add(String(user).toLowerCase()));
+        }
+      } catch (_) { /* local only */ }
+      if (tts.onStatus) tts.onStatus();
     }
-    function connectTtsChat() {
+
+    function hashUser(text) {
+      let hash = 0;
+      for (let i = 0; i < text.length; i++) { hash = ((hash << 5) - hash) + text.charCodeAt(i); hash |= 0; }
+      return Math.abs(hash);
+    }
+    function assignAutomaticVoice(user) {
+      if (!user || !hasSpeech) return null;
+      const key = user.toLowerCase();
+      if (tts.userVoices.has(key)) return tts.userVoices.get(key);
+      const all = window.speechSynthesis.getVoices();
+      if (all.length === 0) return null;
+      const spanish = all.filter((voice) => voice.lang.toLowerCase().startsWith('es'));
+      const pool = spanish.length > 0 ? spanish : all;
+      const chosen = pool[hashUser(key) % pool.length];
+      const female = FEMALE_VOICE_NAMES.some((name) => chosen.name.toLowerCase().includes(name));
+      const preference = { lang: chosen.lang, slot: female ? 1 : 2, name: chosen.name, auto: true };
+      tts.userVoices.set(key, preference);
+      saveUserVoices();
+      ttsNotice(`Asignada voz a ${user}: ${chosen.name} (${chosen.lang})`);
+      return preference;
+    }
+    function voiceForPreference(preference) {
+      if (!preference || !hasSpeech) return null;
+      const all = window.speechSynthesis.getVoices();
+      if (all.length === 0) return null;
+      if (preference.name) {
+        const exact = all.find((voice) => voice.name === preference.name);
+        if (exact) return exact;
+      }
+      const candidates = all.filter((voice) => voice.lang.toLowerCase().startsWith((preference.lang || 'es').toLowerCase()));
+      if (candidates.length === 0) return null;
+      const isFemale = (voice) => FEMALE_VOICE_NAMES.some((name) => voice.name.toLowerCase().includes(name));
+      const isMale = (voice) => MALE_VOICE_NAMES.some((name) => voice.name.toLowerCase().includes(name));
+      if (preference.slot === 1) return candidates.find(isFemale) || candidates[0];
+      return candidates.find(isMale) || candidates[Math.min(1, candidates.length - 1)];
+    }
+    function cleanForSpeech(text) {
+      let clean = String(text || '');
+      if (ttsFlag('skipLinks')) clean = clean.replace(RE_URL, 'enlace');
+      if (ttsFlag('skipEmojis')) clean = clean.replace(RE_EMOJI, '');
+      return clean.replace(/\s+/g, ' ').trim();
+    }
+    // Builds the utterance for one message with the fixed voice from settings,
+    // or the user's own voice when the setting is "automatic".
+    function buildUtterance(text, user) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = ttsSpeed();
+      let preference = user ? tts.userVoices.get(user) : null;
+      if (!preference && user) preference = assignAutomaticVoice(user);
+      const fixed = micSetting(TTS_KEYS.voice, '');
+      const preferred = fixed ? null : voiceForPreference(preference);
+      if (preferred) {
+        utterance.voice = preferred;
+        utterance.lang = preferred.lang;
+        utterance.pitch = preference.slot === 2 ? 0.85 : 1.15;
+      } else if (fixed) {
+        const [name, lang] = fixed.split('|');
+        const voice = window.speechSynthesis.getVoices().find((candidate) => candidate.name === name && candidate.lang === lang);
+        if (voice) { utterance.voice = voice; utterance.lang = voice.lang; }
+      }
+      return utterance;
+    }
+    function playServerVoice(text) {
+      tts.serverPlaying = true;
+      tts.player.src = `/api/tts?tl=es&q=${encodeURIComponent(text.slice(0, 160))}`;
+      tts.player.play().catch(() => { tts.serverPlaying = false; setTimeout(pumpTtsQueue, 150); });
+    }
+    tts.player.addEventListener('ended', () => { tts.serverPlaying = false; setTimeout(pumpTtsQueue, 150); });
+    tts.player.addEventListener('error', () => { tts.serverPlaying = false; setTimeout(pumpTtsQueue, 150); });
+    function pumpTtsQueue() {
+      if (!tts.active || tts.queue.length === 0) return;
+      if (ttsEngine() === 'server') {
+        if (tts.serverPlaying) return;
+        playServerVoice(tts.queue.shift().text);
+        return;
+      }
+      if (backgroundSpeech.busy) return;
+      const { text, user } = tts.queue.shift();
+      backgroundSpeech.speak(buildUtterance(text, user));
+    }
+    function queueTts(text, user) {
+      if (!tts.active || !text) return;
+      tts.queue.push({ text, user: user ? user.toLowerCase() : null });
+      pumpTtsQueue();
+    }
+
+    function parseIrc(raw) {
+      let buffer = raw;
+      const tags = {};
+      if (buffer.startsWith('@')) {
+        const end = buffer.indexOf(' ');
+        if (end !== -1) {
+          buffer.slice(1, end).split(';').forEach((pair) => { const [key, value = ''] = pair.split('='); if (key) tags[key] = value; });
+          buffer = buffer.slice(end + 1);
+        }
+      }
+      let user = null;
+      if (buffer.startsWith(':')) {
+        const end = buffer.indexOf(' ');
+        if (end !== -1) {
+          const prefix = buffer.slice(1, end);
+          buffer = buffer.slice(end + 1);
+          const bang = prefix.indexOf('!');
+          user = bang !== -1 ? prefix.slice(0, bang) : prefix;
+        }
+      }
+      let trailing = null;
+      const split = buffer.indexOf(' :');
+      if (split !== -1) { trailing = buffer.slice(split + 2); buffer = buffer.slice(0, split); }
+      return { tags, command: buffer.split(' ')[0] || '', trailing, user };
+    }
+    function handleChatLine(line) {
+      const { tags, command, trailing, user } = parseIrc(line);
+      if (command !== 'PRIVMSG' || !trailing) return;
+      const name = tags['display-name'] || user || 'alguien';
+      const userKey = (user || '').toLowerCase();
+      if (tts.muted.has(userKey) || tts.muted.has((tags['display-name'] || '').toLowerCase())) { ttsChatLine(name, trailing, true); return; }
+      // !speak -config <lang> <1|2> lets a viewer pick their own voice.
+      const config = trailing.match(/^!speak\s+-config\s+([a-z]{2}(?:-[a-z]{2,4})?)\s+([12])\b/i);
+      if (config && user) {
+        tts.userVoices.set(userKey, { lang: config[1], slot: parseInt(config[2], 10), name: null, auto: false });
+        saveUserVoices();
+        ttsNotice(`${name} eligió voz ${config[1]} #${config[2]} (guardada)`);
+        queueTts(`Voz de ${name} configurada`, user);
+        return;
+      }
+      if (/^[!/.]\S+/.test(trailing.trim()) && ttsFlag('skipCommands')) { ttsChatLine(name, trailing, true); return; }
+      ttsChatLine(name, trailing, false);
+      if (ttsFlag('sound')) { tts.alert.currentTime = 0; tts.alert.play().catch(() => {}); }
+      const clean = cleanForSpeech(trailing);
+      if (clean) queueTts(`${name} dice: ${clean}`, user);
+    }
+    function refreshTtsButton() {
+      setLiveButton($('btn-tts'), tts.active, tts.active
+        ? 'Voz del chat (TTS) activada: pulsa para detenerla'
+        : 'Voz del chat (TTS) apagada: pulsa para activarla');
+      if (tts.onStatus) tts.onStatus();
+    }
+    function startTts() {
+      if (tts.active) return;
+      tts.active = true;
+      const channel = ttsChannel();
+      if (ttsEngine() === 'device') {
+        backgroundSpeech.start();
+        // Speaking inside the tap unlocks speech on Safari and iOS.
+        try { window.speechSynthesis.speak(new SpeechSynthesisUtterance('')); } catch (_) { /* unlocked later */ }
+      } else {
+        tts.player.src = SILENT_WAV;
+        tts.player.play().catch(() => {});
+      }
+      refreshTtsButton();
       if (tts.socket) { try { tts.socket.close(); } catch (_) { /* gone */ } }
-      const retry = () => { if (tts.active) setTimeout(() => { if (tts.active) connectTtsChat(); }, 4000); };
       try {
         const socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
         tts.socket = socket;
-        const marker = `PRIVMSG #${TTS_CHANNEL} :`;
         socket.onopen = () => {
+          socket.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
           socket.send('PASS oauth:undefined');
           socket.send('NICK justinfan' + Math.floor(Math.random() * 89999 + 10000));
-          socket.send(`JOIN #${TTS_CHANNEL}`);
+          socket.send(`JOIN #${channel}`);
+          ttsNotice(`Conectado al chat de Twitch (#${channel}).`);
+          showToast(`Voz del chat conectada a #${channel}`);
+          queueTts(`Conectado al chat de ${channel}`);
         };
         socket.onmessage = (event) => {
-          const raw = event.data || '';
-          if (raw.startsWith('PING')) { socket.send('PONG :tmi.twitch.tv'); return; }
-          if (!raw.includes(marker)) return;
-          let message = (raw.split(marker)[1] || '').trim();
-          const userMatch = raw.match(/:([a-zA-Z0-9_]+)!/);
-          const user = userMatch ? userMatch[1] : '';
-          if (message.startsWith('!') || tts.ignored.has(user.toLowerCase())) return;
-          message = message.replace(/https?:\/\/\S+/gi, 'enlace');
-          queueTts(`${user} dice: ${message}`);
+          String(event.data || '').split('\r\n').forEach((line) => {
+            if (!line) return;
+            if (line.startsWith('PING')) { socket.send('PONG :tmi.twitch.tv'); return; }
+            handleChatLine(line);
+          });
         };
-        socket.onerror = () => { if (tts.socket === socket) retry(); };
-        socket.onclose = () => { if (tts.socket === socket) retry(); };
-      } catch (_) { retry(); }
+        socket.onerror = () => { if (tts.socket === socket) ttsNotice('Error en la conexión con el chat de Twitch.'); };
+        socket.onclose = () => {
+          if (tts.socket !== socket || !tts.active) return;
+          ttsNotice('Desconectado del chat de Twitch. Reintentando…');
+          setTimeout(() => { if (tts.active && tts.socket === socket) { tts.active = false; startTts(); } }, 4000);
+        };
+      } catch (_) {
+        stopTts();
+        showToast('Error al iniciar la voz del chat');
+      }
+    }
+    function stopTts() {
+      tts.active = false;
+      if (tts.socket) {
+        const socket = tts.socket;
+        tts.socket = null;
+        socket.onopen = socket.onmessage = socket.onerror = socket.onclose = null;
+        try { socket.close(); } catch (_) { /* gone */ }
+      }
+      backgroundSpeech.stop();
+      tts.queue.length = 0;
+      tts.serverPlaying = false;
+      try { tts.player.pause(); tts.player.removeAttribute('src'); } catch (_) { /* idle */ }
+      if (hasSpeech) { try { window.speechSynthesis.cancel(); } catch (_) { /* idle */ } }
+      refreshTtsButton();
+      ttsNotice('Voz del chat detenida.');
     }
     function toggleTts() {
-      const button = $('btn-tts');
-      if (tts.active) {
-        tts.active = false;
-        tts.queue.length = 0;
-        tts.playing = false;
-        try { tts.player.pause(); tts.player.removeAttribute('src'); } catch (_) { /* idle */ }
-        if (tts.socket) { const socket = tts.socket; tts.socket = null; try { socket.close(); } catch (_) { /* gone */ } }
-        setLiveButton(button, false, 'Voz del chat (TTS) apagada: pulsa para activarla');
+      if (tts.active) stopTts(); else startTts();
+    }
+    // Speaks one sentence right away with the current voice, speed and engine.
+    function testTts() {
+      const sample = 'Prueba de la voz del chat';
+      if (ttsEngine() === 'server') {
+        const probe = new Audio(`/api/tts?tl=es&q=${encodeURIComponent(sample)}`);
+        probe.play().catch(() => showToast('No se pudo reproducir la voz del servidor'));
         return;
       }
-      // Playing inside the tap unlocks audio on iOS.
-      tts.player.src = SILENT_WAV;
-      tts.player.play().catch(() => {});
-      tts.active = true;
-      loadIgnoredUsers();
-      setLiveButton(button, true, 'Voz del chat (TTS) activada: pulsa para detenerla');
-      queueTts('Voz del chat activada');
-      connectTtsChat();
+      try {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(buildUtterance(sample, null));
+      } catch (_) { showToast('Este navegador no pudo reproducir la voz'); }
+    }
+
+    function renderTtsSettings(panel) {
+      const live = tts.active;
+      settingsHeading(panel, 'Voz del chat');
+      const state = document.createElement('p');
+      state.className = 'hint';
+      panel.appendChild(state);
+      const control = settingsRow(panel);
+      const toggle = settingsButton(control, '', () => { toggleTts(); rerender('tts'); }, live);
+      settingsButton(control, 'Probar la voz', testTts);
+      tts.onStatus = () => {
+        if (!state.isConnected) { tts.onStatus = null; return; }
+        toggle.textContent = tts.active ? 'Detener la voz del chat' : 'Activar la voz del chat';
+        state.textContent = (tts.active ? 'Escuchando en vivo. ' : 'Desactivada. ') + (ttsEngine() === 'device' ? tts.background + '.' : 'Voz del servidor.');
+      };
+      tts.onStatus();
+
+      const field = (labelText, control) => {
+        const row = settingsRow(panel);
+        const label = document.createElement('label');
+        label.textContent = labelText;
+        label.style.minWidth = '6rem';
+        row.append(label, control);
+        return row;
+      };
+      const channel = document.createElement('input');
+      channel.type = 'text';
+      channel.className = 'settings-search';
+      channel.style.width = 'auto';
+      channel.style.flex = '1';
+      channel.value = ttsChannel();
+      channel.disabled = live;
+      channel.autocomplete = 'off';
+      channel.setAttribute('aria-label', 'Canal de Twitch para la voz del chat');
+      channel.addEventListener('change', () => storeSetting(TTS_KEYS.channel, channel.value.trim().toLowerCase().replace(/^#/, '') || 'apliarte'));
+      field('Canal', channel);
+
+      const engine = document.createElement('select');
+      engine.setAttribute('aria-label', 'Motor de voz');
+      [['device', 'Voces de este dispositivo'], ['server', 'Voz del servidor (una sola voz)']].forEach(([value, text]) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = text;
+        option.disabled = value === 'device' && !hasSpeech;
+        engine.appendChild(option);
+      });
+      engine.value = ttsEngine();
+      engine.disabled = live;
+      engine.addEventListener('change', () => { storeSetting(TTS_KEYS.engine, engine.value); rerender('tts'); });
+      field('Motor', engine);
+
+      if (ttsEngine() === 'device') {
+        const voice = document.createElement('select');
+        voice.setAttribute('aria-label', 'Voz');
+        const fillVoices = () => {
+          const stored = micSetting(TTS_KEYS.voice, '');
+          voice.replaceChildren();
+          const auto = document.createElement('option');
+          auto.value = '';
+          auto.textContent = 'Automática (una por usuario)';
+          voice.appendChild(auto);
+          window.speechSynthesis.getVoices().forEach((item) => {
+            const option = document.createElement('option');
+            option.value = `${item.name}|${item.lang}`;
+            option.textContent = `${item.name} (${item.lang})`;
+            voice.appendChild(option);
+          });
+          voice.value = [...voice.options].some((option) => option.value === stored) ? stored : '';
+        };
+        fillVoices();
+        // Some browsers deliver the voice list a moment after the first call.
+        window.speechSynthesis.onvoiceschanged = () => { if (voice.isConnected) fillVoices(); };
+        voice.addEventListener('change', () => storeSetting(TTS_KEYS.voice, voice.value));
+        field('Voz', voice);
+
+        const speed = document.createElement('input');
+        speed.type = 'range';
+        speed.min = '0.5';
+        speed.max = '2';
+        speed.step = '0.1';
+        speed.value = String(ttsSpeed());
+        speed.setAttribute('aria-label', 'Velocidad de la voz');
+        const speedValue = document.createElement('output');
+        speedValue.textContent = ttsSpeed().toFixed(1) + 'x';
+        speed.addEventListener('input', () => { storeSetting(TTS_KEYS.speed, speed.value); speedValue.textContent = ttsSpeed().toFixed(1) + 'x'; });
+        field('Velocidad', speed).appendChild(speedValue);
+      }
+
+      const options = settingsRow(panel);
+      [['sound', 'Sonido de aviso'], ['skipCommands', 'Omitir comandos (!like, !so…)'], ['skipEmojis', 'Omitir emojis'], ['skipLinks', 'Decir «enlace» en vez de leer las URL']].forEach(([key, text]) => {
+        const label = document.createElement('label');
+        label.className = 'draw-check';
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        box.checked = ttsFlag(key);
+        box.addEventListener('change', () => storeSetting(TTS_KEYS[key], String(box.checked)));
+        label.append(box, document.createTextNode(' ' + text));
+        options.appendChild(label);
+      });
+
+      settingsHeading(panel, 'Usuarios silenciados');
+      const muteRow = settingsRow(panel);
+      const muteInput = document.createElement('input');
+      muteInput.type = 'text';
+      muteInput.className = 'settings-search';
+      muteInput.style.width = 'auto';
+      muteInput.style.flex = '1';
+      muteInput.placeholder = 'Usuario a silenciar';
+      muteInput.autocomplete = 'off';
+      muteInput.setAttribute('aria-label', 'Usuario a silenciar');
+      const addMuted = () => {
+        const user = muteInput.value.trim().replace(/^@/, '').toLowerCase();
+        if (!user) return;
+        tts.muted.add(user);
+        saveMutedUsers();
+        showToast(`@${user} silenciado en la voz del chat`);
+        rerender('tts');
+      };
+      muteInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); addMuted(); } });
+      muteRow.appendChild(muteInput);
+      settingsButton(muteRow, 'Silenciar', addMuted);
+      const mutedChips = document.createElement('div');
+      mutedChips.className = 'chips';
+      if (tts.muted.size === 0) settingsNote(panel, 'Ningún usuario silenciado.');
+      [...tts.muted].forEach((user) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chip';
+        chip.textContent = `@${user} ✕`;
+        chip.setAttribute('aria-label', `Volver a leer a ${user}`);
+        chip.addEventListener('click', () => {
+          tts.muted.delete(user);
+          saveMutedUsers();
+          showToast(`@${user} vuelve a leerse`);
+          rerender('tts');
+        });
+        mutedChips.appendChild(chip);
+      });
+      panel.appendChild(mutedChips);
+
+      const logHead = settingsRow(panel);
+      const logTitle = document.createElement('h3');
+      logTitle.textContent = 'Registro de la voz';
+      logTitle.style.marginRight = 'auto';
+      logHead.appendChild(logTitle);
+      settingsButton(logHead, 'Limpiar', () => { tts.log.length = 0; ttsNotice('Registro limpiado.'); });
+      const log = document.createElement('div');
+      log.className = 'tts-log';
+      panel.appendChild(log);
+      tts.onLog = () => {
+        if (!log.isConnected) { tts.onLog = null; return; }
+        log.replaceChildren();
+        if (tts.log.length === 0) {
+          const empty = document.createElement('div');
+          empty.textContent = 'Esperando a que actives la voz del chat…';
+          log.appendChild(empty);
+        }
+        tts.log.forEach((entry) => {
+          const line = document.createElement('div');
+          if (entry.user) {
+            const who = document.createElement('strong');
+            who.textContent = `@${entry.user}: `;
+            line.append(who, document.createTextNode(entry.text + (entry.skipped ? ' (omitido)' : '')));
+            if (entry.skipped) line.className = 'skipped';
+          } else {
+            line.className = 'skipped';
+            line.textContent = entry.text;
+          }
+          log.appendChild(line);
+        });
+        log.scrollTop = log.scrollHeight;
+      };
+      tts.onLog();
     }
 
     function initLiveControls() {
@@ -1972,6 +2460,8 @@
       });
       $('btn-tablet-mic').addEventListener('click', toggleMicrophone);
       $('btn-tts').addEventListener('click', toggleTts);
+      loadUserVoices();
+      loadMutedUsers();
     }
 
     // ── Sheets: chat and commands ────────────────────────────────────────
@@ -2505,6 +2995,7 @@
       { id: 'credentials', label: 'Credenciales y APIs' },
       { id: 'camera', label: 'Cámara y Vídeo' },
       { id: 'audio', label: 'Audio y Filtros' },
+      { id: 'tts', label: 'Voz del chat' },
       { id: 'stage', label: 'Escenario y Avatares 3D' },
       { id: 'commands', label: 'Comandos' },
       { id: 'system', label: 'Apariencia y Sistema' }
@@ -2766,8 +3257,9 @@
         requestAnimationFrame(drawMeter);
       };
       drawMeter();
-      settingsNote(panel, 'Falta por traer del panel antiguo: la configuración de canal y voz del chat.');
     };
+
+    settingsRenderers.tts = (panel) => renderTtsSettings(panel);
 
     settingsRenderers.system = (panel) => {
       settingsHeading(panel, 'Apariencia');
