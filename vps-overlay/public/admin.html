@@ -1105,10 +1105,68 @@
   <!-- ════════ PESTAÑA 1: DIRECTO ════════ -->
   <main class="tab-content active" id="tab-directo">
     
+    <!-- 🛑 Finalizar Directo (Cierre Limpio sin Pausa Técnica) -->
+    <button type="button" class="touch-btn touch-btn-danger" id="btn-finalizar-emision" style="min-height:50px; font-size:1rem; font-weight:800; background:#dc2626; border:2px solid #ef4444; color:#ffffff; margin-bottom:10px;" aria-label="Finalizar emisión en directo y detener retransmisión limpiamente" data-tip="Finalizar directo: detener la retransmisión a Twitch y YouTube sin entrar en bucle de pausa técnica">
+      <span>🛑 FINALIZAR DIRECTO</span>
+    </button>
+    
     <!-- 🖤 Modo Pantalla Negra Inmediata (OLED + Wake Lock) -->
     <button type="button" class="touch-btn" id="btn-emision-pantalla-negra" style="min-height:50px; font-size:1rem; font-weight:700; background:#000000; border:2px solid #475569; color:#f8fafc;" aria-label="Activar pantalla negra con Wake Lock para ahorro de batería OLED" data-tip="Pantalla negra: apagar los píxeles OLED manteniendo el móvil despierto y emitiendo">
       <span>🖤 PANTALLA NEGRA (AHORRO OLED)</span>
     </button>
+
+    <!-- 🎛️ 4 Fuentes Independientes OBS Studio -->
+    <section class="card" id="card-obs-fuentes-directo" style="border: 2px solid #0284c7; background: rgba(2, 132, 199, 0.06); margin-top:10px;">
+      <div class="card-title">
+        <span>🎛️ 4 Fuentes Independientes OBS Studio</span>
+        <span class="badge" style="background:#0369a1; color:#e0f2fe;">Desacopladas</span>
+      </div>
+      <div class="card-subtitle">
+        Copia cada URL para agregarla como fuente Navegador en OBS Studio (1920×1080). Todas son independientes del panel.
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+        <!-- 1. Panel / Fondo 3D -->
+        <div style="background:#1e293b; padding:10px 12px; border-radius:8px; border:1px solid #334155;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-weight:700; font-size:0.85rem; color:#f1f5f9;">1. 🏢 Panel / Fondo 3D (Solo Sonidos del Panel)</span>
+            <button type="button" class="btn-copiar-obs touch-btn touch-btn-primary" data-target="obs-tab-url-plano" style="min-height:30px; padding:2px 10px; font-size:0.75rem; font-weight:700;">Copiar</button>
+          </div>
+          <code id="obs-tab-url-plano" style="display:block; font-size:0.75rem; color:#38bdf8; word-break:break-all; user-select:all;">...</code>
+          <small style="color:#94a3b8; font-size:0.7rem;">Diorama con avatares · Emite únicamente voces TTS y efectos del panel (sin micro)</small>
+        </div>
+
+        <!-- 2. Cámara Frontal -->
+        <div style="background:#1e293b; padding:10px 12px; border-radius:8px; border:1px solid #334155;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-weight:700; font-size:0.85rem; color:#f1f5f9;">2. 📹 Cámara Frontal (Solo Vídeo · Sin Sonido)</span>
+            <button type="button" class="btn-copiar-obs touch-btn touch-btn-primary" data-target="obs-tab-url-vdo" style="min-height:30px; padding:2px 10px; font-size:0.75rem; font-weight:700;">Copiar</button>
+          </div>
+          <code id="obs-tab-url-vdo" style="display:block; font-size:0.75rem; color:#38bdf8; word-break:break-all; user-select:all;">...</code>
+          <small style="color:#94a3b8; font-size:0.7rem;">camara.html (440×248 o 1080p) · Marco y monigote/VDO.Ninja · Cero audio</small>
+        </div>
+
+        <!-- 3. Micrófono Dedicado -->
+        <div style="background:#1e293b; padding:10px 12px; border-radius:8px; border:1px solid #334155;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-weight:700; font-size:0.85rem; color:#f1f5f9;">3. 🎙️ Micrófono Dedicado (Solo Voz de Javier)</span>
+            <button type="button" class="btn-copiar-obs touch-btn touch-btn-primary" data-target="obs-tab-url-micro" style="min-height:30px; padding:2px 10px; font-size:0.75rem; font-weight:700;">Copiar</button>
+          </div>
+          <code id="obs-tab-url-micro" style="display:block; font-size:0.75rem; color:#38bdf8; word-break:break-all; user-select:all;">...</code>
+          <small style="color:#94a3b8; font-size:0.7rem;">micro-obs.html · Activar «Controlar audio vía OBS» · Activable/silenciable independientemente</small>
+        </div>
+
+        <!-- 4. Chat de Twitch -->
+        <div style="background:#1e293b; padding:10px 12px; border-radius:8px; border:1px solid #334155;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-weight:700; font-size:0.85rem; color:#f1f5f9;">4. 💬 Chat de Twitch (Transparente)</span>
+            <button type="button" class="btn-copiar-obs touch-btn touch-btn-primary" data-target="obs-tab-url-chat" style="min-height:30px; padding:2px 10px; font-size:0.75rem; font-weight:700;">Copiar</button>
+          </div>
+          <code id="obs-tab-url-chat" style="display:block; font-size:0.75rem; color:#38bdf8; word-break:break-all; user-select:all;">...</code>
+          <small style="color:#94a3b8; font-size:0.7rem;">chat.html · Capa de chat en vivo para la pantalla</small>
+        </div>
+      </div>
+    </section>
     
     <!-- 🎙️ Transmisión de Voz Móvil (Microphone Toggle + Vúmetro) -->
     <section class="card" id="card-micro-envivo" style="border: 2px solid #38bdf8; background: rgba(56, 189, 248, 0.05);">
@@ -1727,11 +1785,29 @@
 
           <div style="background:#1e293b; padding:12px 14px; border-radius:8px; border:1px solid #334155;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <span style="font-weight:700; font-size:0.9rem; color:#f1f5f9;">📹 Cámara Frontal VDO.Ninja (OBS View)</span>
+              <span style="font-weight:700; font-size:0.9rem; color:#f1f5f9;">📹 Cámara Frontal VDO.Ninja (OBS View - Sin Audio)</span>
               <button type="button" class="btn-copiar-obs" data-target="obs-url-vdo" style="padding:4px 10px; background:#0284c7; border:none; border-radius:5px; color:#fff; font-size:0.8rem; cursor:pointer; font-weight:bold;">Copiar</button>
             </div>
             <code id="obs-url-vdo" style="display:block; font-size:0.8rem; color:#38bdf8; word-break:break-all; user-select:all;">...</code>
-            <small style="color:#64748b; font-size:0.75rem;">Añadir en OBS como Browser Source con audio activo</small>
+            <small style="color:#64748b; font-size:0.75rem;">Añadir en OBS como Browser Source (vídeo exclusivo, sin audio para evitar eco)</small>
+          </div>
+
+          <div style="background:#1e293b; padding:12px 14px; border-radius:8px; border:1px solid #334155;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-weight:700; font-size:0.9rem; color:#f1f5f9;">🎙️ Micrófono Dedicado OBS (micro-obs.html)</span>
+              <button type="button" class="btn-copiar-obs" data-target="obs-url-micro" style="padding:4px 10px; background:#0284c7; border:none; border-radius:5px; color:#fff; font-size:0.8rem; cursor:pointer; font-weight:bold;">Copiar</button>
+            </div>
+            <code id="obs-url-micro" style="display:block; font-size:0.8rem; color:#38bdf8; word-break:break-all; user-select:all;">...</code>
+            <small style="color:#64748b; font-size:0.75rem;">Añadir en OBS como Browser Source con «Controlar audio vía OBS» activado</small>
+          </div>
+
+          <div style="background:#1e293b; padding:12px 14px; border-radius:8px; border:1px solid #334155;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-weight:700; font-size:0.9rem; color:#f1f5f9;">🧊 Fondo / HUD 3D Silenciado (OBS)</span>
+              <button type="button" class="btn-copiar-obs" data-target="obs-url-plano-silenciado" style="padding:4px 10px; background:#0284c7; border:none; border-radius:5px; color:#fff; font-size:0.8rem; cursor:pointer; font-weight:bold;">Copiar</button>
+            </div>
+            <code id="obs-url-plano-silenciado" style="display:block; font-size:0.8rem; color:#38bdf8; word-break:break-all; user-select:all;">...</code>
+            <small style="color:#64748b; font-size:0.75rem;">Resolución: 1920×1080 transparente y silenciado (&noaudio=1)</small>
           </div>
 
           <div style="background:#1e293b; padding:12px 14px; border-radius:8px; border:1px solid #334155;">
@@ -1848,6 +1924,9 @@
           </div>
           <p id="destinos-emision-summary" role="status" style="font-size:0.78rem; color:#cbd5e1;">Sin comprobar</p>
           <ul id="destinos-emision-list" style="margin:0; padding-left:24px; font-size:0.78rem; color:#cbd5e1;"></ul>
+          <div style="margin-top:10px;">
+            <button type="button" id="btn-modal-finalizar-emision" style="width:100%; padding:10px; background:#dc2626; border:1px solid #ef4444; border-radius:6px; color:#fff; font-weight:bold; cursor:pointer;">🛑 Finalizar Directo (Cierre Limpio)</button>
+          </div>
         </section>
 
         <!-- OpenAI -->
@@ -3393,6 +3472,8 @@
     const obsUrlChat = document.getElementById('obs-url-chat');
     const obsUrlPlano = document.getElementById('obs-url-plano');
     const obsUrlVdo = document.getElementById('obs-url-vdo');
+    const obsUrlMicro = document.getElementById('obs-url-micro');
+    const obsUrlPlanoSilenciado = document.getElementById('obs-url-plano-silenciado');
     const obsUrlCristalPlus = document.getElementById('obs-url-cristal-plus');
     const obsUrlPizarraPlus = document.getElementById('obs-url-pizarra-plus');
 
@@ -3417,7 +3498,7 @@
         const res = await fetch('/api/panel/destinos', { cache: 'no-store', credentials: 'same-origin' });
         if (!res.ok) throw new Error('centre unavailable');
         const state = await res.json();
-        destinosSummary.textContent = `Centro: ${state.estado || 'desconocido'} · OBS: ${state.obsActivo ? 'activo' : 'sin señal'}`;
+        destinosSummary.textContent = `Centro: ${state.estado || 'desconocido'} · OBS: ${state.obsActivo ? 'activo' : 'sin señal'}${state.cierreVoluntario ? ' · Cierre voluntario' : ''}`;
         destinosList.replaceChildren();
         for (const destino of state.destinos || []) {
           const item = document.createElement('li');
@@ -3430,6 +3511,30 @@
       }
     }
     document.getElementById('btn-refresh-destinos')?.addEventListener('click', cargarDestinosEmision);
+
+    async function finalizarEmision() {
+      if (!confirm('¿Seguro que deseas finalizar la emisión en directo? Esto detendrá Twitch y YouTube limpiamente sin activar el bucle de dificultades técnicas.')) {
+        return;
+      }
+      try {
+        const res = await fetch('/api/panel/emision/finalizar', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.ok) {
+          alert('Emisión finalizada correctamente.');
+          cargarDestinosEmision();
+        } else {
+          alert('Error al finalizar emisión: ' + (data.error || 'Error desconocido'));
+        }
+      } catch (err) {
+        alert('Error de conexión al finalizar emisión: ' + err.message);
+      }
+    }
+    document.getElementById('btn-finalizar-emision')?.addEventListener('click', finalizarEmision);
+    document.getElementById('btn-modal-finalizar-emision')?.addEventListener('click', finalizarEmision);
 
     async function cargarStreamingConfig() {
       try {
@@ -3533,8 +3638,20 @@
           if (obsUrlChat) obsUrlChat.textContent = obs.chat || `${window.location.origin}/chat.html`;
           if (obsUrlPlano) obsUrlPlano.textContent = obs.plano || `${window.location.origin}/plano?transparente=1`;
           if (obsUrlVdo) obsUrlVdo.textContent = obs.vdoCamView || '...';
+          if (obsUrlMicro) obsUrlMicro.textContent = obs.microObs || `${window.location.origin}/micro-obs.html`;
+          if (obsUrlPlanoSilenciado) obsUrlPlanoSilenciado.textContent = obs.planoSilenciado || `${window.location.origin}/plano?transparente=1&noaudio=1`;
           if (obsUrlCristalPlus) obsUrlCristalPlus.textContent = `${window.location.origin}/cristal-plus`;
           if (obsUrlPizarraPlus) obsUrlPizarraPlus.textContent = `${window.location.origin}/pizarra-plus`;
+
+          // Actualizar URLs de OBS (Tarjeta 4 fuentes en pestaña Directo)
+          const tabUrlPlano = document.getElementById('obs-tab-url-plano');
+          const tabUrlVdo = document.getElementById('obs-tab-url-vdo');
+          const tabUrlMicro = document.getElementById('obs-tab-url-micro');
+          const tabUrlChat = document.getElementById('obs-tab-url-chat');
+          if (tabUrlPlano) tabUrlPlano.textContent = obs.plano || `${window.location.origin}/plano?transparente=1`;
+          if (tabUrlVdo) tabUrlVdo.textContent = obs.camara || `${window.location.origin}/camara.html`;
+          if (tabUrlMicro) tabUrlMicro.textContent = obs.microObs || `${window.location.origin}/micro-obs.html`;
+          if (tabUrlChat) tabUrlChat.textContent = obs.chat || `${window.location.origin}/chat.html`;
 
           // Actualizar campos de formulario
           if (cfgVdoRoom && cfg.vdo?.room) cfgVdoRoom.value = cfg.vdo.room;
@@ -3548,6 +3665,9 @@
         }
       } catch (_) {}
     }
+
+    // Carga inicial para tener las 4 fuentes listas en la pestaña Directo
+    cargarPanelConfig();
 
     function abrirModalPanelConfig() {
       cargarPanelConfig();

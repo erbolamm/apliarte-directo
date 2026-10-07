@@ -47,6 +47,19 @@ export class CentroEstado {
     if (!this.tieneRespaldo) this.inicioEmision = null;
   }
 
+  finalizarEmision() {
+    this.obsActivo = false;
+    this.estado = ESTADOS.DETENIDO;
+    this.inicioEmision = null;
+    this.archivoManual = null;
+    for (const d of this.destinos.values()) {
+      d.pid = null;
+      d.modo = null;
+      d.error = null;
+      d.ultimoModo = 'respaldo';
+    }
+  }
+
   /** Arranca la reproducción manual de un vídeo elegido a mano, sustituyendo lo que hubiera. */
   activarManual(archivo) {
     this.estado = ESTADOS.MANUAL;

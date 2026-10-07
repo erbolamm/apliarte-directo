@@ -332,6 +332,7 @@ function programarReintento(destino, entrada, revision) {
 let relevoEnMarcha = false;
 let relevoPendiente = false;
 let revisionEntrada = 0;
+let cierreVoluntario = false;
 
 async function pasarARespaldo() {
   if (relevoEnMarcha) {
@@ -415,6 +416,7 @@ const nms = new NodeMediaServer({
 
 // node-media-server v4 emite un unico argumento: la sesion. Ver src/sesion-rtmp.js.
 nms.on("postPublish", (sesion) => {
+  cierreVoluntario = false;
   const ruta = rutaDeSesion(sesion);
   const flujo = nombreDeFlujo(ruta) || configuracion.rutaEntrada;
   anotar(`OBS empezó a publicar en ${ruta || "(ruta desconocida)"}`);
@@ -446,11 +448,16 @@ nms.on("donePublish", (sesion) => {
   anotar(
     `OBS dejó de publicar en ${rutaDeSesion(sesion) || "(ruta desconocida)"}`,
   );
-  if (tieneRespaldo) pasarARespaldo();
-  else {
+  if (cierreVoluntario) {
+    procesos.detenerTodos().catch((error) => anotar(error.message));
+    centro.finalizarEmision();
+    difundir();
+  } else if (!tieneRespaldo) {
     procesos.detenerTodos().catch((error) => anotar(error.message));
     centro.obsDejaDePublicar();
     difundir();
+  } else {
+    pasarARespaldo();
   }
 });
 
@@ -545,7 +552,7 @@ app.get("/pizarra", (_req, res) =>
 );
 app.get("/api/estado", (_req, res) => {
   for (const destination of configuracion.destinos) refreshDestination(destination);
-  res.json({ ...centro.instantanea(), registro: registro.slice(-40) });
+  res.json({ ...centro.instantanea(), cierreVoluntario, registro: registro.slice(-40) });
 });
 
 app.get("/api/tts", async (req, res) => {
@@ -593,6 +600,27 @@ app.post("/api/destino/:nombre/detener", async (req, res) => {
     difundir();
   }
   res.json({ parado });
+});
+
+app.post("/api/emision/finalizar", async (_req, res) => {
+  cierreVoluntario = true;
+  relevoPendiente = false;
+  relevoEnMarcha = false;
+  try {
+    for (const d of configuracion.destinos) {
+      if (centro.destinos.has(d.nombre)) {
+        centro.destinos.get(d.nombre).ultimoModo = "respaldo";
+      }
+    }
+    await procesos.detenerTodos();
+    centro.finalizarEmision();
+    anotar("Emisión finalizada voluntariamente desde el panel");
+    difundir();
+    res.json({ ok: true, mensaje: "Emisión finalizada correctamente" });
+  } catch (error) {
+    anotar(`Error al finalizar emisión: ${error.message}`);
+    res.status(500).json({ ok: false, error: error.message });
+  }
 });
 
 // ─── Listas persistidas del panel (usuarios, canales, mensajes, comandos bot) ──

@@ -5,7 +5,7 @@ const { exec } = require('child_process');
 const { WebSocketServer } = require('ws');
 const { parseWsAuth, parseWsPanelCookie, isTrustedWsOrigin, decideWsRole, canReceive, canSend } = require('./src/ws-auth');
 const { handleStreamingConfig } = require('./src/streaming-config');
-const { handleCentreStatus } = require('./src/centro-status');
+const { handleCentreStatus, handleFinalizarEmision } = require('./src/centro-status');
 
 // Local, gitignored launch settings (data/directo.local.json → {"env": {...}}).
 // Applied as defaults so every launcher (npm run directo, erbolamm directo on,
@@ -387,9 +387,10 @@ function getObsUrls(req, cfg) {
     chat: `${baseUrl}/chat.html`,
     plano: `${baseUrl}/plano?transparente=1`, // OBS mode: no controls, avatar column, !contexto
     planoSilenciado: `${baseUrl}/plano?transparente=1&noaudio=1`,
+    camara: `${baseUrl}/camara.html`,
     microObs: `${baseUrl}/micro-obs.html`,
     vdoCamPush: `https://vdo.ninja/?push=${encodeURIComponent(stream)}&room=${encodeURIComponent(room)}${passQuery}&webcam&autostart`,
-    vdoCamView: `https://vdo.ninja/?view=${encodeURIComponent(stream)}&room=${encodeURIComponent(room)}${passQuery}&solo&cleanoutput&transparent&autoplay=1&cover=1&buffer=350&sync=0&videobitrate=1500&codec=h264&api`,
+    vdoCamView: `https://vdo.ninja/?view=${encodeURIComponent(stream)}&room=${encodeURIComponent(room)}${passQuery}&solo&cleanoutput&transparent&autoplay=1&cover=1&buffer=350&sync=0&videobitrate=1500&codec=h264&api&noaudio`,
     baseUrl
   };
 }
@@ -1518,6 +1519,9 @@ const server = http.createServer((req, res) => {
   if (path === '/api/panel/destinos') {
     return handleCentreStatus(req, res, isAuth, { port: Number(process.env.CENTRO_PANEL_PORT || 8790) });
   }
+  if (path === '/api/panel/emision/finalizar' && req.method === 'POST') {
+    return handleFinalizarEmision(req, res, isAuth, { port: Number(process.env.CENTRO_PANEL_PORT || 8790) });
+  }
   const params = new URL(url, 'http://localhost').searchParams;
   // GET /api/tts — proxy de audio TTS para el directo (evita bloqueo Referer de Google y CORS)
   if (path === '/api/tts' && req.method === 'GET') {
@@ -2615,6 +2619,10 @@ html,body{width:100%;height:100%;overflow:hidden;
 
   if (path === '/plano' || path === '/plano.html' || path === '/overlay') {
     if (serveStatic(req, res, '/plano.html')) return;
+  }
+
+  if (path === '/camara' || path === '/camara.html') {
+    if (serveStatic(req, res, '/camara.html')) return;
   }
 
   if (path === '/cristal' || path === '/cristal.html') {

@@ -88,6 +88,10 @@ test('getObsUrls genera URLs completas de fuentes OBS Studio según la petición
   assert.equal(urlsLocal.plano, 'http://localhost:7979/plano?transparente=1');
   assert.ok(urlsLocal.vdoCamPush.includes('https://vdo.ninja/?push=ja_cam_77&room=apliarte-obs&password=mypassword'));
   assert.ok(urlsLocal.vdoCamView.includes('https://vdo.ninja/?view=ja_cam_77&room=apliarte-obs&password=mypassword'));
+  assert.ok(urlsLocal.vdoCamView.includes('&noaudio'));
+  assert.equal(urlsLocal.microObs, 'http://localhost:7979/micro-obs.html');
+  assert.equal(urlsLocal.planoSilenciado, 'http://localhost:7979/plano?transparente=1&noaudio=1');
+  assert.equal(urlsLocal.camara, 'http://localhost:7979/camara.html');
 
   // Petición con proxy inverso HTTPS (ej. Tailscale Serve o VPS)
   const mockReqProxy = {
@@ -101,6 +105,9 @@ test('getObsUrls genera URLs completas de fuentes OBS Studio según la petición
   assert.equal(urlsProxy.fondo, 'https://directo.apliarte.com/fondo.html');
   assert.equal(urlsProxy.chat, 'https://directo.apliarte.com/chat.html');
   assert.equal(urlsProxy.plano, 'https://directo.apliarte.com/plano?transparente=1');
+  assert.equal(urlsProxy.camara, 'https://directo.apliarte.com/camara.html');
+  assert.equal(urlsProxy.microObs, 'https://directo.apliarte.com/micro-obs.html');
+  assert.equal(urlsProxy.planoSilenciado, 'https://directo.apliarte.com/plano?transparente=1&noaudio=1');
 });
 
 test('DEFAULT_LAYERS usa plantilla saneada e idéntica en servidor local y VPS', () => {

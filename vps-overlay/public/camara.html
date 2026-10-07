@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cámara Frontal · ApliArte Directo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent !important;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    /* En lienzo estándar 1920x1080 para OBS: se sitúa en la esquina inferior derecha */
+    .camera-container {
+      position: fixed;
+      right: 20px;
+      bottom: 50px;
+      width: 440px;
+      height: 248px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      overflow: hidden;
+      background: transparent !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    /* Si OBS tiene configurado el lienzo exacto del widget (ej. 440x248) o pantalla reducida */
+    @media (max-width: 600px), (max-height: 400px) {
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .camera-container {
+        position: relative !important;
+        right: auto !important;
+        bottom: auto !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        border-radius: 16px;
+      }
+    }
+
+    .camera-container.hidden {
+      display: none !important;
+    }
+
+    .ja-avatar-cam-box {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 70%, #020617 100%);
+      pointer-events: auto;
+      overflow: hidden;
+    }
+
+    .ja-cam-header {
+      position: absolute;
+      top: 10px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 5;
+    }
+
+    .ja-cam-badge {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    .ja-cam-name {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 0.02em;
+    }
+
+    .ja-cam-avatar-svg {
+      overflow: visible;
+      filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
+      margin-bottom: -10px;
+      transition: transform 0.3s ease;
+    }
+
+    .ja-avatar-cam-box.mini-pip {
+      position: absolute;
+      inset: auto auto 8px 8px;
+      width: 90px;
+      height: 98px;
+      border-radius: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.75);
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .ja-avatar-cam-box.mini-pip .ja-cam-header {
+      display: none;
+    }
+
+    .ja-avatar-cam-box.mini-pip .ja-cam-avatar-svg {
+      transform: scale(0.44);
+      transform-origin: bottom center;
+      margin-bottom: -5px;
+    }
+
+    .camera-container iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      border: none;
+      background: transparent !important;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <div id="camera-container" class="camera-container" aria-label="Cámara en directo">
+    <div id="ja-avatar-cam-box" class="ja-avatar-cam-box">
+      <div class="ja-cam-header">
+        <span class="ja-cam-badge">🔴 EN DIRECTO</span>
+        <span class="ja-cam-name">Javier Mateo</span>
+      </div>
+      <svg class="ja-cam-avatar-svg" viewBox="-45 -95 90 95" width="220" height="232" aria-hidden="true">
+        <!-- Cuerpo / Torso -->
+        <g id="ja-torso-group">
+          <!-- Camisa #f4f7fb -->
+          <rect x="-20" y="-48" width="40" height="48" rx="14" fill="#f4f7fb" stroke="#2f2620" stroke-width="2"/>
+          <!-- Cuello -->
+          <path d="M-8,-48 l8,8 l8,-8" fill="none" stroke="#2f2620" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M0,-40 v35" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="2 6"/>
+          <!-- Tirantes rojos #d9534f -->
+          <rect x="-14" y="-48" width="5" height="48" fill="#d9534f" stroke="#2f2620" stroke-width="1.4"/>
+          <rect x="9" y="-48" width="5" height="48" fill="#d9534f" stroke="#2f2620" stroke-width="1.4"/>
+          <rect x="-15" y="-22" width="7" height="3" rx="1" fill="#94a3b8" stroke="#2f2620" stroke-width="0.8"/>
+          <rect x="8" y="-22" width="7" height="3" rx="1" fill="#94a3b8" stroke="#2f2620" stroke-width="0.8"/>
+          <!-- Badge #005fa9 -->
+          <rect x="-16" y="-34" width="8" height="9" rx="2" fill="#005fa9" stroke="#2f2620" stroke-width="1.2"/>
+          <rect x="-14" y="-32" width="4" height="2" fill="#ffffff" opacity="0.9"/>
+          <rect x="-14" y="-28" width="4" height="1.5" fill="#ffffff" opacity="0.6"/>
+        </g>
+        <!-- Cabeza y rostro (bobbing) -->
+        <g id="ja-head-group" style="transition: transform 0.08s ease-out; transform-origin: 0px -64px;">
+          <!-- Piel #f3c79c -->
+          <ellipse cx="0" cy="-64" rx="17.5" ry="16.5" fill="#f3c79c" stroke="#2f2620" stroke-width="2"/>
+          <!-- Mejillas sonrosadas -->
+          <ellipse cx="-12" cy="-60" rx="3.6" ry="2.2" fill="#e91916" opacity="0.25"/>
+          <ellipse cx="12" cy="-60" rx="3.6" ry="2.2" fill="#e91916" opacity="0.25"/>
+          <!-- Pelo #4a3527 -->
+          <path d="M-17,-70 q2,-14 17,-13.5 q15,-0.5 17,13.5 q-6,-7 -17,-6.5 q-11,-0.5 -17,6.5 z" fill="#4a3527" stroke="#2f2620" stroke-width="1.8" stroke-linejoin="round"/>
+          <!-- Barba #5b4130 -->
+          <path d="M-15,-62 q1,15 15,15.5 q14,-0.5 15,-15.5 q-4,6 -15,6 q-11,0 -15,-6 z" fill="#5b4130" stroke="#2f2620" stroke-width="1.6"/>
+          <!-- Cejas -->
+          <path d="M-12,-73.5 q5,-2 10,0" stroke="#4a3527" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          <path d="M2,-73.5 q5,-2 10,0" stroke="#4a3527" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          <!-- Ojos -->
+          <ellipse cx="-6.2" cy="-66" rx="3.2" ry="3.9" fill="#2f2620"/>
+          <ellipse cx="6.2" cy="-66" rx="3.2" ry="3.9" fill="#2f2620"/>
+          <circle cx="-7.3" cy="-67.6" r="1.15" fill="#fff"/>
+          <circle cx="5.1" cy="-67.6" r="1.15" fill="#fff"/>
+          <!-- Gafas -->
+          <g stroke="#2f2620" stroke-width="1.6" fill="none">
+            <rect x="-13" y="-71.5" width="13" height="10" rx="3"/>
+            <rect x="0" y="-71.5" width="13" height="10" rx="3"/>
+            <path d="M-13,-68 l-4,-1.5"/>
+            <path d="M13,-68 l4,-1.5"/>
+          </g>
+          <!-- Bocas reactivas -->
+          <path id="ja-mouth-closed" d="M-4.2,-57.4 q4.2,4.4 8.4,0" stroke="#2b201a" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <g id="ja-mouth-open" style="display:none;">
+            <path d="M-4.5,-58 q4.5,8 9,0 q-4.5,2 -9,0 z" fill="#3a0b0b" stroke="#2b201a" stroke-width="1.6"/>
+            <path d="M-2.5,-53.5 q2.5,2.5 5,0 z" fill="#e11d48"/>
+            <path d="M-3,-57.8 h6" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <iframe id="camera-iframe"
+      src=""
+      allow="autoplay; camera"
+      allowtransparency="true"
+      loading="eager"
+      title="Cámara en Directo"></iframe>
+  </div>
+
+  <script>
+    const cameraEl = document.getElementById('camera-container');
+    const cameraIframe = document.getElementById('camera-iframe');
+    const jaAvatarCamBox = document.getElementById('ja-avatar-cam-box');
+    let modoCamaraActual = 'monigote';
+    let videoCamaraRecibido = false;
+
+    // Enviar orden de silenciado continuo al iframe de VDO.Ninja al cargar
+    if (cameraIframe) {
+      cameraIframe.addEventListener('load', () => {
+        try {
+          cameraIframe.contentWindow?.postMessage({ action: 'mute' }, '*');
+        } catch (_) {}
+      });
+    }
+
+    function actualizarVisibilidadCamaraYMonigote() {
+      const esCamara = modoCamaraActual === 'camara';
+      if (cameraIframe) {
+        cameraIframe.style.opacity = esCamara ? '1' : '0';
+        cameraIframe.style.pointerEvents = esCamara ? 'auto' : 'none';
+      }
+      if (jaAvatarCamBox) {
+        jaAvatarCamBox.classList.toggle('mini-pip', esCamara);
+      }
+    }
+
+    function setModoCamara(modo) {
+      const normalizado = (modo === 'camara' || modo === 'on' || modo === true) ? 'camara' : 'monigote';
+      if (normalizado === modoCamaraActual && cameraIframe && cameraIframe.src && cameraIframe.src !== 'about:blank') {
+        return;
+      }
+      modoCamaraActual = normalizado;
+
+      if (modoCamaraActual === 'camara' && cameraIframe && (!cameraIframe.src || cameraIframe.src === 'about:blank')) {
+        initCameraOverlay();
+      }
+
+      actualizarVisibilidadCamaraYMonigote();
+    }
+    window.setModoCamara = setModoCamara;
+
+    // Escuchar eventos de VDO.Ninja (Iframe API)
+    window.addEventListener('message', (event) => {
+      try {
+        let msg = event.data;
+        if (typeof msg === 'string' && (msg.startsWith('{') || msg.startsWith('['))) {
+          try { msg = JSON.parse(msg); } catch (_) {}
+        }
+        if (!msg || typeof msg !== 'object') return;
+        const act = msg.action || msg.event || msg.type;
+        if (act === 'video-started' || act === 'stream-started' || act === 'new-stream' || act === 'playing' || act === 'loaded') {
+          videoCamaraRecibido = true;
+          actualizarVisibilidadCamaraYMonigote();
+        } else if (act === 'stream-stopped' || act === 'stream-ended' || act === 'peer-disconnected') {
+          videoCamaraRecibido = false;
+          actualizarVisibilidadCamaraYMonigote();
+        }
+      } catch (_) {}
+    });
+
+    async function initCameraOverlay() {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paramRoom = urlParams.get('room');
+        const paramStream = urlParams.get('stream') || urlParams.get('view');
+        const paramPass = urlParams.get('password');
+        const paramModo = urlParams.get('modo');
+        if (paramModo) setModoCamara(paramModo);
+
+        if (paramStream && paramRoom) {
+          const passPart = paramPass ? `&password=${encodeURIComponent(paramPass)}` : '';
+          const targetUrl = `https://vdo.ninja/?view=${encodeURIComponent(paramStream)}&room=${encodeURIComponent(paramRoom)}${passPart}&solo&cleanoutput&transparent&autoplay=1&cover=1&buffer=350&sync=0&videobitrate=1500&codec=h264&api&mute=1&noaudio=1`;
+          if (cameraIframe && cameraIframe.src !== targetUrl) {
+            cameraIframe.src = targetUrl;
+          }
+          actualizarVisibilidadCamaraYMonigote();
+          return;
+        }
+
+        const res = await fetch('/api/directo/camara/config', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          let vUrl = data.viewUrl;
+          if (vUrl) {
+            if (!vUrl.includes('&mute=1')) vUrl += '&mute=1';
+            if (!vUrl.includes('&noaudio=1')) vUrl += '&noaudio=1';
+          }
+          if (vUrl && cameraIframe && cameraIframe.src !== vUrl) {
+            cameraIframe.src = vUrl;
+          }
+          if (data.modo && !paramModo) {
+            setModoCamara(data.modo);
+          }
+          actualizarVisibilidadCamaraYMonigote();
+        }
+      } catch (err) {
+        console.warn('Config cámara overlay:', err);
+      }
+    }
+    initCameraOverlay();
+
+    // ─── Animación reactiva de la boca del monigote Javier ─────────────
+    let jaSpeechAnimInterval = null;
+    let jaSpeechStep = 0;
+    let jaVoiceStopTimeout = null;
+
+    function animarBocaJa(durationSecs) {
+      const headEl = document.getElementById('ja-head-group');
+      const mouthClosed = document.getElementById('ja-mouth-closed');
+      const mouthOpen = document.getElementById('ja-mouth-open');
+      if (!headEl || !mouthClosed || !mouthOpen) return;
+
+      if (!jaSpeechAnimInterval) {
+        jaSpeechAnimInterval = setInterval(() => {
+          jaSpeechStep = (jaSpeechStep + 1) % 2;
+          if (jaSpeechStep === 1) {
+            mouthClosed.style.display = 'none';
+            mouthOpen.style.display = 'block';
+            headEl.style.transform = 'translateY(-2px)';
+          } else {
+            mouthClosed.style.display = 'block';
+            mouthOpen.style.display = 'none';
+            headEl.style.transform = 'translateY(0)';
+          }
+        }, 120);
+      }
+
+      clearTimeout(jaVoiceStopTimeout);
+      const durMs = Math.max(160, (durationSecs || 0.15) * 1000);
+      jaVoiceStopTimeout = setTimeout(() => {
+        if (jaSpeechAnimInterval) {
+          clearInterval(jaSpeechAnimInterval);
+          jaSpeechAnimInterval = null;
+        }
+        mouthClosed.style.display = 'block';
+        mouthOpen.style.display = 'none';
+        headEl.style.transform = 'translateY(0)';
+      }, durMs + 180);
+    }
+
+    // ─── WebSocket para recibir control de cámara y reactividad de voz ──
+    let wsOverlay = null;
+
+    function procesarAudioVozPCMParaBoca(base64Pcm, sampleRate) {
+      try {
+        const binaryStr = atob(base64Pcm);
+        const len = binaryStr.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+        const int16 = new Int16Array(bytes.buffer);
+        let sumSq = 0;
+        for (let i = 0; i < int16.length; i++) {
+          const val = int16[i] / (int16[i] < 0 ? 0x8000 : 0x7FFF);
+          sumSq += val * val;
+        }
+        const rms = Math.sqrt(sumSq / int16.length);
+        const durationSecs = int16.length / (sampleRate || 24000);
+        if (rms >= 0.02) {
+          animarBocaJa(durationSecs);
+        }
+      } catch (_) {}
+    }
+
+    function conectarWs() {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host || 'directo.apliarte.com';
+      const wsUrl = `${proto}//${host}/ws`;
+
+      try {
+        wsOverlay = new WebSocket(wsUrl);
+        wsOverlay.onmessage = async (event) => {
+          let raw = event.data;
+          if (raw instanceof Blob) raw = await raw.text();
+          try {
+            const data = JSON.parse(raw);
+            if (data.type === 'voz_pcm' && data.pcm) {
+              procesarAudioVozPCMParaBoca(data.pcm, data.sampleRate);
+            }
+            if (data.type === 'micro_start') {
+              animarBocaJa(0.3);
+            }
+            if (data.type === 'micro_stop') {
+              if (jaSpeechAnimInterval) {
+                clearInterval(jaSpeechAnimInterval);
+                jaSpeechAnimInterval = null;
+                const mouthClosed = document.getElementById('ja-mouth-closed');
+                const mouthOpen = document.getElementById('ja-mouth-open');
+                if (mouthClosed) mouthClosed.style.display = 'block';
+                if (mouthOpen) mouthOpen.style.display = 'none';
+              }
+            }
+            if (data.type === 'camara_modo') {
+              setModoCamara(data.modo);
+            }
+            if (data.type === 'directo_comando' && data.cmd) {
+              if (data.cmd.modo) setModoCamara(data.cmd.modo);
+            }
+          } catch (_) {}
+        };
+        wsOverlay.onclose = () => setTimeout(conectarWs, 3000);
+        wsOverlay.onerror = () => { try { wsOverlay.close(); } catch (_) {} };
+      } catch (e) {
+        setTimeout(conectarWs, 5000);
+      }
+    }
+
+    conectarWs();
+  </script>
+</body>
+</html>

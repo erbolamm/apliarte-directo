@@ -43,6 +43,16 @@ test('si OBS deja de publicar y NO hay respaldo, se detiene', () => {
   assert.equal(c.estado, ESTADOS.DETENIDO);
 });
 
+test('finalizarEmision detiene el centro y limpia destinos incluso con respaldo', () => {
+  const c = new CentroEstado({ destinos, tieneRespaldo: true });
+  c.obsPublica();
+  c.relayArrancado('twitch', 4321);
+  c.finalizarEmision();
+  assert.equal(c.estado, ESTADOS.DETENIDO);
+  assert.equal(c.obsActivo, false);
+  assert.deepEqual(c.destinosActivos(), []);
+});
+
 test('decidirTrasCorte pide matar los relays y arrancar el respaldo', () => {
   const c = new CentroEstado({ destinos, tieneRespaldo: true });
   c.obsPublica();

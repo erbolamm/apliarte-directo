@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const http = require('node:http');
-const { handleCentreStatus } = require('../src/centro-status');
+const { handleCentreStatus, handleFinalizarEmision, publicStatus } = require('../src/centro-status');
 function response() {
   return { status: 0, headers: {}, body: '', writeHead(code, headers = {}) { this.status = code; this.headers = headers; }, end(body = '') { this.body = body; } };
 }
@@ -44,3 +44,42 @@ test('status proxy reaches only a loopback centre on random test ports', async (
     await new Promise(resolve => upstream.close(resolve));
   }
 });
+
+test('handleFinalizarEmision is POST-only, authenticated, and proxies to upstream', async () => {
+  const req = { method: 'POST' };
+  const denied = response();
+  handleFinalizarEmision(req, denied, () => false);
+  assert.equal(denied.status, 401);
+
+  const getMethod = response();
+  handleFinalizarEmision({ method: 'GET' }, getMethod, () => true);
+  assert.equal(getMethod.status, 405);
+
+  const requester = (options, onResponse) => {
+    assert.equal(options.path, '/api/emision/finalizar');
+    assert.equal(options.method, 'POST');
+    const incoming = new EventEmitter(); incoming.statusCode = 200;
+    const outbound = new EventEmitter(); outbound.setTimeout = () => {};
+    outbound.end = () => {
+      onResponse(incoming);
+      queueMicrotask(() => {
+        incoming.emit('data', Buffer.from(JSON.stringify({ ok: true, mensaje: 'Emisión finalizada' })));
+        incoming.emit('end');
+      });
+    };
+    return outbound;
+  };
+  const ok = response();
+  handleFinalizarEmision(req, ok, () => true, { port: 12345, requester });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(ok.status, 200);
+  assert.equal(JSON.parse(ok.body).ok, true);
+});
+
+test('publicStatus includes cierreVoluntario flag', () => {
+  const normal = publicStatus({ estado: 'esperando', obsActivo: false });
+  assert.equal(normal.cierreVoluntario, false);
+  const cerrado = publicStatus({ estado: 'esperando', obsActivo: false, cierreVoluntario: true });
+  assert.equal(cerrado.cierreVoluntario, true);
+});
+

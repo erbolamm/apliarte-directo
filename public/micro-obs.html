@@ -183,6 +183,7 @@
 
     let audioCtx = null;
     let gainNode = null;
+    let silentCarrier = null;
     let nextPlayTime = 0;
     let packetCount = 0;
     let activeTimer = null;
@@ -195,41 +196,72 @@
     const statLatency = document.getElementById('stat-latency');
     const btnUnlock = document.getElementById('btn-unlock');
 
-    function initAudio() {
+    async function initAudio() {
       if (!audioCtx) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioContextClass) return false;
-        audioCtx = new AudioContextClass();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
+        audioCtx = new AudioContextClass({ latencyHint: 'interactive' });
       }
       if (!gainNode && audioCtx) {
         gainNode = audioCtx.createGain();
         gainNode.gain.value = 2.4;
         gainNode.connect(audioCtx.destination);
       }
+      if (audioCtx.state === 'suspended') {
+        try {
+          await audioCtx.resume();
+        } catch (_) {}
+      }
       if (audioCtx && audioCtx.state === 'running') {
         btnUnlock.style.display = 'none';
+        iniciarKeepAliveAudio();
       }
-      return true;
+      return audioCtx && audioCtx.state === 'running';
+    }
+
+    // Keep-alive silencioso para que OBS Mixer mantenga la pista de audio 100% activa
+    // incluso cuando no se esté hablando (permite activar/desactivar y mutear en OBS sin lag)
+    function iniciarKeepAliveAudio() {
+      if (!audioCtx || silentCarrier) return;
+      try {
+        const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate, audioCtx.sampleRate);
+        const silentSource = audioCtx.createBufferSource();
+        silentSource.buffer = buffer;
+        silentSource.loop = true;
+        const silentGain = audioCtx.createGain();
+        silentGain.gain.value = 0.00001; // Inaudible, mantiene viva la tubería de audio
+        silentSource.connect(silentGain);
+        silentGain.connect(audioCtx.destination);
+        silentSource.start(0);
+        silentCarrier = silentSource;
+      } catch (_) {}
     }
 
     btnUnlock.addEventListener('click', () => {
       initAudio();
     });
 
-    // Intentar inicialización automática
+    // Auto-inicialización inmediata para OBS Studio (sin requerir clics del usuario)
     document.addEventListener('DOMContentLoaded', () => {
       initAudio();
-      if (audioCtx && audioCtx.state === 'suspended') {
-        btnUnlock.style.display = 'block';
-      }
+      // Desbloqueo proactivo con elemento HTML5 de audio silencioso para CEF/Chromium
+      try {
+        const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+        silentAudio.volume = 0.01;
+        silentAudio.play().then(() => {
+          if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().then(() => iniciarKeepAliveAudio());
+          }
+        }).catch(() => {});
+      } catch (_) {}
     });
     window.addEventListener('click', () => initAudio(), { once: true });
 
-    function reproducirPCM(base64Pcm, sampleRate) {
-      if (!initAudio()) return;
+    async function reproducirPCM(base64Pcm, sampleRate) {
+      if (!audioCtx || audioCtx.state !== 'running') {
+        await initAudio();
+      }
+      if (!audioCtx || !gainNode) return;
 
       try {
         const binaryStr = atob(base64Pcm);
@@ -259,8 +291,8 @@
         src.connect(gainNode);
 
         const now = audioCtx.currentTime;
-        if (nextPlayTime - now > 0.5 || nextPlayTime < now) {
-          nextPlayTime = now + 0.04;
+        if (nextPlayTime - now > 0.4 || nextPlayTime < now) {
+          nextPlayTime = now + 0.03;
         }
         src.start(nextPlayTime);
         nextPlayTime += audioBuf.duration;

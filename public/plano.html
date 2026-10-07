@@ -371,7 +371,12 @@
     }
 
     body.obs-overlay #directo-hud {
-      display: none;
+      display: none !important;
+    }
+
+    body.obs-overlay .camera-container,
+    body.obs-overlay #camera-container {
+      display: none !important;
     }
 
     /* ─── Contenedor de Cámara IRL y Monigote Javier ────────────────── */
@@ -3459,7 +3464,7 @@
           obsVoiceGainNode = obsVoiceAudioCtx.createGain();
           obsVoiceGainNode.gain.value = 2.4; // Ganancia aumentada para volumen potente en directo
           const urlParams = new URLSearchParams(window.location.search);
-          const sinRetorno = urlParams.has('noaudio') || urlParams.get('audio') === '0' || window.self !== window.top;
+          const sinRetorno = urlParams.has('noaudio') || urlParams.get('audio') === '0' || window.self !== window.top || initialTransparent || document.getElementById('page-body')?.classList?.contains('obs-overlay');
           if (sinRetorno) {
             obsVoiceGainNode.gain.value = 0;
           }

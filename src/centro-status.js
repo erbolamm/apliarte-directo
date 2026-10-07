@@ -7,6 +7,7 @@ function publicStatus(raw) {
     estado: VALID_STATES.has(raw?.estado) ? raw.estado : 'error',
     obsActivo: raw?.obsActivo === true,
     tieneRespaldo: raw?.tieneRespaldo === true,
+    cierreVoluntario: raw?.cierreVoluntario === true,
     destinos: Array.isArray(raw?.destinos) ? raw.destinos.slice(0, 30).map(d => ({
       nombre: String(d?.nombre || '').slice(0, 48).replace(/[^\p{L}\p{N} _-]/gu, ''),
       listo: d?.listo === true,
@@ -49,4 +50,39 @@ function handleCentreStatus(req, res, isAuth, { port = 8790, requester = http.re
   });
   upstream.end();
 }
-module.exports = { publicStatus, handleCentreStatus };
+
+function handleFinalizarEmision(req, res, isAuth, { port = 8790, requester = http.request } = {}) {
+  res.setHeader?.('Cache-Control', 'no-store');
+  res.removeHeader?.('Access-Control-Allow-Origin');
+  if (!isAuth(req)) { res.writeHead(401, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ ok: false })); }
+  if (req.method !== 'POST') { res.writeHead(405, { Allow: 'POST' }); return res.end(); }
+  if (!Number.isInteger(Number(port)) || Number(port) < 1 || Number(port) > 65535) {
+    res.writeHead(503, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ ok: false, error: 'Centro no disponible' }));
+  }
+  const upstream = requester({ hostname: '127.0.0.1', port: Number(port), path: '/api/emision/finalizar', method: 'POST' }, incoming => {
+    let body = '';
+    incoming.on('data', chunk => {
+      body += chunk;
+      if (body.length > 65536) upstream.destroy();
+    });
+    incoming.on('end', () => {
+      if (res.writableEnded) return;
+      try {
+        const payload = JSON.parse(body || '{}');
+        res.writeHead(incoming.statusCode || 200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify(payload));
+      } catch (_) {
+        res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: false, error: 'Respuesta inválida del centro' }));
+      }
+    });
+  });
+  upstream.setTimeout?.(5000, () => upstream.destroy());
+  upstream.on('error', (err) => {
+    if (res.writableEnded) return;
+    res.writeHead(503, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: false, error: 'Centro no disponible: ' + err.message }));
+  });
+  upstream.end();
+}
+
+module.exports = { publicStatus, handleCentreStatus, handleFinalizarEmision };
+
