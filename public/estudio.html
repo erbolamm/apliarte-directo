@@ -677,6 +677,29 @@
         }
       });
     }
+    // One-shot rescue of values typed into a page that was loaded before
+    // saving existed: a console snippet leaves them in sessionStorage and
+    // reloads. They are put back into the fields and removed at once.
+    const DRAFT_KEY = 'apliarte_estudio_draft';
+    function restoreDraft() {
+      let draft = null;
+      try {
+        draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY));
+        sessionStorage.removeItem(DRAFT_KEY);
+      } catch (_) { return false; }
+      if (!draft || typeof draft !== 'object') return false;
+      CREDENTIAL_GROUPS.forEach((definition) => {
+        if (!definition.required && draft.groups && typeof draft.groups[definition.id] === 'boolean') {
+          setGroupEnabled(groupElement(definition), draft.groups[definition.id]);
+        }
+        definition.fields.forEach((field) => {
+          const value = draft.fields && draft.fields[`cred-${field.id}`];
+          if (typeof value === 'string' && value) fieldInput(field).value = value;
+        });
+      });
+      return true;
+    }
+
     function saveSwitches() {
       const data = readLocal();
       data.groups = collectLocal().groups;
@@ -1022,9 +1045,11 @@
       });
       $('btn-arrancar-estudio').addEventListener('click', () => showView('studio'));
       applyLocal();
+      const draftRestored = restoreDraft();
       hideAllSecrets();
       refreshStart();
       loadServerState();
+      if (draftRestored) showToast('Recuperado lo que habías escrito. Pulsa «Guardar credenciales».');
 
       renderObsSources();
     }
