@@ -304,10 +304,11 @@
 
       <section class="card" aria-labelledby="credentials-title">
         <h2 id="credentials-title">Paso 0 · Credenciales</h2>
-        <p class="notice" id="credentials-notice">Maqueta de la fase 1. Estos campos no leen las claves que ya tengas guardadas, no guardan nada y no envían nada al servidor. Tampoco comprueban si una clave es válida. Apaga con su interruptor los bloques que no vayas a usar.</p>
+        <p class="notice" id="credentials-notice">Al guardar, las claves van al servidor, igual que en el panel antiguo, y no vuelven a mostrarse: un hueco vacío con «Guardada» significa que el servidor ya la tiene. La conexión con OBS y el servidor personalizado se guardan solo en este navegador.</p>
+        <p class="hint" id="credentials-status" role="status"></p>
         <form id="credentials-form" class="groups" autocomplete="off" novalidate>
           <div id="credential-groups" class="groups"></div>
-          <button type="submit" class="btn" id="btn-save-credentials" disabled>Guardar credenciales</button>
+          <button type="submit" class="btn" id="btn-save-credentials">Guardar credenciales</button>
         </form>
       </section>
 
@@ -318,7 +319,7 @@
       </section>
 
       <button type="button" class="btn btn-primary btn-start" id="btn-arrancar-estudio" disabled aria-describedby="start-hint">▶ Arrancar Estudio</button>
-      <p class="hint" id="start-hint">«Arrancar Estudio» todavía no hace nada: se conectará al servidor en una fase posterior.</p>
+      <p class="hint" id="start-hint" role="status"></p>
       <button type="button" class="btn" data-action="preview-studio">Ver la maqueta del estudio</button>
     </main>
   </div>
@@ -497,36 +498,38 @@
       document.querySelectorAll('[data-action="toggle-secret"]').forEach((button) => setSecretVisible(button, false));
     }
 
-    // ── Credential groups (phase 1 scaffolding) ──────────────────────────
+    // ── Credential groups ────────────────────────────────────────────────
     // One group per block of data/config.json that the project actually
-    // uses, plus the OBS connection and the custom streaming server. Nothing here is read from, stored in or
-    // sent to the server; the switch only shows or hides its own fields.
+    // uses, plus the OBS connection and the custom streaming server.
+    // `config` is a path in POST /api/panel/config, `streaming` a key in
+    // POST /api/panel/streaming, `flag` the "already saved" boolean each GET
+    // returns. Groups marked `local` have no server storage today.
     const CREDENTIAL_GROUPS = [
       { id: 'twitch-stream', title: 'Emisión en Twitch', required: true, fields: [
-        { id: 'twitch-stream-key', label: 'Clave de emisión de Twitch', secret: true }
+        { id: 'twitch-stream-key', label: 'Clave de emisión de Twitch', secret: true, streaming: 'twitchStreamKey', flag: 'streaming.hasTwitchStreamKey' }
       ] },
       { id: 'twitch-chat', title: 'Chat y bot de Twitch', enabled: true, fields: [
-        { id: 'twitch-channel', label: 'Canal de Twitch' },
-        { id: 'twitch-nick', label: 'Nick de Twitch' },
-        { id: 'twitch-token', label: 'Token de Twitch', secret: true }
+        { id: 'twitch-channel', label: 'Canal de Twitch', config: 'twitch.canal' },
+        { id: 'twitch-nick', label: 'Nick de Twitch', config: 'twitch.nick' },
+        { id: 'twitch-token', label: 'Token de Twitch', secret: true, config: 'twitch.token', flag: 'config.twitch.hasToken' }
       ] },
       { id: 'youtube', title: 'Emisión en YouTube', enabled: false, fields: [
-        { id: 'youtube-stream-key', label: 'Clave de emisión de YouTube', secret: true }
+        { id: 'youtube-stream-key', label: 'Clave de emisión de YouTube', secret: true, streaming: 'youtubeStreamKey', flag: 'streaming.hasYoutubeStreamKey' }
       ] },
       { id: 'vdo', title: 'Cámara por VDO.Ninja', enabled: true, fields: [
-        { id: 'vdo-room', label: 'Sala de VDO.Ninja' },
-        { id: 'vdo-stream-id', label: 'Identificador de cámara' },
-        { id: 'vdo-password', label: 'Contraseña de VDO.Ninja', secret: true }
+        { id: 'vdo-room', label: 'Sala de VDO.Ninja', config: 'vdo.room', streaming: 'vdoRoom' },
+        { id: 'vdo-stream-id', label: 'Identificador de cámara', config: 'vdo.camStreamId' },
+        { id: 'vdo-password', label: 'Contraseña de VDO.Ninja', secret: true, config: 'vdo.password', streaming: 'vdoPassword', flag: 'config.vdo.hasPassword' }
       ] },
-      { id: 'obs', title: 'Conexión con OBS', enabled: true,
-        note: 'Son los tres datos que muestra OBS en la información de conexión de su servidor WebSocket.',
+      { id: 'obs', title: 'Conexión con OBS', enabled: true, local: true,
+        note: 'Son los tres datos que muestra OBS en la información de conexión de su servidor WebSocket. Se guardan solo en este navegador.',
         fields: [
           { id: 'obs-host', label: 'IP del servidor' },
           { id: 'obs-port', label: 'Puerto del servidor', numeric: true },
           { id: 'obs-password', label: 'Contraseña del servidor', secret: true }
         ] },
-      { id: 'relay', title: 'Servidor de emisión personalizado', enabled: false,
-        note: 'Son los datos de Ajustes → Emisión de OBS cuando el servicio es «Personalizado». No hace falta si solo emites en Twitch.',
+      { id: 'relay', title: 'Servidor de emisión personalizado', enabled: false, local: true,
+        note: 'Son los datos de Ajustes → Emisión de OBS cuando el servicio es «Personalizado». No hace falta si solo emites en Twitch. Se guardan solo en este navegador.',
         fields: [
           { id: 'relay-server', label: 'Servidor' },
           { id: 'relay-stream-key', label: 'Clave de retransmisión', secret: true }
@@ -623,6 +626,152 @@
         list.appendChild(group);
         setGroupEnabled(group, definition.required || definition.enabled);
       });
+    }
+
+    // ── Credentials: saved state and saving ──────────────────────────────
+    // Server-backed fields follow the old panel exactly: non-empty values
+    // are posted, secrets are never returned, and the two endpoints are
+    // called one after the other because both rewrite the same config file.
+    const LOCAL_KEY = 'apliarte_estudio_local_v1';
+    const SAVED_PLACEHOLDER = 'Guardada. Escribe solo para cambiarla';
+    const serverState = { loaded: false, flags: {} };
+
+    const getPath = (object, path) => path.split('.').reduce((node, key) => (node == null ? undefined : node[key]), object);
+    function setPath(object, path, value) {
+      const keys = path.split('.');
+      let node = object;
+      keys.slice(0, -1).forEach((key) => { node = node[key] = node[key] || {}; });
+      node[keys[keys.length - 1]] = value;
+    }
+    const fieldInput = (field) => $(`cred-${field.id}`);
+    const groupElement = (definition) => document.querySelector(`[data-group="${definition.id}"]`);
+    const isGroupEnabled = (definition) => definition.required || !groupElement(definition).querySelector('.group-body').hidden;
+
+    function readLocal() {
+      try {
+        const data = JSON.parse(localStorage.getItem(LOCAL_KEY));
+        return data && typeof data === 'object' ? data : {};
+      } catch (_) { return {}; }
+    }
+    function writeLocal(data) {
+      try { localStorage.setItem(LOCAL_KEY, JSON.stringify(data)); return true; } catch (_) { return false; }
+    }
+    function collectLocal() {
+      const data = { groups: {}, fields: {} };
+      CREDENTIAL_GROUPS.forEach((definition) => {
+        if (!definition.required) data.groups[definition.id] = isGroupEnabled(definition);
+        if (definition.local) definition.fields.forEach((field) => { data.fields[field.id] = fieldInput(field).value.trim(); });
+      });
+      return data;
+    }
+    function applyLocal() {
+      const data = readLocal();
+      CREDENTIAL_GROUPS.forEach((definition) => {
+        if (!definition.required && data.groups && typeof data.groups[definition.id] === 'boolean') {
+          setGroupEnabled(groupElement(definition), data.groups[definition.id]);
+        }
+        if (definition.local && data.fields) {
+          definition.fields.forEach((field) => {
+            if (typeof data.fields[field.id] === 'string') fieldInput(field).value = data.fields[field.id];
+          });
+        }
+      });
+    }
+    function saveSwitches() {
+      const data = readLocal();
+      data.groups = collectLocal().groups;
+      writeLocal(data);
+    }
+
+    async function requestJson(url, body) {
+      const options = { cache: 'no-store', credentials: 'same-origin' };
+      if (body) {
+        options.method = 'POST';
+        options.headers = { 'Content-Type': 'application/json' };
+        options.body = JSON.stringify(body);
+      }
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        const error = new Error(`HTTP ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+      return response.json();
+    }
+    const describeError = (error) => (error && error.status === 401
+      ? 'El servidor no reconoce la sesión de este navegador. Entra primero en el panel antiguo (/admin).'
+      : 'No se pudo hablar con el servidor.');
+
+    function refreshStart() {
+      const chat = CREDENTIAL_GROUPS.find((definition) => definition.id === 'twitch-chat');
+      const missing = [];
+      if (!serverState.loaded) missing.push('consultar el servidor');
+      else {
+        if (!serverState.flags['streaming.hasTwitchStreamKey']) missing.push('guardar la clave de emisión de Twitch');
+        if (isGroupEnabled(chat) && !serverState.flags['config.twitch.hasToken']) missing.push('guardar el token de Twitch o apagar el bloque de chat');
+      }
+      $('btn-arrancar-estudio').disabled = missing.length > 0;
+      $('start-hint').textContent = missing.length > 0 ? `Para arrancar falta: ${missing.join('; ')}.` : '';
+    }
+
+    async function loadServerState() {
+      try {
+        const streaming = (await requestJson('/api/panel/streaming')).streaming || {};
+        // Only `config` is read from this response; its `obs` part carries
+        // credential-bearing URLs and is deliberately left untouched.
+        const config = (await requestJson('/api/panel/config')).config || {};
+        const state = { streaming, config };
+        CREDENTIAL_GROUPS.forEach((definition) => definition.fields.forEach((field) => {
+          const input = fieldInput(field);
+          if (field.flag) {
+            const saved = Boolean(getPath(state, field.flag));
+            serverState.flags[field.flag] = saved;
+            input.placeholder = saved ? SAVED_PLACEHOLDER : '';
+          } else if (field.config && !input.value) {
+            const value = getPath(config, field.config);
+            if (typeof value === 'string') input.value = value;
+          }
+        }));
+        serverState.loaded = true;
+        $('credentials-status').textContent = '';
+      } catch (error) {
+        serverState.loaded = false;
+        $('credentials-status').textContent = describeError(error);
+      }
+      refreshStart();
+    }
+
+    async function saveCredentials() {
+      const button = $('btn-save-credentials');
+      const configPayload = {};
+      const streamingPayload = {};
+      const sentSecrets = [];
+      CREDENTIAL_GROUPS.forEach((definition) => {
+        if (definition.local || !isGroupEnabled(definition)) return;
+        definition.fields.forEach((field) => {
+          const value = fieldInput(field).value.trim();
+          if (!value) return;
+          if (field.config) setPath(configPayload, field.config, value);
+          if (field.streaming) streamingPayload[field.streaming] = value;
+          if (field.secret) sentSecrets.push(field);
+        });
+      });
+
+      button.disabled = true;
+      const localSaved = writeLocal(collectLocal());
+      try {
+        if (Object.keys(streamingPayload).length > 0) await requestJson('/api/panel/streaming', streamingPayload);
+        if (Object.keys(configPayload).length > 0) await requestJson('/api/panel/config', configPayload);
+        sentSecrets.forEach((field) => { fieldInput(field).value = ''; });
+        hideAllSecrets();
+        await loadServerState();
+        showToast(localSaved ? 'Credenciales guardadas' : 'Guardado en el servidor, pero este navegador no deja guardar los datos locales');
+      } catch (error) {
+        $('credentials-status').textContent = `${describeError(error)} Lo que has escrito sigue en pantalla.`;
+        showToast('No se pudo guardar en el servidor');
+      } finally {
+        button.disabled = false;
+      }
     }
 
     // ── OBS sources ──────────────────────────────────────────────────────
@@ -839,7 +988,11 @@
       'toggle-secret': (button) => setSecretVisible(button, button.getAttribute('aria-pressed') !== 'true'),
       'open-settings': () => $('settings-dialog').showModal(),
       'close-settings': () => $('settings-dialog').close(),
-      'toggle-group': (button) => setGroupEnabled(button.closest('.group'), button.getAttribute('aria-checked') !== 'true'),
+      'toggle-group': (button) => {
+        setGroupEnabled(button.closest('.group'), button.getAttribute('aria-checked') !== 'true');
+        saveSwitches();
+        refreshStart();
+      },
       'black-screen': showBlackScreen,
       'preview-studio': () => showView('studio'),
       'back-to-welcome': () => showView('welcome')
@@ -863,8 +1016,15 @@
         if (action) action(button);
       });
 
-      // Phase 1 scaffolding: the form never submits and nothing reads its values.
-      $('credentials-form').addEventListener('submit', (event) => event.preventDefault());
+      $('credentials-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        saveCredentials();
+      });
+      $('btn-arrancar-estudio').addEventListener('click', () => showView('studio'));
+      applyLocal();
+      hideAllSecrets();
+      refreshStart();
+      loadServerState();
 
       renderObsSources();
     }
