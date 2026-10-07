@@ -127,6 +127,38 @@
     .notice { border-left: 3px solid var(--warn); padding-left: var(--gap); font-size: 0.85rem; }
     .mock-banner { margin: var(--gap); }
 
+    .groups { display: grid; gap: var(--gap); }
+    .group { display: grid; gap: var(--gap); margin: 0; padding: var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); min-width: 0; }
+    .group-head { display: flex; align-items: center; gap: var(--gap); min-height: var(--touch); }
+    .group-head h3 { font-size: 0.9rem; margin-right: auto; }
+    .group-body { display: grid; gap: var(--gap); border: 0; margin: 0; padding: 0; min-width: 0; }
+    .switch {
+      position: relative;
+      width: 52px;
+      height: 30px;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--surface);
+      cursor: pointer;
+      flex: none;
+      touch-action: manipulation;
+    }
+    .switch::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: transform 0.15s;
+    }
+    .switch[aria-checked="true"] { background: var(--brand); border-color: var(--brand); }
+    .switch[aria-checked="true"]::after { transform: translateX(22px); background: var(--on-brand); }
+    @media (prefers-reduced-motion: reduce) { .switch::after { transition: none; } }
+
     .field { display: grid; gap: 0.25rem; }
     .field label { font-size: 0.85rem; font-weight: 600; }
     .field .tag { font-weight: 400; color: var(--text-muted); }
@@ -246,32 +278,10 @@
 
       <section class="card" aria-labelledby="credentials-title">
         <h2 id="credentials-title">Paso 0 · Credenciales</h2>
-        <p class="notice" id="credentials-notice">Maqueta de la fase 1. Estos campos no leen las claves que ya tengas guardadas, no guardan nada y no envían nada al servidor. Tampoco comprueban si una clave es válida.</p>
-        <form id="credentials-form" autocomplete="off" novalidate>
-          <div class="card" style="border:0; padding:0; background:transparent;">
-            <div class="field" data-credential="twitchStreamKey" data-required="true">
-              <label for="cred-twitch-key">Clave de emisión de Twitch <span class="tag">(obligatoria)</span></label>
-              <div class="field-row">
-                <input id="cred-twitch-key" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-                <button type="button" class="icon-btn" data-action="toggle-secret" data-target="cred-twitch-key" aria-pressed="false" aria-label="Mostrar la clave de emisión de Twitch" data-tip="Muestra u oculta la clave escrita."></button>
-              </div>
-            </div>
-            <div class="field" data-credential="youtubeStreamKey" data-required="false">
-              <label for="cred-youtube-key">Clave de emisión de YouTube <span class="tag">(opcional)</span></label>
-              <div class="field-row">
-                <input id="cred-youtube-key" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-                <button type="button" class="icon-btn" data-action="toggle-secret" data-target="cred-youtube-key" aria-pressed="false" aria-label="Mostrar la clave de emisión de YouTube" data-tip="Muestra u oculta la clave escrita."></button>
-              </div>
-            </div>
-            <div class="field" data-credential="apiToken" data-required="true">
-              <label for="cred-api-token">Token de API <span class="tag">(obligatorio)</span></label>
-              <div class="field-row">
-                <input id="cred-api-token" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-                <button type="button" class="icon-btn" data-action="toggle-secret" data-target="cred-api-token" aria-pressed="false" aria-label="Mostrar el token de API" data-tip="Muestra u oculta el token escrito."></button>
-              </div>
-            </div>
-            <button type="submit" class="btn" id="btn-save-credentials" disabled>Guardar credenciales</button>
-          </div>
+        <p class="notice" id="credentials-notice">Maqueta de la fase 1. Estos campos no leen las claves que ya tengas guardadas, no guardan nada y no envían nada al servidor. Tampoco comprueban si una clave es válida. Apaga con su interruptor los bloques que no vayas a usar.</p>
+        <form id="credentials-form" class="groups" autocomplete="off" novalidate>
+          <div id="credential-groups" class="groups"></div>
+          <button type="submit" class="btn" id="btn-save-credentials" disabled>Guardar credenciales</button>
         </form>
       </section>
 
@@ -455,6 +465,137 @@
       document.querySelectorAll('[data-action="toggle-secret"]').forEach((button) => setSecretVisible(button, false));
     }
 
+    // ── Credential groups (phase 1 scaffolding) ──────────────────────────
+    // One group per block of data/config.json plus the OBS connection and
+    // the custom streaming server. Nothing here is read from, stored in or
+    // sent to the server; the switch only shows or hides its own fields.
+    const CREDENTIAL_GROUPS = [
+      { id: 'twitch-stream', title: 'Emisión en Twitch', required: true, fields: [
+        { id: 'twitch-stream-key', label: 'Clave de emisión de Twitch', secret: true }
+      ] },
+      { id: 'twitch-chat', title: 'Chat y bot de Twitch', enabled: true, fields: [
+        { id: 'twitch-channel', label: 'Canal de Twitch' },
+        { id: 'twitch-nick', label: 'Nick de Twitch' },
+        { id: 'twitch-token', label: 'Token de Twitch', secret: true }
+      ] },
+      { id: 'youtube', title: 'Emisión en YouTube', enabled: false, fields: [
+        { id: 'youtube-stream-key', label: 'Clave de emisión de YouTube', secret: true }
+      ] },
+      { id: 'vdo', title: 'Cámara por VDO.Ninja', enabled: true, fields: [
+        { id: 'vdo-room', label: 'Sala de VDO.Ninja' },
+        { id: 'vdo-stream-id', label: 'Identificador de cámara' },
+        { id: 'vdo-password', label: 'Contraseña de VDO.Ninja', secret: true }
+      ] },
+      { id: 'obs', title: 'Conexión con OBS', enabled: true,
+        note: 'Son los tres datos que muestra OBS en la información de conexión de su servidor WebSocket.',
+        fields: [
+          { id: 'obs-host', label: 'IP del servidor' },
+          { id: 'obs-port', label: 'Puerto del servidor', numeric: true },
+          { id: 'obs-password', label: 'Contraseña del servidor', secret: true }
+        ] },
+      { id: 'relay', title: 'Servidor de emisión personalizado', enabled: false,
+        note: 'Son los datos de Ajustes → Emisión de OBS cuando el servicio es «Personalizado». No hace falta si solo emites en Twitch.',
+        fields: [
+          { id: 'relay-server', label: 'Servidor' },
+          { id: 'relay-stream-key', label: 'Clave de retransmisión', secret: true }
+        ] },
+      { id: 'openai', title: 'OpenAI', enabled: false, fields: [
+        { id: 'openai-api-key', label: 'Clave de API de OpenAI', secret: true }
+      ] }
+    ];
+
+    function buildField(field) {
+      const inputId = `cred-${field.id}`;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'field';
+
+      const label = document.createElement('label');
+      label.htmlFor = inputId;
+      label.textContent = field.label;
+
+      const row = document.createElement('div');
+      row.className = 'field-row';
+      const input = document.createElement('input');
+      input.id = inputId;
+      input.type = field.secret ? 'password' : 'text';
+      input.autocomplete = 'off';
+      input.spellcheck = false;
+      input.setAttribute('autocapitalize', 'off');
+      input.setAttribute('autocorrect', 'off');
+      if (field.numeric) input.inputMode = 'numeric';
+      row.appendChild(input);
+
+      if (field.secret) {
+        const eye = document.createElement('button');
+        eye.type = 'button';
+        eye.className = 'icon-btn';
+        eye.dataset.action = 'toggle-secret';
+        eye.dataset.target = inputId;
+        eye.dataset.tip = 'Muestra u oculta lo que has escrito.';
+        eye.setAttribute('aria-label', `Mostrar: ${field.label}`);
+        row.appendChild(eye);
+      }
+      wrapper.append(label, row);
+      return wrapper;
+    }
+
+    function setGroupEnabled(group, enabled) {
+      const body = group.querySelector('.group-body');
+      const toggle = group.querySelector('.switch');
+      body.hidden = !enabled;
+      body.disabled = !enabled;
+      if (toggle) toggle.setAttribute('aria-checked', String(enabled));
+      if (!enabled) {
+        group.querySelectorAll('[data-action="toggle-secret"]').forEach((button) => setSecretVisible(button, false));
+      }
+    }
+
+    function renderCredentialGroups() {
+      const list = $('credential-groups');
+      list.replaceChildren();
+      CREDENTIAL_GROUPS.forEach((definition) => {
+        const group = document.createElement('section');
+        group.className = 'group';
+        group.dataset.group = definition.id;
+
+        const head = document.createElement('div');
+        head.className = 'group-head';
+        const title = document.createElement('h3');
+        title.id = `group-title-${definition.id}`;
+        title.textContent = definition.title;
+        head.appendChild(title);
+        if (definition.required) {
+          const tag = document.createElement('span');
+          tag.className = 'hint';
+          tag.textContent = 'Obligatorio';
+          head.appendChild(tag);
+        } else {
+          const toggle = document.createElement('button');
+          toggle.type = 'button';
+          toggle.className = 'switch';
+          toggle.dataset.action = 'toggle-group';
+          toggle.setAttribute('role', 'switch');
+          toggle.setAttribute('aria-labelledby', title.id);
+          head.appendChild(toggle);
+        }
+
+        const body = document.createElement('fieldset');
+        body.className = 'group-body';
+        body.setAttribute('aria-labelledby', title.id);
+        if (definition.note) {
+          const note = document.createElement('p');
+          note.className = 'hint';
+          note.textContent = definition.note;
+          body.appendChild(note);
+        }
+        definition.fields.forEach((field) => body.appendChild(buildField(field)));
+
+        group.append(head, body);
+        list.appendChild(group);
+        setGroupEnabled(group, definition.required || definition.enabled);
+      });
+    }
+
     // ── OBS sources ──────────────────────────────────────────────────────
     // Same four paths the server builds in getObsUrls() (server.js), joined
     // to the origin this page was opened from. /api/panel/config is not
@@ -609,12 +750,14 @@
       'toggle-secret': (button) => setSecretVisible(button, button.getAttribute('aria-pressed') !== 'true'),
       'open-settings': () => $('settings-dialog').showModal(),
       'close-settings': () => $('settings-dialog').close(),
+      'toggle-group': (button) => setGroupEnabled(button.closest('.group'), button.getAttribute('aria-checked') !== 'true'),
       'preview-studio': () => showView('studio'),
       'back-to-welcome': () => showView('welcome')
     };
 
     function init() {
       applyTheme(readStoredTheme());
+      renderCredentialGroups();
       hideAllSecrets();
       document.querySelectorAll('[data-action="open-settings"]').forEach((button) => { button.innerHTML = icon('gear'); });
       document.querySelectorAll('[data-action="close-settings"]').forEach((button) => { button.innerHTML = icon('close'); });
