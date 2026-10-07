@@ -734,7 +734,7 @@
           Safari en iPad/iPhone requiere HTTPS para pedir permisos de cámara. Al abrir OBS.Ninja en una pestaña segura, Safari pide permisos al instante y emite a OBS.
         </p>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button type="button" id="btn-open-ninja-cam" class="sheet-btn primary" style="flex: 1; min-height: 44px; font-size: 14px; font-weight: 700;">Abrir Cámara en OBS.Ninja</button>
+          <a id="btn-open-ninja-cam" href="https://vdo.ninja" target="_blank" rel="noopener" class="sheet-btn primary" style="flex: 1; min-height: 44px; font-size: 14px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; text-align: center;">Abrir Cámara en OBS.Ninja ↗</a>
           <button type="button" id="btn-copy-ninja-cam" class="sheet-btn" style="min-height: 44px; padding: 0 12px; font-size: 13px;" title="Copiar enlace para abrir en otro móvil">Copiar Enlace</button>
         </div>
         <span id="toast-ninja-cam-copied" style="display:none; color:#22c55e; font-size:12px; font-weight:700;">¡Enlace copiado! Pégalo en tu móvil o navegador</span>
@@ -793,7 +793,7 @@
           Para emitir la voz desde otro móvil o tablet independiente con cancelación de eco y ganancia nativa de OBS.Ninja:
         </p>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button type="button" id="btn-open-ninja-mic" class="sheet-btn primary" style="flex: 1; min-height: 44px; font-size: 14px; font-weight: 700;">Abrir Micro en OBS.Ninja</button>
+          <a id="btn-open-ninja-mic" href="https://vdo.ninja" target="_blank" rel="noopener" class="sheet-btn primary" style="flex: 1; min-height: 44px; font-size: 14px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; text-align: center;">Abrir Micro en OBS.Ninja ↗</a>
           <button type="button" id="btn-copy-ninja-mic" class="sheet-btn" style="min-height: 44px; padding: 0 12px; font-size: 13px;" title="Copiar enlace para el móvil">Copiar Enlace</button>
         </div>
         <span id="toast-ninja-mic-copied" style="display:none; color:#22c55e; font-size:12px; font-weight:700;">¡Enlace copiado! Pégalo en tu móvil o navegador</span>
@@ -2726,6 +2726,7 @@
           if (d.modo) {
             syncFavCameraMode(d.modo === 'camara');
           }
+          refrescarNinjaLinks();
         })
         .catch(() => {});
     }
@@ -2741,14 +2742,21 @@
       let bitrate = 250, w = 320, h = 240, fps = 15;
       if (q === 'med') { bitrate = 600; w = 640; h = 360; fps = 24; }
       else if (q === 'high') { bitrate = 1500; w = 1280; h = 720; fps = 30; }
-      return `https://vdo.ninja/?push=${encodeURIComponent(streamId)}&room=${encodeURIComponent(room)}${passPart}&webcam${facingPart}&videobitrate=${bitrate}&width=${w}&height=${h}&framerate=${fps}&autostart&cleanoutput&noaudio`;
+      return `https://vdo.ninja/?push=${encodeURIComponent(streamId)}&room=${encodeURIComponent(room)}${passPart}&webcam${facingPart}&videobitrate=${bitrate}&width=${w}&height=${h}&framerate=${fps}&noaudio`;
     }
 
     function getNinjaMicPushUrl() {
       const room = ninjaCamConfig.room || 'erbolammapliarte';
       const streamId = (ninjaCamConfig.streamId || 'ja_cam_directo') + '_mic';
       const passPart = ninjaCamConfig.password ? `&password=${encodeURIComponent(ninjaCamConfig.password)}` : '';
-      return `https://vdo.ninja/?push=${encodeURIComponent(streamId)}&room=${encodeURIComponent(room)}${passPart}&audioonly&autostart&cleanoutput`;
+      return `https://vdo.ninja/?push=${encodeURIComponent(streamId)}&room=${encodeURIComponent(room)}${passPart}&audioonly`;
+    }
+
+    function refrescarNinjaLinks() {
+      const btnCam = document.getElementById('btn-open-ninja-cam');
+      const btnMic = document.getElementById('btn-open-ninja-mic');
+      if (btnCam) btnCam.href = getNinjaCamPushUrl();
+      if (btnMic) btnMic.href = getNinjaMicPushUrl();
     }
 
     async function copiarTextoAlPortapapeles(texto) {
@@ -2775,8 +2783,11 @@
     }
 
     document.getElementById('btn-open-ninja-cam')?.addEventListener('click', () => {
-      const url = getNinjaCamPushUrl();
-      window.open(url, '_blank');
+      fetch('/api/directo/comando', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modo: 'camara', comando: '!cam camara' })
+      }).catch(() => {});
     });
 
     document.getElementById('btn-copy-ninja-cam')?.addEventListener('click', async () => {
@@ -2788,11 +2799,6 @@
         toast.textContent = ok ? '¡Enlace copiado! Pégalo en tu móvil o navegador' : url;
         setTimeout(() => { toast.style.display = 'none'; }, 4000);
       }
-    });
-
-    document.getElementById('btn-open-ninja-mic')?.addEventListener('click', () => {
-      const url = getNinjaMicPushUrl();
-      window.open(url, '_blank');
     });
 
     document.getElementById('btn-copy-ninja-mic')?.addEventListener('click', async () => {
@@ -2844,10 +2850,9 @@
       if (previewBox && previewIframe) {
         previewBox.style.display = isCapturing && !cameraPreviewHidden ? 'block' : 'none';
         if (isCapturing) {
-          const nestedIframe = doc.getElementById('camera-push-iframe');
-          const pushUrl = nestedIframe?.dataset?.pushUrl || nestedIframe?.src;
-          if (pushUrl && pushUrl !== 'about:blank' && previewIframe.src !== pushUrl) {
-            previewIframe.src = pushUrl;
+          const previewUrl = ninjaCamConfig.viewUrl || nestedIframe?.dataset?.pushUrl || nestedIframe?.src;
+          if (previewUrl && previewUrl !== 'about:blank' && previewIframe.src !== previewUrl) {
+            previewIframe.src = previewUrl;
           }
         } else if (previewIframe.src && previewIframe.src !== 'about:blank') {
           previewIframe.src = 'about:blank';
@@ -2870,6 +2875,11 @@
       }
     });
     document.getElementById('btn-pizarra-cam-stop')?.addEventListener('click', () => {
+      fetch('/api/directo/comando', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modo: 'monigote', comando: '!cam monigote' })
+      }).catch(() => {});
       const doc = adminFrame.contentDocument;
       const original = doc?.getElementById('btn-apagar-camara');
       if (original && !original.disabled) {
@@ -2879,23 +2889,27 @@
     });
     document.getElementById('btn-pizarra-cam-front')?.addEventListener('click', () => {
       localCamFacingMode = 'user';
+      refrescarNinjaLinks();
       const doc = adminFrame.contentDocument;
       doc?.getElementById('btn-cam-facing-user')?.click();
       setTimeout(syncPizarraCamUi, 200);
     });
     document.getElementById('btn-pizarra-cam-back')?.addEventListener('click', () => {
       localCamFacingMode = 'back';
+      refrescarNinjaLinks();
       const doc = adminFrame.contentDocument;
       doc?.getElementById('btn-cam-facing-back')?.click();
       setTimeout(syncPizarraCamUi, 200);
     });
     document.getElementById('btn-pizarra-cam-switch')?.addEventListener('click', () => {
       localCamFacingMode = (localCamFacingMode === 'back' ? 'user' : 'back');
+      refrescarNinjaLinks();
       const doc = adminFrame.contentDocument;
       doc?.getElementById('btn-cam-switch-toggle')?.click();
       setTimeout(syncPizarraCamUi, 200);
     });
     document.getElementById('pizarra-cam-quality')?.addEventListener('change', (e) => {
+      refrescarNinjaLinks();
       const doc = adminFrame.contentDocument;
       const sel = doc?.getElementById('select-camara-calidad');
       if (sel) {

@@ -236,7 +236,7 @@
     }
 
     function actualizarVisibilidadCamaraYMonigote() {
-      const esCamara = modoCamaraActual === 'camara';
+      const esCamara = modoCamaraActual === 'camara' || videoCamaraRecibido;
       if (cameraIframe) {
         cameraIframe.style.opacity = esCamara ? '1' : '0';
         cameraIframe.style.pointerEvents = esCamara ? 'auto' : 'none';
