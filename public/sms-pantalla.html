@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>ApliArte Directo · Mensaje en pantalla</title>
+  <style>
+    /* OBS browser source, 1920×1080, transparent. It shows the one SMS that
+       was chosen in the studio panel, along the bottom of the picture. */
+    :root {
+      --brand: #005fa9;
+      --brand-strong: #0284c7;
+      --panel: #090d16;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --font: Inter, "DejaVu Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+    body { font-family: var(--font); color: var(--text); }
+    .message {
+      position: fixed;
+      left: 4vw;
+      right: 4vw;
+      bottom: 5vh;
+      display: flex;
+      align-items: center;
+      gap: 2vw;
+      padding: 2vh 2vw;
+      border-left: 0.6vw solid var(--brand-strong);
+      border-radius: 1.2vh;
+      background: var(--panel);
+      opacity: 0;
+      transform: translateY(3vh);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    .message.visible { opacity: 1; transform: none; }
+    .avatar {
+      flex: none;
+      width: 11vh;
+      height: 11vh;
+      border-radius: 50%;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      background: var(--brand);
+      font-size: 6vh;
+      font-weight: 700;
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .content { min-width: 0; }
+    .user { font-size: 3.2vh; font-weight: 700; color: var(--brand-strong); }
+    .text { font-size: 4.4vh; line-height: 1.25; overflow-wrap: anywhere; }
+    @media (prefers-reduced-motion: reduce) { .message { transition: none; } }
+  </style>
+</head>
+<body>
+  <div class="message" id="message" aria-live="polite">
+    <div class="avatar" id="avatar"></div>
+    <div class="content">
+      <div class="user" id="user"></div>
+      <div class="text" id="text"></div>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    'use strict';
+    const POLL_MS = 1500;
+    const message = document.getElementById('message');
+    const avatar = document.getElementById('avatar');
+    const user = document.getElementById('user');
+    const text = document.getElementById('text');
+    let shownId = null;
+
+    function paintAvatar(name, url) {
+      avatar.replaceChildren();
+      const initial = (String(name || '?').trim().charAt(0) || '?').toUpperCase();
+      if (!url) { avatar.textContent = initial; return; }
+      const image = document.createElement('img');
+      image.alt = '';
+      // A picture that fails to load falls back to the initial.
+      image.addEventListener('error', () => { avatar.replaceChildren(); avatar.textContent = initial; });
+      image.src = url;
+      avatar.appendChild(image);
+    }
+
+    function render(data) {
+      if (!data) {
+        shownId = null;
+        message.classList.remove('visible');
+        return;
+      }
+      if (data.id !== shownId) {
+        shownId = data.id;
+        user.textContent = '@' + data.usuario;
+        text.textContent = data.texto;
+        paintAvatar(data.usuario, data.avatar);
+      }
+      message.classList.add('visible');
+    }
+
+    async function poll() {
+      try {
+        const response = await fetch('/api/directo/sms/pantalla', { cache: 'no-store' });
+        // A failed poll leaves the picture as it is; only a real answer changes it.
+        if (response.ok) render((await response.json()).mensaje || null);
+      } catch (_) { /* server restarting: try again on the next tick */ }
+      setTimeout(poll, POLL_MS);
+    }
+    poll();
+  })();
+  </script>
+</body>
+</html>

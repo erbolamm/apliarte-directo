@@ -7,6 +7,7 @@ const { parseWsAuth, parseWsPanelCookie, isTrustedWsOrigin, decideWsRole, canRec
 const { handleStreamingConfig } = require('./src/streaming-config');
 const { handleCentreStatus, handleFinalizarEmision } = require('./src/centro-status');
 const { handleRedLocal } = require('./src/red-local');
+const { createSmsPantalla } = require('./src/sms-pantalla');
 
 // Local, gitignored launch settings (data/directo.local.json → {"env": {...}}).
 // Applied as defaults so every launcher (npm run directo, erbolamm directo on,
@@ -868,6 +869,21 @@ function saveSmsList(lista) {
     console.error('[sms] Error al guardar:', e.message);
   }
 }
+
+// Twitch profile picture of whoever sent an SMS, for the on-screen message.
+// Returns null when Twitch is not configured or the name is not a Twitch login.
+async function buscarAvatarTwitch(login) {
+  const cleanToken = String(twitchConfig.token || '').replace(/^oauth:/, '').trim();
+  if (!cleanToken || !/^[a-z0-9_]{2,25}$/.test(String(login || ''))) return null;
+  const res = await fetch('https://api.twitch.tv/helix/users?login=' + encodeURIComponent(login), {
+    headers: { 'Client-Id': 'gp762nuuoqcoxypju8c569th9wz7q5', 'Authorization': 'Bearer ' + cleanToken },
+    signal: AbortSignal.timeout(4000),
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return (data.data && data.data[0] && data.data[0].profile_image_url) || null;
+}
+const smsPantalla = createSmsPantalla({ getSmsList, lookupAvatar: buscarAvatarTwitch });
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -2285,6 +2301,11 @@ const server = http.createServer((req, res) => {
     }
   }
 
+
+  // One SMS shown on the stream by hand (src/sms-pantalla.js).
+  if (smsPantalla.matches(path)) {
+    return smsPantalla.handle(req, res, path, isAuth);
+  }
 
   // ── Buzón SMS del directo ────────────────────────────────────────────────
   if (path === '/api/directo/sms') {

@@ -1240,7 +1240,8 @@
       { id: 'plano', title: 'Escena 3D (1920×1080)', path: '/plano?transparente=1', note: 'Diorama con avatares, voces del chat y efectos del panel.' },
       { id: 'camara', title: 'Cámara', path: '/camara.html', note: 'Solo vídeo, sin sonido.' },
       { id: 'micro', title: 'Micrófono', path: '/micro-obs.html', note: 'Solo audio. En OBS, activa «Controlar audio vía OBS».' },
-      { id: 'chat', title: 'Chat', path: '/chat.html', note: 'Capa de chat en vivo.' }
+      { id: 'chat', title: 'Chat', path: '/chat.html', note: 'Capa de chat en vivo.' },
+      { id: 'sms', title: 'Mensaje SMS en pantalla', path: '/sms-pantalla.html', note: 'Muestra abajo el SMS que elijas con el ojo en Ajustes → Mensajes SMS. Ponla encima de las demás.' }
     ];
     function renderObsSources() {
       const origin = window.location.origin;
@@ -3806,7 +3807,7 @@
     }
     const tabOpen = (id) => $('settings-dialog').open && $(`settings-tab-${id}`).getAttribute('aria-selected') === 'true';
 
-    const sms = { loaded: false, messages: [], error: '' };
+    const sms = { loaded: false, messages: [], error: '', shownId: null };
     async function loadSms() {
       sms.error = '';
       try {
@@ -3814,6 +3815,11 @@
         if (response.ok) sms.messages = (await response.json()).mensajes || [];
         else sms.error = 'No se pudo consultar el buzón.';
       } catch (_) { sms.error = 'Sin conexión con el servidor.'; }
+      // Which message, if any, is on the stream right now.
+      try {
+        const response = await fetch('/api/directo/sms/pantalla', { cache: 'no-store' });
+        sms.shownId = response.ok ? (((await response.json()).mensaje || {}).id || null) : null;
+      } catch (_) { sms.shownId = null; }
       sms.loaded = true;
       if (tabOpen('sms')) selectSettingsTab('sms');
     }
@@ -3852,7 +3858,32 @@
         text.textContent = message.texto;
         text.style.overflowWrap = 'anywhere';
         card.append(top, text);
-        armedButton(settingsRow(card), 'Eliminar', 'Pulsa otra vez para eliminar', () => smsPost('/api/directo/sms/borrar', { id: message.id }, 'Mensaje eliminado'));
+        const actions = settingsRow(card);
+        // The eye puts this one message on the stream; pressing it again takes it off.
+        const onScreen = sms.shownId === message.id;
+        const eye = document.createElement('button');
+        eye.type = 'button';
+        eye.className = 'icon-btn';
+        eye.innerHTML = icon(onScreen ? 'eyeOff' : 'eye');
+        eye.setAttribute('aria-pressed', String(onScreen));
+        eye.setAttribute('aria-label', onScreen ? 'Quitar este mensaje de la pantalla' : 'Mostrar este mensaje en pantalla');
+        eye.dataset.tip = 'Muestra este mensaje en el directo, abajo, con el nombre de quien lo envió. Otro toque lo quita.';
+        eye.addEventListener('click', async () => {
+          eye.disabled = true;
+          try {
+            const response = await fetch(onScreen ? '/api/directo/sms/ocultar' : '/api/directo/sms/mostrar', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(onScreen ? {} : { id: message.id })
+            });
+            const data = await response.json().catch(() => ({}));
+            showToast(response.ok ? (onScreen ? 'Mensaje quitado de la pantalla' : 'Mensaje en pantalla')
+              : (response.status === 404 && !data.error ? 'El servidor en marcha es anterior a esta función: reinícialo' : (data.error || 'No se pudo completar')));
+          } catch (_) { showToast('Error de conexión'); }
+          await loadSms();
+        });
+        actions.appendChild(eye);
+        armedButton(actions, 'Eliminar', 'Pulsa otra vez para eliminar', () => smsPost('/api/directo/sms/borrar', { id: message.id }, 'Mensaje eliminado'));
         panel.appendChild(card);
       });
     };
