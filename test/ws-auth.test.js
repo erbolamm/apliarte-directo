@@ -126,6 +126,7 @@ test('canReceive: publico recibe camara_*, micro_*, voz_pcm', () => {
   assert.equal(canReceive('publico', 'camara_stop'), true);
   assert.equal(canReceive('publico', 'camara_desactivada'), true);
   assert.equal(canReceive('publico', 'camara_modo'), true);
+  assert.equal(canReceive('publico', 'camara_aspecto'), true);
   assert.equal(canReceive('publico', 'micro_start'), true);
   assert.equal(canReceive('publico', 'micro_stop'), true);
   assert.equal(canReceive('publico', 'micro_desactivado'), true);
@@ -186,6 +187,7 @@ test('canSend: publico puede enviar camara_*, micro_*, voz_pcm (PUBLIC_EVENTS)',
   assert.equal(canSend('publico', 'camara_stop'), true);
   assert.equal(canSend('publico', 'camara_desactivada'), true);
   assert.equal(canSend('publico', 'camara_modo'), true);
+  assert.equal(canSend('publico', 'camara_aspecto'), true);
   assert.equal(canSend('publico', 'micro_start'), true);
   assert.equal(canSend('publico', 'micro_stop'), true);
   assert.equal(canSend('publico', 'micro_desactivado'), true);

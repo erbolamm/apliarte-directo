@@ -276,6 +276,7 @@ let serverOwners     = {};
 let seqComandosDirecto = 0;
 const ringComandosDirecto = [];
 let modoCamaraDirecto = 'monigote';
+let aspectoCamaraDirecto = 'horizontal';
 const cooldownComandosTwitch = new Map();
 const COOLDOWN_COMANDO_MS = 2000;
 
@@ -1919,7 +1920,8 @@ const server = http.createServer((req, res) => {
       streamId: VDO_CAM_STREAM,
       password: VDO_CAM_PASS,
       viewUrl,
-      modo: modoCamaraDirecto
+      modo: modoCamaraDirecto,
+      aspecto: aspectoCamaraDirecto
     }));
   }
 
@@ -1935,6 +1937,7 @@ const server = http.createServer((req, res) => {
         duenos: serverOwners,
         seq: seqComandosDirecto,
         modoCamara: modoCamaraDirecto,
+        aspectoCamara: aspectoCamaraDirecto,
         comandos: filtrados
       }));
     }
@@ -1945,6 +1948,7 @@ const server = http.createServer((req, res) => {
         try {
           const cmd = JSON.parse(body || '{}');
           const modoPrevioCamara = modoCamaraDirecto;
+          const aspectoPrevioCamara = aspectoCamaraDirecto;
           if (cmd.comando === 'adoptar' && cmd.agente && cmd.usuario) {
             for (const [aId, u] of Object.entries(serverOwners)) {
               if (u.toLowerCase() === cmd.usuario.toLowerCase()) delete serverOwners[aId];
@@ -1974,6 +1978,9 @@ const server = http.createServer((req, res) => {
             else if (arg === 'off' || arg === 'ocultar' || arg === 'monigote') modoCamaraDirecto = 'monigote';
           } else if (cmd.modo) {
             modoCamaraDirecto = cmd.modo === 'camara' ? 'camara' : 'monigote';
+          }
+          if (cmd.aspecto) {
+            aspectoCamaraDirecto = (cmd.aspecto === 'cuadrado' || cmd.aspecto === '1:1') ? 'cuadrado' : 'horizontal';
           }
 
           let twitchEnviado = false;
@@ -2022,9 +2029,12 @@ const server = http.createServer((req, res) => {
             ringComandosDirecto.push(ev);
             if (ringComandosDirecto.length > 100) ringComandosDirecto.shift();
 
-            broadcast({ type: 'directo_comando', cmd, duenos: serverOwners, seq: seqComandosDirecto, modoCamara: modoCamaraDirecto });
+            broadcast({ type: 'directo_comando', cmd, duenos: serverOwners, seq: seqComandosDirecto, modoCamara: modoCamaraDirecto, aspectoCamara: aspectoCamaraDirecto });
             if (modoCamaraDirecto !== modoPrevioCamara && (cmd.modo || (cmd.comando && typeof cmd.comando === 'string' && cmd.comando.startsWith('!cam')))) {
               broadcast({ type: 'camara_modo', modo: modoCamaraDirecto });
+            }
+            if (aspectoCamaraDirecto !== aspectoPrevioCamara && cmd.aspecto) {
+              broadcast({ type: 'camara_aspecto', aspecto: aspectoCamaraDirecto });
             }
             if (cmd.comando && cmd.comando !== 'adoptar' && cmd.comando !== 'liberar') {
               broadcast({ type: 'comando_chat', comando: cmd.comando, usuario: cmd.usuario || 'ja' });
@@ -2037,6 +2047,7 @@ const server = http.createServer((req, res) => {
             duenos: serverOwners,
             seq: seqComandosDirecto,
             modoCamara: modoCamaraDirecto,
+            aspectoCamara: aspectoCamaraDirecto,
             twitchEnviado,
             duplicadoIgnorado,
             twitchConfigurado: Boolean(twitchConfig.token),
@@ -2769,7 +2780,7 @@ wss.on('connection', (ws, request) => {
     const TIPOS_RETRANS_PERMITIDOS = new Set([
       'voz_pcm',
       'micro_start', 'micro_stop', 'micro_desactivado',
-      'camara_start', 'camara_stop', 'camara_desactivada', 'camara_modo',
+      'camara_start', 'camara_stop', 'camara_desactivada', 'camara_modo', 'camara_aspecto',
       'comando_chat', 'directo_comando',
       'scene', 'layer_add', 'layer_remove', 'layer_update', 'layer_reorder',
       'stream_state', 'twitch_state',
@@ -2785,6 +2796,16 @@ wss.on('connection', (ws, request) => {
 
     // Dispatch por parsed.type top-level, NO por substring del texto crudo.
     switch (msgType) {
+      case 'camara_aspecto': {
+        if (parsed && parsed.aspecto) {
+          const nuevoAspecto = (parsed.aspecto === 'cuadrado' || parsed.aspecto === '1:1') ? 'cuadrado' : 'horizontal';
+          if (nuevoAspecto !== aspectoCamaraDirecto) {
+            aspectoCamaraDirecto = nuevoAspecto;
+            broadcast({ type: 'camara_aspecto', aspecto: aspectoCamaraDirecto });
+          }
+        }
+        return;
+      }
       case 'micro_start': {
         if (activeMicSender && activeMicSender !== ws && activeMicSender.readyState === 1) {
           try {

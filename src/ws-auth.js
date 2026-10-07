@@ -97,6 +97,7 @@ const PUBLIC_EVENTS = new Set([
   'camara_stop',
   'camara_desactivada',
   'camara_modo',
+  'camara_aspecto',
   'micro_start',
   'micro_stop',
   'micro_desactivado',

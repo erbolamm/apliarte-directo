@@ -35,7 +35,13 @@
       border: 1px solid rgba(255, 255, 255, 0.08) !important;
       box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
       pointer-events: none;
-      transition: opacity 0.3s ease;
+      transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), height 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.35s ease, opacity 0.3s ease;
+    }
+
+    .camera-container.aspect-cuadrado {
+      width: 320px;
+      height: 320px;
+      border-radius: 24px;
     }
 
     /* Si OBS tiene configurado el lienzo exacto del widget (ej. 440x248) o pantalla reducida */
@@ -224,6 +230,7 @@
     const cameraIframe = document.getElementById('camera-iframe');
     const jaAvatarCamBox = document.getElementById('ja-avatar-cam-box');
     let modoCamaraActual = 'monigote';
+    let aspectoCamaraActual = 'horizontal';
     let videoCamaraRecibido = false;
 
     // Enviar orden de silenciado continuo al iframe de VDO.Ninja al cargar
@@ -234,6 +241,15 @@
         } catch (_) {}
       });
     }
+
+    function setAspectoCamara(aspecto) {
+      const esCuadrado = aspecto === 'cuadrado' || aspecto === '1:1';
+      aspectoCamaraActual = esCuadrado ? 'cuadrado' : 'horizontal';
+      if (cameraEl) {
+        cameraEl.classList.toggle('aspect-cuadrado', esCuadrado);
+      }
+    }
+    window.setAspectoCamara = setAspectoCamara;
 
     function actualizarVisibilidadCamaraYMonigote() {
       const esCamara = modoCamaraActual === 'camara' || videoCamaraRecibido;
@@ -287,7 +303,9 @@
         const paramStream = urlParams.get('stream') || urlParams.get('view');
         const paramPass = urlParams.get('password');
         const paramModo = urlParams.get('modo');
+        const paramAspect = urlParams.get('aspect') || urlParams.get('aspecto');
         if (paramModo) setModoCamara(paramModo);
+        if (paramAspect) setAspectoCamara(paramAspect);
 
         if (paramStream && paramRoom) {
           const passPart = paramPass ? `&password=${encodeURIComponent(paramPass)}` : '';
@@ -312,6 +330,9 @@
           }
           if (data.modo && !paramModo) {
             setModoCamara(data.modo);
+          }
+          if (data.aspecto && !paramAspect) {
+            setAspectoCamara(data.aspecto);
           }
           actualizarVisibilidadCamaraYMonigote();
         }
@@ -416,8 +437,12 @@
             if (data.type === 'camara_modo') {
               setModoCamara(data.modo);
             }
+            if (data.type === 'camara_aspecto') {
+              setAspectoCamara(data.aspecto);
+            }
             if (data.type === 'directo_comando' && data.cmd) {
               if (data.cmd.modo) setModoCamara(data.cmd.modo);
+              if (data.cmd.aspecto) setAspectoCamara(data.cmd.aspecto);
             }
           } catch (_) {}
         };

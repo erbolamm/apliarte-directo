@@ -752,6 +752,12 @@
         <button type="button" id="btn-pizarra-cam-switch" class="sheet-btn" style="min-height: 44px; padding: 0 14px; font-size: 16px;" title="Conmutar rápida entre frontal y trasera">🔄</button>
       </div>
 
+      <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Formato de Marco en OBS:</div>
+      <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+        <button type="button" id="btn-pizarra-aspect-horizontal" class="sheet-btn primary" style="flex: 1; min-height: 44px; font-weight: 700;">Panorámico (16:9)</button>
+        <button type="button" id="btn-pizarra-aspect-cuadrado" class="sheet-btn" style="flex: 1; min-height: 44px; font-weight: 700;">Cuadrado (1:1)</button>
+      </div>
+
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding: 10px 14px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px;">
         <label for="pizarra-cam-quality" style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Calidad Vídeo:</label>
         <select id="pizarra-cam-quality" style="background: var(--panel-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 12px; font-size: 13px; font-weight: 600;">
@@ -2713,6 +2719,25 @@
       password: ''
     };
     let localCamFacingMode = 'user';
+    let localCamAspecto = 'horizontal';
+
+    function syncPizarraCamAspectUi(aspecto) {
+      const esCuadrado = aspecto === 'cuadrado' || aspecto === '1:1';
+      localCamAspecto = esCuadrado ? 'cuadrado' : 'horizontal';
+      const btnH = document.getElementById('btn-pizarra-aspect-horizontal');
+      const btnC = document.getElementById('btn-pizarra-aspect-cuadrado');
+      if (btnH) btnH.classList.toggle('primary', !esCuadrado);
+      if (btnC) btnC.classList.toggle('primary', esCuadrado);
+    }
+
+    function cambiarAspectoCamara(nuevoAspecto) {
+      syncPizarraCamAspectUi(nuevoAspecto);
+      fetch('/api/directo/comando', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aspecto: localCamAspecto })
+      }).catch(() => {});
+    }
 
     function cargarConfigCamaraNinja() {
       if (typeof fetch !== 'function') return;
@@ -2725,6 +2750,9 @@
           if (d.password !== undefined) ninjaCamConfig.password = d.password;
           if (d.modo) {
             syncFavCameraMode(d.modo === 'camara');
+          }
+          if (d.aspecto) {
+            syncPizarraCamAspectUi(d.aspecto);
           }
           refrescarNinjaLinks();
         })
@@ -2907,6 +2935,12 @@
       const doc = adminFrame.contentDocument;
       doc?.getElementById('btn-cam-switch-toggle')?.click();
       setTimeout(syncPizarraCamUi, 200);
+    });
+    document.getElementById('btn-pizarra-aspect-horizontal')?.addEventListener('click', () => {
+      cambiarAspectoCamara('horizontal');
+    });
+    document.getElementById('btn-pizarra-aspect-cuadrado')?.addEventListener('click', () => {
+      cambiarAspectoCamara('cuadrado');
     });
     document.getElementById('pizarra-cam-quality')?.addEventListener('change', (e) => {
       refrescarNinjaLinks();
