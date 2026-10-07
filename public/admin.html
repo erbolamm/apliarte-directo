@@ -1115,6 +1115,25 @@
       <span>🖤 PANTALLA NEGRA (AHORRO OLED)</span>
     </button>
 
+    <!-- 🖍️ Pizarra Táctil Directo (Desactivada por defecto, activable con 1 toque) -->
+    <button type="button" class="touch-btn" id="btn-toggle-pizarra-embed" style="min-height:50px; font-size:1rem; font-weight:700; background:#1e293b; border:2px solid #0284c7; color:#38bdf8; margin-top:10px;" aria-label="Activar o desactivar la pizarra táctil dentro del panel" data-tip="Pizarra táctil: abrir o cerrar la pizarra de dibujo directamente en esta pantalla">
+      <span>🖍️ ACTIVAR PIZARRA TÁCTIL</span>
+    </button>
+
+    <!-- Contenedor Pizarra (Desactivada / oculta por defecto) -->
+    <div id="pizarra-embed-container" style="display:none; margin-top:10px; border-radius:10px; overflow:hidden; border:2px solid #0284c7; background:#000;">
+      <div style="background:#0f172a; padding:6px 12px; display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; color:#94a3b8; border-bottom:1px solid #1e293b;">
+        <span style="color:#38bdf8; font-weight:700;">🖍️ PIZARRA TÁCTIL (EN VIVO)</span>
+        <div style="display:flex; gap:8px;">
+          <a href="/pizarra-plus" target="_blank" rel="noopener" class="touch-btn" style="min-height:26px; padding:2px 8px; font-size:0.72rem; background:#1e293b; border:1px solid #334155; color:#94a3b8; text-decoration:none; display:inline-flex; align-items:center;">↗ Abrir en pestaña</a>
+          <button type="button" class="touch-btn touch-btn-danger" id="btn-cerrar-pizarra-embed" style="min-height:26px; padding:2px 8px; font-size:0.72rem; background:#dc2626; color:#fff;">✕ Desactivar</button>
+        </div>
+      </div>
+      <div style="width:100%; height:480px;">
+        <iframe id="pizarra-embed-iframe" src="about:blank" data-src="/pizarra-plus" allow="fullscreen" style="width:100%; height:100%; border:none; display:block; background:#000;"></iframe>
+      </div>
+    </div>
+
     <!-- 🎛️ 4 Fuentes Independientes OBS Studio -->
     <section class="card" id="card-obs-fuentes-directo" style="border: 2px solid #0284c7; background: rgba(2, 132, 199, 0.06); margin-top:10px;">
       <div class="card-title">
@@ -3089,6 +3108,43 @@
 
     blackScreenOverlay?.addEventListener('click', desactivarPantallaNegra);
     blackScreenOverlay?.addEventListener('touchstart', desactivarPantallaNegra, { passive: true });
+
+    // ── Pizarra Táctil Directo (Embed activable por botón, desactivada por defecto) ──
+    const btnTogglePizarraEmbed = document.getElementById('btn-toggle-pizarra-embed');
+    const pizarraEmbedContainer = document.getElementById('pizarra-embed-container');
+    const pizarraEmbedIframe = document.getElementById('pizarra-embed-iframe');
+    const btnCerrarPizarraEmbed = document.getElementById('btn-cerrar-pizarra-embed');
+
+    function alternarPizarraEmbed(forzarEstado) {
+      if (!pizarraEmbedContainer || !pizarraEmbedIframe) return;
+      const estaAbierta = pizarraEmbedContainer.style.display !== 'none';
+      const abrir = typeof forzarEstado === 'boolean' ? forzarEstado : !estaAbierta;
+
+      if (abrir) {
+        pizarraEmbedContainer.style.display = 'block';
+        if (pizarraEmbedIframe.src === 'about:blank' || !pizarraEmbedIframe.src || pizarraEmbedIframe.src.endsWith('about:blank')) {
+          pizarraEmbedIframe.src = '/pizarra-plus';
+        }
+        if (btnTogglePizarraEmbed) {
+          btnTogglePizarraEmbed.innerHTML = '<span>🖍️ DESACTIVAR PIZARRA TÁCTIL</span>';
+          btnTogglePizarraEmbed.style.background = '#0284c7';
+          btnTogglePizarraEmbed.style.color = '#ffffff';
+        }
+        showToast('🖍️ Pizarra táctil activada');
+      } else {
+        pizarraEmbedContainer.style.display = 'none';
+        pizarraEmbedIframe.src = 'about:blank';
+        if (btnTogglePizarraEmbed) {
+          btnTogglePizarraEmbed.innerHTML = '<span>🖍️ ACTIVAR PIZARRA TÁCTIL</span>';
+          btnTogglePizarraEmbed.style.background = '#1e293b';
+          btnTogglePizarraEmbed.style.color = '#38bdf8';
+        }
+        showToast('Pizarra desactivada');
+      }
+    }
+
+    btnTogglePizarraEmbed?.addEventListener('click', () => alternarPizarraEmbed());
+    btnCerrarPizarraEmbed?.addEventListener('click', () => alternarPizarraEmbed(false));
 
     document.addEventListener('visibilitychange', async () => {
       if (blackScreenOverlay && blackScreenOverlay.style.display !== 'none' && document.visibilityState === 'visible') {
