@@ -497,62 +497,50 @@ test('commands open a centred modal dialog with an editable command, Send and Ca
   assert.doesNotMatch(html, /button\.append\(strong,\s*small\)/);
 });
 
-test('top favorites bar contains camera mode toggle and OLED black screen button with responsive design', async () => {
+test('toolbar provides direct 1-tap toggles for camera, microphone, and TTS with visual feedback', async () => {
   const { readFileSync } = await import('node:fs');
   const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
-  // Favorites bar is positioned at the top of canvas-wrapper
-  const wrapper = html.match(/<main id="canvas-wrapper"[\s\S]*?<\/main>/)[0];
-  assert.match(wrapper, /<nav id="top-favorites-bar" class="favorites-bar"/);
-  assert.match(wrapper, /id="btn-fav-cam-mode"/);
-  assert.match(wrapper, /id="fav-cam-mode-label">Cámara</);
-  assert.match(wrapper, /id="btn-fav-black-screen"/);
 
-  // Bar CSS styling and fixed top centering
-  const favCss = html.match(/\.favorites-bar\s*\{([^}]+)\}/)[1];
-  assert.match(favCss, /position:\s*fixed/);
-  assert.match(favCss, /top:\s*calc/);
-  assert.match(favCss, /transform:\s*translateX\(-50%\)/);
+  // Toolbar contains 1-tap action buttons for camera, mic, and TTS
+  assert.match(html, /id="btn-device-camera"/);
+  assert.match(html, /id="btn-tablet-mic"/);
+  assert.match(html, /id="btn-tts"/);
 
-  // Black screen OLED overlay
+  // Direct toggle on click: mic clicks admin btn-micro-toggle directly
+  assert.match(html, /tabletMicButton\.addEventListener\('click'[\s\S]*?btn-micro-toggle[\s\S]*?original\.click\(\)/);
+
+  // Direct toggle on click: camera toggles between start capture and apagar camara (monigote)
+  assert.match(html, /cameraCaptureButton\.addEventListener\('click'[\s\S]*?btn-apagar-camara[\s\S]*?btn-toggle-camara-modo/);
+
+  // Active status triggers danger / active classes and aria-pressed
+  assert.match(html, /tabletMicButton\.classList\.toggle\('danger',\s*isLive\)/);
+  assert.match(html, /cameraCaptureButton\.classList\.toggle\('danger',\s*isCapturing\)/);
+  assert.match(html, /ttsButton\.classList\.toggle\('active',\s*on\)/);
+
+  // Black screen OLED overlay and wake lock functionality
   assert.match(html, /<div id="black-screen-overlay" class="black-screen-overlay" hidden/);
   const blackCss = html.match(/\.black-screen-overlay\s*\{([^}]+)\}/)[1];
   assert.match(blackCss, /background:\s*#000000/);
   assert.match(blackCss, /z-index:\s*9999/);
   assert.match(blackCss, /position:\s*fixed/);
-
-  // Mobile responsiveness collapses text labels at phone width
-  assert.match(html, /@media\s*\(max-width:\s*420px\)[\s\S]*?\.fav-label\s*\{display:\s*none;\}/);
-
-  // Functionality: wakeLock and sync helpers
   assert.match(html, /async function requestScreenWakeLock\(\)/);
   assert.match(html, /async function activarPantallaNegra\(\)/);
   assert.match(html, /async function desactivarPantallaNegra\(\)/);
-  assert.match(html, /function syncFavCameraMode\(/);
 });
 
-test('favorites manager modal allows pinning core actions dynamically with persistence', async () => {
+test('commands sheet shows favorite commands by default with toggle to view all and persistent favorites', async () => {
   const { readFileSync } = await import('node:fs');
   const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
 
-  // Add favorites button exists in favorites bar with visible label
-  assert.match(html, /<button type="button" class="bar-icon fav-add-btn" id="btn-fav-add"/);
-  assert.match(html, /<span class="fav-label">\+ Favoritos<\/span>/);
+  // Commands sheet header defaults to Comandos Favoritos
+  assert.match(html, /<section id="commands-sheet"[\s\S]*?<h2>Comandos Favoritos<\/h2>/);
 
-  // Favorites modal exists outside sheets with options list
-  assert.match(html, /<div id="fav-modal" class="cmd-modal" hidden>/);
-  assert.match(html, /id="fav-dialog" class="cmd-step" role="dialog" aria-modal="true"/);
-  assert.match(html, /<div id="fav-options-list" class="fav-options-list">/);
-  assert.match(html, /id="btn-fav-modal-close"/);
-  assert.match(html, /id="btn-fav-modal-done"/);
+  // Toggle button to view all commands exists
+  assert.match(html, /<button type="button" id="btn-toggle-all-commands"[^>]*>Ver todos<\/button>/);
+  assert.match(html, /btnToggleAllCommands\?\.addEventListener\('click'/);
 
-  // Core favorites catalog contains management actions and no toolbar duplicates
-  assert.match(html, /const CORE_FAVORITES = \[/);
-  assert.match(html, /id: 'add-canal'/);
-  assert.match(html, /id: 'add-usuario'/);
-  assert.match(html, /id: 'add-mensaje'/);
-  assert.match(html, /id: 'add-comando'/);
-  assert.match(html, /id: 'clear-canvas'/);
-  assert.doesNotMatch(html.match(/const CORE_FAVORITES = \[[\s\S]*?\];/)[0], /obs-snapshot|obs-mute|tts-toggle|chat-view|commands-view/);
+  // Filtering: defaults to favorites only unless showAllCommands or text filter is active
+  assert.match(html, /if \(!showAllCommands && !isFav && !filter\) continue;/);
 
   // Quick item add modal exists for adding channels, users, messages, commands
   assert.match(html, /<div id="item-modal" class="cmd-modal" hidden>/);
@@ -565,13 +553,9 @@ test('favorites manager modal allows pinning core actions dynamically with persi
   assert.match(html, /pizarra_plus_favoritos_v1/);
   assert.match(html, /function getSavedFavorites\(\)/);
   assert.match(html, /function saveFavorites\(list\)/);
-  assert.match(html, /function renderFavoritesBar\(activeIds\)/);
-  assert.match(html, /function openFavModal\(\)/);
-  assert.match(html, /function closeFavModal\(\)/);
 
   // Escape key closes modals when open
   assert.match(html, /if \(itemModal && !itemModal\.hidden\) \{ closeItemModal\(\); return; \}/);
-  assert.match(html, /if \(favModal && !favModal\.hidden\) \{ closeFavModal\(\); return; \}/);
 });
 
 test('draw panel includes a close button in panel-head that hides the panel', async () => {
@@ -586,7 +570,7 @@ test('draw panel includes a close button in panel-head that hides the panel', as
   assert.match(html, /document\.getElementById\('btn-draw-close'\)\?\.addEventListener\('click',\s*\(\)\s*=>\s*\{[\s\S]*?closeDrawPanel\(\)/);
 });
 
-test('commands can be pinned directly to the favorites bar from the grid and the modal', async () => {
+test('commands can be starred as favorites directly from the grid and the modal', async () => {
   const { readFileSync } = await import('node:fs');
   const html = readFileSync(new URL('../private/pizarra-plus.html', import.meta.url), 'utf8');
 
@@ -598,13 +582,6 @@ test('commands can be pinned directly to the favorites bar from the grid and the
   // Grid creates a star button for each command item
   assert.match(html, /starBtn\.className = 'cmd-star-btn'/);
   assert.match(html, /toggleCommandFavorite\(name\)/);
-
-  // Top favorites bar renders dynamic command buttons with cmd: prefix
-  assert.match(html, /id\.startsWith\('cmd:'\)/);
-  assert.match(html, /Comando \$\{cmdName\}|Comando '\s*\+\s*cmdName/);
-
-  // Favorites manager modal lists available commands
-  assert.match(html, /COMANDOS DISPONIBLES/);
 });
 
 test('command buttons and items can be edited persistently and deleted from modal and command flow', async () => {

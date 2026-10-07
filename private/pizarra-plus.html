@@ -586,22 +586,6 @@
 <body>
   <div id="app-container">
     <main id="canvas-wrapper">
-      <nav id="top-favorites-bar" class="favorites-bar" aria-label="Acciones rápidas de emisión">
-        <div id="favorites-items" class="favorites-items">
-          <button type="button" class="bar-icon fav-btn" id="btn-fav-cam-mode" data-fav-id="cam-mode" aria-label="Cambiar modo de cámara (Cámara / Monigote)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="12" height="14" rx="2"/><path d="M15 10l6-4v12l-6-4"/><circle cx="9" cy="12" r="2"/></svg>
-            <span class="fav-label" id="fav-cam-mode-label">Cámara</span>
-          </button>
-          <button type="button" class="bar-icon fav-btn" id="btn-fav-black-screen" data-fav-id="black-screen" aria-label="Pantalla negra OLED (Ahorro batería)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-            <span class="fav-label">Pantalla negra</span>
-          </button>
-        </div>
-        <button type="button" class="bar-icon fav-add-btn" id="btn-fav-add" aria-label="Gestionar favoritos en la barra superior" title="Añadir o quitar favoritos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span class="fav-label">+ Favoritos</span>
-        </button>
-      </nav>
       <div id="canvas-container" class="board-hidden">
         <img id="obs-preview-bg" alt="Vista previa OBS" />
         <canvas id="drawing-canvas"></canvas>
@@ -698,12 +682,13 @@
 
   <section id="commands-sheet" class="sheet" aria-label="Comandos" hidden>
     <div class="sheet-head">
-      <h2>Comandos</h2>
+      <h2>Comandos Favoritos</h2>
       <button type="button" class="bar-icon sheet-close" aria-label="Cerrar comandos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="sheet-body">
-      <div style="display: flex; gap: 8px; align-items: center;">
-        <input id="commands-filter" type="search" placeholder="Buscar comando" aria-label="Buscar comando" style="flex: 1;">
+      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+        <input id="commands-filter" type="search" placeholder="Buscar comando..." aria-label="Buscar comando" style="flex: 1;">
+        <button type="button" id="btn-toggle-all-commands" class="sheet-btn" style="min-height: 44px; padding: 0 12px; font-size: 13px; white-space: nowrap;">Ver todos</button>
         <button type="button" id="btn-sheet-add-cmd" class="sheet-btn" style="min-height: 44px; padding: 0 12px; font-size: 14px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Nuevo
@@ -711,104 +696,6 @@
       </div>
       <p id="commands-message" role="status"></p>
       <div id="commands-grid" class="cmd-grid"></div>
-    </div>
-  </section>
-
-  <section id="camera-sheet" class="sheet" aria-label="Control de Cámara" hidden>
-    <div class="sheet-head">
-      <h2>Control de Cámara</h2>
-      <button type="button" class="bar-icon sheet-close" id="btn-camera-sheet-close" aria-label="Cerrar control de cámara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    </div>
-    <div class="sheet-body">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 10px 14px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px;">
-        <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Emisión a OBS:</span>
-        <span id="pizarra-cam-badge" style="font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 6px; background: var(--panel-bg); border: 1px solid var(--border-color);">Monigote OBS</span>
-      </div>
-
-      <div style="display: flex; gap: 10px; margin-bottom: 14px;">
-        <button type="button" id="btn-pizarra-cam-toggle" class="sheet-btn primary" style="flex: 1; min-height: 48px; font-size: 15px; font-weight: 700;">Activar Cámara</button>
-        <button type="button" id="btn-pizarra-cam-stop" class="sheet-btn danger" style="flex: 1; min-height: 48px; font-size: 15px; font-weight: 700; display: none;">Apagar Cámara</button>
-      </div>
-
-      <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Orientación de Cámara:</div>
-      <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-        <button type="button" id="btn-pizarra-cam-front" class="sheet-btn primary" style="flex: 1; min-height: 44px; font-weight: 700;">Frontal (Selfie)</button>
-        <button type="button" id="btn-pizarra-cam-back" class="sheet-btn" style="flex: 1; min-height: 44px; font-weight: 700;">Trasera (Local)</button>
-        <button type="button" id="btn-pizarra-cam-switch" class="sheet-btn" style="min-height: 44px; padding: 0 14px; font-size: 16px;" title="Conmutar rápida entre frontal y trasera">🔄</button>
-      </div>
-
-      <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Formato de Marco en OBS:</div>
-      <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-        <button type="button" id="btn-pizarra-aspect-horizontal" class="sheet-btn primary" style="flex: 1; min-height: 44px; font-weight: 700;">Panorámico (16:9)</button>
-        <button type="button" id="btn-pizarra-aspect-cuadrado" class="sheet-btn" style="flex: 1; min-height: 44px; font-weight: 700;">Cuadrado (1:1)</button>
-      </div>
-
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding: 10px 14px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px;">
-        <label for="pizarra-cam-quality" style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Calidad Vídeo:</label>
-        <select id="pizarra-cam-quality" style="background: var(--panel-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 12px; font-size: 13px; font-weight: 600;">
-          <option value="low">Baja (~320×240 @ 15fps · 250 kbps)</option>
-          <option value="med">Media (~640×360 @ 24fps · 600 kbps)</option>
-          <option value="high">Alta (~1280×720 @ 30fps · 1.5 Mbps)</option>
-        </select>
-      </div>
-
-      <div id="pizarra-cam-preview-box" style="display: none; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--panel-bg); border-bottom: 1px solid var(--border-color);">
-          <span style="font-size: 11px; font-weight: 700; color: #ef4444;">VISTA PREVIA LOCAL</span>
-          <button type="button" id="btn-pizarra-cam-preview-toggle" class="sheet-btn" style="min-height: 28px; padding: 2px 8px; font-size: 11px;">Ocultar Preview</button>
-        </div>
-        <div id="pizarra-cam-preview-wrapper" style="width: 100%; height: 200px; background: #000;">
-          <iframe id="pizarra-cam-preview-iframe" src="" allow="camera; microphone; autoplay; fullscreen" style="width: 100%; height: 100%; border: none; display: block;"></iframe>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="mic-sheet" class="sheet" aria-label="Control de Micrófono" hidden>
-    <div class="sheet-head">
-      <h2>Control de Micrófono</h2>
-      <button type="button" class="bar-icon sheet-close" id="btn-mic-sheet-close" aria-label="Cerrar control de micrófono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    </div>
-    <div class="sheet-body">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 10px 14px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px;">
-        <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Estado del Micrófono:</span>
-        <span id="pizarra-mic-badge" style="font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 6px; background: var(--panel-bg); border: 1px solid var(--border-color);">Silenciado</span>
-      </div>
-
-      <button type="button" id="btn-pizarra-mic-toggle" class="sheet-btn primary" style="width: 100%; min-height: 48px; font-size: 15px; font-weight: 700; margin-bottom: 14px;">Activar Micrófono</button>
-
-      <div style="margin-bottom: 14px; padding: 12px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 11px; font-weight: 700; color: var(--text-muted);">
-          <span>NIVEL DE ENTRADA (VÚMETRO)</span>
-          <span id="pizarra-vumetro-db" style="font-family: monospace; color: var(--accent);">-∞ dB</span>
-        </div>
-        <div style="height: 14px; background: var(--border-color); border-radius: 7px; overflow: hidden;">
-          <div id="pizarra-vumetro-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #22c55e 60%, #eab308 85%, #ef4444 100%); transition: width 0.05s ease;"></div>
-        </div>
-      </div>
-
-      <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Filtros de Audio (Tiempo Real):</div>
-      <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-        <button type="button" id="btn-pizarra-denoise" class="sheet-btn primary" style="flex: 1; min-height: 40px; font-size: 13px; font-weight: 700;">Silenciar Ruido: ON</button>
-        <button type="button" id="btn-pizarra-eco" class="sheet-btn primary" style="flex: 1; min-height: 40px; font-size: 13px; font-weight: 700;">Cancelar Eco: ON</button>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
-          <span style="font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Ganancia de Voz:</span>
-          <span id="pizarra-gain-val" style="font-family: monospace; font-weight: 700; color: var(--accent);">1.5x (+3.5 dB)</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 11px; color: var(--text-muted);">0.5x</span>
-          <input type="range" id="pizarra-gain-slider" min="0.5" max="3.0" step="0.1" value="1.5" style="flex: 1; accent-color: var(--accent); cursor: pointer;">
-          <span style="font-size: 11px; color: var(--text-muted);">3.0x</span>
-        </div>
-        <div style="display: flex; gap: 6px; margin-top: 2px;">
-          <button type="button" class="sheet-btn btn-pizarra-gain" data-gain="0.8" style="flex: 1; min-height: 30px; font-size: 12px;">Baja (0.8x)</button>
-          <button type="button" class="sheet-btn primary btn-pizarra-gain" data-gain="1.5" style="flex: 1; min-height: 30px; font-size: 12px; font-weight: 700;">Normal (1.5x)</button>
-          <button type="button" class="sheet-btn btn-pizarra-gain" data-gain="2.2" style="flex: 1; min-height: 30px; font-size: 12px;">Alta (2.2x)</button>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -842,19 +729,6 @@
     </div>
   </div>
 
-  <div id="fav-modal" class="cmd-modal" hidden>
-    <div id="fav-dialog" class="cmd-step" role="dialog" aria-modal="true" aria-labelledby="fav-modal-title" tabindex="-1">
-      <div class="panel-head">
-        <h2 id="fav-modal-title">Gestionar barra de favoritos</h2>
-        <button type="button" class="bar-icon panel-close" id="btn-fav-modal-close" aria-label="Cerrar ventana de favoritos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      </div>
-      <p style="font-size: 14px; color: var(--text-muted); margin: 0;">Elige qué botones y accesos directos tener siempre a mano arriba.</p>
-      <div id="fav-options-list" class="fav-options-list"></div>
-      <div class="panel-row" style="justify-content: flex-end; margin-top: 8px;">
-        <button type="button" class="sheet-btn primary" id="btn-fav-modal-done">Listo</button>
-      </div>
-    </div>
-  </div>
 
   <div id="item-modal" class="cmd-modal" hidden>
     <div id="item-dialog" class="cmd-step" role="dialog" aria-modal="true" aria-labelledby="item-modal-title" tabindex="-1">
@@ -2249,16 +2123,12 @@
     const chatSheet = document.getElementById('chat-sheet');
     const commandsSheet = document.getElementById('commands-sheet');
     const obsSheet = document.getElementById('obs-sheet');
-    const cameraSheet = document.getElementById('camera-sheet');
-    const micSheet = document.getElementById('mic-sheet');
     const sheetButtons = new Map([
       [chatSheet, document.getElementById('btn-chat-view')],
       [commandsSheet, document.getElementById('btn-commands-view')],
       [obsSheet, document.getElementById('btn-obs-menu')],
       [sourcesSheet, document.getElementById('btn-obs-menu')],
-      [cameraSheet, document.getElementById('btn-device-camera')],
-      [micSheet, document.getElementById('btn-tablet-mic')],
-    ]);
+    ].filter(([sheet, button]) => Boolean(sheet && button)));
     function closeDrawPanel() {
       if (drawPanel.hidden) return;
       drawPanel.hidden = true;
@@ -2423,14 +2293,30 @@
       }
       renderCommands();
     }
+    let showAllCommands = false;
+    const btnToggleAllCommands = document.getElementById('btn-toggle-all-commands');
+    btnToggleAllCommands?.addEventListener('click', () => {
+      showAllCommands = !showAllCommands;
+      btnToggleAllCommands.textContent = showAllCommands ? 'Solo favoritos' : 'Ver todos';
+      btnToggleAllCommands.setAttribute('aria-pressed', String(showAllCommands));
+      btnToggleAllCommands.classList.toggle('primary', showAllCommands);
+      const sheetTitle = document.querySelector('#commands-sheet .sheet-head h2');
+      if (sheetTitle) sheetTitle.textContent = showAllCommands ? 'Todos los Comandos' : 'Comandos Favoritos';
+      renderCommands();
+    });
+
     function renderCommands() {
       const filter = commandsFilter.value.trim().toLowerCase();
       commandsGrid.replaceChildren();
+      const savedFavs = getSavedFavorites();
+      let shownCount = 0;
       for (const item of commandsCache) {
         const name = Array.isArray(item) ? String(item[0] ?? '') : String(item ?? '');
         const desc = Array.isArray(item) ? String(item[1] ?? '') : '';
         if (!name || (filter && !(name + ' ' + desc).toLowerCase().includes(filter))) continue;
-        const isFav = getSavedFavorites().includes('cmd:' + name);
+        const isFav = savedFavs.includes('cmd:' + name);
+        if (!showAllCommands && !isFav && !filter) continue;
+        shownCount++;
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'cmd-btn';
@@ -2452,6 +2338,11 @@
 
         button.addEventListener('click', () => startCommand(name, desc));
         commandsGrid.appendChild(button);
+      }
+      if (commandsCache.length > 0 && shownCount === 0 && !showAllCommands && !filter) {
+        reportCommands('No tienes comandos favoritos fijados. Pulsa "Ver todos" o busca uno para fijarlo con la estrella.');
+      } else if (commandsCache.length > 0 && !filter) {
+        reportCommands('');
       }
     }
     function startCommand(template, desc = '') {
@@ -2675,11 +2566,31 @@
 
     const tabletMicButton = document.getElementById('btn-tablet-mic');
     tabletMicButton.addEventListener('click', () => {
-      if (openSheet(micSheet)) syncPizarraMicUi();
+      const doc = adminFrame.contentDocument;
+      const original = doc?.getElementById('btn-micro-toggle');
+      if (original && !original.disabled) {
+        original.click();
+      }
     });
     const cameraCaptureButton = document.getElementById('btn-device-camera');
     cameraCaptureButton.addEventListener('click', () => {
-      if (openSheet(cameraSheet)) syncPizarraCamUi();
+      const doc = adminFrame.contentDocument;
+      if (!doc) return;
+      const cameraContainer = doc.getElementById('camera-push-container');
+      const isCapturing = !!cameraContainer && cameraContainer.style.display !== 'none';
+      if (isCapturing) {
+        fetch('/api/directo/comando', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ modo: 'monigote', comando: '!cam monigote' })
+        }).catch(() => {});
+        const stop = doc.getElementById('btn-apagar-camara');
+        if (stop && !stop.disabled) stop.click();
+      } else {
+        cameraPreviewHidden = false;
+        const start = doc.getElementById('btn-toggle-camara-modo');
+        if (start && !start.disabled) start.click();
+      }
     });
 
     // ── Direct OBS.Ninja (VDO.Ninja) HTTPS Integration ──
@@ -3146,8 +3057,10 @@
       const syncMic = () => {
         tabletMicButton.disabled = !mic || mic.disabled;
         const state = (micBadge?.textContent?.trim() || 'estado desconocido').replace(/[\p{Extended_Pictographic}️]/gu, '').trim();
+        const isLive = state === 'EN VIVO';
         tabletMicButton.setAttribute('aria-label', 'Micrófono de este dispositivo: ' + state);
-        tabletMicButton.setAttribute('aria-pressed', String(state === 'EN VIVO'));
+        tabletMicButton.setAttribute('aria-pressed', String(isLive));
+        tabletMicButton.classList.toggle('danger', isLive);
       };
       syncMic();
       if (micBadge) new MutationObserver(syncMic).observe(micBadge, { childList: true, subtree: true, characterData: true });
@@ -3163,6 +3076,7 @@
         const label = !isCapturing ? 'Activar cámara de este dispositivo' : (cameraPreviewHidden ? 'Mostrar la vista de cámara' : 'Apagar cámara de este dispositivo');
         cameraCaptureButton.setAttribute('aria-label', label);
         cameraCaptureButton.setAttribute('aria-pressed', String(isCapturing));
+        cameraCaptureButton.classList.toggle('danger', isCapturing);
         syncFavCameraMode(isCapturing, !start || !stop || (isCapturing ? stop.disabled : start.disabled));
         syncAdminDock();
       };
@@ -3180,6 +3094,7 @@
         const on = pizarraTtsActive || (ttsBadge?.textContent || '').trim() === 'Escuchando en vivo';
         ttsButton.setAttribute('aria-pressed', String(on));
         ttsButton.setAttribute('aria-label', on ? 'Voz del chat (TTS) activada: pulsa para detenerla' : 'Voz del chat (TTS) apagada: pulsa para activarla');
+        ttsButton.classList.toggle('active', on);
       };
       syncTts();
       if (ttsBadge) new MutationObserver(syncTts).observe(ttsBadge, { childList: true, subtree: true, characterData: true });
