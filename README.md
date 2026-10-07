@@ -29,13 +29,24 @@
 
 ---
 
-## 🖱️ Easiest start: double-click
+## 🖱️ Arranque Fácil con Doble Clic (Windows PC y Mac)
 
-1. Install **Node.js LTS** from [nodejs.org](https://nodejs.org) (once).
-2. Download this project and double-click **`Iniciar directo.command`** (Mac) or **`Iniciar directo.bat`** (Windows).
-3. The first time it installs what it needs and opens your browser to create the panel password (shown once: save it). Then it prints exactly what to paste in OBS.
+> 📖 **Guía visual interactiva**: Abre el archivo [`EMPEZAR.html`](./EMPEZAR.html) en tu navegador para seguir los pasos con capturas y botones.  
+> 🖥️ **Guía detallada para Windows**: Consulta la [**Guía Completa para PC (Windows)**](./DOCUMENTATION/GUIA-PC-WINDOWS.md) con explicación de Firewall, OBS y conexión de tablet.
 
-It starts the overlay, the panel and the Twitch + YouTube restream centre together; closing the window stops everything. For simultaneous streaming you also need [ffmpeg](https://ffmpeg.org/download.html); without it the overlay and panel still work. From a terminal the same launcher runs with `npm run directo`.
+1. Instala **Node.js LTS** desde [nodejs.org](https://nodejs.org) (solo una vez).
+2. Descarga este repositorio y haz doble clic en **`Iniciar directo.bat`** (en Windows) o **`Iniciar directo.command`** (en Mac).
+   - *En Windows*: Si aparece la alerta del Firewall de Windows, marca **«Redes privadas»** y pulsa **«Permitir acceso»** para que tu tablet o móvil puedan conectarse a la pizarra táctil.
+3. La primera vez se instalarán las dependencias automáticamente y se abrirá tu navegador para crear la contraseña privada de tu panel.
+4. En la consola verás tus enlaces listos para usar:
+   - **Panel en PC**: `http://127.0.0.1:7979/admin`
+   - **Pizarra táctil (tablet o móvil)**: `http://<TU-IP-LOCAL>:7979/pizarra-plus`
+   - **Fuentes OBS (1920×1080)**:
+     - Capa transparente (avatares 3D, chat y rótulos): `http://127.0.0.1:7979/plano?transparente=1`
+     - Cámara conmutable (monigote / vídeo): `http://127.0.0.1:7979/camara.html`
+     - Fondo animado: `http://127.0.0.1:7979/fondo.html`
+
+Arranca la capa 3D, el panel y el centro de retransmisión Twitch + YouTube juntos; al cerrar la ventana se apaga todo limpiamente. Para emitir simultáneamente a Twitch y YouTube se recomienda instalar [ffmpeg](https://ffmpeg.org/download.html) (en Windows: `winget install ffmpeg`). Desde terminal se puede arrancar con `npm run directo`.
 
 ## 🚀 Quick Start in 3 Steps
 

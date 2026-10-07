@@ -22,20 +22,42 @@ export function comandoAbrir(plataforma, url) {
   return ['xdg-open', [url]];
 }
 
+import os from 'node:os';
+
 export function versionNodeValida(version = process.version) {
   const mayor = Number(String(version).replace(/^v/, '').split('.')[0]);
   return Number.isInteger(mayor) && mayor >= 20;
 }
 
+/** Detects the primary local LAN IPv4 address (e.g. 192.168.1.35) for tablet access. */
+export function obtenerIpLocal() {
+  try {
+    const interfaces = os.networkInterfaces();
+    for (const nombre of Object.keys(interfaces)) {
+      for (const red of interfaces[nombre] || []) {
+        if (red.family === 'IPv4' && !red.internal) {
+          return red.address;
+        }
+      }
+    }
+  } catch (_) {}
+  return '127.0.0.1';
+}
+
 /** Plain-language summary shown once everything is running. */
 export function resumenOBS(puerto, { centro }) {
   const base = `http://127.0.0.1:${puerto}`;
+  const ipLocal = obtenerIpLocal();
   const lineas = [
     '',
     '✅ ApliArte Directo está funcionando. No cierres esta ventana mientras emites.',
     '',
+    '📱 Pizarra táctil (Tablet o Móvil en la misma red Wi-Fi):',
+    `   http://${ipLocal}:${puerto}/pizarra-plus`,
+    '',
     'En OBS, añade dos «Fuentes de navegador» de 1920 × 1080:',
     `  • Capa (avatares y rótulos):  ${base}/plano?transparente=1`,
+    `  • Cámara (conmutador monigote): ${base}/camara.html`,
     `  • Fondo animado:              ${base}/fondo.html`,
     '',
     `Panel de control (ordenador):   ${base}/admin`,
@@ -61,3 +83,4 @@ export function resumenOBS(puerto, { centro }) {
   lineas.push('', 'Para apagarlo todo: cierra esta ventana o pulsa Ctrl+C.', '');
   return lineas.join('\n');
 }
+

@@ -263,14 +263,20 @@
       <p>En esta misma carpeta donde has descomprimido el proyecto, localiza el archivo correspondiente a tu sistema operativo y haz doble clic sobre él:</p>
       <div class="grid-2">
         <div class="os-box">
+          <div class="os-title">En Windows (PC):</div>
+          <p>Haz doble clic en el archivo:</p>
+          <div class="code-box">Iniciar directo.bat</div>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.4rem;">
+            🛡️ <strong>Aviso del Firewall</strong>: Si Windows te muestra una ventana de aviso, marca la casilla <strong>«Redes privadas»</strong> y pulsa <strong>«Permitir acceso»</strong> para que la tablet pueda conectarse por Wi-Fi.
+          </p>
+        </div>
+        <div class="os-box">
           <div class="os-title">En Mac (macOS):</div>
           <p>Haz doble clic en el archivo:</p>
           <div class="code-box">Iniciar directo.command</div>
-        </div>
-        <div class="os-box">
-          <div class="os-title">En Windows:</div>
-          <p>Haz doble clic en el archivo:</p>
-          <div class="code-box">Iniciar directo.bat</div>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.4rem;">
+            Arrancará de inmediato y abrirá la consola de control.
+          </p>
         </div>
       </div>
       <div class="note">
@@ -294,15 +300,10 @@
         <div class="os-title" style="color: var(--accent);">El truco de los creadores: añade el panel a Favoritos</div>
         <p>Abre el enlace de arriba y pulsa en tu teclado:</p>
         <p>
-          <span class="kbd">Cmd</span> + <span class="kbd">D</span> (en Mac) &nbsp;&bull;&nbsp;
-          <span class="kbd">Ctrl</span> + <span class="kbd">D</span> (en Windows)
+          <span class="kbd">Ctrl</span> + <span class="kbd">D</span> (en Windows) &nbsp;&bull;&nbsp;
+          <span class="kbd">Cmd</span> + <span class="kbd">D</span> (en Mac)
         </p>
-        <p style="margin-bottom: 0;">Guárdalo en la barra de marcadores con el nombre <strong>«Mi Directo»</strong>. A partir de ahora, tu rutina para cada emisión será exactamente:</p>
-        <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
-          <li>Doble clic en tu archivo de inicio (<code>Iniciar directo</code>).</li>
-          <li>Clic en tu favorito <strong>«Mi Directo»</strong> en el navegador.</li>
-          <li>¡A emitir y divertirte con tu comunidad!</li>
-        </ol>
+        <p style="margin-bottom: 0;">Guárdalo en la barra de marcadores con el nombre <strong>«Mi Directo»</strong> para tenerlo siempre a mano con un solo clic.</p>
       </div>
     </section>
 
@@ -312,20 +313,57 @@
         <div class="step-number">4</div>
         <h2>Conecta tu OBS Studio</h2>
       </div>
-      <p>Para ver los avatares 3D, el escenario y los avisos en tu directo:</p>
+      <p>Para ver los avatares 3D, el escenario y la cámara en tu directo, añade dos fuentes en OBS Studio:</p>
       <ol style="margin-left: 1.5rem; margin-bottom: 1rem;">
-        <li>Abre OBS Studio y ve a tu escena de emisión.</li>
-        <li>Añade una nueva fuente de tipo <strong>«Navegador»</strong> (Browser Source).</li>
-        <li>Configura los siguientes valores:
-          <ul style="margin-left: 1.5rem; margin-top: 0.35rem;">
-            <li><strong>URL:</strong> <code>http://127.0.0.1:7979/</code></li>
-            <li><strong>Ancho:</strong> <code>1920</code></li>
-            <li><strong>Alto:</strong> <code>1080</code></li>
-            <li><strong>Controlar audio vía OBS:</strong> Activado (opcional si quieres graduar el sonido desde la mesa de mezclas de OBS).</li>
+        <li style="margin-bottom: 0.75rem;">
+          <strong>Fuente 1: Capa 3D (Avatares, Chat y Rótulos)</strong>
+          <ul style="margin-left: 1.5rem; margin-top: 0.25rem;">
+            <li>Tipo: <strong>«Navegador»</strong> (Browser Source)</li>
+            <li><strong>URL:</strong> <code>http://127.0.0.1:7979/plano?transparente=1</code></li>
+            <li><strong>Ancho:</strong> <code>1920</code> &nbsp;|&nbsp; <strong>Alto:</strong> <code>1080</code></li>
+            <li>Marca: <em>«Actualizar el navegador cuando la escena se active»</em></li>
+          </ul>
+        </li>
+        <li style="margin-bottom: 0.75rem;">
+          <strong>Fuente 2: Cámara y Monigote (Conmutador Inteligente)</strong>
+          <ul style="margin-left: 1.5rem; margin-top: 0.25rem;">
+            <li>Tipo: <strong>«Navegador»</strong> (Browser Source)</li>
+            <li><strong>URL:</strong> <code>http://127.0.0.1:7979/camara.html</code></li>
+            <li><strong>Ancho:</strong> <code>1920</code> &nbsp;|&nbsp; <strong>Alto:</strong> <code>1080</code></li>
+            <li>Muestra el monigote de Javier en reposo y conmuta automáticamente a la cámara de tu tablet cuando la actives.</li>
           </ul>
         </li>
       </ol>
-      <p>Pulsa Aceptar y ya verás la capa transparente con tus personajes y animaciones en directo.</p>
+      <p style="font-size:0.9rem; color:var(--text-muted);">
+        Opcional: Si quieres añadir un fondo animado detrás, añade otra fuente Navegador apuntando a <code>http://127.0.0.1:7979/fondo.html</code>.
+      </p>
+    </section>
+
+    <!-- Paso 5 -->
+    <section class="card" style="border-color: rgba(16, 185, 129, 0.4); background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(19, 27, 46, 0.8));">
+      <div class="step-header">
+        <div class="step-number" style="background: var(--success);">5</div>
+        <h2>Conecta tu Tablet o Móvil (Pizarra Táctil)</h2>
+      </div>
+      <p>Controla todo tu directo desde la tablet (iPad o Android) sin tocar el ordenador mientras emites:</p>
+      <ol style="margin-left: 1.5rem; margin-bottom: 1rem;">
+        <li>Conecta la tablet a la <strong>misma red Wi-Fi</strong> que tu PC.</li>
+        <li>Abre el navegador de tu tablet (Safari o Chrome) y escribe la dirección que mostró la terminal al arrancar:
+          <div class="code-box">http://&lt;TU-IP-LOCAL&gt;:7979/pizarra-plus</div>
+          <em>(Por ejemplo: <code>http://192.168.1.35:7979/pizarra-plus</code>)</em>
+        </li>
+        <li>Toca en el navegador <strong>«Añadir a la pantalla de inicio»</strong> para abrirla a pantalla completa como una app.</li>
+      </ol>
+      <div class="os-box" style="background: rgba(0,0,0,0.35);">
+        <div class="os-title" style="color: var(--success);">Botonera directa de 1 toque en la Tablet:</div>
+        <ul style="margin-left: 1.5rem; font-size: 0.95rem;">
+          <li>📹 <strong>Cámara</strong>: 1 toque para emitir tu cámara a OBS o apagarla volviendo al monigote.</li>
+          <li>🎙️ <strong>Micrófono</strong>: 1 toque para silenciar o activar tu voz en directo.</li>
+          <li>🔊 <strong>Chat TTS</strong>: 1 toque para encender o apagar la lectura del chat en vivo.</li>
+          <li>⭐ <strong>Comandos Favoritos</strong>: accede a los comandos rápidos de tu bot de Twitch.</li>
+          <li>🎨 <strong>Lienzo Pizarra</strong>: dibuja y haz esquemas táctiles sobre el directo en tiempo real.</li>
+        </ul>
+      </div>
     </section>
 
     <!-- Vídeo Tutorial YouTube -->
@@ -347,6 +385,7 @@
     <section class="card">
       <h2>Documentación y Enlaces Útiles</h2>
       <div style="display:flex; flex-wrap:wrap; gap: 0.75rem; margin-top: 1rem;">
+        <a href="./DOCUMENTATION/GUIA-PC-WINDOWS.md" class="btn btn-primary" style="font-weight:700;">Guía Completa para PC (Windows)</a>
         <a href="./public/guia-directo.html" class="btn btn-outline">Guía Oficial de Comandos</a>
         <a href="./public/demo.html" class="btn btn-outline">Probar Demo 3D Interactiva</a>
         <a href="https://directo.apliarte.com" target="_blank" rel="noopener noreferrer" class="btn btn-outline">Web Oficial (directo.apliarte.com)</a>
