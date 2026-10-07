@@ -15,6 +15,7 @@
       --brand-strong: #0284c7;
       --on-brand: #ffffff;
       --warn: #e8955e;
+      --danger: #dc2626;
       --black: #000000;
       --black-hint: #64748b;
 
@@ -101,6 +102,8 @@
     }
     .btn-primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
     .btn-primary:hover:not(:disabled) { background: var(--brand-strong); border-color: var(--brand-strong); }
+    /* The shutdown button is the only red control in this file. */
+    .btn-danger { background: var(--danger); border-color: var(--danger); color: var(--on-brand); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-start { width: 100%; min-height: 56px; font-size: 1.1rem; }
     .icon-btn {
@@ -233,6 +236,20 @@
       .settings-tab { white-space: nowrap; }
     }
 
+    /* ── Confirmation dialog ───────────────────────────────────────────── */
+    dialog.confirm {
+      width: min(460px, 100vw - 1rem);
+      padding: var(--gap);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+    }
+    dialog.confirm::backdrop { background: rgba(9, 13, 22, 0.6); }
+    .confirm-body { display: grid; gap: var(--gap); }
+    .confirm-body h2 { font-size: 1rem; }
+    .confirm-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--gap); }
+
     /* ── Black screen (battery saver, ported from pizarra-plus) ────────── */
     .black-screen {
       position: fixed;
@@ -333,10 +350,10 @@
       </div>
       <div class="app-bar-actions" id="studio-actions">
         <button type="button" class="btn" data-action="back-to-welcome">Volver</button>
-        <button type="button" class="btn" id="btn-apagar-estudio" disabled aria-describedby="studio-mock-note">Apagar</button>
+        <button type="button" class="btn btn-danger" id="btn-apagar-estudio" data-action="open-shutdown">Apagar</button>
       </div>
     </header>
-    <p class="notice mock-banner" id="studio-mock-note">Maqueta de la fase 1. Nada de esta pantalla está conectado: «Apagar» no detiene ninguna emisión.</p>
+    <p class="notice mock-banner" id="studio-mock-note">En construcción. Ya funcionan «Apagar» y la pantalla negra; faltan el lienzo, la cámara, el micrófono, la voz del chat, los comandos y los ajustes.</p>
     <main class="stage">
       <div class="stage-canvas" id="studio-stage">Lienzo 16:9 de la pizarra · se integra en la fase 3</div>
     </main>
@@ -356,6 +373,18 @@
       <div class="settings-body">
         <div class="settings-tabs" role="tablist" aria-orientation="vertical" id="settings-tabs"></div>
         <div class="settings-panel" role="tabpanel" id="settings-panel" tabindex="0"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="confirm" id="shutdown-dialog" aria-labelledby="shutdown-title">
+    <div class="confirm-body">
+      <h2 id="shutdown-title">Finalizar la emisión</h2>
+      <p>¿Seguro que deseas finalizar la emisión en directo? Esto detendrá Twitch y YouTube limpiamente sin activar el bucle de dificultades técnicas.</p>
+      <p class="hint" id="shutdown-status" role="status"></p>
+      <div class="confirm-actions">
+        <button type="button" class="btn" id="btn-cancel-shutdown" data-action="cancel-shutdown">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-shutdown" data-action="confirm-shutdown">Sí, finalizar</button>
       </div>
     </div>
   </dialog>
@@ -902,6 +931,40 @@
       });
     }
 
+    // ── Shutdown: clean end of the broadcast ─────────────────────────────
+    // Same request and messages as finalizarEmision() in the old panel,
+    // with a dialog instead of the browser's confirm() and alert().
+    function openShutdown() {
+      $('shutdown-status').textContent = '';
+      $('btn-confirm-shutdown').disabled = false;
+      $('shutdown-dialog').showModal();
+      $('btn-cancel-shutdown').focus();
+    }
+    async function confirmShutdown() {
+      const confirmButton = $('btn-confirm-shutdown');
+      const status = $('shutdown-status');
+      if (confirmButton.disabled) return;
+      confirmButton.disabled = true;
+      status.textContent = 'Finalizando…';
+      try {
+        const response = await fetch('/api/panel/emision/finalizar', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (response.ok && data.ok) {
+          $('shutdown-dialog').close();
+          showToast('Emisión finalizada correctamente.');
+          return;
+        }
+        status.textContent = `Error al finalizar emisión: ${data.error || 'Error desconocido'}`;
+      } catch (error) {
+        status.textContent = `Error de conexión al finalizar emisión: ${error.message}`;
+      }
+      confirmButton.disabled = false;
+    }
+
     // ── Views ────────────────────────────────────────────────────────────
     function showView(name) {
       $('view-welcome').hidden = name !== 'welcome';
@@ -1017,6 +1080,9 @@
         refreshStart();
       },
       'black-screen': showBlackScreen,
+      'open-shutdown': openShutdown,
+      'cancel-shutdown': () => $('shutdown-dialog').close(),
+      'confirm-shutdown': confirmShutdown,
       'preview-studio': () => showView('studio'),
       'back-to-welcome': () => showView('welcome')
     };
