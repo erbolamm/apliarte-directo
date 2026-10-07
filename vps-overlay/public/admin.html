@@ -1216,29 +1216,62 @@
     <!-- 📹 Cámara Frontal en Directo / Modo Monigote -->
     <section class="card" id="card-camara-modo">
       <div class="card-title">
-        <span>📹 Cámara Frontal en Directo</span>
+        <span>📹 Cámara del Dispositivo (Frontal / Trasera)</span>
         <span class="badge" id="badge-camara-modo" style="background:#1e293b; color:var(--cyan);">👤 Monigote Javier</span>
       </div>
       <div class="card-subtitle">
-        Emite la cámara frontal del móvil directamente a OBS y conmuta al modo cámara.
+        Emite la cámara del dispositivo directamente a OBS. Conmuta entre cámara frontal y trasera en tiempo real para directos en local.
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button type="button" class="touch-btn touch-btn-primary" id="btn-toggle-camara-modo" style="flex:1; min-height:54px; font-size:1.05rem; font-weight:700;" aria-label="Activar cámara frontal del teléfono" data-tip="Activar cámara: emitir la cámara frontal a OBS en la esquina derecha">
-          📹 Activar Cámara Frontal
+        <button type="button" class="touch-btn touch-btn-primary" id="btn-toggle-camara-modo" style="flex:1; min-height:54px; font-size:1.05rem; font-weight:700;" aria-label="Activar cámara del dispositivo" data-tip="Activar cámara: emitir la cámara a OBS">
+          📹 Activar Cámara (Frontal)
         </button>
-        <button type="button" class="touch-btn touch-btn-danger" id="btn-apagar-camara" style="flex:1; min-height:54px; font-size:1.05rem; font-weight:700; display:none; background:#dc2626; color:#fff;" aria-label="Apagar cámara frontal y volver al monigote" data-tip="Apagar cámara: detener la emisión de la cámara frontal y volver al avatar monigote en OBS">
+        <button type="button" class="touch-btn" id="btn-abrir-panel-camara" style="min-height:54px; padding:0 14px; font-size:0.95rem; font-weight:700; background:#0f172a; border:1px solid #38bdf8; color:#38bdf8;" aria-label="Abrir panel de control de cámara" data-tip="Abrir controles para cambiar entre cámara trasera y frontal">
+          ⚙️ Ajustes Cámara
+        </button>
+        <button type="button" class="touch-btn touch-btn-danger" id="btn-apagar-camara" style="flex:1; min-height:54px; font-size:1.05rem; font-weight:700; display:none; background:#dc2626; color:#fff;" aria-label="Apagar cámara y volver al monigote" data-tip="Apagar cámara: detener la emisión de la cámara y volver al avatar monigote en OBS">
           🛑 Apagar Cámara
         </button>
       </div>
 
-      <!-- Selector de presets de calidad de vídeo -->
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-top:10px; padding:6px 10px; background:#0f172a; border-radius:8px; border:1px solid #334155;">
-        <label for="select-camara-calidad" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">⚙️ CALIDAD VÍDEO:</label>
-        <select id="select-camara-calidad" style="background:#1e293b; color:#38bdf8; border:1px solid #475569; border-radius:6px; padding:4px 8px; font-size:0.78rem; font-weight:600;">
-          <option value="low" selected>Baja (~320×240 @ 15fps · 250 kbps)</option>
-          <option value="med">Media (~640×360 @ 24fps · 600 kbps)</option>
-          <option value="high">Alta (~1280×720 @ 30fps · 1.5 Mbps)</option>
-        </select>
+      <!-- Panel de Control y Selección de Cámara -->
+      <div id="panel-controles-camara" style="margin-top:12px; padding:12px; background:#0f172a; border-radius:10px; border:1px solid #334155; display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.8rem; font-weight:700; color:#38bdf8;">🎛️ SELECTOR DE CÁMARA (DISPOSITIVO):</span>
+          <span id="label-camara-activa" style="font-size:0.75rem; color:#38bdf8; font-family:monospace; background:#1e293b; padding:2px 8px; border-radius:4px;">📱 Frontal</span>
+        </div>
+
+        <!-- Selector Rápido Frontal / Trasera con botones táctiles grandes -->
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="touch-btn touch-btn-primary" id="btn-cam-facing-user" style="flex:1; min-height:44px; font-size:0.85rem; font-weight:700;" title="Usar cámara frontal (selfie)">
+            📱 Frontal (Selfie)
+          </button>
+          <button type="button" class="touch-btn" id="btn-cam-facing-back" style="flex:1; min-height:44px; font-size:0.85rem; font-weight:700; background:#1e293b; border:1px solid #475569; color:#94a3b8;" title="Usar cámara trasera (ambiente / local)">
+            📷 Trasera (Local)
+          </button>
+          <button type="button" class="touch-btn" id="btn-cam-switch-toggle" style="min-height:44px; padding:0 14px; font-size:0.95rem; font-weight:700; background:#0284c7; color:#fff;" title="Conmutar rápidamente entre cámara frontal y trasera">
+            🔄
+          </button>
+        </div>
+
+        <!-- Selector desplegable de dispositivos detectados -->
+        <div id="wrapper-cam-devices" style="display:flex; flex-direction:column; gap:4px;">
+          <label for="select-camara-dispositivo" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">DISPOSITIVO DE VÍDEO:</label>
+          <select id="select-camara-dispositivo" style="background:#1e293b; color:#f8fafc; border:1px solid #475569; border-radius:6px; padding:6px 10px; font-size:0.8rem;">
+            <option value="user" selected>📱 Cámara Frontal (Selfie / Predeterminada)</option>
+            <option value="back">📷 Cámara Trasera (Ambiente / Local)</option>
+          </select>
+        </div>
+
+        <!-- Selector de presets de calidad de vídeo -->
+        <div style="display:flex; align-items:center; justify-content:space-between; padding-top:6px; border-top:1px solid #1e293b;">
+          <label for="select-camara-calidad" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">⚙️ CALIDAD VÍDEO:</label>
+          <select id="select-camara-calidad" style="background:#1e293b; color:#38bdf8; border:1px solid #475569; border-radius:6px; padding:4px 8px; font-size:0.78rem; font-weight:600;">
+            <option value="low" selected>Baja (~320×240 @ 15fps · 250 kbps)</option>
+            <option value="med">Media (~640×360 @ 24fps · 600 kbps)</option>
+            <option value="high">Alta (~1280×720 @ 30fps · 1.5 Mbps)</option>
+          </select>
+        </div>
       </div>
 
       <!-- Preview local de la cámara frontal mientras emite -->
@@ -2307,7 +2340,137 @@
     const cameraPushIframe = document.getElementById('camera-push-iframe');
     const labelCameraPresetActive = document.getElementById('label-camera-preset-active');
 
-    // Cargar y persistir preset por dispositivo en localStorage
+    // Cargar y persistir preset y cámara por dispositivo en localStorage
+    let camaraFacingMode = localStorage.getItem('erbolamm_cam_facing') || 'user';
+    let camaraDeviceId = localStorage.getItem('erbolamm_cam_device_id') || '';
+
+    const btnAbrirPanelCamara = document.getElementById('btn-abrir-panel-camara');
+    const panelControlesCamara = document.getElementById('panel-controles-camara');
+    const btnCamFacingUser = document.getElementById('btn-cam-facing-user');
+    const btnCamFacingBack = document.getElementById('btn-cam-facing-back');
+    const btnCamSwitchToggle = document.getElementById('btn-cam-switch-toggle');
+    const selectCamaraDispositivo = document.getElementById('select-camara-dispositivo');
+    const labelCamaraActiva = document.getElementById('label-camara-activa');
+
+    function obtenerPushUrlCamara() {
+      const presetKey = selectCamaraCalidad?.value || localStorage.getItem('erbolamm_cam_preset') || 'low';
+      const preset = PRESETS_CAMARA[presetKey] || PRESETS_CAMARA.low;
+      const passParam = camaraConfig.password ? `&password=${encodeURIComponent(camaraConfig.password)}` : '';
+      const isBack = camaraFacingMode === 'back' || camaraFacingMode === 'environment';
+      const facingParam = isBack ? '&facing=back' : '&facing=user';
+      let deviceParam = '';
+      if (camaraDeviceId) {
+        deviceParam = `&videodevice=${encodeURIComponent(camaraDeviceId)}`;
+      }
+      return `https://vdo.ninja/?push=${encodeURIComponent(camaraConfig.streamId)}&room=${encodeURIComponent(camaraConfig.room)}${passParam}&webcam${facingParam}${deviceParam}&videobitrate=${preset.bitrate}&width=${preset.width}&height=${preset.height}&framerate=${preset.fps}&autostart&cleanoutput&noaudio`;
+    }
+
+    function actualizarUiSelectorCamara() {
+      const isBack = camaraFacingMode === 'back' || camaraFacingMode === 'environment';
+      if (labelCamaraActiva) {
+        labelCamaraActiva.textContent = isBack ? '📷 Trasera (Local)' : '📱 Frontal';
+        labelCamaraActiva.style.color = isBack ? '#facc15' : '#38bdf8';
+      }
+      if (btnCamFacingUser) {
+        btnCamFacingUser.classList.toggle('touch-btn-primary', !isBack);
+        btnCamFacingUser.style.background = !isBack ? '' : '#1e293b';
+        btnCamFacingUser.style.color = !isBack ? '' : '#94a3b8';
+        btnCamFacingUser.style.border = !isBack ? '' : '1px solid #475569';
+      }
+      if (btnCamFacingBack) {
+        btnCamFacingBack.classList.toggle('touch-btn-primary', isBack);
+        btnCamFacingBack.style.background = isBack ? '#0284c7' : '#1e293b';
+        btnCamFacingBack.style.color = isBack ? '#ffffff' : '#94a3b8';
+        btnCamFacingBack.style.border = isBack ? 'none' : '1px solid #475569';
+      }
+      if (selectCamaraDispositivo && !camaraDeviceId) {
+        selectCamaraDispositivo.value = isBack ? 'back' : 'user';
+      }
+      actualizarBotonCamaraModo();
+    }
+
+    function cambiarCamara(facing, deviceId = '') {
+      camaraFacingMode = facing;
+      camaraDeviceId = deviceId;
+      localStorage.setItem('erbolamm_cam_facing', facing);
+      if (deviceId) {
+        localStorage.setItem('erbolamm_cam_device_id', deviceId);
+      } else {
+        localStorage.removeItem('erbolamm_cam_device_id');
+      }
+      actualizarUiSelectorCamara();
+
+      if (mobileCamaraActiva) {
+        const pushUrl = obtenerPushUrlCamara();
+        if (cameraPushIframe) {
+          if (window.self === window.top) {
+            cameraPushIframe.src = pushUrl;
+          } else {
+            cameraPushIframe.dataset.pushUrl = pushUrl;
+            cameraPushIframe.src = 'about:blank';
+          }
+        }
+        const texto = camaraFacingMode === 'back' ? 'trasera (local)' : 'frontal';
+        showToast(`📷 Conmutado a cámara ${texto}`);
+      } else {
+        const texto = camaraFacingMode === 'back' ? 'trasera (local)' : 'frontal';
+        showToast(`Cámara ${texto} seleccionada`);
+      }
+    }
+
+    btnCamFacingUser?.addEventListener('click', () => cambiarCamara('user', ''));
+    btnCamFacingBack?.addEventListener('click', () => cambiarCamara('back', ''));
+    btnCamSwitchToggle?.addEventListener('click', () => {
+      const next = (camaraFacingMode === 'back' || camaraFacingMode === 'environment') ? 'user' : 'back';
+      cambiarCamara(next, '');
+    });
+
+    selectCamaraDispositivo?.addEventListener('change', () => {
+      const val = selectCamaraDispositivo.value;
+      const opt = selectCamaraDispositivo.selectedOptions[0];
+      if (opt && opt.dataset.isDevice === '1') {
+        cambiarCamara(camaraFacingMode, val);
+      } else if (val === 'back' || val === 'environment') {
+        cambiarCamara('back', '');
+      } else {
+        cambiarCamara('user', '');
+      }
+    });
+
+    btnAbrirPanelCamara?.addEventListener('click', () => {
+      if (!panelControlesCamara) return;
+      const visible = panelControlesCamara.style.display !== 'none';
+      panelControlesCamara.style.display = visible ? 'none' : 'flex';
+      btnAbrirPanelCamara.style.borderColor = visible ? '#38bdf8' : '#0284c7';
+      showToast(visible ? 'Panel de cámara plegado' : 'Ajustes de cámara abiertos');
+    });
+
+    async function enumerarDispositivosCamara() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        if (!selectCamaraDispositivo || videoDevices.length === 0) return;
+
+        let html = `
+          <option value="user"${camaraFacingMode === 'user' && !camaraDeviceId ? ' selected' : ''}>📱 Cámara Frontal (Selfie)</option>
+          <option value="back"${camaraFacingMode === 'back' && !camaraDeviceId ? ' selected' : ''}>📷 Cámara Trasera (Ambiente / Local)</option>
+        `;
+        videoDevices.forEach((d, idx) => {
+          const label = d.label || `Cámara ${idx + 1}`;
+          const isSelected = camaraDeviceId === d.deviceId;
+          html += `<option value="${escapeHtml(d.deviceId)}" data-is-device="1"${isSelected ? ' selected' : ''}>📹 ${escapeHtml(label)}</option>`;
+        });
+        selectCamaraDispositivo.innerHTML = html;
+      } catch (_) {}
+    }
+
+    if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+      navigator.mediaDevices.addEventListener('devicechange', enumerarDispositivosCamara);
+    }
+    enumerarDispositivosCamara();
+    actualizarUiSelectorCamara();
+
     const savedPreset = localStorage.getItem('erbolamm_cam_preset') || 'low';
     if (selectCamaraCalidad) {
       selectCamaraCalidad.value = savedPreset;
@@ -2316,15 +2479,12 @@
         localStorage.setItem('erbolamm_cam_preset', val);
         showToast(`⚙️ Calidad guardada: ${PRESETS_CAMARA[val]?.desc || val}`);
         if (mobileCamaraActiva) {
-          // Cambiar únicamente la captura local de VDO.ninja sin enviar órdenes de conmutación al servidor ni a OBS
-          const preset = PRESETS_CAMARA[val] || PRESETS_CAMARA.low;
-          const passParam = camaraConfig.password ? `&password=${encodeURIComponent(camaraConfig.password)}` : '';
-          const pushUrl = `https://vdo.ninja/?push=${encodeURIComponent(camaraConfig.streamId)}&room=${encodeURIComponent(camaraConfig.room)}${passParam}&webcam&facing=user&videobitrate=${preset.bitrate}&width=${preset.width}&height=${preset.height}&framerate=${preset.fps}&autostart&cleanoutput&noaudio`;
+          const pushUrl = obtenerPushUrlCamara();
           if (cameraPushIframe && cameraPushIframe.src !== pushUrl) {
             cameraPushIframe.src = pushUrl;
           }
           if (labelCameraPresetActive) {
-            labelCameraPresetActive.textContent = preset.desc;
+            labelCameraPresetActive.textContent = PRESETS_CAMARA[val]?.desc || val;
           }
         }
       });
@@ -2362,15 +2522,17 @@
     function actualizarBotonCamaraModo() {
       if (!btnToggleCamaraModo || !badgeCamaraModo) return;
       const activa = mobileCamaraActiva || camaraModoAdmin === 'camara';
+      const isBack = camaraFacingMode === 'back' || camaraFacingMode === 'environment';
+      const facingTexto = isBack ? 'Trasera' : 'Frontal';
       if (activa) {
-        btnToggleCamaraModo.textContent = '📹 Cámara Frontal Activa';
+        btnToggleCamaraModo.textContent = `📹 Cámara ${facingTexto} Activa`;
         btnToggleCamaraModo.classList.remove('touch-btn-primary');
         btnToggleCamaraModo.classList.add('touch-btn-purple');
-        badgeCamaraModo.textContent = '🔴 Cámara Frontal Activa';
+        badgeCamaraModo.textContent = `🔴 Cámara ${facingTexto} Activa`;
         badgeCamaraModo.style.color = '#38bdf8';
         if (btnApagarCamara) btnApagarCamara.style.display = 'block';
       } else {
-        btnToggleCamaraModo.textContent = '📹 Activar Cámara Frontal';
+        btnToggleCamaraModo.textContent = `📹 Activar Cámara (${facingTexto})`;
         btnToggleCamaraModo.classList.remove('touch-btn-purple');
         btnToggleCamaraModo.classList.add('touch-btn-primary');
         badgeCamaraModo.textContent = '👤 Monigote Javier';
@@ -2393,9 +2555,8 @@
       const presetKey = selectCamaraCalidad?.value || localStorage.getItem('erbolamm_cam_preset') || 'low';
       const preset = PRESETS_CAMARA[presetKey] || PRESETS_CAMARA.low;
 
-      // 3. Generar URL de emisión en VDO.Ninja (vídeo WebRTC con &noaudio para no colisionar con el micro independiente)
-      const passParam = camaraConfig.password ? `&password=${encodeURIComponent(camaraConfig.password)}` : '';
-      const pushUrl = `https://vdo.ninja/?push=${encodeURIComponent(camaraConfig.streamId)}&room=${encodeURIComponent(camaraConfig.room)}${passParam}&webcam&facing=user&videobitrate=${preset.bitrate}&width=${preset.width}&height=${preset.height}&framerate=${preset.fps}&autostart&cleanoutput&noaudio`;
+      // 3. Generar URL de emisión en VDO.Ninja con selector de cámara frontal/trasera y &noaudio
+      const pushUrl = obtenerPushUrlCamara();
 
       if (cameraPushIframe) {
         if (window.self === window.top) {
@@ -2433,7 +2594,8 @@
       } else if (typeof enviarComando === 'function') {
         enviarComando('!cam camara', { modo: 'camara' }).catch(() => {});
       }
-      showToast(`📹 Cámara frontal emitiendo (${preset.desc})`);
+      const isBack = camaraFacingMode === 'back' || camaraFacingMode === 'environment';
+      showToast(`📹 Cámara ${isBack ? 'trasera (local)' : 'frontal'} emitiendo (${preset.desc})`);
     }
 
     function detenerCamaraMobile(motivo, desdeRemoto = false) {
