@@ -15,6 +15,8 @@
       --brand-strong: #0284c7;
       --on-brand: #ffffff;
       --warn: #e8955e;
+      --black: #000000;
+      --black-hint: #64748b;
 
       --bg: #ffffff;
       --surface: #f8fafc;
@@ -231,6 +233,30 @@
       .settings-tab { white-space: nowrap; }
     }
 
+    /* ── Black screen (battery saver, ported from pizarra-plus) ────────── */
+    .black-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--black);
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    .black-screen-hint {
+      padding: 1rem;
+      color: var(--black-hint);
+      font-size: 0.95rem;
+      font-weight: 500;
+      text-align: center;
+      pointer-events: none;
+      transition: opacity 1s ease;
+    }
+
     /* ── Feedback ──────────────────────────────────────────────────────── */
     .toast {
       position: fixed;
@@ -314,6 +340,7 @@
       <div class="stage-canvas" id="studio-stage">Lienzo 16:9 de la pizarra · se integra en la fase 3</div>
     </main>
     <footer class="toolbar" id="studio-toolbar">
+      <button type="button" class="icon-btn" id="btn-pantalla-negra" data-action="black-screen" aria-label="Pantalla negra de ahorro" data-tip="Pone la pantalla en negro para ahorrar batería sin cortar el directo. Toca la pantalla para volver."></button>
       <button type="button" class="icon-btn" data-action="open-settings" aria-label="Abrir ajustes" data-tip="Abre los ajustes del estudio."></button>
     </footer>
   </div>
@@ -332,6 +359,10 @@
     </div>
   </dialog>
 
+  <div class="black-screen" id="black-screen-overlay" hidden role="button" tabindex="0" aria-label="Pantalla apagada para ahorro de batería. Toca para encender.">
+    <div class="black-screen-hint" id="black-screen-hint">Toca cualquier parte para encender la pantalla</div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <div class="tip" id="tip" role="tooltip" hidden></div>
 
@@ -348,7 +379,8 @@
       sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>',
       moon: '<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/>',
       gear: '<circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
-      close: '<path d="M6 6l12 12M18 6L6 18"/>'
+      close: '<path d="M6 6l12 12M18 6L6 18"/>',
+      screenOff: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M5 6l14 9"/>'
     };
     const icon = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
 
@@ -638,6 +670,66 @@
       });
     }
 
+    // ── Black screen with Wake Lock ──────────────────────────────────────
+    // Same behaviour as pizarra-plus: a black overlay that keeps the screen
+    // awake so the stream is not cut, dismissed by touching anywhere. The
+    // hint fades after a few seconds, as in the admin panel, so no text
+    // stays lit on an OLED screen. Wake Lock needs a secure context; without
+    // it the overlay still shows but the device may go to sleep.
+    const BLACK_HINT_MS = 3000;
+    let wakeLockSentinel = null;
+    let blackHintTimer = 0;
+
+    async function requestScreenWakeLock() {
+      if (!('wakeLock' in navigator) || typeof navigator.wakeLock.request !== 'function') return;
+      try {
+        wakeLockSentinel = await navigator.wakeLock.request('screen');
+        wakeLockSentinel.addEventListener('release', () => { wakeLockSentinel = null; });
+      } catch (_) { /* denied, or the page is not visible */ }
+    }
+    async function releaseScreenWakeLock() {
+      if (!wakeLockSentinel) return;
+      try { await wakeLockSentinel.release(); } catch (_) { /* already released */ }
+      wakeLockSentinel = null;
+    }
+    async function showBlackScreen() {
+      const overlay = $('black-screen-overlay');
+      const hint = $('black-screen-hint');
+      overlay.hidden = false;
+      hint.style.opacity = '1';
+      clearTimeout(blackHintTimer);
+      blackHintTimer = setTimeout(() => { hint.style.opacity = '0'; }, BLACK_HINT_MS);
+      overlay.focus({ preventScroll: true });
+      await requestScreenWakeLock();
+    }
+    async function hideBlackScreen() {
+      const overlay = $('black-screen-overlay');
+      if (overlay.hidden) return;
+      overlay.hidden = true;
+      clearTimeout(blackHintTimer);
+      await releaseScreenWakeLock();
+      $('btn-pantalla-negra').focus({ preventScroll: true });
+    }
+    function bindBlackScreen() {
+      const overlay = $('black-screen-overlay');
+      overlay.addEventListener('click', hideBlackScreen);
+      // preventDefault stops the touch from also clicking what lies beneath.
+      overlay.addEventListener('touchstart', (event) => {
+        event.preventDefault();
+        hideBlackScreen();
+      }, { passive: false });
+      overlay.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          hideBlackScreen();
+        }
+      });
+      // The browser drops the lock when the page is hidden; take it again.
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !overlay.hidden) requestScreenWakeLock();
+      });
+    }
+
     // ── Views ────────────────────────────────────────────────────────────
     function showView(name) {
       $('view-welcome').hidden = name !== 'welcome';
@@ -748,6 +840,7 @@
       'open-settings': () => $('settings-dialog').showModal(),
       'close-settings': () => $('settings-dialog').close(),
       'toggle-group': (button) => setGroupEnabled(button.closest('.group'), button.getAttribute('aria-checked') !== 'true'),
+      'black-screen': showBlackScreen,
       'preview-studio': () => showView('studio'),
       'back-to-welcome': () => showView('welcome')
     };
@@ -758,8 +851,10 @@
       hideAllSecrets();
       document.querySelectorAll('[data-action="open-settings"]').forEach((button) => { button.innerHTML = icon('gear'); });
       document.querySelectorAll('[data-action="close-settings"]').forEach((button) => { button.innerHTML = icon('close'); });
+      document.querySelectorAll('[data-action="black-screen"]').forEach((button) => { button.innerHTML = icon('screenOff'); });
       buildSettingsTabs();
       bindTips();
+      bindBlackScreen();
 
       document.addEventListener('click', (event) => {
         const button = event.target.closest('[data-action]');
