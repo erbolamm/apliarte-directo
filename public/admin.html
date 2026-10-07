@@ -1211,6 +1211,43 @@
           <div id="vumetro-bar" class="vumetro-bar"></div>
         </div>
       </div>
+
+      <!-- Ajustes de Micrófono: Silenciar Ruido y Ganancia Regulable -->
+      <div id="panel-ajustes-micro" style="margin-top:10px; padding:10px 12px; background:#0f172a; border-radius:8px; border:1px solid #334155; display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.78rem; font-weight:700; color:#38bdf8;">⚙️ AJUSTES DE AUDIO (EN TIEMPO REAL):</span>
+          <span id="badge-micro-denoise-status" style="font-size:0.72rem; color:#22c55e; font-weight:700;">Denoise Activo</span>
+        </div>
+
+        <!-- Fila 1: Supresión de Ruido / Denoise y Puerta de Ruido -->
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button type="button" class="touch-btn touch-btn-primary" id="btn-toggle-micro-denoise" style="flex:1; min-height:38px; font-size:0.8rem; font-weight:700;" title="Activar o desactivar filtro supresor de ruido ambiental">
+            🔇 Silenciar Ruido: ON
+          </button>
+          <button type="button" class="touch-btn" id="btn-toggle-micro-eco" style="flex:1; min-height:38px; font-size:0.8rem; font-weight:700; background:#1e293b; border:1px solid #475569; color:#f8fafc;" title="Cancelación de eco acústico">
+            🛡️ Cancelar Eco: ON
+          </button>
+        </div>
+
+        <!-- Fila 2: Control Deslizante de Ganancia -->
+        <div style="display:flex; flex-direction:column; gap:4px; padding-top:4px; border-top:1px solid #1e293b;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem;">
+            <label for="slider-micro-gain" style="font-weight:700; color:#94a3b8;">GANANCIA DE VOZ:</label>
+            <span id="label-micro-gain-val" style="font-family:monospace; color:#38bdf8; font-weight:700;">1.5x (+3.5 dB)</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:0.72rem; color:#64748b;">0.5x</span>
+            <input type="range" id="slider-micro-gain" min="0.5" max="3.0" step="0.1" value="1.5" style="flex:1; accent-color:#38bdf8; cursor:pointer;">
+            <span style="font-size:0.72rem; color:#64748b;">3.0x</span>
+          </div>
+          <!-- Presets rápidos de ganancia -->
+          <div style="display:flex; gap:6px; margin-top:2px;">
+            <button type="button" class="touch-btn btn-gain-preset" data-gain="0.8" style="flex:1; min-height:28px; padding:2px 4px; font-size:0.72rem; background:#1e293b; border:1px solid #334155; color:#94a3b8;">Baja (0.8x)</button>
+            <button type="button" class="touch-btn btn-gain-preset active-gain" data-gain="1.5" style="flex:1; min-height:28px; padding:2px 4px; font-size:0.72rem; background:#0284c7; border:none; color:#fff; font-weight:700;">Normal (1.5x)</button>
+            <button type="button" class="touch-btn btn-gain-preset" data-gain="2.2" style="flex:1; min-height:28px; padding:2px 4px; font-size:0.72rem; background:#1e293b; border:1px solid #334155; color:#94a3b8;">Alta (2.2x)</button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- 📹 Cámara Frontal en Directo / Modo Monigote -->
@@ -2202,13 +2239,104 @@
       animVumetroMobileId = requestAnimationFrame(actualizarVumetroMobile);
     }
 
+    // ── Ajustes de Micrófono Móvil: Supresión de Ruido y Ganancia ──
+    let microDenoiseActivo = localStorage.getItem('erbolamm_micro_denoise') !== 'false';
+    let microEcoActivo = localStorage.getItem('erbolamm_micro_eco') !== 'false';
+    let microGananciaValor = parseFloat(localStorage.getItem('erbolamm_micro_gain') || '1.5');
+
+    const btnToggleMicroDenoise = document.getElementById('btn-toggle-micro-denoise');
+    const btnToggleMicroEco = document.getElementById('btn-toggle-micro-eco');
+    const badgeMicroDenoiseStatus = document.getElementById('badge-micro-denoise-status');
+    const sliderMicroGain = document.getElementById('slider-micro-gain');
+    const labelMicroGainVal = document.getElementById('label-micro-gain-val');
+    const gainPresetBtns = document.querySelectorAll('.btn-gain-preset');
+
+    function actualizarUiAjustesMicro() {
+      if (sliderMicroGain) sliderMicroGain.value = microGananciaValor;
+      if (labelMicroGainVal) {
+        const db = 20 * Math.log10(microGananciaValor);
+        const signo = db >= 0 ? '+' : '';
+        labelMicroGainVal.textContent = `${microGananciaValor.toFixed(1)}x (${signo}${db.toFixed(1)} dB)`;
+      }
+
+      if (btnToggleMicroDenoise) {
+        btnToggleMicroDenoise.textContent = microDenoiseActivo ? '🔇 Silenciar Ruido: ON' : '🔊 Silenciar Ruido: OFF';
+        btnToggleMicroDenoise.classList.toggle('touch-btn-primary', microDenoiseActivo);
+        btnToggleMicroDenoise.style.background = microDenoiseActivo ? '' : '#1e293b';
+        btnToggleMicroDenoise.style.color = microDenoiseActivo ? '' : '#94a3b8';
+      }
+      if (badgeMicroDenoiseStatus) {
+        badgeMicroDenoiseStatus.textContent = microDenoiseActivo ? 'Denoise Activo' : 'Denoise Apagado';
+        badgeMicroDenoiseStatus.style.color = microDenoiseActivo ? '#22c55e' : '#94a3b8';
+      }
+
+      if (btnToggleMicroEco) {
+        btnToggleMicroEco.textContent = microEcoActivo ? '🛡️ Cancelar Eco: ON' : '🛡️ Cancelar Eco: OFF';
+        btnToggleMicroEco.style.background = microEcoActivo ? '#1e293b' : '#0f172a';
+        btnToggleMicroEco.style.color = microEcoActivo ? '#f8fafc' : '#94a3b8';
+      }
+
+      gainPresetBtns.forEach(btn => {
+        const val = parseFloat(btn.dataset.gain);
+        const isActive = Math.abs(val - microGananciaValor) < 0.05;
+        btn.classList.toggle('active-gain', isActive);
+        btn.style.background = isActive ? '#0284c7' : '#1e293b';
+        btn.style.color = isActive ? '#fff' : '#94a3b8';
+        btn.style.fontWeight = isActive ? '700' : 'normal';
+      });
+    }
+
+    function cambiarGananciaMicro(val) {
+      microGananciaValor = Math.max(0.5, Math.min(3.0, parseFloat(val) || 1.5));
+      localStorage.setItem('erbolamm_micro_gain', microGananciaValor.toString());
+      actualizarUiAjustesMicro();
+    }
+
+    sliderMicroGain?.addEventListener('input', (e) => {
+      cambiarGananciaMicro(e.target.value);
+    });
+
+    gainPresetBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const g = parseFloat(btn.dataset.gain);
+        cambiarGananciaMicro(g);
+        showToast(`Ganancia fijada en ${g.toFixed(1)}x`);
+      });
+    });
+
+    btnToggleMicroDenoise?.addEventListener('click', async () => {
+      microDenoiseActivo = !microDenoiseActivo;
+      localStorage.setItem('erbolamm_micro_denoise', microDenoiseActivo ? 'true' : 'false');
+      actualizarUiAjustesMicro();
+      if (mobileStream) {
+        mobileStream.getAudioTracks().forEach(t => {
+          try { t.applyConstraints({ noiseSuppression: microDenoiseActivo }); } catch (_) {}
+        });
+      }
+      showToast(microDenoiseActivo ? '🔇 Supresión de ruido activada (puerta anti-viento/tráfico)' : '🔊 Supresión de ruido desactivada');
+    });
+
+    btnToggleMicroEco?.addEventListener('click', async () => {
+      microEcoActivo = !microEcoActivo;
+      localStorage.setItem('erbolamm_micro_eco', microEcoActivo ? 'true' : 'false');
+      actualizarUiAjustesMicro();
+      if (mobileStream) {
+        mobileStream.getAudioTracks().forEach(t => {
+          try { t.applyConstraints({ echoCancellation: microEcoActivo }); } catch (_) {}
+        });
+      }
+      showToast(microEcoActivo ? '🛡️ Cancelación de eco activada' : 'Cancelación de eco desactivada');
+    });
+
+    actualizarUiAjustesMicro();
+
     async function toggleMicroMobile() {
       const btn = document.getElementById('btn-micro-toggle');
       const badge = document.getElementById('badge-micro-estado');
       if (!mobileMicroActivo) {
         try {
           mobileStream = await navigator.mediaDevices.getUserMedia({
-            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+            audio: { echoCancellation: microEcoActivo, noiseSuppression: microDenoiseActivo, autoGainControl: true }
           });
           const AudioCtx = window.AudioContext || window.webkitAudioContext;
           mobileAudioCtx = new AudioCtx();
@@ -2237,12 +2365,14 @@
               const a = Math.abs(input[i]);
               if (a > maxAmp) maxAmp = a;
             }
-            // Descartar silencio digital para no saturar la red ni OBS
-            if (maxAmp < 0.001) return;
+            // Descartar silencio digital para no saturar la red ni OBS (puerta de ruido anti-ruido ambiente)
+            const umbralSilencio = microDenoiseActivo ? 0.005 : 0.001;
+            if (maxAmp < 0.001 || (microDenoiseActivo && maxAmp < umbralSilencio)) return;
 
             const int16 = new Int16Array(input.length);
+            const factor = microGananciaValor || 1.5;
             for (let i = 0; i < input.length; i++) {
-              const s = Math.max(-1, Math.min(1, input[i] * 1.5));
+              const s = Math.max(-1, Math.min(1, input[i] * factor));
               int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
             }
             if (adminWs && adminWs.readyState === WebSocket.OPEN) {
