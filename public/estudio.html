@@ -186,7 +186,7 @@
     .source code { font-family: var(--mono); font-size: 0.8rem; color: var(--code); word-break: break-all; user-select: all; -webkit-user-select: all; }
 
     /* ── Studio (state 2, shell only in phase 1) ───────────────────────── */
-    .studio { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; min-height: 100dvh; }
+    .studio { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto 1fr auto; min-height: 100dvh; }
     .stage { display: grid; place-items: center; padding: var(--gap); min-height: 0; }
     .stage-canvas {
       position: relative;
@@ -241,7 +241,15 @@
       border-left: 1px solid var(--line);
       background: var(--bg);
     }
-    .sheet-head { display: flex; align-items: center; gap: var(--gap); padding: var(--gap); border-bottom: 1px solid var(--line); }
+    .chat-sheet { grid-template-rows: auto auto 1fr; }
+    .sheet-extra { display: grid; gap: var(--gap); }
+    .sheet-extra > :not([hidden]) { margin: var(--gap); }
+    .sheet-extra input { min-height: var(--touch); padding: 0 var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: 1rem; }
+    .stream-box { aspect-ratio: 16 / 9; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--black); }
+    .stream-box iframe { width: 100%; height: 100%; border: 0; display: block; }
+    .sheet-head .btn[aria-pressed="true"] { border-color: var(--brand-strong); color: var(--brand-strong); }
+    .favorites-bar { display: flex; flex-wrap: wrap; gap: var(--gap); padding: 0 var(--gap); }
+    .sheet-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); padding: var(--gap); border-bottom: 1px solid var(--line); }
     .sheet-head h2 { font-size: 1rem; margin-right: auto; }
     .sheet-body { min-height: 0; overflow: auto; padding: var(--gap); display: grid; gap: var(--gap); align-content: start; }
     .sheet-body.flush { padding: 0; }
@@ -470,6 +478,7 @@
       </div>
     </header>
     <p class="notice mock-banner" id="studio-mock-note">Panel nuevo en pruebas: todo lo del panel antiguo está traído, pero aún no se ha probado en un directo real.</p>
+    <div class="favorites-bar" id="favorites-bar" aria-label="Comandos favoritos"></div>
     <main class="stage">
       <div class="stage-canvas" id="canvas-container" hidden>
         <img id="obs-preview-bg" alt="Captura fija de OBS" hidden>
@@ -520,10 +529,22 @@
       <label class="draw-check"><input id="allow-touch" type="checkbox"> Dibujar también con el dedo</label>
     </section>
 
-    <aside class="sheet" id="chat-sheet" aria-label="Chat" hidden>
+    <aside class="sheet chat-sheet" id="chat-sheet" aria-label="Chat" hidden>
       <div class="sheet-head">
         <h2>Chat</h2>
+        <button type="button" class="btn" id="btn-toggle-stream" aria-pressed="false">Ver stream</button>
+        <button type="button" class="btn" id="btn-chat-todos" aria-pressed="false">Todos</button>
+        <button type="button" class="btn" id="btn-reload-chat">Recargar</button>
         <button type="button" class="icon-btn sheet-close" aria-label="Cerrar chat"></button>
+      </div>
+      <div class="sheet-extra">
+        <div class="input-row" id="botrix-config" hidden>
+          <input id="botrix-url" type="text" inputmode="url" autocomplete="off" placeholder="https://botrix.live/…" aria-label="Dirección del widget de chat de Botrix">
+          <button type="button" class="btn" id="btn-botrix-guardar">Guardar</button>
+        </div>
+        <div class="stream-box" id="stream-player-box" hidden>
+          <iframe id="twitch-player-frame" title="Stream en directo" allow="autoplay; fullscreen"></iframe>
+        </div>
       </div>
       <div class="sheet-body flush">
         <iframe id="chat-frame" title="Chat del directo"></iframe>
@@ -631,6 +652,7 @@
       </div>
       <p class="hint" id="item-message" role="status"></p>
       <div class="confirm-actions">
+        <button type="button" class="btn" id="item-copy" hidden>Copiar</button>
         <button type="button" class="btn" id="item-delete" hidden>Eliminar</button>
         <button type="button" class="btn" id="item-cancel">Cancelar</button>
         <button type="button" class="btn btn-primary" id="item-save">Guardar</button>
@@ -2503,16 +2525,68 @@
       const query = parents.map((parent) => 'parent=' + encodeURIComponent(parent)).join('&');
       return 'https://www.twitch.tv/embed/' + encodeURIComponent(channel) + '/chat?' + query + '&darkpopout';
     }
+    const chat = { config: { todos: false, botrixUrl: '' }, streamOn: false };
+    const botrixSaved = () => (isBotrixUrl(chat.config.botrixUrl) ? chat.config.botrixUrl : '');
+    function paintChatControls() {
+      $('btn-chat-todos').setAttribute('aria-pressed', String(chat.config.todos === true && Boolean(botrixSaved())));
+      $('btn-toggle-stream').setAttribute('aria-pressed', String(chat.streamOn));
+    }
+    async function chatConfigRequest(changes) {
+      try {
+        const response = await fetch('/api/panel/chat-config', changes === undefined
+          ? { cache: 'no-store' }
+          : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes) });
+        const data = await response.json().catch(() => null);
+        if (response.ok && data && typeof data.todos === 'boolean' && typeof data.botrixUrl === 'string') {
+          chat.config = { todos: data.todos, botrixUrl: data.botrixUrl };
+          return true;
+        }
+      } catch (_) { /* reported by the caller */ }
+      return false;
+    }
+    function loadChatFrame(force = false) {
+      const target = chatUrl(chat.config, window.location.hostname, CHAT_CHANNEL);
+      const frame = $('chat-frame');
+      if (force || frame.getAttribute('src') !== target) frame.src = target;
+    }
     async function openChat() {
       if (!openSheet('chat-sheet')) return;
-      let config = null;
-      try {
-        const response = await fetch('/api/panel/chat-config', { cache: 'no-store' });
-        if (response.ok) config = await response.json();
-      } catch (_) { /* plain Twitch chat */ }
-      const target = chatUrl(config, window.location.hostname, CHAT_CHANNEL);
-      const frame = $('chat-frame');
-      if (frame.getAttribute('src') !== target) frame.src = target;
+      await chatConfigRequest();
+      paintChatControls();
+      loadChatFrame();
+    }
+    // "Todos" shows every platform's chat through the Botrix widget.
+    async function toggleAllChats() {
+      if (!botrixSaved()) {
+        $('botrix-config').hidden = false;
+        $('botrix-url').focus();
+        showToast('Pega la dirección de tu widget de chat de Botrix y pulsa guardar');
+        return;
+      }
+      if (!await chatConfigRequest({ todos: !chat.config.todos })) { showToast('No se guardó la configuración del chat'); return; }
+      paintChatControls();
+      loadChatFrame(true);
+      showToast(chat.config.todos ? 'Todos los chats juntos (Botrix)' : 'Solo chat de Twitch');
+    }
+    async function saveBotrix() {
+      const value = $('botrix-url').value.trim();
+      if (!isBotrixUrl(value)) { showToast('Tiene que ser una dirección https://botrix.live/…'); return; }
+      if (!await chatConfigRequest({ botrixUrl: value, todos: true })) { showToast('No se guardó la configuración del chat'); return; }
+      $('botrix-config').hidden = true;
+      paintChatControls();
+      loadChatFrame(true);
+      showToast('Guardado en el servidor: todos los chats juntos (Botrix)');
+    }
+    // Muted Twitch player above the chat, unloaded when hidden.
+    function toggleStreamPlayer() {
+      chat.streamOn = !chat.streamOn;
+      const parents = [...new Set([window.location.hostname, 'directo.apliarte.com'])].filter(Boolean)
+        .map((parent) => 'parent=' + encodeURIComponent(parent)).join('&');
+      $('stream-player-box').hidden = !chat.streamOn;
+      $('twitch-player-frame').src = chat.streamOn
+        ? `https://player.twitch.tv/?channel=${CHAT_CHANNEL}&${parents}&muted=true&autoplay=true&playsinline=true`
+        : 'about:blank';
+      paintChatControls();
     }
 
     // Commands: the server owns the list; favourites are per device and
@@ -2608,7 +2682,25 @@
       }
       renderCommands();
     }
+    // Favourite commands as one-tap chips under the app bar.
+    function renderFavoritesBar() {
+      const bar = $('favorites-bar');
+      bar.replaceChildren();
+      commands.cache.forEach((entry) => {
+        const name = Array.isArray(entry) ? String(entry[0] ?? '') : String(entry ?? '');
+        const desc = Array.isArray(entry) ? String(entry[1] ?? '') : '';
+        if (!name || !isFavorite(name)) return;
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chip';
+        chip.textContent = name;
+        if (desc && desc !== '—') chip.dataset.tip = desc;
+        chip.addEventListener('click', () => startCommand(name, desc));
+        bar.appendChild(chip);
+      });
+    }
     function renderCommands() {
+      renderFavoritesBar();
       const filter = $('commands-filter').value.trim().toLowerCase();
       const grid = $('commands-grid');
       grid.replaceChildren();
@@ -2727,6 +2819,10 @@
         button.addEventListener('click', closeSheets);
       });
       $('btn-chat-view').addEventListener('click', openChat);
+      $('btn-chat-todos').addEventListener('click', toggleAllChats);
+      $('btn-botrix-guardar').addEventListener('click', saveBotrix);
+      $('btn-reload-chat').addEventListener('click', () => loadChatFrame(true));
+      $('btn-toggle-stream').addEventListener('click', toggleStreamPlayer);
       $('btn-commands-view').addEventListener('click', () => {
         if (openSheet('commands-sheet')) { cancelCommand(); loadCommands(); }
       });
@@ -3031,13 +3127,14 @@
         hideAllSecrets();
         // The board joins the shared drawing socket only once the studio opens.
         if (board.ready && !board.ws) board.connect();
-        if (!panel.started) { connectPanelSocket(); loadCameraConfig(); }
+        if (!panel.started) { connectPanelSocket(); loadCameraConfig(); loadCommands(); }
       }
     }
 
     // ── Settings: lateral tabs ───────────────────────────────────────────
     const SETTINGS_TABS = [
       { id: 'credentials', label: 'Credenciales y APIs' },
+      { id: 'broadcast', label: 'Emisión' },
       { id: 'camera', label: 'Cámara y Vídeo' },
       { id: 'audio', label: 'Audio y Filtros' },
       { id: 'tts', label: 'Voz del chat' },
@@ -3312,6 +3409,15 @@
       settingsHeading(panel, 'Apariencia');
       const dark = document.documentElement.dataset.theme === 'dark';
       settingsButton(settingsRow(panel), dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro', () => { toggleTheme(); rerender('system'); });
+      settingsHeading(panel, 'Ayuda');
+      const guide = document.createElement('a');
+      guide.className = 'btn';
+      guide.href = '/pizarra-plus/guia';
+      guide.target = '_blank';
+      guide.rel = 'noopener';
+      guide.textContent = 'Guía de la pizarra';
+      guide.style.textDecoration = 'none';
+      settingsRow(panel).appendChild(guide);
       settingsHeading(panel, 'Fuentes de OBS');
       settingsButton(settingsRow(panel), 'Ver las direcciones para OBS', () => { $('settings-dialog').close(); showView('welcome'); });
     };
@@ -3347,6 +3453,7 @@
       $('item-desc').value = desc && desc !== '—' ? desc : '';
       $('item-command-extra').hidden = type !== 'comando';
       $('item-delete').hidden = !editing;
+      $('item-copy').hidden = !(editing && type === 'comando');
       $('item-main').placeholder = type === 'comando' ? '!comando [usuario]'
         : (type === 'mensaje' ? 'Texto del mensaje' : 'Nombre, o varios separados por comas');
       itemMessage('');
@@ -3448,6 +3555,10 @@
       $('item-save').addEventListener('click', saveItem);
       $('item-delete').addEventListener('click', deleteItem);
       $('item-cancel').addEventListener('click', closeItem);
+      $('item-copy').addEventListener('click', async () => {
+        const copied = await copyText($('item-main').value.trim());
+        itemMessage(copied ? 'Copiado al portapapeles.' : 'No se pudo copiar: selecciónalo y cópialo a mano.', !copied);
+      });
       $('item-main').addEventListener('keydown', (event) => {
         if (event.key !== 'Enter') return;
         event.preventDefault();
@@ -3728,6 +3839,210 @@
       settingsNote(panel, 'Votos: ' + (votes || 'ninguno') + (detail ? '. Detalle: ' + detail : ''));
     };
 
+    // ── Broadcast tab: destinations, Twitch chat link, YouTube ───────────
+    // Ported from the old panel: /api/panel/destinos and /api/twitch/config.
+    const YOUTUBE_CHANNEL_KEY = 'apliarte_youtube_channel_id';
+    const broadcast = { loaded: false, centre: null, centreError: '', twitch: null };
+    async function loadBroadcast() {
+      broadcast.centreError = '';
+      try {
+        const response = await fetch('/api/panel/destinos', { cache: 'no-store', credentials: 'same-origin' });
+        if (!response.ok) throw new Error('unavailable');
+        broadcast.centre = await response.json();
+      } catch (_) { broadcast.centre = null; broadcast.centreError = 'Centro local no disponible'; }
+      try {
+        const response = await fetch('/api/twitch/config', { cache: 'no-store' });
+        broadcast.twitch = response.ok ? await response.json() : null;
+      } catch (_) { broadcast.twitch = null; }
+      broadcast.loaded = true;
+      if (tabOpen('broadcast')) selectSettingsTab('broadcast');
+    }
+    settingsRenderers.broadcast = (panel) => {
+      if (!broadcast.loaded) { settingsNote(panel, 'Consultando la emisión…'); loadBroadcast(); return; }
+      const head = settingsRow(panel);
+      const heading = document.createElement('h3');
+      heading.textContent = 'Destinos de emisión';
+      heading.style.marginRight = 'auto';
+      head.appendChild(heading);
+      settingsButton(head, 'Actualizar', () => loadBroadcast());
+      if (broadcast.centre) {
+        const centre = broadcast.centre;
+        settingsNote(panel, `Centro: ${centre.estado || 'desconocido'} · OBS: ${centre.obsActivo ? 'activo' : 'sin señal'}${centre.cierreVoluntario ? ' · Cierre voluntario' : ''}`);
+        (centre.destinos || []).forEach((destination) => {
+          const row = document.createElement('div');
+          row.className = 'list-row';
+          const text = document.createElement('span');
+          const state = destination.conError ? 'error' : destination.activo ? 'emitiendo' : destination.listo ? 'preparado' : 'falta clave';
+          text.textContent = `${destination.nombre}: ${state}${destination.modo ? ` (${destination.modo})` : ''}`;
+          row.appendChild(text);
+          panel.appendChild(row);
+        });
+      } else {
+        settingsNote(panel, broadcast.centreError);
+      }
+
+      settingsHeading(panel, 'Chat de Twitch (bot)');
+      const twitch = broadcast.twitch || {};
+      settingsNote(panel, twitch.configurado && twitch.conectado ? `Conectado como @${twitch.nick || 'apliarte'}.`
+        : (twitch.configurado ? 'Conectando…' : 'Sin token: el bot no puede escribir en el chat.'));
+      const form = settingsRow(panel);
+      const nick = document.createElement('input');
+      nick.type = 'text';
+      nick.className = 'settings-search';
+      nick.style.cssText = 'width:auto;flex:1;min-width:120px';
+      nick.placeholder = 'Nick';
+      nick.autocomplete = 'off';
+      nick.value = twitch.nick || '';
+      nick.setAttribute('aria-label', 'Nick de Twitch del bot');
+      const token = document.createElement('input');
+      token.type = 'password';
+      token.className = 'settings-search';
+      token.style.cssText = 'width:auto;flex:1;min-width:120px';
+      token.placeholder = twitch.configurado ? 'Token configurado. Escribe solo para cambiarlo' : 'Token de Twitch';
+      token.autocomplete = 'off';
+      token.setAttribute('aria-label', 'Token de Twitch del bot');
+      form.append(nick, token);
+      settingsButton(form, 'Conectar', async () => {
+        const name = (nick.value || 'apliarte').trim();
+        try {
+          const response = await fetch('/api/twitch/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nick: name, canal: name, token: token.value.trim() })
+          });
+          showToast(response.ok ? 'Conexión a Twitch Chat guardada' : 'Error al guardar el token en el servidor');
+        } catch (_) { showToast('Error de conexión al guardar el token'); }
+        loadBroadcast();
+      });
+
+      settingsHeading(panel, 'YouTube');
+      const youtube = settingsRow(panel);
+      const channel = document.createElement('input');
+      channel.type = 'text';
+      channel.className = 'settings-search';
+      channel.style.cssText = 'width:auto;flex:1;min-width:160px';
+      channel.placeholder = 'Identificador del canal de YouTube';
+      channel.autocomplete = 'off';
+      channel.value = micSetting(YOUTUBE_CHANNEL_KEY, '');
+      channel.setAttribute('aria-label', 'Identificador del canal de YouTube');
+      const link = document.createElement('a');
+      link.className = 'btn';
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = 'Abrir YouTube Studio';
+      link.style.textDecoration = 'none';
+      const setLink = () => {
+        const id = channel.value.trim();
+        link.href = id ? `https://studio.youtube.com/channel/${encodeURIComponent(id)}/livestreaming/manage` : 'https://studio.youtube.com/livestreaming/manage';
+      };
+      channel.addEventListener('change', () => {
+        const id = channel.value.trim();
+        if (id) storeSetting(YOUTUBE_CHANNEL_KEY, id);
+        else { try { localStorage.removeItem(YOUTUBE_CHANNEL_KEY); } catch (_) { /* private mode */ } }
+        setLink();
+      });
+      setLink();
+      youtube.append(channel, link);
+    };
+
+    // Default commands and lists, copied unchanged from the old panel. They
+    // are only added on request and merged: nothing existing is changed.
+    const DEFAULT_USERS = [
+      'elesky', 'TheAnibalOS', 'CursosDeDesarrollo', 'rucalleja77', 'nMarulo',
+      'Ocholoko234', 'gordon_f_', 'fromguer', 'marshallflashmusic', 'joaquin_net',
+      'gaguico1', 'Banus10', 'Gordon_F_', 'fedsson', 'klamojino123'
+    ];
+
+    const DEFAULT_CHANNELS = [
+      'apliarte', 'elesky', 'TheAnibalOS', 'CursosDeDesarrollo', 'rucalleja77', 'nMarulo',
+      'melanieariasart', 'Loisdefazouro', 'klamojino123', 'Gordon_F_', 'informaticarupestre',
+      'fedsson', 'campanillagt', 'midudev', 'mouredev', 'gentleman_programming'
+    ];
+
+    const DEFAULT_MESSAGES = [
+      '¡Bienvenidos al directo! Dejad vuestro follow y saludad en el chat 👋',
+      'Recuerda todos los días los directos a las 10:00 de la mañana ⏰',
+      'Adopta a tu avatar: pon ! seguido de cl, ge, co, om, pi, be... y configura tu voz en !voz 🦾',
+      '!repo - Ecosistema de código libre en https://github.com/erbolamm 💻',
+      '!redes - Todos los proyectos y enlaces en https://apliarte.com 🌐',
+      'Pausa técnica de 5 minutos, ¡enseguida volvemos! ☕',
+      '¡Muchas gracias a todos por acompañarme en el directo de hoy! ❤️',
+      'Para enviar sugerencias y mensajes privados usa !sms [mensaje] 📩',
+      'hay que recordar que estamos a Sub Septiembre con 30% de descuento en suscripciones ⭐'
+    ];
+
+    const DEFAULT_COMMANDS = [
+      // Moderación oficial Twitch
+      ['/announce [mensaje]', 'Publica un anuncio destacado con banner en el chat de Twitch (máx 500 caracteres)'],
+      ['/ban [usuario] [mensaje]', 'Banea permanentemente a un usuario del chat de Twitch'],
+      ['/unban [usuario]', 'Desbanea a un usuario en el chat de Twitch'],
+      ['/timeout [usuario] 600', 'Silencia temporalmente a un usuario por 10 minutos'],
+      ['/clear', 'Limpia los mensajes del chat por completo'],
+      ['/slow 10', 'Activa modo lento de 10 segundos'],
+      ['/slowoff', 'Desactiva modo lento'],
+      ['/subscribers', 'Activa chat exclusivo para suscriptores'],
+      ['/subscribersoff', 'Desactiva chat exclusivo de suscriptores'],
+      ['/vips', 'Muestra la lista de usuarios VIP del canal'],
+      ['/mods', 'Muestra los moderadores del canal'],
+      // Adopción de Avatares en el diorama
+      ['!co', 'Adoptar avatar de Codex (programación e ingeniería)'],
+      ['!cl', 'Adoptar avatar de Claude (arquitectura y frontend)'],
+      ['!pi', 'Adoptar avatar de Pi (asistente de investigación)'],
+      ['!ge', 'Adoptar avatar de Gemini (análisis multimodal)'],
+      ['!om', 'Adoptar avatar de Ollama (modelos locales)'],
+      ['!gr', 'Adoptar avatar de Groq (inferencia ultra-rápida)'],
+      ['!op', 'Adoptar avatar de OpenAI (razonamiento)'],
+      ['!ex', 'Adoptar avatar de Externo (invitado especial)'],
+      ['!be', 'Adoptar avatar de Vigía (supervisor del sistema)'],
+      ['!liberar', 'Libera el avatar actual que tengas adoptado'],
+      ['!liberar todos', 'Libera todos los avatares ocupados de golpe (solo Javier)'],
+      ['!liberar [agente]', 'Libera el avatar indicado: ge, cl, co, om... (solo Javier)'],
+      // Movimiento y acciones diorama
+      ['!w 1', 'Mueve tu avatar hacia arriba (norte)'],
+      ['!s 1', 'Mueve tu avatar hacia abajo (sur)'],
+      ['!a 1', 'Mueve tu avatar a la izquierda (oeste)'],
+      ['!d 1', 'Mueve tu avatar a la derecha (este)'],
+      ['!salta', 'Hace saltar de alegría a tu avatar'],
+      ['!cafe', 'Envía a tu avatar a la cafetera a por café'],
+      ['!beso [usuario]', 'Manda un beso al avatar de otro usuario'],
+      ['!trabajar', 'Tu avatar se sienta en su escritorio a trabajar'],
+      ['!bronca', 'Javier echa bronca a todos en la oficina'],
+      ['!fiesta', 'Inicia fiesta con luces y baile en la oficina'],
+      ['!info', 'Abre la guía de comandos a pantalla completa en OBS (5s)'],
+      // Minijuegos y utilidades
+      ['!pizarra', 'Abre o muestra la pizarra interactiva en el directo'],
+      ['!juego', 'Abre votación de minijuegos (!trofeo vs !traidor)'],
+      ['!trofeo', 'Inicia la carrera por la copa'],
+      ['!traidor', 'Inicia el juego del traidor impostor (solo votan usuarios con avatar asignado)'],
+      ['!sms [mensaje]', 'Envía un mensaje privado al buzón de Javier'],
+      ['!speak -config es-ES 1', 'Configura voz de lectura en español (España 👩)'],
+      ['!speak -config es-AR 1', 'Configura voz de lectura en español (Argentina 👩)'],
+      ['!speak -config es-MX 1', 'Configura voz de lectura en español (México 👩)'],
+      // Enlaces y difusión
+      ['!redes', 'Publica todos los enlaces y redes de ApliArte'],
+      ['!repo', 'Enlace al repositorio abierto en GitHub'],
+      ['!cafecito', 'Enlace de apoyo con café en Ko-fi'],
+      ['!subs', 'Información sobre ventajas para suscriptores'],
+      ['!comandos', 'Resumen rápido de comandos en el chat']
+    ];
+    async function loadDefaults() {
+      const lists = [['usuario', DEFAULT_USERS], ['canal', DEFAULT_CHANNELS], ['mensaje', DEFAULT_MESSAGES]];
+      const failed = [];
+      try { await postPanel('/api/panel/comandos-bot', { accion: 'fusionar', comandos: DEFAULT_COMMANDS }); } catch (_) { failed.push('comandos'); }
+      for (const [type, values] of lists) {
+        try { await postPanel('/api/panel/lista', { tipo: type, accion: 'fusionar', valores: values }); } catch (_) { failed.push(type); }
+      }
+      showToast(failed.length ? `No se añadieron: ${failed.join(', ')}` : 'Predeterminados añadidos en el servidor');
+      await afterItemChange();
+    }
+    async function clearAllCommands() {
+      try {
+        await postPanel('/api/panel/comandos-bot', { accion: 'vaciar' });
+        showToast('Comandos borrados');
+      } catch (error) { showToast('No se pudieron borrar: ' + error.message); }
+      await afterItemChange();
+    }
+
     let commandsTabLoaded = false;
     let commandsTabFilter = '';
     settingsRenderers.commands = (panel) => {
@@ -3778,6 +4093,9 @@
           panel.appendChild(row);
         });
       };
+      const bulk = settingsRow(panel);
+      armedButton(bulk, 'Cargar predeterminados', 'Pulsa otra vez: se añaden, no se borra nada', loadDefaults);
+      armedButton(bulk, 'Borrar todos los comandos', 'Pulsa otra vez para borrar todos', clearAllCommands);
       section('Comandos', 'comando', commands.cache.map((entry) => (Array.isArray(entry) ? [String(entry[0] ?? ''), String(entry[1] ?? '')] : [String(entry ?? ''), ''])).filter(([name]) => name));
       section('Usuarios', 'usuario', commands.lists.usuario.map((value) => [String(value), '']));
       section('Canales', 'canal', commands.lists.canal.map((value) => [String(value), '']));
@@ -3873,7 +4191,7 @@
       'copy': handleCopy,
       'toggle-theme': toggleTheme,
       'toggle-secret': (button) => setSecretVisible(button, button.getAttribute('aria-pressed') !== 'true'),
-      'open-settings': () => { commandsTabLoaded = false; stage.loaded = false; sms.loaded = false; game.loaded = false; $('settings-dialog').showModal(); selectSettingsTab(SETTINGS_TABS[0].id); },
+      'open-settings': () => { commandsTabLoaded = false; stage.loaded = false; sms.loaded = false; game.loaded = false; broadcast.loaded = false; $('settings-dialog').showModal(); selectSettingsTab(SETTINGS_TABS[0].id); },
       'close-settings': () => $('settings-dialog').close(),
       'toggle-group': (button) => {
         setGroupEnabled(button.closest('.group'), button.getAttribute('aria-checked') !== 'true');
