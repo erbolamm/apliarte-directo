@@ -215,6 +215,36 @@
       background: var(--black);
     }
     .camera-box iframe { width: 100%; height: 100%; border: 0; display: block; }
+    /* ── Side sheets: chat and commands, one open at a time ────────────── */
+    .sheet {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: calc(var(--touch) + 2 * var(--gap) + env(safe-area-inset-bottom));
+      z-index: 16;
+      width: min(420px, 100vw);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      border-left: 1px solid var(--line);
+      background: var(--bg);
+    }
+    .sheet-head { display: flex; align-items: center; gap: var(--gap); padding: var(--gap); border-bottom: 1px solid var(--line); }
+    .sheet-head h2 { font-size: 1rem; margin-right: auto; }
+    .sheet-body { min-height: 0; overflow: auto; padding: var(--gap); display: grid; gap: var(--gap); align-content: start; }
+    .sheet-body.flush { padding: 0; }
+    .sheet-body iframe { width: 100%; height: 100%; border: 0; display: block; }
+    .sheet-body input[type="search"], dialog.confirm input[type="text"] {
+      width: 100%; min-height: var(--touch); padding: 0 var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: 1rem;
+    }
+    .commands-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--gap); }
+    .cmd-btn { justify-content: space-between; text-align: left; overflow-wrap: anywhere; padding: 0 0 0 var(--gap); }
+    .cmd-star { display: inline-grid; place-items: center; width: var(--touch); height: var(--touch); flex: none; color: var(--text-muted); }
+    .cmd-star.is-fav { color: var(--warn); }
+    .chips { display: flex; flex-wrap: wrap; gap: var(--gap); }
+    .chip { min-height: 36px; padding: 0 0.75rem; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); cursor: pointer; }
+    .input-row { display: flex; gap: var(--gap); }
+    .input-row input { flex: 1; min-width: 0; }
+    [data-kind="error"] { color: var(--warn); }
     .toolbar-sep { width: 1px; align-self: stretch; background: var(--line); }
     .toolbar-status { align-self: center; color: var(--text-muted); font-size: 0.8rem; }
     .icon-btn.active { border-color: var(--brand-strong); color: var(--brand-strong); }
@@ -401,7 +431,7 @@
         <button type="button" class="btn btn-danger" id="btn-apagar-estudio" data-action="open-shutdown">Apagar</button>
       </div>
     </header>
-    <p class="notice mock-banner" id="studio-mock-note">En construcción. Ya funcionan la pizarra, la cámara, el micrófono, la voz del chat, «Apagar» y la pantalla negra; faltan el chat, los comandos, las escenas de OBS y los ajustes.</p>
+    <p class="notice mock-banner" id="studio-mock-note">En construcción. Faltan las escenas de OBS y los ajustes; añadir, editar o borrar comandos llegará con los ajustes.</p>
     <main class="stage">
       <div class="stage-canvas" id="canvas-container" hidden>
         <canvas id="drawing-canvas"></canvas>
@@ -421,6 +451,8 @@
       <button type="button" class="icon-btn" id="btn-tablet-mic" aria-pressed="false" aria-label="Micrófono de este dispositivo: silenciado" data-tip="Envía el micrófono de este dispositivo a OBS. Otro toque lo silencia."></button>
       <button type="button" class="icon-btn" id="btn-tts" aria-pressed="false" aria-label="Voz del chat (TTS) apagada: pulsa para activarla" data-tip="Lee en voz alta los mensajes del chat. Otro toque la detiene."></button>
       <span class="toolbar-sep" aria-hidden="true"></span>
+      <button type="button" class="icon-btn" id="btn-chat-view" aria-expanded="false" aria-label="Chat" data-tip="Abre el chat del directo."></button>
+      <button type="button" class="icon-btn" id="btn-commands-view" aria-expanded="false" aria-label="Comandos" data-tip="Abre tus comandos favoritos del bot."></button>
       <button type="button" class="icon-btn" id="btn-pantalla-negra" data-action="black-screen" aria-label="Pantalla negra de ahorro" data-tip="Pone la pantalla en negro para ahorrar batería sin cortar el directo. Toca la pantalla para volver."></button>
       <button type="button" class="icon-btn" data-action="open-settings" aria-label="Abrir ajustes" data-tip="Abre los ajustes del estudio."></button>
       <span class="toolbar-status" id="board-status" role="status"></span>
@@ -448,6 +480,29 @@
       <label class="draw-check"><input id="allow-touch" type="checkbox"> Dibujar también con el dedo</label>
     </section>
 
+    <aside class="sheet" id="chat-sheet" aria-label="Chat" hidden>
+      <div class="sheet-head">
+        <h2>Chat</h2>
+        <button type="button" class="icon-btn sheet-close" aria-label="Cerrar chat"></button>
+      </div>
+      <div class="sheet-body flush">
+        <iframe id="chat-frame" title="Chat del directo"></iframe>
+      </div>
+    </aside>
+
+    <aside class="sheet" id="commands-sheet" aria-label="Comandos" hidden>
+      <div class="sheet-head">
+        <h2 id="commands-title">Comandos Favoritos</h2>
+        <button type="button" class="btn" id="btn-toggle-all-commands" aria-pressed="false">Ver todos</button>
+        <button type="button" class="icon-btn sheet-close" aria-label="Cerrar comandos"></button>
+      </div>
+      <div class="sheet-body">
+        <input id="commands-filter" type="search" placeholder="Buscar comando" aria-label="Buscar comando" autocomplete="off">
+        <p class="hint" id="commands-message" role="status"></p>
+        <div class="commands-grid" id="commands-grid"></div>
+      </div>
+    </aside>
+
     <div class="camera-box" id="camera-push-container" hidden>
       <iframe id="camera-push-iframe" src="about:blank" title="Cámara de este dispositivo" allow="camera; microphone; autoplay; fullscreen"></iframe>
     </div>
@@ -469,6 +524,30 @@
       <div class="settings-body">
         <div class="settings-tabs" role="tablist" aria-orientation="vertical" id="settings-tabs"></div>
         <div class="settings-panel" role="tabpanel" id="settings-panel" tabindex="0"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="confirm" id="cmd-dialog" aria-labelledby="cmd-step-title">
+    <div class="confirm-body">
+      <div class="draw-head">
+        <h2 id="cmd-step-title"></h2>
+        <button type="button" class="icon-btn" id="btn-cmd-fav-toggle" aria-pressed="false" aria-label="Añadir comando a favoritos"></button>
+      </div>
+      <p class="hint" id="cmd-step-desc" hidden></p>
+      <p id="cmd-step-prompt" hidden></p>
+      <div class="chips" id="cmd-step-chips"></div>
+      <div class="input-row" id="cmd-step-row">
+        <input id="cmd-step-input" type="text" autocomplete="off" aria-label="Valor del parámetro">
+        <button type="button" class="btn" id="cmd-step-use">Usar</button>
+      </div>
+      <div class="input-row" id="cmd-final-row" hidden>
+        <input id="cmd-final" type="text" autocomplete="off" aria-label="Comando final, editable">
+      </div>
+      <p class="hint" id="cmd-step-message" role="status" data-kind="error"></p>
+      <div class="confirm-actions">
+        <button type="button" class="btn" id="cmd-cancel">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="cmd-send" disabled>Enviar</button>
       </div>
     </div>
   </dialog>
@@ -509,6 +588,9 @@
       gear: '<circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
       close: '<path d="M6 6l12 12M18 6L6 18"/>',
       screenOff: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M5 6l14 9"/>',
+      // Sheet icons, taken unchanged from pizarra-plus.
+      sheetChat: "<path d=\"M3 4h18v13H8l-5 4zM7 8h10M7 12h7\"/>",
+      sheetCommands: "<path d=\"M4 6l6 6-6 6M13 18h7\"/>",
       // One-tap toggle icons, taken unchanged from pizarra-plus.
       liveCamera: "<rect x=\"3\" y=\"5\" width=\"12\" height=\"14\" rx=\"2\"/><path d=\"M15 10l6-4v12l-6-4\"/>",
       liveMic: "<rect x=\"9\" y=\"2\" width=\"6\" height=\"12\" rx=\"3\"/><path d=\"M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8\"/>",
@@ -1790,6 +1872,275 @@
       $('btn-tts').addEventListener('click', toggleTts);
     }
 
+    // ── Sheets: chat and commands ────────────────────────────────────────
+    // Ported from pizarra-plus. One sheet open at a time.
+    const SHEETS = [['chat-sheet', 'btn-chat-view'], ['commands-sheet', 'btn-commands-view']];
+    function closeSheets() {
+      SHEETS.forEach(([sheetId, buttonId]) => {
+        $(sheetId).hidden = true;
+        $(buttonId).setAttribute('aria-expanded', 'false');
+      });
+    }
+    // Returns true when the sheet ends up open.
+    function openSheet(sheetId) {
+      const wasOpen = !$(sheetId).hidden;
+      closeSheets();
+      if (wasOpen) return false;
+      $(sheetId).hidden = false;
+      $(SHEETS.find(([id]) => id === sheetId)[1]).setAttribute('aria-expanded', 'true');
+      return true;
+    }
+
+    // Chat: Twitch chat, or the Botrix widget when the server says so.
+    const CHAT_CHANNEL = 'apliarte';
+    const isBotrixUrl = (value) => typeof value === 'string' && /^https:\/\/botrix\.live\/[^\s"'<>]*$/i.test(value.trim());
+    function chatUrl(config, host, channel) {
+      const botrix = config && typeof config.botrixUrl === 'string' ? config.botrixUrl : '';
+      if (config && config.todos === true && isBotrixUrl(botrix)) return botrix.trim();
+      const parents = [...new Set([host, 'directo.apliarte.com'])].filter(Boolean);
+      const query = parents.map((parent) => 'parent=' + encodeURIComponent(parent)).join('&');
+      return 'https://www.twitch.tv/embed/' + encodeURIComponent(channel) + '/chat?' + query + '&darkpopout';
+    }
+    async function openChat() {
+      if (!openSheet('chat-sheet')) return;
+      let config = null;
+      try {
+        const response = await fetch('/api/panel/chat-config', { cache: 'no-store' });
+        if (response.ok) config = await response.json();
+      } catch (_) { /* plain Twitch chat */ }
+      const target = chatUrl(config, window.location.hostname, CHAT_CHANNEL);
+      const frame = $('chat-frame');
+      if (frame.getAttribute('src') !== target) frame.src = target;
+    }
+
+    // Commands: the server owns the list; favourites are per device and
+    // share their storage key with pizarra-plus.
+    const FAVORITES_KEY = 'pizarra_plus_favoritos_v1';
+    const DEFAULT_FAVORITES = ['cam-mode', 'black-screen', 'add-canal', 'add-usuario', 'clear-canvas'];
+    const AGENT_CODES = ['co', 'cl', 'ge', 'pi', 'om', 'gr', 'op', 'ex', 'be'];
+    const commands = { cache: [], lists: { usuario: [], canal: [], mensaje: [] }, flow: null, showAll: false };
+    function getFavorites() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(FAVORITES_KEY));
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter((id) => typeof id === 'string');
+          if (valid.length > 0) return valid;
+        }
+      } catch (_) { /* defaults */ }
+      return DEFAULT_FAVORITES.slice();
+    }
+    function saveFavorites(list) {
+      try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(list)); } catch (_) { /* private mode */ }
+    }
+    const isFavorite = (name) => getFavorites().includes('cmd:' + name);
+    function toggleFavorite(name) {
+      if (!name) return;
+      const id = 'cmd:' + name;
+      const list = getFavorites();
+      const index = list.indexOf(id);
+      if (index >= 0) list.splice(index, 1); else list.push(id);
+      saveFavorites(list);
+      renderCommands();
+      if (commands.flow && commands.flow.template === name) refreshDialogFavorite(name);
+    }
+    function refreshDialogFavorite(name) {
+      const button = $('btn-cmd-fav-toggle');
+      const favorite = isFavorite(name);
+      button.textContent = favorite ? '★' : '☆';
+      button.classList.toggle('active', favorite);
+      button.setAttribute('aria-pressed', String(favorite));
+      button.setAttribute('aria-label', favorite ? 'Quitar comando de favoritos' : 'Añadir comando a favoritos');
+    }
+
+    const placeholdersOf = (template) => [...String(template).matchAll(/\[(usuario|canal|mensaje|agente)\]/g)].map((match) => match[1]);
+    function buildCommand(template, values) {
+      let index = 0;
+      return String(template)
+        .replace(/\[(usuario|canal|mensaje|agente)\]/g, () => String(values[index++] ?? '').trim())
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+    async function sendCommand(command) {
+      try {
+        const response = await fetch('/api/directo/comando', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ comando: command, usuario: 'ja' })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 401) return { ok: false, message: 'La sesión ha caducado: vuelve a entrar en el panel.' };
+        if (!response.ok) return { ok: false, message: data.error || data.mensaje || ('El servidor respondió ' + response.status + '.') };
+        if (data.duplicadoIgnorado) return { ok: true, message: 'Ya se había enviado hace un instante.' };
+        if (data.twitchConfigurado === false) return { ok: false, message: 'Twitch no está conectado.' };
+        const local = command.startsWith('!cam') || command === 'adoptar' || command === 'liberar';
+        if (data.twitchEnviado === false && !local) return { ok: false, message: 'No se envió: ' + (data.error || data.mensaje || command) };
+        return { ok: true, message: data.mensaje || ('Enviado: ' + command) };
+      } catch (_) {
+        return { ok: false, message: 'Sin conexión con el servidor.' };
+      }
+    }
+    function reportCommands(text, error = false) {
+      const message = $('commands-message');
+      message.textContent = text;
+      message.dataset.kind = error ? 'error' : 'info';
+    }
+    async function loadCommands() {
+      reportCommands('Cargando comandos…');
+      const types = ['usuario', 'canal', 'mensaje'];
+      try {
+        const [commandsResponse, ...listResponses] = await Promise.all([
+          fetch('/api/panel/comandos-bot', { cache: 'no-store' }),
+          ...types.map((type) => fetch('/api/panel/lista?tipo=' + type, { cache: 'no-store' }))
+        ]);
+        if (!commandsResponse.ok) throw new Error('El servidor respondió ' + commandsResponse.status + '.');
+        const data = await commandsResponse.json();
+        commands.cache = Array.isArray(data.comandos) ? data.comandos : [];
+        for (let i = 0; i < types.length; i++) {
+          const list = listResponses[i].ok ? await listResponses[i].json().catch(() => ({})) : {};
+          commands.lists[types[i]] = Array.isArray(list.valores) ? list.valores : [];
+        }
+        reportCommands(commands.cache.length ? '' : 'No hay comandos guardados.');
+      } catch (error) {
+        commands.cache = [];
+        reportCommands('No se pudieron cargar los comandos: ' + error.message, true);
+      }
+      renderCommands();
+    }
+    function renderCommands() {
+      const filter = $('commands-filter').value.trim().toLowerCase();
+      const grid = $('commands-grid');
+      grid.replaceChildren();
+      let shown = 0;
+      commands.cache.forEach((item) => {
+        const name = Array.isArray(item) ? String(item[0] ?? '') : String(item ?? '');
+        const desc = Array.isArray(item) ? String(item[1] ?? '') : '';
+        if (!name || (filter && !(name + ' ' + desc).toLowerCase().includes(filter))) return;
+        const favorite = isFavorite(name);
+        if (!commands.showAll && !favorite && !filter) return;
+        shown++;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn cmd-btn';
+        if (desc && desc !== '—') button.dataset.tip = desc;
+        const label = document.createElement('strong');
+        label.textContent = name;
+        const star = document.createElement('span');
+        star.className = 'cmd-star' + (favorite ? ' is-fav' : '');
+        star.setAttribute('role', 'button');
+        star.tabIndex = 0;
+        star.textContent = favorite ? '★' : '☆';
+        star.setAttribute('aria-label', favorite ? `Quitar ${name} de favoritos` : `Añadir ${name} a favoritos`);
+        const toggle = (event) => { event.stopPropagation(); event.preventDefault(); toggleFavorite(name); };
+        star.addEventListener('click', toggle);
+        star.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') toggle(event); });
+        button.append(label, star);
+        button.addEventListener('click', () => startCommand(name, desc));
+        grid.appendChild(button);
+      });
+      if (commands.cache.length > 0 && shown === 0 && !commands.showAll && !filter) {
+        reportCommands('No tienes comandos favoritos fijados. Pulsa «Ver todos» o busca uno para fijarlo con la estrella.');
+      } else if (commands.cache.length > 0 && !filter) {
+        reportCommands('');
+      }
+    }
+    function startCommand(template, desc = '') {
+      commands.flow = { template, desc, types: placeholdersOf(template), values: [] };
+      $('cmd-step-message').textContent = '';
+      const cleanDesc = desc && desc !== '—' ? desc : '';
+      $('cmd-step-desc').textContent = cleanDesc;
+      $('cmd-step-desc').hidden = !cleanDesc;
+      refreshDialogFavorite(template);
+      $('cmd-dialog').showModal();
+      showCommandStep();
+    }
+    function showCommandStep() {
+      const flow = commands.flow;
+      const pending = flow.types[flow.values.length];
+      const ready = pending === undefined;
+      const chips = $('cmd-step-chips');
+      chips.replaceChildren();
+      $('cmd-step-input').value = '';
+      $('cmd-step-row').hidden = ready;
+      $('cmd-final-row').hidden = !ready;
+      $('cmd-send').disabled = !ready;
+      $('cmd-step-title').textContent = flow.template;
+      const prompt = $('cmd-step-prompt');
+      if (ready) {
+        // The final text stays editable so parameters can be fixed before sending.
+        prompt.hidden = true;
+        $('cmd-final').value = buildCommand(flow.template, flow.values);
+        $('cmd-final').focus();
+        return;
+      }
+      const labels = { usuario: 'un usuario', canal: 'un canal', mensaje: 'un mensaje', agente: 'un agente' };
+      prompt.hidden = false;
+      prompt.textContent = 'Elige ' + (labels[pending] || pending) + ' o escríbelo:';
+      const values = pending === 'agente' ? AGENT_CODES : (commands.lists[pending] || []);
+      values.forEach((value) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chip';
+        chip.textContent = pending === 'usuario' ? '@' + value : value;
+        chip.addEventListener('click', () => useCommandValue(value));
+        chips.appendChild(chip);
+      });
+      $('cmd-step-input').focus();
+    }
+    function useCommandValue(value) {
+      const clean = String(value || '').trim().replace(/^@/, '');
+      if (!commands.flow || !clean) return;
+      commands.flow.values.push(clean);
+      showCommandStep();
+    }
+    function cancelCommand() {
+      commands.flow = null;
+      if ($('cmd-dialog').open) $('cmd-dialog').close();
+    }
+    async function submitCommand() {
+      const flow = commands.flow;
+      if (!flow || flow.values.length < flow.types.length) return;
+      const finalText = $('cmd-final').value.replace(/\s+/g, ' ').trim();
+      if (!finalText) { $('cmd-step-message').textContent = 'Escribe el comando antes de enviarlo.'; return; }
+      $('cmd-step-message').textContent = '';
+      $('cmd-send').disabled = true;
+      const result = await sendCommand(finalText);
+      // Errors stay inside the dialog; success closes it.
+      if (result.ok) { reportCommands(result.message); cancelCommand(); }
+      else { $('cmd-step-message').textContent = result.message; $('cmd-send').disabled = false; }
+    }
+    function initSheets() {
+      $('btn-chat-view').innerHTML = icon('sheetChat');
+      $('btn-commands-view').innerHTML = icon('sheetCommands');
+      document.querySelectorAll('.sheet-close').forEach((button) => {
+        button.innerHTML = icon('close');
+        button.addEventListener('click', closeSheets);
+      });
+      $('btn-chat-view').addEventListener('click', openChat);
+      $('btn-commands-view').addEventListener('click', () => {
+        if (openSheet('commands-sheet')) { cancelCommand(); loadCommands(); }
+      });
+      $('btn-toggle-all-commands').addEventListener('click', () => {
+        commands.showAll = !commands.showAll;
+        const button = $('btn-toggle-all-commands');
+        button.textContent = commands.showAll ? 'Solo favoritos' : 'Ver todos';
+        button.setAttribute('aria-pressed', String(commands.showAll));
+        $('commands-title').textContent = commands.showAll ? 'Todos los Comandos' : 'Comandos Favoritos';
+        renderCommands();
+      });
+      $('commands-filter').addEventListener('input', renderCommands);
+      $('btn-cmd-fav-toggle').addEventListener('click', () => { if (commands.flow) toggleFavorite(commands.flow.template); });
+      $('cmd-step-use').addEventListener('click', () => useCommandValue($('cmd-step-input').value));
+      $('cmd-step-input').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') { event.preventDefault(); useCommandValue($('cmd-step-input').value); }
+      });
+      $('cmd-cancel').addEventListener('click', cancelCommand);
+      $('cmd-dialog').addEventListener('close', () => { commands.flow = null; });
+      $('cmd-send').addEventListener('click', submitCommand);
+      $('cmd-final').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') { event.preventDefault(); submitCommand(); }
+      });
+    }
+
     // ── Shutdown: clean end of the broadcast ─────────────────────────────
     // Same request and messages as finalizarEmision() in the old panel,
     // with a dialog instead of the browser's confirm() and alert().
@@ -1828,6 +2179,7 @@
     function showView(name) {
       $('view-welcome').hidden = name !== 'welcome';
       $('view-studio').hidden = name !== 'studio';
+      if (name !== 'studio') closeSheets();
       if (name === 'studio') {
         hideAllSecrets();
         // The board joins the shared drawing socket only once the studio opens.
@@ -1963,6 +2315,7 @@
       bindBlackScreen();
       initBoard();
       initLiveControls();
+      initSheets();
 
       document.addEventListener('click', (event) => {
         const button = event.target.closest('[data-action]');
