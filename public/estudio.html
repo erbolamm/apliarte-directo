@@ -267,6 +267,18 @@
     .input-row { display: flex; gap: var(--gap); }
     .input-row input { flex: 1; min-width: 0; }
     [data-kind="error"] { color: var(--warn); }
+    /* Raised toolbar buttons: a coloured edge underneath that disappears
+       while the button is held down or switched on, so it reads as pressed. */
+    .toolbar .icon-btn {
+      --edge: var(--brand-strong);
+      box-shadow: inset 0 -4px 0 var(--edge);
+      transition: box-shadow 0.08s, transform 0.08s;
+    }
+    .toolbar .icon-btn:active,
+    .toolbar .icon-btn[aria-pressed="true"],
+    .toolbar .icon-btn[aria-expanded="true"] { box-shadow: none; transform: translateY(2px); }
+    .toolbar .icon-btn:disabled { box-shadow: none; transform: none; }
+    @media (prefers-reduced-motion: reduce) { .toolbar .icon-btn { transition: none; } }
     .toolbar-sep { width: 1px; align-self: stretch; background: var(--line); }
     .toolbar-status { align-self: center; color: var(--text-muted); font-size: 0.8rem; }
     .icon-btn.active { border-color: var(--brand-strong); color: var(--brand-strong); }
@@ -1487,8 +1499,8 @@
         board.color = color;
         document.querySelectorAll('.color-swatch').forEach((swatch) => swatch.classList.toggle('active', swatch.dataset.color.toLowerCase() === color.toLowerCase()));
         $('custom-color').value = color;
-        // A coloured underline shows the current colour without hiding the icon.
-        drawButton.style.boxShadow = `inset 0 -4px 0 ${color}`;
+        // The pencil's raised edge takes the current drawing colour.
+        drawButton.style.setProperty('--edge', color);
       }
       $('tools-group').addEventListener('click', (event) => {
         const button = event.target.closest('[data-tool]');
