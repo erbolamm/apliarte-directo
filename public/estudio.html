@@ -240,6 +240,15 @@
     .cmd-btn { justify-content: space-between; text-align: left; overflow-wrap: anywhere; padding: 0 0 0 var(--gap); }
     .cmd-star { display: inline-grid; place-items: center; width: var(--touch); height: var(--touch); flex: none; color: var(--text-muted); }
     .cmd-star.is-fav { color: var(--warn); }
+    .scenes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--gap); }
+    .scene-btn { flex-direction: column; align-items: flex-start; gap: 0; padding: var(--gap); text-align: left; overflow-wrap: anywhere; }
+    .scene-btn small { font-weight: 400; color: var(--text-muted); }
+    .scene-btn.active { border-color: var(--brand-strong); color: var(--brand-strong); }
+    .source-card { display: flex; align-items: center; gap: var(--gap); padding: var(--gap); border: 1px solid var(--line); border-radius: var(--radius); }
+    .source-card.off { opacity: 0.6; }
+    .source-info { display: grid; margin-right: auto; min-width: 0; overflow-wrap: anywhere; }
+    .source-info small { color: var(--text-muted); }
+    .sheet-body select { width: 100%; min-height: var(--touch); padding: 0 var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 1rem; }
     .chips { display: flex; flex-wrap: wrap; gap: var(--gap); }
     .chip { min-height: 36px; padding: 0 0.75rem; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); cursor: pointer; }
     .input-row { display: flex; gap: var(--gap); }
@@ -431,7 +440,7 @@
         <button type="button" class="btn btn-danger" id="btn-apagar-estudio" data-action="open-shutdown">Apagar</button>
       </div>
     </header>
-    <p class="notice mock-banner" id="studio-mock-note">En construcción. Faltan las escenas de OBS y los ajustes; añadir, editar o borrar comandos llegará con los ajustes.</p>
+    <p class="notice mock-banner" id="studio-mock-note">En construcción. Faltan los ajustes (y con ellos añadir, editar o borrar comandos) y la captura fija de OBS como fondo del lienzo.</p>
     <main class="stage">
       <div class="stage-canvas" id="canvas-container" hidden>
         <canvas id="drawing-canvas"></canvas>
@@ -453,6 +462,7 @@
       <span class="toolbar-sep" aria-hidden="true"></span>
       <button type="button" class="icon-btn" id="btn-chat-view" aria-expanded="false" aria-label="Chat" data-tip="Abre el chat del directo."></button>
       <button type="button" class="icon-btn" id="btn-commands-view" aria-expanded="false" aria-label="Comandos" data-tip="Abre tus comandos favoritos del bot."></button>
+      <button type="button" class="icon-btn" id="btn-obs-menu" aria-expanded="false" aria-label="Controles OBS" data-tip="Abre las escenas, el audio y las fuentes de OBS."></button>
       <button type="button" class="icon-btn" id="btn-pantalla-negra" data-action="black-screen" aria-label="Pantalla negra de ahorro" data-tip="Pone la pantalla en negro para ahorrar batería sin cortar el directo. Toca la pantalla para volver."></button>
       <button type="button" class="icon-btn" data-action="open-settings" aria-label="Abrir ajustes" data-tip="Abre los ajustes del estudio."></button>
       <span class="toolbar-status" id="board-status" role="status"></span>
@@ -500,6 +510,27 @@
         <input id="commands-filter" type="search" placeholder="Buscar comando" aria-label="Buscar comando" autocomplete="off">
         <p class="hint" id="commands-message" role="status"></p>
         <div class="commands-grid" id="commands-grid"></div>
+      </div>
+    </aside>
+
+    <aside class="sheet" id="obs-sheet" aria-label="Controles OBS" hidden>
+      <div class="sheet-head">
+        <h2>OBS</h2>
+        <button type="button" class="btn" id="btn-obs-refresh">Actualizar</button>
+        <button type="button" class="icon-btn sheet-close" aria-label="Cerrar controles OBS"></button>
+      </div>
+      <div class="sheet-body">
+        <p class="hint" id="obs-message" role="status"></p>
+        <div class="scenes-grid" id="obs-scenes-grid"></div>
+        <select id="obs-input" aria-label="Entrada de audio de OBS" disabled></select>
+        <button type="button" class="btn" id="btn-obs-mute" aria-pressed="false" disabled>Audio de OBS sin estado confirmado</button>
+        <button type="button" class="btn" id="btn-open-sources">Ver fuentes de la escena activa</button>
+        <div id="sources-section" class="groups" hidden>
+          <h3 id="sources-title">Fuentes</h3>
+          <input id="sources-filter" type="search" placeholder="Buscar fuente" aria-label="Buscar fuente" autocomplete="off">
+          <p class="hint" id="sources-message" role="status"></p>
+          <div class="groups" id="sources-grid"></div>
+        </div>
       </div>
     </aside>
 
@@ -589,6 +620,7 @@
       close: '<path d="M6 6l12 12M18 6L6 18"/>',
       screenOff: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M5 6l14 9"/>',
       // Sheet icons, taken unchanged from pizarra-plus.
+      sheetObs: "<rect x=\"3\" y=\"4\" width=\"18\" height=\"13\" rx=\"2\"/><path d=\"M8 21h8M12 17v4\"/>",
       sheetChat: "<path d=\"M3 4h18v13H8l-5 4zM7 8h10M7 12h7\"/>",
       sheetCommands: "<path d=\"M4 6l6 6-6 6M13 18h7\"/>",
       // One-tap toggle icons, taken unchanged from pizarra-plus.
@@ -1874,7 +1906,7 @@
 
     // ── Sheets: chat and commands ────────────────────────────────────────
     // Ported from pizarra-plus. One sheet open at a time.
-    const SHEETS = [['chat-sheet', 'btn-chat-view'], ['commands-sheet', 'btn-commands-view']];
+    const SHEETS = [['chat-sheet', 'btn-chat-view'], ['commands-sheet', 'btn-commands-view'], ['obs-sheet', 'btn-obs-menu']];
     function closeSheets() {
       SHEETS.forEach(([sheetId, buttonId]) => {
         $(sheetId).hidden = true;
@@ -2141,6 +2173,207 @@
       });
     }
 
+    // ── OBS controls ─────────────────────────────────────────────────────
+    // Ported from pizarra-plus: scenes, one audio input with its mute, and
+    // the sources of a scene, over the private /api/pizarra-plus/obs routes.
+    const obs = { scene: '', scenes: [], muted: null, sources: [], stateBusy: false, actionBusy: false, sourcesBusy: false };
+    function reportObs(message, error = false) {
+      $('obs-message').textContent = message;
+      $('obs-message').dataset.kind = error ? 'error' : 'info';
+    }
+    function reportSources(message, error = false) {
+      $('sources-message').textContent = message;
+      $('sources-message').dataset.kind = error ? 'error' : 'info';
+    }
+    async function obsRequest(route, body) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch('/api/pizarra-plus/obs/' + route, {
+          cache: 'no-store',
+          signal: controller.signal,
+          ...(body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.message || 'OBS no completó la petición (' + response.status + ').');
+        return data;
+      } finally { clearTimeout(timer); }
+    }
+    function populateSelect(select, values, preferred) {
+      const previous = select.value;
+      select.replaceChildren();
+      values.forEach((value) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      });
+      if (values.includes(preferred)) select.value = preferred;
+      else if (values.includes(previous)) select.value = previous;
+      select.disabled = values.length === 0;
+    }
+    function updateMute(muted) {
+      obs.muted = muted;
+      const button = $('btn-obs-mute');
+      button.disabled = muted === null || obs.actionBusy;
+      const name = $('obs-input').value || 'entrada';
+      button.textContent = muted === null ? 'Audio de OBS sin estado confirmado' : (muted ? 'Activar en OBS: ' : 'Silenciar en OBS: ') + name;
+      button.setAttribute('aria-pressed', String(muted === false));
+    }
+    function renderScenes(scenes, activeScene) {
+      obs.scenes = Array.isArray(scenes) ? scenes : [];
+      obs.scene = activeScene || obs.scenes[0] || '';
+      const grid = $('obs-scenes-grid');
+      grid.replaceChildren();
+      obs.scenes.forEach((scene) => {
+        const active = scene === obs.scene;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn scene-btn' + (active ? ' active' : '');
+        button.setAttribute('aria-pressed', String(active));
+        const title = document.createElement('strong');
+        title.textContent = scene;
+        const sub = document.createElement('small');
+        sub.textContent = active ? 'Activa en emisión' : 'Tocar para activar';
+        button.append(title, sub);
+        button.addEventListener('click', async () => {
+          if (obs.actionBusy) return;
+          await obsAction('scene', scene);
+          if (!$('sources-section').hidden) loadSources(scene);
+        });
+        grid.appendChild(button);
+      });
+      $('btn-open-sources').textContent = 'Ver fuentes de ' + (obs.scene || 'la escena activa');
+      $('sources-title').textContent = 'Fuentes: ' + (obs.scene || 'Escena');
+    }
+    async function refreshObs() {
+      if (obs.stateBusy) return;
+      obs.stateBusy = true;
+      const input = $('obs-input');
+      try {
+        let data = await obsRequest('state' + (input.value ? '?input=' + encodeURIComponent(input.value) : ''));
+        const inputs = Array.isArray(data.inputs) ? data.inputs : [];
+        populateSelect(input, inputs, input.value || (inputs.includes('Mic/Aux') ? 'Mic/Aux' : inputs[0]));
+        if (input.value && data.muted === null) data = await obsRequest('state?input=' + encodeURIComponent(input.value));
+        updateMute(data.muted);
+        renderScenes(data.scenes, data.scene);
+        reportObs('OBS conectado.');
+      } catch (error) {
+        input.disabled = true;
+        updateMute(null);
+        renderScenes([], '');
+        reportObs(error.name === 'AbortError' ? 'OBS no responde.' : error.message, true);
+      } finally { obs.stateBusy = false; }
+    }
+    async function obsAction(action, name) {
+      if (obs.actionBusy || !name) return;
+      obs.actionBusy = true;
+      $('btn-obs-mute').disabled = true;
+      try {
+        await obsRequest('action', { action, name });
+        await refreshObs();
+      } catch (error) {
+        await refreshObs();
+        reportObs(error.message, true);
+      } finally {
+        obs.actionBusy = false;
+        $('btn-obs-mute').disabled = obs.muted === null;
+      }
+    }
+    // Audio sources follow their real mute state; the rest toggle visibility.
+    const sourceToggleRequest = (source, scene, enabled) => (source.audio
+      ? { action: 'mute', name: source.name, muted: !enabled }
+      : { action: 'toggle_source', scene, id: source.id, enabled });
+    function paintSource(card, toggle, source) {
+      const on = Boolean(source.enabled);
+      card.className = 'source-card' + (on ? '' : ' off');
+      toggle.innerHTML = icon(on ? 'eye' : 'eyeOff');
+      toggle.setAttribute('aria-pressed', String(on));
+      toggle.setAttribute('aria-label', source.audio
+        ? (on ? 'Silenciar ' : 'Activar ') + source.name
+        : (on ? 'Ocultar ' : 'Mostrar ') + source.name);
+    }
+    function renderSources() {
+      const query = $('sources-filter').value.trim().toLowerCase();
+      const grid = $('sources-grid');
+      grid.replaceChildren();
+      obs.sources
+        .filter((source) => !query || source.name.toLowerCase().includes(query) || (source.type || '').toLowerCase().includes(query))
+        .forEach((source) => {
+          const card = document.createElement('div');
+          const info = document.createElement('div');
+          info.className = 'source-info';
+          const name = document.createElement('strong');
+          name.textContent = source.name;
+          const type = document.createElement('small');
+          type.textContent = source.audio ? 'audio' : (source.type ? source.type.replace(/_/g, ' ') : 'fuente');
+          info.append(name, type);
+          const toggle = document.createElement('button');
+          toggle.type = 'button';
+          toggle.className = 'icon-btn';
+          paintSource(card, toggle, source);
+          toggle.addEventListener('click', async () => {
+            const previous = Boolean(source.enabled);
+            const next = !previous;
+            source.enabled = next;
+            paintSource(card, toggle, source);
+            // One request at a time: a double tap must not invert the state.
+            toggle.disabled = true;
+            try {
+              const data = await obsRequest('action', sourceToggleRequest(source, obs.scene, next));
+              if (source.audio) {
+                source.muted = Boolean(data.muted);
+                source.enabled = !source.muted;
+                paintSource(card, toggle, source);
+                reportSources('Audio «' + source.name + '» ' + (source.enabled ? 'activado' : 'silenciado') + '.');
+              } else {
+                reportSources('Fuente «' + source.name + '» ' + (next ? 'activada' : 'ocultada') + '.');
+              }
+            } catch (error) {
+              source.enabled = previous;
+              paintSource(card, toggle, source);
+              reportSources('Error: ' + error.message, true);
+            } finally { toggle.disabled = false; }
+          });
+          card.append(info, toggle);
+          grid.appendChild(card);
+        });
+    }
+    async function loadSources(scene = obs.scene) {
+      if (obs.sourcesBusy) return;
+      obs.sourcesBusy = true;
+      reportSources('Cargando fuentes de OBS…');
+      try {
+        const target = scene || obs.scene;
+        const data = await obsRequest('sources' + (target ? '?scene=' + encodeURIComponent(target) : ''));
+        obs.sources = Array.isArray(data.sources) ? data.sources : [];
+        if (target) {
+          obs.scene = target;
+          $('sources-title').textContent = 'Fuentes: ' + target;
+        }
+        renderSources();
+        reportSources(obs.sources.length === 0 ? 'No hay fuentes en esta escena.' : (obs.sources.length + ' fuentes encontradas.'));
+      } catch (error) {
+        obs.sources = [];
+        renderSources();
+        reportSources(error.message, true);
+      } finally { obs.sourcesBusy = false; }
+    }
+    function initObs() {
+      $('btn-obs-menu').innerHTML = icon('sheetObs');
+      $('btn-obs-menu').addEventListener('click', () => {
+        if (openSheet('obs-sheet')) refreshObs();
+      });
+      $('btn-obs-refresh').addEventListener('click', refreshObs);
+      $('obs-input').addEventListener('change', refreshObs);
+      $('btn-obs-mute').addEventListener('click', () => obsAction('mute', $('obs-input').value));
+      $('btn-open-sources').addEventListener('click', () => {
+        $('sources-section').hidden = false;
+        loadSources(obs.scene);
+      });
+      $('sources-filter').addEventListener('input', renderSources);
+    }
+
     // ── Shutdown: clean end of the broadcast ─────────────────────────────
     // Same request and messages as finalizarEmision() in the old panel,
     // with a dialog instead of the browser's confirm() and alert().
@@ -2316,6 +2549,7 @@
       initBoard();
       initLiveControls();
       initSheets();
+      initObs();
 
       document.addEventListener('click', (event) => {
         const button = event.target.closest('[data-action]');
