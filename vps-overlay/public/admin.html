@@ -1578,7 +1578,7 @@
         </div>
 
         <div class="cmd-grid-4" id="comandos-grid-container">
-          <!-- 3 Botones fijos de gestión (AGENTS.md §Pestaña de Comandos en Grid de 4) -->
+          <!-- 4 Botones fijos de gestión (Grid de 4 completo) -->
           <button type="button" class="cmd-grid-btn cmd-grid-btn-fixed" id="btn-grid-add-canal" aria-label="Gestionar o agregar canales de Twitch" data-tip="Canales: abrir listado de canales guardados y agregar nuevos">
             <span class="cmd-grid-icon" style="font-size:1.1rem;">📡</span>
             <span class="cmd-grid-name">+ Canal</span>
@@ -1593,6 +1593,11 @@
             <span class="cmd-grid-icon" style="font-size:1.1rem;">💬</span>
             <span class="cmd-grid-name">+ Mensaje</span>
             <span class="cmd-grid-param">gestión</span>
+          </button>
+          <button type="button" class="cmd-grid-btn cmd-grid-btn-fixed" id="btn-grid-toggle-pizarra" aria-label="Activar o desactivar pizarra táctil" data-tip="Pizarra táctil: abrir o cerrar la pizarra interactiva">
+            <span class="cmd-grid-icon" style="font-size:1.1rem;">🖍️</span>
+            <span class="cmd-grid-name">Pizarra</span>
+            <span class="cmd-grid-param">táctil</span>
           </button>
           
           <!-- El resto de comandos dinámicos se insertan aquí -->
@@ -1681,10 +1686,10 @@
           <input type="text" id="new-cmd-desc" placeholder="Descripción breve de lo que hace" style="height:38px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:6px; padding:0 10px; font-size:0.85rem;">
           <div style="display:flex; gap:8px;">
             <select id="new-cmd-tipo" style="flex:1; height:38px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:6px; padding:0 8px; font-size:0.85rem;">
-              <option value="usuario">👤 Requiere Usuario</option>
+              <option value="ninguno" selected>⚡ Sin Parámetro (Ninguno)</option>
               <option value="canal">📺 Requiere Canal</option>
               <option value="mensaje">💬 Requiere Mensaje</option>
-              <option value="ninguno">⚡ Sin Parámetro</option>
+              <option value="usuario">👤 Requiere Usuario</option>
             </select>
             <button type="button" class="touch-btn touch-btn-primary" id="btn-save-new-cmd" style="min-height:38px; padding:0 14px; font-weight:700;">+ Guardar</button>
           </div>
@@ -4175,6 +4180,7 @@
       ['!fiesta', 'Inicia fiesta con luces y baile en la oficina'],
       ['!info', 'Abre la guía de comandos a pantalla completa en OBS (5s)'],
       // Minijuegos y utilidades
+      ['!pizarra', 'Abre o muestra la pizarra interactiva en el directo'],
       ['!juego', 'Abre votación de minijuegos (!trofeo vs !traidor)'],
       ['!trofeo', 'Inicia la carrera por la copa'],
       ['!traidor', 'Inicia el juego del traidor impostor (solo votan usuarios con avatar asignado)'],
@@ -4267,22 +4273,44 @@
     }
 
     async function agregarValorLista(tipo, bruto, input) {
-      let valor = String(bruto || '').trim();
-      if (tipo === 'usuario' || tipo === 'canal') valor = valor.replace(/^@/, '');
-      if (!valor) return false;
+      const crudo = String(bruto || '').trim();
+      if (!crudo) return false;
+
+      // Limpiar @ y soportar entradas múltiples separadas por coma o espacio si es usuario o canal
+      const limpiar = v => (tipo === 'usuario' || tipo === 'canal') ? v.replace(/^@/, '').trim() : v.trim();
+      const elementos = (tipo === 'usuario' || tipo === 'canal')
+        ? crudo.split(/[\s,]+/).map(limpiar).filter(Boolean)
+        : [crudo.trim()];
+
+      if (elementos.length === 0) return false;
       if (input) input.disabled = true;
-      showToast(`⏳ Guardando ${valor}…`);
-      const r = await pedirPanel('/api/panel/lista', { tipo, accion: 'agregar', valor });
-      if (input) input.disabled = false;
-      if (!r.ok || !Array.isArray(r.data.valores) || !r.data.valores.includes(valor)) {
-        showToast(`❌ No se guardó «${valor}»: ${motivoFallo(r)}`);
-        return false;
+      showToast(`⏳ Guardando ${elementos.join(', ')}…`);
+
+      let ultimosValores = null;
+      let errores = 0;
+
+      for (const item of elementos) {
+        const r = await pedirPanel('/api/panel/lista', { tipo, accion: 'agregar', valor: item });
+        if (r.ok && Array.isArray(r.data.valores) && r.data.valores.includes(item)) {
+          ultimosValores = r.data.valores;
+        } else {
+          errores++;
+          showToast(`❌ No se guardó «${item}»: ${motivoFallo(r)}`);
+        }
       }
-      fijarLista(tipo, r.data.valores);
-      if (input) input.value = '';
-      showToast(`✓ Guardado en el servidor: ${valor}`);
-      repintarListas();
-      return true;
+
+      if (input) {
+        input.disabled = false;
+        if (errores === 0) input.value = '';
+      }
+
+      if (ultimosValores && errores === 0) {
+        fijarLista(tipo, ultimosValores);
+        repintarListas();
+        showToast(`✓ Guardado en el servidor: ${elementos.join(', ')}`);
+        return true;
+      }
+      return false;
     }
 
     function agregarItemLista(tipo, inputId) {
@@ -4321,7 +4349,11 @@
       const desc = (descInput?.value || '').trim();
       const tipo = tipoSelect?.value || 'ninguno';
       if (!name) { showToast('⚠️ Introduce el nombre del comando'); return false; }
-      if (tipo !== 'ninguno' && !name.includes(`[${tipo}]`)) name = `${name} [${tipo}]`;
+
+      // Limpiar cualquier etiqueta previa si el usuario cambia de tipo
+      name = name.replace(/\s*\[(usuario|canal|mensaje|agente)\]/gi, '').trim();
+      if (tipo !== 'ninguno') name = `${name} [${tipo}]`;
+
       const ok = await pedirComandos(
         { accion: 'agregar', comando: name, descripcion: desc },
         lista => lista.some(c => nombreComando(c) === name),
@@ -4561,6 +4593,16 @@
     document.getElementById('btn-add-canal')?.addEventListener('click', () => agregarItemLista('canal', 'input-add-canal'));
     document.getElementById('btn-add-mensaje')?.addEventListener('click', () => agregarItemLista('mensaje', 'input-add-mensaje'));
 
+    document.getElementById('input-add-usuario')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-add-usuario')?.click(); }
+    });
+    document.getElementById('input-add-canal')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-add-canal')?.click(); }
+    });
+    document.getElementById('input-add-mensaje')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-add-mensaje')?.click(); }
+    });
+
     // ══════════════════════════════════════════════════════════════════════════
     // CUADRÍCULA DE 4 COLUMNAS Y SUBVISTAS DRILL-DOWN (Fase 2 Rediseño Móvil)
     // ══════════════════════════════════════════════════════════════════════════
@@ -4594,6 +4636,11 @@
           <span class="cmd-grid-icon" style="font-size:1.1rem;">💬</span>
           <span class="cmd-grid-name">+ Mensaje</span>
           <span class="cmd-grid-param">gestión</span>
+        </button>
+        <button type="button" class="cmd-grid-btn cmd-grid-btn-fixed" id="btn-grid-toggle-pizarra" aria-label="Activar o desactivar pizarra táctil" data-tip="Pizarra táctil: abrir o cerrar la pizarra interactiva">
+          <span class="cmd-grid-icon" style="font-size:1.1rem;">🖍️</span>
+          <span class="cmd-grid-name">Pizarra</span>
+          <span class="cmd-grid-param">táctil</span>
         </button>
       `;
 
@@ -4648,6 +4695,14 @@
       document.getElementById('btn-grid-add-canal')?.addEventListener('click', () => abrirDrillDown({ tipo: 'gestion_canal' }));
       document.getElementById('btn-grid-add-usuario')?.addEventListener('click', () => abrirDrillDown({ tipo: 'gestion_usuario' }));
       document.getElementById('btn-grid-add-mensaje')?.addEventListener('click', () => abrirDrillDown({ tipo: 'gestion_mensaje' }));
+      document.getElementById('btn-grid-toggle-pizarra')?.addEventListener('click', () => {
+        if (typeof alternarPizarraEmbed === 'function') {
+          cambiarPestana('tab-directo');
+          alternarPizarraEmbed(true);
+        } else {
+          window.open('/pizarra-plus', '_blank');
+        }
+      });
 
       // Listeners para los botones de comandos del grid
       container.querySelectorAll('.cmd-grid-btn:not(.cmd-grid-btn-fixed)').forEach(btn => {
@@ -4709,9 +4764,13 @@
             `).join('')}
           </div>
         `;
-        document.getElementById('btn-drill-add-canal')?.addEventListener('click', async () => {
-          const inp = document.getElementById('input-drill-add-canal');
-          if (await agregarValorLista('canal', inp?.value, inp)) abrirDrillDown({ tipo: 'gestion_canal' });
+        const inpCanal = document.getElementById('input-drill-add-canal');
+        const triggerAddCanal = async () => {
+          if (await agregarValorLista('canal', inpCanal?.value, inpCanal)) abrirDrillDown({ tipo: 'gestion_canal' });
+        };
+        document.getElementById('btn-drill-add-canal')?.addEventListener('click', triggerAddCanal);
+        inpCanal?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); triggerAddCanal(); }
         });
       } else if (opts.tipo === 'gestion_usuario') {
         titleEl.textContent = '👤 Usuarios de Twitch';
@@ -4730,9 +4789,13 @@
             `).join('')}
           </div>
         `;
-        document.getElementById('btn-drill-add-usuario')?.addEventListener('click', async () => {
-          const inp = document.getElementById('input-drill-add-usuario');
-          if (await agregarValorLista('usuario', inp?.value, inp)) abrirDrillDown({ tipo: 'gestion_usuario' });
+        const inpUsuario = document.getElementById('input-drill-add-usuario');
+        const triggerAddUsuario = async () => {
+          if (await agregarValorLista('usuario', inpUsuario?.value, inpUsuario)) abrirDrillDown({ tipo: 'gestion_usuario' });
+        };
+        document.getElementById('btn-drill-add-usuario')?.addEventListener('click', triggerAddUsuario);
+        inpUsuario?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); triggerAddUsuario(); }
         });
       } else if (opts.tipo === 'gestion_mensaje') {
         titleEl.textContent = '💬 Mensajes Guardados';
@@ -4755,9 +4818,13 @@
             `).join('')}
           </div>
         `;
-        document.getElementById('btn-drill-add-mensaje')?.addEventListener('click', async () => {
-          const inp = document.getElementById('input-drill-add-mensaje');
-          if (await agregarValorLista('mensaje', inp?.value, inp)) abrirDrillDown({ tipo: 'gestion_mensaje' });
+        const inpMensaje = document.getElementById('input-drill-add-mensaje');
+        const triggerAddMensaje = async () => {
+          if (await agregarValorLista('mensaje', inpMensaje?.value, inpMensaje)) abrirDrillDown({ tipo: 'gestion_mensaje' });
+        };
+        document.getElementById('btn-drill-add-mensaje')?.addEventListener('click', triggerAddMensaje);
+        inpMensaje?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); triggerAddMensaje(); }
         });
         bodyEl.querySelectorAll('.btn-saved-msg-send').forEach(btn => {
           btn.addEventListener('click', async () => {
@@ -4775,25 +4842,94 @@
         titleEl.textContent = '➕ Nuevo Comando';
         subtitleEl.textContent = 'Registra un nuevo comando rápido para la botonera';
         bodyEl.innerHTML = `
-          <div style="display:flex; flex-direction:column; gap:10px;">
-            <input type="text" id="input-drill-cmd-name" placeholder="Ej: !os o /shoutout" style="height:42px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:8px; padding:0 12px; font-size:0.9rem;">
-            <input type="text" id="input-drill-cmd-desc" placeholder="Descripción breve" style="height:42px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:8px; padding:0 12px; font-size:0.9rem;">
-            <select id="select-drill-cmd-tipo" style="height:42px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:8px; padding:0 10px; font-size:0.9rem;">
-              <option value="usuario">👤 Requiere Usuario</option>
-              <option value="canal">📺 Requiere Canal</option>
-              <option value="mensaje">💬 Requiere Mensaje</option>
-              <option value="ninguno">⚡ Sin Parámetro</option>
-            </select>
-            <button type="button" class="touch-btn touch-btn-primary" id="btn-drill-save-cmd" style="min-height:44px; font-weight:700; font-size:0.95rem;">+ Guardar Comando</button>
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div>
+              <label for="input-drill-cmd-name" style="display:block; font-size:0.8rem; font-weight:700; color:#cbd5e1; margin-bottom:4px;">Nombre del comando:</label>
+              <input type="text" id="input-drill-cmd-name" placeholder="Ej: !os o /shoutout" style="width:100%; height:42px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:8px; padding:0 12px; font-size:0.9rem; box-sizing:border-box;">
+            </div>
+            <div>
+              <label for="input-drill-cmd-desc" style="display:block; font-size:0.8rem; font-weight:700; color:#cbd5e1; margin-bottom:4px;">Descripción (opcional):</label>
+              <input type="text" id="input-drill-cmd-desc" placeholder="Descripción breve de lo que hace" style="width:100%; height:42px; background:#1e293b; border:1px solid var(--card-border); color:#fff; border-radius:8px; padding:0 12px; font-size:0.9rem; box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:700; color:#cbd5e1; margin-bottom:6px;">¿Qué tipo de parámetro requiere este comando?:</label>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;" id="cmd-tipo-selector-grid">
+                <button type="button" class="touch-btn cmd-param-pill-btn" data-tipo="ninguno" style="display:flex; align-items:center; justify-content:center; gap:6px; min-height:44px; border:2px solid #38bdf8; background:#0284c728; color:#fff; font-size:0.85rem; font-weight:700; border-radius:8px;">
+                  ⚡ Sin Parámetro
+                </button>
+                <button type="button" class="touch-btn cmd-param-pill-btn" data-tipo="canal" style="display:flex; align-items:center; justify-content:center; gap:6px; min-height:44px; border:1px solid #334155; background:#1e293b; color:#cbd5e1; font-size:0.85rem; font-weight:600; border-radius:8px;">
+                  📺 Requiere Canal
+                </button>
+                <button type="button" class="touch-btn cmd-param-pill-btn" data-tipo="mensaje" style="display:flex; align-items:center; justify-content:center; gap:6px; min-height:44px; border:1px solid #334155; background:#1e293b; color:#cbd5e1; font-size:0.85rem; font-weight:600; border-radius:8px;">
+                  💬 Requiere Mensaje
+                </button>
+                <button type="button" class="touch-btn cmd-param-pill-btn" data-tipo="usuario" style="display:flex; align-items:center; justify-content:center; gap:6px; min-height:44px; border:1px solid #334155; background:#1e293b; color:#cbd5e1; font-size:0.85rem; font-weight:600; border-radius:8px;">
+                  👤 Requiere Usuario
+                </button>
+              </div>
+              <select id="select-drill-cmd-tipo" style="display:none;">
+                <option value="ninguno" selected>⚡ Sin Parámetro</option>
+                <option value="canal">📺 Requiere Canal</option>
+                <option value="mensaje">💬 Requiere Mensaje</option>
+                <option value="usuario">👤 Requiere Usuario</option>
+              </select>
+            </div>
+            <div style="background:#0f172a; border:1px dashed #334155; border-radius:8px; padding:10px; display:flex; align-items:center; justify-content:space-between;">
+              <span style="font-size:0.78rem; color:var(--muted); font-weight:600;">Previsualización en botonera:</span>
+              <span id="drill-cmd-live-preview" style="font-size:0.85rem; font-weight:700; color:#38bdf8; font-family:monospace; background:#1e293b; padding:4px 8px; border-radius:4px;">!comando</span>
+            </div>
+            <button type="button" class="touch-btn touch-btn-primary" id="btn-drill-save-cmd" style="min-height:46px; font-weight:700; font-size:0.95rem; margin-top:4px;">+ Guardar Comando</button>
           </div>
         `;
-        document.getElementById('btn-drill-save-cmd')?.addEventListener('click', async () => {
-          const guardado = await guardarNuevoComando(
-            document.getElementById('input-drill-cmd-name'),
-            document.getElementById('input-drill-cmd-desc'),
-            document.getElementById('select-drill-cmd-tipo'),
-          );
+
+        const tipoSelect = document.getElementById('select-drill-cmd-tipo');
+        const previewEl = document.getElementById('drill-cmd-live-preview');
+        const nameInput = document.getElementById('input-drill-cmd-name');
+        const descInput = document.getElementById('input-drill-cmd-desc');
+        const pillBtns = bodyEl.querySelectorAll('.cmd-param-pill-btn');
+
+        const actualizarPreview = () => {
+          const val = (nameInput?.value || '').trim() || '!comando';
+          const t = tipoSelect?.value || 'ninguno';
+          if (t === 'ninguno') {
+            if (previewEl) previewEl.textContent = val;
+          } else {
+            if (previewEl) previewEl.textContent = `${val} [${t}]`;
+          }
+        };
+
+        nameInput?.addEventListener('input', actualizarPreview);
+
+        pillBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            pillBtns.forEach(b => {
+              b.style.border = '1px solid #334155';
+              b.style.background = '#1e293b';
+              b.style.color = '#cbd5e1';
+              b.style.fontWeight = '600';
+            });
+            btn.style.border = '2px solid #38bdf8';
+            btn.style.background = '#0284c728';
+            btn.style.color = '#fff';
+            btn.style.fontWeight = '700';
+
+            const tipoElegido = btn.dataset.tipo;
+            if (tipoSelect) tipoSelect.value = tipoElegido;
+            actualizarPreview();
+          });
+        });
+
+        const ejecutarGuardar = async () => {
+          const guardado = await guardarNuevoComando(nameInput, descInput, tipoSelect);
           if (guardado) cerrarDrillDown();
+        };
+
+        document.getElementById('btn-drill-save-cmd')?.addEventListener('click', ejecutarGuardar);
+        nameInput?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); ejecutarGuardar(); }
+        });
+        descInput?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); ejecutarGuardar(); }
         });
       } else if (opts.tipo === 'comando') {
         const { cmdName, cmdDesc, paramType } = opts;
@@ -5399,6 +5535,12 @@
         document.getElementById('new-cmd-desc'),
         document.getElementById('new-cmd-tipo'),
       );
+    });
+    document.getElementById('new-cmd-name')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-save-new-cmd')?.click(); }
+    });
+    document.getElementById('new-cmd-desc')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-save-new-cmd')?.click(); }
     });
 
     // ── Tooltip flotante sobre botones de icono (3 segundos - AGENTS.md §3.2) ──
