@@ -125,6 +125,7 @@
     .card > h2 { font-size: 1rem; }
     .hint { color: var(--text-muted); font-size: 0.85rem; }
     .notice { border-left: 3px solid var(--warn); padding-left: var(--gap); font-size: 0.85rem; }
+    .mock-banner { margin: var(--gap); }
 
     .field { display: grid; gap: 0.25rem; }
     .field label { font-size: 0.85rem; font-weight: 600; }
@@ -141,7 +142,6 @@
       font-family: var(--mono);
       font-size: 1rem; /* 16px keeps iOS from zooming on focus */
     }
-    .field[data-missing="true"] input { border-color: var(--warn); }
 
     .source { display: grid; gap: 0.25rem; padding: var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
     .source-head { display: flex; align-items: center; gap: var(--gap); }
@@ -149,10 +149,10 @@
     .source code { font-family: var(--mono); font-size: 0.8rem; color: var(--code); word-break: break-all; user-select: all; -webkit-user-select: all; }
 
     /* ── Studio (state 2, shell only in phase 1) ───────────────────────── */
-    .studio { display: grid; grid-template-rows: auto 1fr auto; min-height: 100dvh; }
+    .studio { display: grid; grid-template-rows: auto auto 1fr auto; min-height: 100dvh; }
     .stage { display: grid; place-items: center; padding: var(--gap); min-height: 0; }
     .stage-canvas {
-      width: min(100%, calc((100dvh - 140px) * 16 / 9));
+      width: min(100%, calc((100dvh - 190px) * 16 / 9));
       aspect-ratio: 16 / 9;
       display: grid;
       place-items: center;
@@ -246,7 +246,7 @@
 
       <section class="card" aria-labelledby="credentials-title">
         <h2 id="credentials-title">Paso 0 · Credenciales</h2>
-        <p class="notice" id="credentials-notice">Fase 1: estos campos todavía no se guardan ni se envían al servidor. La comprobación real de claves llega en la fase 2.</p>
+        <p class="notice" id="credentials-notice">Maqueta de la fase 1. Estos campos no leen las claves que ya tengas guardadas, no guardan nada y no envían nada al servidor. Tampoco comprueban si una clave es válida.</p>
         <form id="credentials-form" autocomplete="off" novalidate>
           <div class="card" style="border:0; padding:0; background:transparent;">
             <div class="field" data-credential="twitchStreamKey" data-required="true">
@@ -277,25 +277,13 @@
 
       <section class="card" aria-labelledby="sources-title">
         <h2 id="sources-title">Fuentes para OBS Studio</h2>
-        <p class="hint">Añade cada dirección en OBS como fuente «Navegador» de 1920×1080.</p>
-        <div class="source">
-          <div class="source-head">
-            <h3>Capa 3D (1920×1080)</h3>
-            <button type="button" class="btn" data-action="copy" data-target="obs-url-plano">Copiar</button>
-          </div>
-          <code id="obs-url-plano" tabindex="0"></code>
-        </div>
-        <div class="source">
-          <div class="source-head">
-            <h3>Cámara</h3>
-            <button type="button" class="btn" data-action="copy" data-target="obs-url-camara">Copiar</button>
-          </div>
-          <code id="obs-url-camara" tabindex="0"></code>
-        </div>
+        <p class="hint">Añade cada dirección en OBS como fuente «Navegador». Las direcciones se forman con la dirección desde la que has abierto esta página.</p>
+        <div id="obs-sources" class="card" style="border:0; padding:0; background:transparent;"></div>
       </section>
 
-      <button type="button" class="btn btn-primary btn-start" id="btn-arrancar-estudio" disabled>▶ Arrancar Estudio</button>
-      <p class="hint" id="start-hint" role="status"></p>
+      <button type="button" class="btn btn-primary btn-start" id="btn-arrancar-estudio" disabled aria-describedby="start-hint">▶ Arrancar Estudio</button>
+      <p class="hint" id="start-hint">«Arrancar Estudio» todavía no hace nada: se conectará al servidor en una fase posterior.</p>
+      <button type="button" class="btn" data-action="preview-studio">Ver la maqueta del estudio</button>
     </main>
   </div>
 
@@ -308,8 +296,10 @@
       </div>
       <div class="app-bar-actions" id="studio-actions">
         <button type="button" class="btn" data-action="back-to-welcome">Volver</button>
+        <button type="button" class="btn" id="btn-apagar-estudio" disabled aria-describedby="studio-mock-note">Apagar</button>
       </div>
     </header>
+    <p class="notice mock-banner" id="studio-mock-note">Maqueta de la fase 1. Nada de esta pantalla está conectado: «Apagar» no detiene ninguna emisión.</p>
     <main class="stage">
       <div class="stage-canvas" id="studio-stage">Lienzo 16:9 de la pizarra · se integra en la fase 3</div>
     </main>
@@ -428,7 +418,7 @@
         showToast('Copiado al portapapeles');
         return;
       }
-      // Both mechanisms failed: leave the text selected for a manual copy.
+      // Neither method confirmed the copy: leave the text selected for a manual copy.
       if (source) selectElementText(source);
       showToast('No se pudo copiar. El texto queda seleccionado: cópialo a mano.');
     }
@@ -465,49 +455,49 @@
       document.querySelectorAll('[data-action="toggle-secret"]').forEach((button) => setSecretVisible(button, false));
     }
 
-    // ── Step 0: readiness ────────────────────────────────────────────────
-    // Phase 1 derives readiness from what is typed in this page only.
-    // Phase 2 replaces readCredentialState() with the server's saved state
-    // and wires saveCredentials(); nothing else here needs to change.
-    function readCredentialState() {
-      const state = {};
-      document.querySelectorAll('[data-credential]').forEach((field) => {
-        state[field.dataset.credential] = {
-          required: field.dataset.required === 'true',
-          present: field.querySelector('input').value.trim().length > 0
-        };
-      });
-      return state;
-    }
-    function missingRequired(state) {
-      return Object.keys(state).filter((key) => state[key].required && !state[key].present);
-    }
-    function refreshReadiness() {
-      const state = readCredentialState();
-      const missing = missingRequired(state);
-      document.querySelectorAll('[data-credential]').forEach((field) => {
-        field.dataset.missing = String(missing.includes(field.dataset.credential));
-      });
-      $('btn-arrancar-estudio').disabled = missing.length > 0;
-      $('start-hint').textContent = missing.length > 0
-        ? 'Rellena las credenciales obligatorias para poder arrancar.'
-        : '';
-    }
-
     // ── OBS sources ──────────────────────────────────────────────────────
-    function renderObsSources(obs) {
+    // Same four paths the server builds in getObsUrls() (server.js), joined
+    // to the origin this page was opened from. /api/panel/config is not
+    // called on purpose: its response also carries credential-bearing URLs.
+    const OBS_SOURCES = [
+      { id: 'plano', title: 'Escena 3D (1920×1080)', path: '/plano?transparente=1', note: 'Diorama con avatares, voces del chat y efectos del panel.' },
+      { id: 'camara', title: 'Cámara', path: '/camara.html', note: 'Solo vídeo, sin sonido.' },
+      { id: 'micro', title: 'Micrófono', path: '/micro-obs.html', note: 'Solo audio. En OBS, activa «Controlar audio vía OBS».' },
+      { id: 'chat', title: 'Chat', path: '/chat.html', note: 'Capa de chat en vivo.' }
+    ];
+    function renderObsSources() {
       const origin = window.location.origin;
-      $('obs-url-plano').textContent = obs.plano || `${origin}/plano?transparente=1`;
-      $('obs-url-camara').textContent = obs.camara || `${origin}/camara.html`;
-    }
-    async function loadObsSources() {
-      renderObsSources({});
-      try {
-        const response = await fetch('/api/panel/config', { cache: 'no-store', credentials: 'same-origin' });
-        if (!response.ok) return;
-        const data = await response.json();
-        renderObsSources(data.obs || {});
-      } catch (_) { /* offline or static hosting: origin-based URLs stay */ }
+      const list = $('obs-sources');
+      list.replaceChildren();
+      OBS_SOURCES.forEach((source) => {
+        const card = document.createElement('div');
+        card.className = 'source';
+
+        const head = document.createElement('div');
+        head.className = 'source-head';
+        const title = document.createElement('h3');
+        title.textContent = source.title;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn';
+        button.dataset.action = 'copy';
+        button.dataset.target = `obs-url-${source.id}`;
+        button.textContent = 'Copiar';
+        button.setAttribute('aria-label', `Copiar la dirección de ${source.title}`);
+        head.append(title, button);
+
+        const url = document.createElement('code');
+        url.id = `obs-url-${source.id}`;
+        url.tabIndex = 0;
+        url.textContent = origin + source.path;
+
+        const note = document.createElement('p');
+        note.className = 'hint';
+        note.textContent = source.note;
+
+        card.append(head, url, note);
+        list.appendChild(card);
+      });
     }
 
     // ── Views ────────────────────────────────────────────────────────────
@@ -619,6 +609,7 @@
       'toggle-secret': (button) => setSecretVisible(button, button.getAttribute('aria-pressed') !== 'true'),
       'open-settings': () => $('settings-dialog').showModal(),
       'close-settings': () => $('settings-dialog').close(),
+      'preview-studio': () => showView('studio'),
       'back-to-welcome': () => showView('welcome')
     };
 
@@ -637,14 +628,10 @@
         if (action) action(button);
       });
 
+      // Phase 1 scaffolding: the form never submits and nothing reads its values.
       $('credentials-form').addEventListener('submit', (event) => event.preventDefault());
-      $('credentials-form').addEventListener('input', refreshReadiness);
-      $('btn-arrancar-estudio').addEventListener('click', () => {
-        if (missingRequired(readCredentialState()).length === 0) showView('studio');
-      });
 
-      refreshReadiness();
-      loadObsSources();
+      renderObsSources();
     }
 
     init();
