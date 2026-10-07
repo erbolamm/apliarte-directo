@@ -259,6 +259,7 @@
     .source-info { display: grid; margin-right: auto; min-width: 0; overflow-wrap: anywhere; }
     .source-info small { color: var(--text-muted); }
     .sheet-body select { width: 100%; min-height: var(--touch); padding: 0 var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 1rem; }
+    .settings-search { width: 100%; min-height: var(--touch); padding: 0 var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: 1rem; }
     .list-row { display: flex; align-items: center; gap: var(--gap); padding: 0.25rem var(--gap); border: 1px solid var(--line); border-radius: var(--radius); }
     .list-row span { margin-right: auto; min-width: 0; overflow-wrap: anywhere; }
     .list-row small { display: block; color: var(--text-muted); }
@@ -486,9 +487,9 @@
       <button type="button" class="icon-btn" id="btn-tts" aria-pressed="false" aria-label="Voz del chat (TTS) apagada: pulsa para activarla" data-tip="Lee en voz alta los mensajes del chat. Otro toque la detiene."></button>
       <span class="toolbar-sep" aria-hidden="true"></span>
       <button type="button" class="icon-btn" id="btn-chat-view" aria-expanded="false" aria-label="Chat" data-tip="Abre el chat del directo."></button>
-      <button type="button" class="icon-btn" id="btn-commands-view" aria-expanded="false" aria-label="Comandos" data-tip="Abre tus comandos favoritos del bot."></button>
+      <button type="button" class="icon-btn" id="btn-commands-view" aria-expanded="false" aria-label="Comandos" data-tip="Abre tus comandos favoritos."></button>
       <button type="button" class="icon-btn" id="btn-obs-menu" aria-expanded="false" aria-label="Controles OBS" data-tip="Abre las escenas, el audio y las fuentes de OBS."></button>
-      <button type="button" class="icon-btn" id="btn-pantalla-negra" data-action="black-screen" aria-label="Pantalla negra de ahorro" data-tip="Pone la pantalla en negro para ahorrar batería sin cortar el directo. Toca la pantalla para volver."></button>
+      <button type="button" class="icon-btn" id="btn-pantalla-negra" data-action="black-screen" aria-label="Pantalla negra de ahorro" data-tip="Pone la pantalla en negro para ahorrar batería sin cortar el directo. Para volver, toca tres veces seguidas o con tres dedos."></button>
       <button type="button" class="icon-btn" data-action="open-settings" aria-label="Abrir ajustes" data-tip="Abre los ajustes del estudio."></button>
       <span class="toolbar-status" id="board-status" role="status"></span>
     </footer>
@@ -637,8 +638,8 @@
     </div>
   </dialog>
 
-  <div class="black-screen" id="black-screen-overlay" hidden role="button" tabindex="0" aria-label="Pantalla apagada para ahorro de batería. Toca para encender.">
-    <div class="black-screen-hint" id="black-screen-hint">Toca cualquier parte para encender la pantalla</div>
+  <div class="black-screen" id="black-screen-overlay" hidden role="button" tabindex="0" aria-label="Pantalla apagada para ahorro de batería. Toca tres veces seguidas, o con tres dedos, para encender.">
+    <div class="black-screen-hint" id="black-screen-hint">Toca tres veces seguidas, o con tres dedos, para encender la pantalla</div>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
@@ -1169,11 +1170,9 @@
     }
     async function showBlackScreen() {
       const overlay = $('black-screen-overlay');
-      const hint = $('black-screen-hint');
       overlay.hidden = false;
-      hint.style.opacity = '1';
-      clearTimeout(blackHintTimer);
-      blackHintTimer = setTimeout(() => { hint.style.opacity = '0'; }, BLACK_HINT_MS);
+      blackTaps = [];
+      showBlackHint();
       overlay.focus({ preventScroll: true });
       await requestScreenWakeLock();
     }
@@ -1185,19 +1184,34 @@
       await releaseScreenWakeLock();
       $('btn-pantalla-negra').focus({ preventScroll: true });
     }
+    // Leaving takes three quick taps or one three-finger touch, so a brush
+    // of the hand does not light the screen. A single tap shows the hint.
+    const BLACK_TAP_WINDOW_MS = 900;
+    let blackTaps = [];
+    function showBlackHint() {
+      const hint = $('black-screen-hint');
+      hint.style.opacity = '1';
+      clearTimeout(blackHintTimer);
+      blackHintTimer = setTimeout(() => { hint.style.opacity = '0'; }, BLACK_HINT_MS);
+    }
+    function registerBlackTap() {
+      const now = Date.now();
+      blackTaps = blackTaps.filter((time) => now - time < BLACK_TAP_WINDOW_MS);
+      blackTaps.push(now);
+      if (blackTaps.length >= 3) { blackTaps = []; hideBlackScreen(); return; }
+      showBlackHint();
+    }
     function bindBlackScreen() {
       const overlay = $('black-screen-overlay');
-      overlay.addEventListener('click', hideBlackScreen);
+      overlay.addEventListener('click', registerBlackTap);
       // preventDefault stops the touch from also clicking what lies beneath.
       overlay.addEventListener('touchstart', (event) => {
         event.preventDefault();
-        hideBlackScreen();
+        if (event.touches.length >= 3) { blackTaps = []; hideBlackScreen(); return; }
+        if (event.touches.length === 1) registerBlackTap();
       }, { passive: false });
       overlay.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          hideBlackScreen();
-        }
+        if (event.key === 'Escape') { event.preventDefault(); hideBlackScreen(); }
       });
       // The browser drops the lock when the page is hidden; take it again.
       document.addEventListener('visibilitychange', () => {
@@ -1725,9 +1739,16 @@
         try {
           const denoise = micSetting('erbolamm_micro_denoise', 'true') !== 'false';
           const echo = micSetting('erbolamm_micro_eco', 'true') !== 'false';
-          mic.stream = await navigator.mediaDevices.getUserMedia({
-            audio: { echoCancellation: echo, noiseSuppression: denoise, autoGainControl: true }
-          });
+          const audio = { echoCancellation: echo, noiseSuppression: denoise, autoGainControl: true };
+          const chosenMic = micSetting('apliarte_estudio_mic_device', '');
+          try {
+            mic.stream = await navigator.mediaDevices.getUserMedia({ audio: chosenMic ? { ...audio, deviceId: { exact: chosenMic } } : audio });
+          } catch (error) {
+            // The chosen microphone is gone: fall back to the default one.
+            if (!chosenMic || error.name !== 'OverconstrainedError') throw error;
+            mic.stream = await navigator.mediaDevices.getUserMedia({ audio });
+            showToast('El micrófono elegido no está disponible: se usa el predeterminado');
+          }
           const AudioContextClass = window.AudioContext || window.webkitAudioContext;
           mic.context = new AudioContextClass();
           if (mic.context.state === 'suspended') await mic.context.resume();
@@ -1804,11 +1825,13 @@
     function cameraPushUrl() {
       const preset = CAMERA_PRESETS[micSetting('erbolamm_cam_preset', 'low')] || CAMERA_PRESETS.low;
       const facing = micSetting('erbolamm_cam_facing', 'user');
-      const deviceId = micSetting('erbolamm_cam_device_id', '');
+      // A chosen camera is passed by its label: VDO.Ninja matches labels,
+      // while device ids differ between this page and its iframe.
+      const deviceLabel = micSetting('apliarte_estudio_cam_label', '');
       const { room, streamId, password } = camera.config;
       const passParam = password ? `&password=${encodeURIComponent(password)}` : '';
-      const facingParam = facing === 'back' || facing === 'environment' ? '&facing=back' : '&facing=user';
-      const deviceParam = deviceId ? `&videodevice=${encodeURIComponent(deviceId)}` : '';
+      const facingParam = deviceLabel ? '' : (facing === 'back' || facing === 'environment' ? '&facing=back' : '&facing=user');
+      const deviceParam = deviceLabel ? `&videodevice=${encodeURIComponent(deviceLabel.trim().replace(/\s+/g, '_'))}` : '';
       return {
         preset,
         url: `https://vdo.ninja/?push=${encodeURIComponent(streamId)}&room=${encodeURIComponent(room)}${passParam}&webcam${facingParam}${deviceParam}&videobitrate=${preset.bitrate}&width=${preset.width}&height=${preset.height}&framerate=${preset.fps}&autostart&cleanoutput&noaudio`
@@ -2483,7 +2506,7 @@
       { id: 'camera', label: 'Cámara y Vídeo' },
       { id: 'audio', label: 'Audio y Filtros' },
       { id: 'stage', label: 'Escenario y Avatares 3D' },
-      { id: 'commands', label: 'Comandos de Bot y Listas' },
+      { id: 'commands', label: 'Comandos' },
       { id: 'system', label: 'Apariencia y Sistema' }
     ];
     // Phase 4 registers one render function per tab id here.
@@ -2522,6 +2545,63 @@
     }
     const rerender = (id) => selectSettingsTab(id);
 
+    // Device picker shared by the camera and audio tabs. Browsers only show
+    // device names after permission was granted on this page, hence the
+    // search button.
+    function devicePicker(panel, { kind, storageKey, valueOf, autoLabel, searchLabel, onChange }) {
+      const row = settingsRow(panel);
+      const select = document.createElement('select');
+      select.setAttribute('aria-label', searchLabel);
+      row.appendChild(select);
+      const status = document.createElement('p');
+      status.className = 'hint';
+      panel.appendChild(status);
+      const fill = async (askPermission) => {
+        select.replaceChildren();
+        const auto = document.createElement('option');
+        auto.value = '';
+        auto.textContent = autoLabel;
+        select.appendChild(auto);
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+          status.textContent = 'Este navegador no deja ver los dispositivos aquí (hace falta HTTPS o localhost).';
+          return;
+        }
+        if (askPermission) {
+          try {
+            const probe = await navigator.mediaDevices.getUserMedia(kind === 'videoinput' ? { video: true } : { audio: true });
+            probe.getTracks().forEach((track) => track.stop());
+          } catch (_) { /* denied: the list stays without names */ }
+        }
+        let devices = [];
+        try { devices = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === kind); } catch (_) { /* none */ }
+        const named = devices.filter((device) => device.label);
+        const stored = micSetting(storageKey, '');
+        named.forEach((device) => {
+          const option = document.createElement('option');
+          option.value = valueOf(device);
+          option.textContent = device.label;
+          select.appendChild(option);
+        });
+        if (stored && !named.some((device) => valueOf(device) === stored)) {
+          const missing = document.createElement('option');
+          missing.value = stored;
+          missing.textContent = 'Elegido antes (no conectado ahora)';
+          select.appendChild(missing);
+        }
+        select.value = stored;
+        status.textContent = named.length > 0 ? '' : (devices.length > 0
+          ? 'Pulsa «Buscar» y da permiso para ver los nombres de los dispositivos.'
+          : 'No se ha encontrado ningún dispositivo.');
+      };
+      select.addEventListener('change', () => {
+        if (select.value) storeSetting(storageKey, select.value);
+        else { try { localStorage.removeItem(storageKey); } catch (_) { /* private mode */ } }
+        onChange(select.options[select.selectedIndex].textContent);
+      });
+      settingsButton(row, 'Buscar', () => fill(true));
+      fill(false);
+    }
+
     // Changing a camera setting while it is sending reloads the VDO.Ninja
     // page, as the old panel does; the picture drops for a moment.
     function reloadCameraIfActive() {
@@ -2539,6 +2619,17 @@
       };
       settingsButton(facing, 'Frontal (selfie)', () => setFacing('user', 'frontal'), !back);
       settingsButton(facing, 'Trasera', () => setFacing('back', 'trasera'), back);
+
+      settingsHeading(panel, 'Dispositivo de cámara');
+      devicePicker(panel, {
+        kind: 'videoinput',
+        storageKey: 'apliarte_estudio_cam_label',
+        valueOf: (device) => device.label,
+        autoLabel: 'Automática (según frontal o trasera)',
+        searchLabel: 'Dispositivo de cámara',
+        onChange: (label) => { reloadCameraIfActive(); showToast(`Cámara: ${label}`); }
+      });
+      settingsNote(panel, 'Si eliges una cámara concreta, «Frontal» y «Trasera» dejan de aplicarse.');
 
       settingsHeading(panel, 'Calidad');
       const quality = document.createElement('select');
@@ -2577,7 +2668,6 @@
         $('camera-push-container').classList.toggle('minimized', camera.previewHidden);
         rerender('camera');
       }, camera.previewHidden);
-      settingsNote(panel, 'Falta por traer del panel antiguo: elegir un dispositivo de cámara concreto.');
     };
 
     settingsRenderers.audio = (panel) => {
@@ -2593,6 +2683,16 @@
           return true;
         } catch (_) { return false; }
       };
+      settingsHeading(panel, 'Micrófono');
+      devicePicker(panel, {
+        kind: 'audioinput',
+        storageKey: 'apliarte_estudio_mic_device',
+        valueOf: (device) => device.deviceId,
+        autoLabel: 'Predeterminado del sistema',
+        searchLabel: 'Micrófono',
+        onChange: (label) => showToast(mic.active ? `Micrófono: ${label}. Se usará al volver a encenderlo` : `Micrófono: ${label}`)
+      });
+
       settingsHeading(panel, 'Filtros del micrófono');
       const filters = settingsRow(panel);
       settingsButton(filters, denoise ? 'Silenciar ruido: activado' : 'Silenciar ruido: apagado', async () => {
@@ -2673,8 +2773,6 @@
       settingsHeading(panel, 'Apariencia');
       const dark = document.documentElement.dataset.theme === 'dark';
       settingsButton(settingsRow(panel), dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro', () => { toggleTheme(); rerender('system'); });
-      settingsHeading(panel, 'Pantalla');
-      settingsButton(settingsRow(panel), 'Pantalla negra de ahorro', () => { $('settings-dialog').close(); showBlackScreen(); });
       settingsHeading(panel, 'Fuentes de OBS');
       settingsButton(settingsRow(panel), 'Ver las direcciones para OBS', () => { $('settings-dialog').close(); showView('welcome'); });
     };
@@ -2932,6 +3030,7 @@
     };
 
     let commandsTabLoaded = false;
+    let commandsTabFilter = '';
     settingsRenderers.commands = (panel) => {
       if (!commandsTabLoaded) {
         commandsTabLoaded = true;
@@ -2941,6 +3040,21 @@
         });
         return;
       }
+      const search = document.createElement('input');
+      search.type = 'search';
+      search.className = 'settings-search';
+      search.placeholder = 'Buscar comando, usuario, canal o mensaje';
+      search.setAttribute('aria-label', 'Buscar en comandos y listas');
+      search.autocomplete = 'off';
+      search.value = commandsTabFilter;
+      panel.appendChild(search);
+      // Filtering hides rows in place, so typing keeps the focus.
+      const applyFilter = () => {
+        commandsTabFilter = search.value;
+        const query = search.value.trim().toLowerCase();
+        panel.querySelectorAll('.list-row').forEach((row) => { row.hidden = Boolean(query) && !row.dataset.search.includes(query); });
+      };
+      search.addEventListener('input', applyFilter);
       const section = (title, type, entries) => {
         const head = settingsRow(panel);
         const heading = document.createElement('h3');
@@ -2952,6 +3066,7 @@
         entries.forEach(([value, desc]) => {
           const row = document.createElement('div');
           row.className = 'list-row';
+          row.dataset.search = (value + ' ' + (desc || '')).toLowerCase();
           const text = document.createElement('span');
           text.textContent = value;
           if (desc && desc !== '—') {
@@ -2964,11 +3079,12 @@
           panel.appendChild(row);
         });
       };
-      section('Comandos del bot', 'comando', commands.cache.map((entry) => (Array.isArray(entry) ? [String(entry[0] ?? ''), String(entry[1] ?? '')] : [String(entry ?? ''), ''])).filter(([name]) => name));
+      section('Comandos', 'comando', commands.cache.map((entry) => (Array.isArray(entry) ? [String(entry[0] ?? ''), String(entry[1] ?? '')] : [String(entry ?? ''), ''])).filter(([name]) => name));
       section('Usuarios', 'usuario', commands.lists.usuario.map((value) => [String(value), '']));
       section('Canales', 'canal', commands.lists.canal.map((value) => [String(value), '']));
       section('Mensajes', 'mensaje', commands.lists.mensaje.map((value) => [String(value), '']));
       settingsNote(panel, 'Falta por traer del panel antiguo: los minijuegos del chat.');
+      applyFilter();
     };
 
     function selectSettingsTab(id) {
@@ -3080,7 +3196,7 @@
       hideAllSecrets();
       document.querySelectorAll('[data-action="open-settings"]').forEach((button) => { button.innerHTML = icon('gear'); });
       document.querySelectorAll('[data-action="close-settings"]').forEach((button) => { button.innerHTML = icon('close'); });
-      document.querySelectorAll('[data-action="black-screen"]').forEach((button) => { button.innerHTML = icon('screenOff'); });
+      document.querySelectorAll('[data-action="black-screen"]').forEach((button) => { button.innerHTML = icon('eye'); });
       buildSettingsTabs();
       bindTips();
       bindBlackScreen();
