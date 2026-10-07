@@ -466,8 +466,8 @@
     }
 
     // ── Credential groups (phase 1 scaffolding) ──────────────────────────
-    // One group per block of data/config.json plus the OBS connection and
-    // the custom streaming server. Nothing here is read from, stored in or
+    // One group per block of data/config.json that the project actually
+    // uses, plus the OBS connection and the custom streaming server. Nothing here is read from, stored in or
     // sent to the server; the switch only shows or hides its own fields.
     const CREDENTIAL_GROUPS = [
       { id: 'twitch-stream', title: 'Emisión en Twitch', required: true, fields: [
@@ -498,10 +498,7 @@
         fields: [
           { id: 'relay-server', label: 'Servidor' },
           { id: 'relay-stream-key', label: 'Clave de retransmisión', secret: true }
-        ] },
-      { id: 'openai', title: 'OpenAI', enabled: false, fields: [
-        { id: 'openai-api-key', label: 'Clave de API de OpenAI', secret: true }
-      ] }
+        ] }
     ];
 
     function buildField(field) {
