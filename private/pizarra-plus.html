@@ -65,22 +65,6 @@
       display: none !important;
     }
 
-    #board-placeholder {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px 20px;
-      margin: auto;
-      text-align: center;
-      color: var(--text-muted);
-      border: 1px dashed var(--border-color);
-      border-radius: 12px;
-      max-width: 440px;
-      gap: 12px;
-      background: var(--panel-bg);
-    }
-
     #obs-preview-bg {
       position: absolute;
       inset: 0;
@@ -618,12 +602,6 @@
           <span class="fav-label">+ Favoritos</span>
         </button>
       </nav>
-      <div id="board-placeholder">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 44px; height: 44px; color: var(--accent);" aria-hidden="true"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h10"/></svg>
-        <div style="font-weight: 700; font-size: 15px; color: var(--text-main);">Centro de Control Táctil</div>
-        <div style="font-size: 13px;">La pizarra táctil se inicia desactivada para facilitar el control de cámara, micrófono y comandos. Toca el botón de pizarra para abrir el lienzo de dibujo.</div>
-        <button type="button" class="sheet-btn primary" id="btn-activate-board" style="min-height: 42px; padding: 0 18px; font-weight: 700; margin-top: 4px;">Abrir Pizarra de Dibujo</button>
-      </div>
       <div id="canvas-container" class="board-hidden">
         <img id="obs-preview-bg" alt="Vista previa OBS" />
         <canvas id="drawing-canvas"></canvas>
@@ -1031,6 +1009,12 @@
     }
 
     function resizeContainer() {
+      if (typeof boardActive !== 'undefined' && !boardActive) {
+        toolbar.style.width = 'auto';
+        const barH = toolbar.offsetHeight || 56;
+        document.documentElement.style.setProperty?.('--bar-h', barH + 'px');
+        return;
+      }
       const availW = wrapper.clientWidth;
       const availH = wrapper.clientHeight;
       // The toolbar may wrap to two rows on narrow screens: measure it at the
@@ -2239,25 +2223,19 @@
     // ── Board Activation & Reposo Toggle ──
     let boardActive = false;
     const canvasContainerEl = document.getElementById('canvas-container');
-    const boardPlaceholderEl = document.getElementById('board-placeholder');
     const btnToggleBoardEl = document.getElementById('btn-toggle-board');
-    const btnActivateBoardEl = document.getElementById('btn-activate-board');
 
     function setBoardActive(active) {
       boardActive = !!active;
       if (canvasContainerEl) canvasContainerEl.classList.toggle('board-hidden', !boardActive);
-      if (boardPlaceholderEl) boardPlaceholderEl.style.display = boardActive ? 'none' : 'flex';
       if (btnToggleBoardEl) {
         btnToggleBoardEl.classList.toggle('active', boardActive);
         btnToggleBoardEl.setAttribute('aria-pressed', String(boardActive));
-        btnToggleBoardEl.setAttribute('aria-label', boardActive ? 'Lienzo de dibujo activo. Toca para ocultar' : 'Lienzo de dibujo en reposo. Toca para activar');
+        btnToggleBoardEl.setAttribute('aria-label', boardActive ? 'Pizarra activa. Toca para replegar' : 'Pizarra en reposo. Toca para activar');
       }
-      if (boardActive && typeof resizeCanvas === 'function') {
-        resizeCanvas();
-      }
+      resizeContainer();
     }
     btnToggleBoardEl?.addEventListener('click', () => setBoardActive(!boardActive));
-    btnActivateBoardEl?.addEventListener('click', () => setBoardActive(true));
 
     renderFavoritesBar(getSavedFavorites());
 
