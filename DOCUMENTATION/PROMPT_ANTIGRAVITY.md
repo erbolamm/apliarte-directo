@@ -161,6 +161,32 @@ Comprobado: `npm test` da `tests 891`, `pass 891`, `fail 0`. `public/office-3d.j
 - La cola de animaciones es para fiesta, conga y bronca. La bienvenida corta y vacía la cola.
 - En la conga, quien recibe un avatar al azar no se lo queda: al terminar, el avatar se suelta y pide que lo adopten.
 
+## 2 octies. Estado al cerrar el 2026-10-09 (00:35). Léelo antes que nada.
+
+**Todo está guardado y subido a GitHub.** `npm test`: `tests 902`, `pass 902`, `fail 0`. El servidor en marcha arrancó a las 00:30 con todo.
+
+**Probado en pantalla por Javier y funciona. No lo toques:** adoptar avatares, el nombre encima del avatar, la conga con avatar propio, la fila de fiesta, conga y bronca, el chat del estudio con ojos, y el ojo con mensajes de YouTube. Los dueños sobreviven a un reinicio (comprobado: dos dueños seguían tras reiniciar).
+
+**Arreglado por Claude esta noche, a petición de Javier. No lo rehagas:**
+
+- `public/estudio.html`: la voz del chat con motor de servidor cortaba a 160 caracteres (`playServerVoice`). Ahora parte el mensaje por palabras y lo dice entero, y sigue la velocidad y el tono de los ajustes. Prueba: `test/estudio-voz-servidor.test.js`. El arreglo de trozos que hiciste tú era para los avatares de `plano.html`; la voz que Javier oye en el estudio va por otro camino.
+- `src/youtube-livechat.js`: los nombres de YouTube pierden su `@` al entrar (P9 resuelto).
+- `server.js`: la bienvenida no saluda al dueño del canal en YouTube.
+- `public/chat.html` y su copia: devueltos a como estaban (tarea 2 resuelta).
+
+**Sigue sin resolver:**
+
+- P8, claro y oscuro de la tarjeta de SMS. Javier dice que no le funciona. Claude lo probó en un navegador limpio cambiando el modo tres veces por `/api/categoria` y la tarjeta cambió las tres en menos de 5 segundos. No está reproducido. Hay que ver qué hace Javier exactamente y dónde lo mira.
+
+**Aprobado por Javier («a todo que sí»). Puedes hacerlo, uno por uno, con commit propio y pruebas:**
+
+1. P4, ajustes en el Mac, con la tabla corregida: todas las claves, y el tamaño de las barras se queda en OBS.
+2. Quitar Botrix (tarea 3). Enseña antes la lista de lo que deja de funcionar.
+3. Quitar el canal de YouTube fijo (tarea 4). **Cuidado:** hoy el ojo de YouTube le funciona a Javier gracias a ese valor fijo. Antes de quitarlo, su canal tiene que quedar configurado por la vía normal (ajuste del estudio o variable de entorno) y comprobado. Si no, le rompes algo que funciona.
+4. El traductor (tarea 6).
+
+Sigue valiendo P0: nada nuevo fuera de esta lista, y cada cosa se comprueba en un servidor aparte antes de darla por hecha.
+
 ## 3. Tareas, en este orden
 
 ### P0 — Parar de añadir. Javier pide: «por favor que no falle nada más»
