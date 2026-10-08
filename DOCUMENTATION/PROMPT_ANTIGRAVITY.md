@@ -253,6 +253,14 @@ Hay que averiguar a qué se refiere Javier. Tres posibilidades; compruébalas en
 
 Pregunta a Javier dónde lo ve y qué botón pulsa antes de cambiar nada. Lo único que puedes arreglar sin preguntar es el color de `.btn-zoom` en modo claro, aquí y en `contexto.html` y `avatares.html` si les pasa lo mismo.
 
+### P9 — Doble arroba en los nombres de YouTube (pequeño)
+
+Javier lo vio el 2026-10-09 al probar: un mensaje de YouTube sale como «@@erbolammApliArte hola desde youtube». El ojo con YouTube funciona; solo sobra una arroba.
+
+Causa probable: los nombres de YouTube ya vienen con `@` y la página añade otra (`public/estudio.html`, en `agregarMensajeTwitchFeed`: `@${msg.nombreVisible || msg.usuario}`). Mira también la tarjeta de `public/sms-pantalla.html`, el bocadillo de `public/camara.html` y el texto de bienvenida de `src/bienvenida-chat.js`.
+
+Arréglalo en un solo sitio: quita la arroba inicial del nombre al recibirlo en el servidor, para Twitch y YouTube por igual, y deja que cada página ponga la suya. Prueba con un nombre que empiece por `@` y otro que no.
+
 ### P5 — La bronca se para (después de P7)
 
 Lo que dice Javier: «la bronca que se para».
