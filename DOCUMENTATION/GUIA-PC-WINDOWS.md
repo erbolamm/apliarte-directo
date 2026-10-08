@@ -10,7 +10,7 @@
 **ApliArte Directo** es una suite de streaming soberana, local y ligera diseñada para emitir a **Twitch y YouTube** desde tu ordenador con:
 
 1. **Capa interactiva 3D en OBS**: avatares tridimensionales animados que reaccionan a tu voz (lip-sync), reloj digital, alertas y rótulos en tiempo real.
-2. **Pizarra táctil para tablet o móvil (`/pizarra-plus`)**: controla tu directo desde el iPad o teléfono sin cambiar de ventana en el PC. Tienes a mano:
+2. **Estudio táctil para tablet o móvil (`/estudio`, o ruta antigua `/pizarra-plus`)**: controla tu directo desde el iPad o teléfono sin cambiar de ventana en el PC. Tienes a mano:
    - Activar y apagar la cámara de la tablet con un toque (emitiendo directamente a OBS o volviendo al monigote animado).
    - Silenciar o activar tu micrófono.
    - Activar o parar la voz del chat (Chat TTS).
@@ -74,15 +74,15 @@ En la ventana negra de la terminal verás un resumen con tus enlaces locales:
 ```text
 ✅ ApliArte Directo está funcionando. No cierres esta ventana mientras emites.
 
-📱 Pizarra táctil (Tablet o Móvil en la misma red Wi-Fi):
-   http://192.168.1.35:7979/pizarra-plus
+📱 Estudio táctil (Tablet o Móvil en la misma red Wi-Fi):
+   http://192.168.1.35:7979/estudio (o ruta antigua /pizarra-plus)
 
 En OBS, añade dos «Fuentes de navegador» de 1920 × 1080:
   • Capa (avatares y rótulos):  http://127.0.0.1:7979/plano?transparente=1
   • Cámara (conmutador monigote): http://127.0.0.1:7979/camara.html
   • Fondo animado:              http://127.0.0.1:7979/fondo.html
 
-Panel de control (ordenador):   http://127.0.0.1:7979/admin
+Panel de control (ordenador):   http://127.0.0.1:7979/estudio (o ruta antigua /admin)
 ```
 
 > 💡 **Consejo**: Deja la ventana negra de la terminal minimizada mientras dure tu directo. Al terminar, simplemente pulsa `Ctrl + C` o cierra la ventana.
@@ -118,11 +118,11 @@ Si quieres emitir a las dos plataformas con una sola salida desde OBS:
 2. **Servicio**: Selecciona `Personalizado...`
 3. **Servidor**: `rtmp://127.0.0.1:1935/live`
 4. **Clave de retransmisión**: escribe cualquier palabra (por ejemplo `directo`).
-5. En tu panel de ApliArte (`http://127.0.0.1:7979/admin`), ve a la pestaña de configuración y pega tus claves de transmisión reales de Twitch y YouTube. El servidor de ApliArte distribuirá la señal a ambos sitios automáticamente.
+5. En tu panel de ApliArte (`http://127.0.0.1:7979/estudio`, o ruta antigua `/admin`), ve a la pestaña de configuración y pega tus claves de transmisión reales de Twitch y YouTube. El servidor de ApliArte distribuirá la señal a ambos sitios automáticamente.
 
 ---
 
-## 📱 Conectar tu Tablet o Móvil (Pizarra Táctil)
+## 📱 Conectar tu Tablet o Móvil (Estudio Táctil)
 
 Para controlar la emisión desde la tablet (iPad, tablet Android o smartphone):
 
@@ -130,9 +130,9 @@ Para controlar la emisión desde la tablet (iPad, tablet Android o smartphone):
 2. Abre el navegador de la tablet (Safari en iPad o Chrome en Android).
 3. Introduce la dirección que mostró la terminal al arrancar:
    ```text
-   http://<IP-DE-TU-PC>:7979/pizarra-plus
+   http://<IP-DE-TU-PC>:7979/estudio
    ```
-   *(Por ejemplo: `http://192.168.1.35:7979/pizarra-plus`).*
+   *(Por ejemplo: `http://192.168.1.35:7979/estudio`, o ruta antigua `/pizarra-plus`).*
 4. **Guárdala en tu pantalla de inicio**:
    - En iPad / Safari: pulsa el botón Compartir y elige **«Añadir a la pantalla de inicio»**.
    - En Android / Chrome: pulsa los tres puntos y selecciona **«Instalar aplicación»** o **«Añadir a pantalla de inicio»**.
@@ -167,7 +167,7 @@ Para controlar la emisión desde la tablet (iPad, tablet Android o smartphone):
 ### 3. ¿Cómo saber cuál es la IP de mi PC manualmente?
 - Pulsa la tecla `Windows + R`, escribe `cmd` y pulsa Intro.
 - Escribe `ipconfig` y busca la línea que dice **Dirección IPv4** (suele empezar por `192.168.1.X` o `192.168.0.X`).
-- Esa es la IP que debes escribir en la tablet: `http://192.168.1.X:7979/pizarra-plus`.
+- Esa es la IP que debes escribir en la tablet: `http://192.168.1.X:7979/estudio` (o ruta antigua `/pizarra-plus`).
 
 ---
 
@@ -176,6 +176,6 @@ Para controlar la emisión desde la tablet (iPad, tablet Android o smartphone):
 Una vez configurado todo la primera vez, tu rutina diaria para hacer directo será simplemente:
 
 1. **Doble clic en `Iniciar directo.bat`** en tu PC.
-2. **Abrir la Pizarra en la tablet** tocando el icono de la pantalla de inicio.
+2. **Abrir el Estudio en la tablet** tocando el icono de la pantalla de inicio.
 3. **Abrir OBS Studio** y pulsar **«Iniciar transmisión»**.
 4. ¡A disfrutar del directo con tu comunidad!

@@ -60,7 +60,7 @@ Se lee `config.local.json` si existe y, si no, `config.ejemplo.json`.
 
 ### Claves de Twitch y YouTube: solo en el panel
 
-1. Abre el panel privado de Directo (`/admin`), accede a **Config & OBS** y entra en **Credenciales & Red**.
+1. Abre el panel privado de Directo (`/estudio`, o ruta antigua `/admin`), accede a **Config & OBS** y entra en **Credenciales & Red**.
 2. En **Emisión Twitch / YouTube / WHIP**, pega las dos claves y pulsa **Guardar emisión**. Los campos quedan vacíos tras guardar; el estado muestra solo «guardada» o «pendiente».
 3. Arranca el centro con `npm run centro`; en **Destinos de emisión** del mismo panel pulsa actualizar. OBS publica en `rtmp://127.0.0.1:1935/live/<nombre>`.
 

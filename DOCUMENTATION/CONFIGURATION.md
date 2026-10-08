@@ -32,7 +32,7 @@ Stores application persistent state in JSON format:
 
 #### Admin panel lists: the server is the owner (since 2026-09-30)
 
-The admin panel (`/admin`, port 7979) reads and writes these lists only through
+The studio panel (`/estudio`, or legacy `/admin`, port 7979) reads and writes these lists only through
 `/api/panel/lista?tipo=usuario|canal|mensaje` and `/api/panel/comandos-bot`. The
 same `data/panel/` files are shared with every browser and device that opens the panel.
 

@@ -39,8 +39,8 @@
    - *En Windows*: Si aparece la alerta del Firewall de Windows, marca **«Redes privadas»** y pulsa **«Permitir acceso»** para que tu tablet o móvil puedan conectarse a la pizarra táctil.
 3. La primera vez se instalarán las dependencias automáticamente y se abrirá tu navegador para crear la contraseña privada de tu panel.
 4. En la consola verás tus enlaces listos para usar:
-   - **Panel en PC**: `http://127.0.0.1:7979/admin`
-   - **Pizarra táctil (tablet o móvil)**: `http://<TU-IP-LOCAL>:7979/pizarra-plus`
+   - **Panel en PC**: `http://127.0.0.1:7979/estudio` (panel unificado; `/admin` sigue funcionando como ruta antigua)
+   - **Pizarra táctil (tablet o móvil)**: `http://<TU-IP-LOCAL>:7979/estudio` (o `/pizarra-plus`)
    - **Fuentes OBS (1920×1080)**:
      - Capa transparente (avatares 3D, chat y rótulos): `http://127.0.0.1:7979/plano?transparente=1`
      - Cámara conmutable (monigote / vídeo): `http://127.0.0.1:7979/camara.html`
@@ -66,7 +66,7 @@ nano .env   # Set PANEL_PASS; never commit this file
 docker compose up -d
 ```
 
-The private cockpit opens at `http://localhost:7979/admin`. On first use, open its configuration panel to enter your own Twitch chat OAuth token, Twitch stream key and VDO mixer credentials. Those values persist under ignored `data/`; keep that directory backed up and never commit or publish it. The public demo is separate and does not connect to your private instance.
+The private cockpit opens at `http://localhost:7979/estudio` (or legacy `/admin`). On first use, open its configuration panel to enter your own Twitch chat OAuth token, Twitch stream key and VDO mixer credentials. Those values persist under ignored `data/`; keep that directory backed up and never commit or publish it. The public demo is separate and does not connect to your private instance.
 
 For detailed operational procedures, consult the [**Deployment Guide**](./DOCUMENTATION/DEPLOYMENT.md).
 
@@ -112,7 +112,7 @@ To use your smartphone's front-facing camera and microphone on the road, modern 
   ```bash
   tailscale serve https / http://127.0.0.1:7979
   ```
-- Your mobile cockpit will be accessible securely at `https://<your-vps-node>.<your-tailnet>.ts.net/admin` exclusively from your authenticated Tailscale devices, with zero application passwords needed and zero public exposure.
+- Your mobile cockpit will be accessible securely at `https://<your-vps-node>.<your-tailnet>.ts.net/estudio` (or legacy `/admin`) exclusively from your authenticated Tailscale devices, with zero application passwords needed and zero public exposure.
 
 ---
 

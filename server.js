@@ -1529,7 +1529,7 @@ const server = http.createServer((req, res) => {
 <h1>Panel reclamado</h1>
 <p>Esta es la contraseña de tu panel. <strong>Guárdala ahora: no se volverá a mostrar.</strong></p>
 <p><code style="font-size:1.3rem;padding:8px;border:1px solid #ccc;display:inline-block;user-select:all">${nueva}</code></p>
-<p>Este navegador ya tiene acceso. <a href="/admin">Ir al panel</a></p></main>`);
+<p>Este navegador ya tiene acceso. <a href="/estudio">Ir al estudio</a></p></main>`);
   }
   if (path === '/api/panel/streaming') {
     return handleStreamingConfig(req, res, DATA_DIR, isAuth);
