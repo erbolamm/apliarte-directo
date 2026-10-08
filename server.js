@@ -673,7 +673,8 @@ function iniciarYoutubeLiveChat(canalOVideoId = youtubeCanalConfig) {
   });
 
   youtubeChatInstancia.on('chat', (item) => {
-    if (gestorBienvenida) {
+    // The channel owner is never welcomed to their own stream.
+    if (gestorBienvenida && !item.isOwner) {
       const accion = gestorBienvenida.procesarUsuario({
         usuario: item.usuario,
         nombreVisible: item.usuario,

@@ -40,7 +40,8 @@ class YoutubeLiveChat extends EventEmitter {
     if (!renderer || !renderer.id) return null;
 
     const id = String(renderer.id);
-    const usuario = renderer.authorName?.simpleText || 'anónimo';
+    // YouTube handles already start with "@"; pages add their own, so it is dropped here.
+    const usuario = (renderer.authorName?.simpleText || '').replace(/^@+/, '') || 'anónimo';
     const texto = YoutubeLiveChat.parseRunsText(renderer.message?.runs);
     const avatar = renderer.authorPhoto?.thumbnails?.slice(-1)[0]?.url || null;
     const isOwner = Boolean(

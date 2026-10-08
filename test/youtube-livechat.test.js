@@ -176,3 +176,14 @@ test('YoutubeLiveChat extracts initial tokens and polls messages with mock fetch
   chat.stop();
   assert.equal(chat.running, false);
 });
+
+test('YoutubeLiveChat.parseChatItem drops the leading at-sign from YouTube handles', () => {
+  const item = (name) => YoutubeLiveChat.parseChatItem({
+    addChatItemAction: { item: { liveChatTextMessageRenderer: {
+      id: 'x1', authorName: { simpleText: name }, message: { runs: [{ text: 'hola' }] },
+    } } },
+  });
+  assert.equal(item('@erbolammApliArte').usuario, 'erbolammApliArte');
+  assert.equal(item('Manolito').usuario, 'Manolito');
+  assert.equal(item('@').usuario, 'anónimo');
+});
