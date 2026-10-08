@@ -2433,13 +2433,58 @@
       }
       return utterance;
     }
-    function playServerVoice(text) {
-      tts.serverPlaying = true;
-      tts.player.src = `/api/tts?tl=es&q=${encodeURIComponent(text.slice(0, 160))}`;
-      tts.player.play().catch(() => { tts.serverPlaying = false; setTimeout(pumpTtsQueue, 150); });
+    // The server voice takes at most 160 characters per request, so a long
+    // message is split on whole words and its pieces are played in a row.
+    const SERVER_VOICE_MAX = 160;
+    function splitForServerVoice(text, max = SERVER_VOICE_MAX) {
+      const pieces = [];
+      let current = '';
+      for (const word of String(text || '').trim().split(/\s+/).filter(Boolean)) {
+        if (word.length > max) {
+          if (current) { pieces.push(current); current = ''; }
+          for (let i = 0; i < word.length; i += max) pieces.push(word.slice(i, i + max));
+          continue;
+        }
+        const candidate = current ? current + ' ' + word : word;
+        if (candidate.length <= max) current = candidate;
+        else { pieces.push(current); current = word; }
+      }
+      if (current) pieces.push(current);
+      return pieces;
     }
-    tts.player.addEventListener('ended', () => { tts.serverPlaying = false; setTimeout(pumpTtsQueue, 150); });
-    tts.player.addEventListener('error', () => { tts.serverPlaying = false; setTimeout(pumpTtsQueue, 150); });
+    let serverVoicePieces = [];
+    // A failed piece raises both an error event and a rejected play(); each
+    // piece moves on once, whichever arrives first.
+    let finishServerPiece = () => {};
+    function playNextServerPiece() {
+      const piece = serverVoicePieces.shift();
+      if (!piece || !tts.active) {
+        serverVoicePieces = [];
+        finishServerPiece = () => {};
+        tts.serverPlaying = false;
+        setTimeout(pumpTtsQueue, 150);
+        return;
+      }
+      let finished = false;
+      const finish = () => { if (finished) return; finished = true; playNextServerPiece(); };
+      finishServerPiece = finish;
+      tts.serverPlaying = true;
+      tts.player.src = `/api/tts?tl=es&q=${encodeURIComponent(piece)}`;
+      // Speed and tone come from the same settings as the device voice.
+      const keepPitch = ttsPreservePitch();
+      tts.player.preservesPitch = keepPitch;
+      tts.player.mozPreservesPitch = keepPitch;
+      tts.player.webkitPreservesPitch = keepPitch;
+      tts.player.defaultPlaybackRate = ttsSpeed();
+      tts.player.playbackRate = ttsSpeed();
+      tts.player.play().catch(finish);
+    }
+    function playServerVoice(text) {
+      serverVoicePieces = splitForServerVoice(text);
+      playNextServerPiece();
+    }
+    tts.player.addEventListener('ended', () => finishServerPiece());
+    tts.player.addEventListener('error', () => finishServerPiece());
     function pumpTtsQueue() {
       if (!tts.active || tts.queue.length === 0) return;
       if (ttsEngine() === 'server') {
@@ -2564,6 +2609,8 @@
       }
       backgroundSpeech.stop();
       tts.queue.length = 0;
+      serverVoicePieces = [];
+      finishServerPiece = () => {};
       tts.serverPlaying = false;
       try { tts.player.pause(); tts.player.removeAttribute('src'); } catch (_) { /* idle */ }
       if (hasSpeech) { try { window.speechSynthesis.cancel(); } catch (_) { /* idle */ } }
