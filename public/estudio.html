@@ -408,7 +408,7 @@
     .toast {
       position: fixed;
       left: 50%;
-      bottom: calc(1rem + env(safe-area-inset-bottom));
+      bottom: calc(var(--touch) + 3 * var(--gap) + env(safe-area-inset-bottom));
       transform: translateX(-50%);
       max-width: calc(100vw - 1rem);
       padding: var(--gap) 1rem;
@@ -623,7 +623,7 @@
       </div>
     </aside>
 
-    <div class="camera-box" id="camera-push-container" hidden>
+    <div class="camera-box minimized" id="camera-push-container" hidden>
       <iframe id="camera-push-iframe" src="about:blank" title="Cámara de este dispositivo" allow="camera; microphone; autoplay; fullscreen"></iframe>
     </div>
 
@@ -1850,7 +1850,7 @@
         const socket = new WebSocket(`${protocol}//${window.location.host}/ws${token ? `?token=${encodeURIComponent(token)}` : ''}`);
         panel.ws = socket;
         socket.onopen = () => {
-          panelSend({ type: 'tts_estado', activo: Boolean(typeof tts !== 'undefined' && tts && tts.active) });
+          panelSend({ type: 'tts_estado', activo: Boolean(typeof tts !== 'undefined' && tts && tts.active), velocidad: ttsSpeed(), preservePitch: ttsPreservePitch() });
         };
         socket.onmessage = (event) => {
           let data;
@@ -1980,7 +1980,13 @@
       med: { width: 640, height: 360, fps: 24, bitrate: 600, desc: '640×360 @ 24fps' },
       high: { width: 1280, height: 720, fps: 30, bitrate: 1500, desc: '1280×720 @ 30fps' }
     };
-    const camera = { active: false, mode: 'monigote', aspect: 'horizontal', previewHidden: false, config: { room: 'erbolammapliarte', streamId: 'ja_cam_directo', password: '' } };
+    const camera = {
+      active: false,
+      mode: 'monigote',
+      aspect: 'horizontal',
+      previewHidden: micSetting('apliarte_estudio_cam_preview_hidden', 'true') !== 'false',
+      config: { room: 'erbolammapliarte', streamId: 'ja_cam_directo', password: '' }
+    };
     function cameraPushUrl() {
       const preset = CAMERA_PRESETS[micSetting('erbolamm_cam_preset', 'low')] || CAMERA_PRESETS.low;
       const facing = micSetting('erbolamm_cam_facing', 'user');
@@ -2005,6 +2011,7 @@
     function startCamera() {
       const { preset, url } = cameraPushUrl();
       $('camera-push-iframe').src = url;
+      $('camera-push-container').classList.toggle('minimized', camera.previewHidden);
       $('camera-push-container').hidden = false;
       camera.active = true;
       camera.mode = 'camara';
@@ -2054,7 +2061,8 @@
     const TTS_KEYS = {
       channel: 'directo_tts_canal_v1', sound: 'directo_tts_sonido_aviso_v1', skipCommands: 'directo_tts_omitir_comandos_v1',
       skipEmojis: 'directo_tts_omitir_emojis_v1', skipLinks: 'directo_tts_omitir_enlaces_v1', voices: 'directo_tts_voces_v1',
-      muted: 'directo_tts_usuarios_ignorados_v1', voice: 'apliarte_estudio_tts_voz', speed: 'apliarte_estudio_tts_speed', engine: 'apliarte_estudio_tts_motor'
+      muted: 'directo_tts_usuarios_ignorados_v1', voice: 'apliarte_estudio_tts_voz', speed: 'apliarte_estudio_tts_speed', engine: 'apliarte_estudio_tts_motor',
+      preservePitch: 'apliarte_estudio_tts_preserve_pitch'
     };
     const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
     const FEMALE_VOICE_NAMES = ['mónica', 'monica', 'paulina', 'marisol', 'isabela', 'flo', 'sandy', 'shelley', 'grandma', 'lucía', 'lucia', 'elvira', 'conchita', 'esperanza', 'penélope', 'penelope',
@@ -2065,6 +2073,7 @@
     const RE_URL = /\bhttps?:\/\/\S+/gi;
     const hasSpeech = 'speechSynthesis' in window;
     const ttsFlag = (key) => micSetting(TTS_KEYS[key], 'true') !== 'false';
+    const ttsPreservePitch = () => micSetting(TTS_KEYS.preservePitch, 'false') === 'true';
     const ttsChannel = () => (micSetting(TTS_KEYS.channel, 'apliarte') || 'apliarte').trim().toLowerCase().replace(/^#/, '') || 'apliarte';
     const ttsSpeed = () => Math.max(0.5, Math.min(2.0, parseFloat(micSetting(TTS_KEYS.speed, '1.0')) || 1.0));
     const ttsEngine = () => (!hasSpeech || micSetting(TTS_KEYS.engine, 'device') === 'server' ? 'server' : 'device');
@@ -2517,18 +2526,27 @@
         speed.setAttribute('aria-label', 'Velocidad de la voz');
         const speedValue = document.createElement('output');
         speedValue.textContent = ttsSpeed().toFixed(1) + 'x';
-        speed.addEventListener('input', () => { storeSetting(TTS_KEYS.speed, speed.value); speedValue.textContent = ttsSpeed().toFixed(1) + 'x'; });
+        speed.addEventListener('input', () => {
+          storeSetting(TTS_KEYS.speed, speed.value);
+          speedValue.textContent = ttsSpeed().toFixed(1) + 'x';
+          panelSend({ type: 'tts_estado', activo: Boolean(typeof tts !== 'undefined' && tts && tts.active), velocidad: ttsSpeed(), preservePitch: ttsPreservePitch() });
+        });
         field('Velocidad', speed).appendChild(speedValue);
       }
 
       const options = settingsRow(panel);
-      [['sound', 'Sonido de aviso'], ['skipCommands', 'Omitir comandos (!like, !so…)'], ['skipEmojis', 'Omitir emojis'], ['skipLinks', 'Decir «enlace» en vez de leer las URL']].forEach(([key, text]) => {
+      [['sound', 'Sonido de aviso'], ['skipCommands', 'Omitir comandos (!like, !so…)'], ['skipEmojis', 'Omitir emojis'], ['skipLinks', 'Decir «enlace» en vez de leer las URL'], ['preservePitch', 'Preservar tono al acelerar (Camino 1: tono uniforme; apagado = Camino 2: tonos agudo/grave propios)']].forEach(([key, text]) => {
         const label = document.createElement('label');
         label.className = 'draw-check';
         const box = document.createElement('input');
         box.type = 'checkbox';
-        box.checked = ttsFlag(key);
-        box.addEventListener('change', () => storeSetting(TTS_KEYS[key], String(box.checked)));
+        box.checked = key === 'preservePitch' ? ttsPreservePitch() : ttsFlag(key);
+        box.addEventListener('change', () => {
+          storeSetting(TTS_KEYS[key], String(box.checked));
+          if (key === 'preservePitch') {
+            panelSend({ type: 'tts_estado', activo: Boolean(typeof tts !== 'undefined' && tts && tts.active), velocidad: ttsSpeed(), preservePitch: box.checked });
+          }
+        });
         label.append(box, document.createTextNode(' ' + text));
         options.appendChild(label);
       });
@@ -3454,6 +3472,7 @@
       settingsHeading(panel, 'Vista previa');
       settingsButton(settingsRow(panel), camera.previewHidden ? 'Mostrar vista previa' : 'Ocultar vista previa', () => {
         camera.previewHidden = !camera.previewHidden;
+        storeSetting('apliarte_estudio_cam_preview_hidden', String(camera.previewHidden));
         $('camera-push-container').classList.toggle('minimized', camera.previewHidden);
         rerender('camera');
       }, camera.previewHidden);

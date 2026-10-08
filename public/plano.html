@@ -2185,21 +2185,71 @@
     const ttsColaAudio = [];
     let ttsAudioEnReproduccion = false;
     let ttsActivoEnOverlay = false;
+    let ttsPreservePitchEnOverlay = false; // Camino 2 de serie (cada avatar conserva su tono propio)
     const MAX_TTS_COLA = 8;
+    const MAX_TTS_COLA_TROZOS = 16; // Tope duro de trozos en total (~130s de voz acumulada)
+    const MAX_TROZOS_POR_MENSAJE = 5; // Permite leer mensajes completos de hasta 500 caracteres (límite Twitch)
 
-    // Velocidades y cadencia diferenciadas por avatar para dotarles de personalidad sonora
+    function calcularPlaybackRate(avatarRate, velocidadEstudio = 1.0, factorTono = 1.0) {
+      const baseRate = (avatarRate || 1.15) * (velocidadEstudio || 1.0);
+      const total = baseRate * (factorTono || 1.0);
+      return Math.max(0.6, Math.min(2.5, Math.round(total * 1000) / 1000));
+    }
+
+    function partirTextoEnTrozos(texto, maxLongitud = 140) {
+      const palabras = String(texto || '').trim().split(/\s+/).filter(Boolean);
+      if (palabras.length === 0) return [];
+      const trozos = [];
+      let trozoActual = '';
+
+      for (const palabra of palabras) {
+        if (palabra.length > maxLongitud) {
+          if (trozoActual) {
+            trozos.push(trozoActual);
+            trozoActual = '';
+          }
+          for (let i = 0; i < palabra.length; i += maxLongitud) {
+            trozos.push(palabra.slice(i, i + maxLongitud));
+          }
+          continue;
+        }
+
+        const candidato = trozoActual ? (trozoActual + ' ' + palabra) : palabra;
+        if (candidato.length <= maxLongitud) {
+          trozoActual = candidato;
+        } else {
+          if (trozoActual) trozos.push(trozoActual);
+          trozoActual = palabra;
+        }
+      }
+      if (trozoActual) trozos.push(trozoActual);
+      return trozos;
+    }
+
+    // Velocidades y cadencia diferenciadas por avatar (más ágiles de serie para el directo)
     const VELOCIDADES_AVATAR = {
-      ja: 1.0,   // Javier (normal)
-      ge: 1.05,  // Gemini (ligero)
-      cl: 1.15,  // Claude (ágil y claro)
-      pi: 1.25,  // Pi (rápido y agudo)
-      co: 0.9,   // Codex (técnico y pausado)
-      om: 0.82,  // Ollama (pesado y grave)
-      gr: 0.88,  // Groq (moderado)
-      op: 1.1,   // OpenAI (vivo)
-      ex: 1.2,   // Externo (rápido)
-      be: 0.95   // Vigía (neutral)
+      ja: 1.18,  // Javier (ágil)
+      ge: 1.22,  // Gemini (ligero)
+      cl: 1.28,  // Claude (rápido y claro)
+      pi: 1.35,  // Pi (veloz y agudo)
+      co: 1.08,  // Codex (técnico y pausado)
+      om: 0.96,  // Ollama (pesado y grave)
+      gr: 1.12,  // Groq (moderado)
+      op: 1.24,  // OpenAI (vivo)
+      ex: 1.28,  // Externo (rápido)
+      be: 1.12   // Vigía (neutral)
     };
+
+    let velocidadEstudio = 1.0;
+    try {
+      const vGuardada = parseFloat(localStorage.getItem('apliarte_estudio_tts_speed') || localStorage.getItem('directo_tts_speed_v1'));
+      if (!isNaN(vGuardada) && vGuardada >= 0.5 && vGuardada <= 2.5) velocidadEstudio = vGuardada;
+    } catch (_) {}
+
+    let ttsTraducirEnOverlay = false;
+    try {
+      ttsTraducirEnOverlay = localStorage.getItem('apliarte_estudio_tts_traducir') === 'true';
+    } catch (_) {}
 
     function procesarSiguienteTts() {
       if (ttsAudioEnReproduccion || ttsColaAudio.length === 0) return;
@@ -2232,8 +2282,8 @@
       const lang = pref?.lang || 'es';
       const slot = pref?.slot || 1;
 
-      const textoAcotado = textoLimpio.slice(0, 140);
-      const url = `/api/tts?tl=${encodeURIComponent(lang)}&q=${encodeURIComponent(textoAcotado)}`;
+      // El texto ya viene dividido en trozos por palabras completas <= 140 caracteres
+      const url = `/api/tts?tl=${encodeURIComponent(lang)}&q=${encodeURIComponent(textoLimpio)}`;
 
       let audio = null;
       let watchdogTimer = null;
@@ -2256,17 +2306,18 @@
       try {
         audio = new Audio(url);
         audio.volume = 0.95;
-        const baseRate = VELOCIDADES_AVATAR[item.agente] || 1.0;
+        const avatarRate = VELOCIDADES_AVATAR[item.agente] || 1.15;
+        // Camino 1: preservesPitch = true (velocidad libre sin deformar tono, pero todos suenan con el mismo tono)
+        // Camino 2 (por defecto): preservesPitch = false (cada avatar conserva su tono agudo/grave; subir velocidad agudiza la voz)
+        const preservarTono = Boolean(ttsPreservePitchEnOverlay);
+        audio.preservesPitch = preservarTono;
+        audio.mozPreservesPitch = preservarTono;
+        audio.webkitPreservesPitch = preservarTono;
 
-        // Desactivar preservesPitch para que la variación de velocidad altere la frecuencia/tono real (pitch)
-        audio.preservesPitch = false;
-        audio.mozPreservesPitch = false;
-        audio.webkitPreservesPitch = false;
-
-        // Slot 1: Tono agudo / femenino (+14% velocidad con pitch elevado)
-        // Slot 2: Tono grave / masculino (-14% velocidad con pitch profundo)
-        const factorTono = (slot === 2) ? 0.86 : 1.15;
-        audio.playbackRate = Math.max(0.6, Math.min(1.8, baseRate * factorTono));
+        // Slot 1: Tono femenino/agudo (+12% cadencia / tono si preservesPitch es false)
+        // Slot 2: Tono masculino/grave (-12% cadencia / tono si preservesPitch es false)
+        const factorTono = (slot === 2) ? 0.88 : 1.12;
+        audio.playbackRate = calcularPlaybackRate(avatarRate, velocidadEstudio, factorTono);
 
         audio.onended = finalizar;
         audio.onerror = () => {
@@ -2275,7 +2326,7 @@
         };
 
         // Timeout preventivo adaptativo: 2.5s base + 60ms por carácter, máx 8s (sin atascos)
-        const watchdogMs = Math.min(8000, Math.max(2500, 1000 + textoAcotado.length * 60));
+        const watchdogMs = Math.min(8000, Math.max(2500, 1000 + textoLimpio.length * 60));
         watchdogTimer = setTimeout(finalizar, watchdogMs);
 
         audio.play().catch((err) => {
@@ -2294,43 +2345,106 @@
       const ahora = Date.now();
       const textoNorm = String(texto).trim().toLowerCase();
 
-      // Deduplicación en cola y recién reproducido (<4s) para el mismo avatar
+      // Deduplicación en cola y recién reproducido (<4s) para el mismo avatar sobre el mensaje completo
       if (ultimoAudioHablado.agente === agente && ultimoAudioHablado.texto === textoNorm && (ahora - ultimoAudioHablado.ts) < 4000) {
         console.log('[TTS] Audio idéntico reproducido recientemente (<4s), descartando duplicado:', texto);
         return;
       }
 
-      if (ttsColaAudio.some(item => item.agente === agente && String(item.texto).trim().toLowerCase() === textoNorm)) {
+      if (ttsColaAudio.some(item => item.agente === agente && (item.mensajeOriginal || item.texto).trim().toLowerCase() === textoNorm)) {
         console.log('[TTS] Audio idéntico ya en cola para', agente, ', descartando duplicado');
         return;
       }
 
-      // Anti-monopolio por avatar: máximo 2 audios en cola por avatar si es espectador regular
+      // Anti-monopolio por avatar: máximo 2 mensajes en cola por avatar si es espectador regular
+      // (Los trozos de un mismo mensaje cuentan como uno solo gracias a mensajeId)
       const esPrioritario = tier >= 2 || agente === 'ja' || usuario === 'apliarte' || usuario === 'erbolamm';
-      if (!esPrioritario && ttsColaAudio.filter(it => it.agente === agente).length >= 2) {
+      const mensajesAvatarEnCola = new Set(
+        ttsColaAudio
+          .filter(it => it.agente === agente)
+          .map(it => it.mensajeId || it)
+      ).size;
+
+      if (!esPrioritario && mensajesAvatarEnCola >= 2) {
         return;
       }
 
-      // Límite estricto de cola para raids masivos (máx 8 items)
-      if (ttsColaAudio.length >= MAX_TTS_COLA) {
+      // Dividir el mensaje largo en trozos por palabras enteras (máx 140 chars cada uno)
+      const trozos = partirTextoEnTrozos(texto, 140);
+      if (trozos.length === 0) return;
+
+      if (trozos.length > MAX_TROZOS_POR_MENSAJE) {
+        console.warn(`[TTS] Mensaje excede el límite de trozos (${trozos.length} > ${MAX_TROZOS_POR_MENSAJE}), recortando:`, texto);
+      }
+      const trozosAceptados = trozos.slice(0, MAX_TROZOS_POR_MENSAJE);
+
+      // Tope duro de trozos en total: un mensaje que no cabe entero y no es prioritario se descarta entero, nunca a medias
+      if (ttsColaAudio.length + trozosAceptados.length > MAX_TTS_COLA_TROZOS) {
         if (!esPrioritario) {
-          // Descartar si el nuevo no es prioritario y la cola ya está saturada
+          console.warn('[TTS] Cola de trozos saturada (tope duro), descartando mensaje completo no prioritario:', texto);
           return;
         }
-        // Si el nuevo es prioritario, podar el primer mensaje regular no prioritario
-        const idxDescartable = ttsColaAudio.findIndex(it => it.agente !== 'ja' && (it.tier || 1) < 2);
-        if (idxDescartable !== -1) {
-          ttsColaAudio.splice(idxDescartable, 1);
+        // Si es prioritario, descartar mensajes no prioritarios enteros hasta hacer hueco
+        while (ttsColaAudio.length + trozosAceptados.length > MAX_TTS_COLA_TROZOS && ttsColaAudio.length > 0) {
+          const descartable = ttsColaAudio.find(it => it.agente !== 'ja' && (it.tier || 1) < 2);
+          if (descartable) {
+            const idADescartar = descartable.mensajeId;
+            for (let i = ttsColaAudio.length - 1; i >= 0; i--) {
+              if (ttsColaAudio[i].mensajeId === idADescartar) ttsColaAudio.splice(i, 1);
+            }
+          } else {
+            const masViejoId = ttsColaAudio[0].mensajeId;
+            for (let i = ttsColaAudio.length - 1; i >= 0; i--) {
+              if (ttsColaAudio[i].mensajeId === masViejoId) ttsColaAudio.splice(i, 1);
+            }
+          }
+        }
+      }
+
+      // Comprobar límite de cola total por mensajes
+      const mensajesTotalesEnCola = new Set(ttsColaAudio.map(it => it.mensajeId || it)).size;
+      if (mensajesTotalesEnCola >= MAX_TTS_COLA) {
+        if (!esPrioritario) {
+          return;
+        }
+        // Descartar el primer mensaje no prioritario completo
+        const primerDescartable = ttsColaAudio.find(it => it.agente !== 'ja' && (it.tier || 1) < 2);
+        if (primerDescartable) {
+          const idADescartar = primerDescartable.mensajeId;
+          for (let i = ttsColaAudio.length - 1; i >= 0; i--) {
+            if (ttsColaAudio[i].mensajeId === idADescartar) {
+              ttsColaAudio.splice(i, 1);
+            }
+          }
         } else {
-          // Si todos son prioritarios, descartar el más antiguo que no sea Javier
-          const idxOldest = ttsColaAudio.findIndex(it => it.agente !== 'ja');
-          if (idxOldest !== -1) ttsColaAudio.splice(idxOldest, 1);
-          else ttsColaAudio.shift();
+          const primerNoJavier = ttsColaAudio.find(it => it.agente !== 'ja');
+          if (primerNoJavier) {
+            const idADescartar = primerNoJavier.mensajeId;
+            for (let i = ttsColaAudio.length - 1; i >= 0; i--) {
+              if (ttsColaAudio[i].mensajeId === idADescartar) {
+                ttsColaAudio.splice(i, 1);
+              }
+            }
+          } else {
+            ttsColaAudio.shift();
+          }
         }
       }
 
       ultimoAudioHablado = { texto: textoNorm, agente, ts: ahora };
-      ttsColaAudio.push({ agente, texto, usuario, tier });
+      const mensajeId = 'msg_' + ahora + '_' + Math.random().toString(36).slice(2, 8);
+
+      for (const trozo of trozosAceptados) {
+        ttsColaAudio.push({
+          agente,
+          texto: trozo,
+          usuario,
+          tier,
+          mensajeId,
+          mensajeOriginal: textoNorm
+        });
+      }
+
       procesarSiguienteTts();
     }
 
@@ -3561,7 +3675,17 @@
           try {
             const data = JSON.parse(raw);
             if (data.type === 'tts_estado') {
-              ttsActivoEnOverlay = Boolean(data.activo);
+              if (data.activo !== undefined) ttsActivoEnOverlay = Boolean(data.activo);
+              if (data.velocidad !== undefined) {
+                const v = parseFloat(data.velocidad);
+                if (!isNaN(v) && v >= 0.5 && v <= 2.5) velocidadEstudio = v;
+              }
+              if (data.preservePitch !== undefined) {
+                ttsPreservePitchEnOverlay = Boolean(data.preservePitch);
+              }
+              if (data.traducir !== undefined) {
+                ttsTraducirEnOverlay = Boolean(data.traducir);
+              }
             }
             if (data.type === 'voz_pcm' && data.pcm) {
               reproducirAudioVozPCM(data.pcm, data.sampleRate);
