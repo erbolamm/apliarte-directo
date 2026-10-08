@@ -60,7 +60,7 @@ export function resumenOBS(puerto, { centro }) {
     `  • Cámara (conmutador monigote): ${base}/camara.html`,
     `  • Fondo animado:              ${base}/fondo.html`,
     '',
-    `Panel de control (ordenador):   ${base}/admin`,
+    `Panel de control (ordenador):   ${base}/estudio (o ${base}/admin)`,
   ];
   if (centro) {
     lineas.push(

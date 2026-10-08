@@ -89,7 +89,7 @@ async function main() {
     arrancar('centro', [...silencio, 'src/server.js'], { OBS_BRIDGE_WS_URL: `ws://127.0.0.1:${PUERTO}/ws` });
   }
   setTimeout(() => {
-    if (!abierto) { abierto = true; abrir(`http://127.0.0.1:${PUERTO}/directo`); }
+    if (!abierto) { abierto = true; abrir(`http://127.0.0.1:${PUERTO}/estudio`); }
     decir(resumenOBS(PUERTO, { centro: hayFfmpeg }));
   }, 3000);
 }

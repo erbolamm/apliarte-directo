@@ -2672,7 +2672,7 @@ html,body{width:100%;height:100%;overflow:hidden;
     if (serveStatic(req, res, '/admin.html')) return;
   }
 
-  if (path === '/estudio') {
+  if (path === '/estudio' || path === '/estudio.html') {
     if (serveStatic(req, res, '/estudio.html')) return;
   }
 
