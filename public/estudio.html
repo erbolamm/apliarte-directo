@@ -506,6 +506,7 @@
     <footer class="toolbar" id="studio-toolbar">
       <button type="button" class="icon-btn" id="btn-toggle-board" aria-pressed="false" aria-label="Pizarra en reposo. Toca para activar" data-tip="Muestra u oculta el lienzo de dibujo."></button>
       <button type="button" class="icon-btn" id="btn-draw-menu" aria-expanded="false" aria-label="Dibujo: herramientas, colores y grosor" data-tip="Abre las herramientas, los colores y el grosor."></button>
+      <button type="button" class="icon-btn" id="btn-obs-snapshot" aria-pressed="false" aria-label="Captura fija de OBS en la pizarra" data-tip="Captura la pantalla de OBS para pintar encima en la pizarra."></button>
       <span class="toolbar-sep" aria-hidden="true"></span>
       <button type="button" class="icon-btn" id="btn-undo" aria-label="Deshacer" data-tip="Deshace el último trazo."></button>
       <button type="button" class="icon-btn" id="btn-redo" aria-label="Rehacer" data-tip="Rehace el último trazo deshecho."></button>
@@ -517,6 +518,7 @@
       <span class="toolbar-sep" aria-hidden="true"></span>
       <button type="button" class="icon-btn" id="btn-chat-view" aria-expanded="false" aria-label="Chat" data-tip="Abre el chat del directo."></button>
       <button type="button" class="icon-btn" id="btn-commands-view" aria-expanded="false" aria-label="Comandos" data-tip="Abre tus comandos favoritos."></button>
+      <button type="button" class="icon-btn" id="btn-sms-view" aria-expanded="false" aria-label="Mensajes SMS" data-tip="Abre los mensajes SMS recibidos en directo."></button>
       <button type="button" class="icon-btn" id="btn-obs-menu" aria-expanded="false" aria-label="Controles OBS" data-tip="Abre las escenas, el audio y las fuentes de OBS."></button>
       <button type="button" class="icon-btn" id="btn-pantalla-negra" data-action="black-screen" aria-label="Pantalla negra de ahorro" data-tip="Pone la pantalla en negro para ahorrar batería sin cortar el directo. Para volver, toca tres veces seguidas o con tres dedos."></button>
       <button type="button" class="icon-btn" data-action="open-settings" aria-label="Abrir ajustes" data-tip="Abre los ajustes del estudio."></button>
@@ -577,6 +579,18 @@
         <input id="commands-filter" type="search" placeholder="Buscar comando" aria-label="Buscar comando" autocomplete="off">
         <p class="hint" id="commands-message" role="status"></p>
         <div class="commands-grid" id="commands-grid"></div>
+      </div>
+    </aside>
+
+    <aside class="sheet" id="sms-sheet" aria-label="Mensajes SMS" hidden>
+      <div class="sheet-head">
+        <h2>SMS</h2>
+        <button type="button" class="btn" id="btn-sms-sheet-refresh">Actualizar</button>
+        <button type="button" class="icon-btn sheet-close" aria-label="Cerrar mensajes SMS"></button>
+      </div>
+      <div class="sheet-body" id="sms-sheet-body">
+        <p class="hint" id="sms-sheet-message" role="status">Cargando buzón de SMS…</p>
+        <div class="groups" id="sms-sheet-list"></div>
       </div>
     </aside>
 
@@ -716,6 +730,8 @@
       sheetObs: "<rect x=\"3\" y=\"4\" width=\"18\" height=\"13\" rx=\"2\"/><path d=\"M8 21h8M12 17v4\"/>",
       sheetChat: "<path d=\"M3 4h18v13H8l-5 4zM7 8h10M7 12h7\"/>",
       sheetCommands: "<path d=\"M4 6l6 6-6 6M13 18h7\"/>",
+      sheetSms: "<path d=\"M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z\"/><polyline points=\"22,6 12,13 2,6\"/>",
+      obsSnapshot: "<path d=\"M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z\"/><circle cx=\"12\" cy=\"13\" r=\"4\"/>",
       // One-tap toggle icons, taken unchanged from pizarra-plus.
       liveCamera: "<rect x=\"3\" y=\"5\" width=\"12\" height=\"14\" rx=\"2\"/><path d=\"M15 10l6-4v12l-6-4\"/>",
       liveMic: "<rect x=\"9\" y=\"2\" width=\"6\" height=\"12\" rx=\"3\"/><path d=\"M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8\"/>",
@@ -1408,6 +1424,14 @@
 
       $('btn-toggle-board').innerHTML = icon('boardToggle');
       drawButton.innerHTML = icon('boardDraw');
+      const snapBtn = $('btn-obs-snapshot');
+      if (snapBtn) {
+        snapBtn.innerHTML = icon('obsSnapshot');
+        snapBtn.addEventListener('click', () => {
+          if (!board.active && !obsPreview.active) setBoardActive(true);
+          setObsPreview(!obsPreview.active);
+        });
+      }
       $('btn-undo').innerHTML = icon('boardUndo');
       $('btn-redo').innerHTML = icon('boardRedo');
       clearButton.innerHTML = icon('boardClear');
@@ -1825,6 +1849,9 @@
         const token = new URLSearchParams(window.location.search).get('token') || '';
         const socket = new WebSocket(`${protocol}//${window.location.host}/ws${token ? `?token=${encodeURIComponent(token)}` : ''}`);
         panel.ws = socket;
+        socket.onopen = () => {
+          panelSend({ type: 'tts_estado', activo: Boolean(typeof tts !== 'undefined' && tts && tts.active) });
+        };
         socket.onmessage = (event) => {
           let data;
           try { data = JSON.parse(event.data); } catch (_) { return; }
@@ -2324,6 +2351,7 @@
       if (clean) queueTts(`${name} dice: ${clean}`, user);
     }
     function refreshTtsButton() {
+      panelSend({ type: 'tts_estado', activo: Boolean(tts && tts.active) });
       setLiveButton($('btn-tts'), tts.active, tts.active
         ? 'Voz del chat (TTS) activada: pulsa para detenerla'
         : 'Voz del chat (TTS) apagada: pulsa para activarla');
@@ -2596,7 +2624,12 @@
 
     // ── Sheets: chat and commands ────────────────────────────────────────
     // Ported from pizarra-plus. One sheet open at a time.
-    const SHEETS = [['chat-sheet', 'btn-chat-view'], ['commands-sheet', 'btn-commands-view'], ['obs-sheet', 'btn-obs-menu']];
+    const SHEETS = [
+      ['chat-sheet', 'btn-chat-view'],
+      ['commands-sheet', 'btn-commands-view'],
+      ['sms-sheet', 'btn-sms-view'],
+      ['obs-sheet', 'btn-obs-menu']
+    ];
     function closeSheets() {
       SHEETS.forEach(([sheetId, buttonId]) => {
         $(sheetId).hidden = true;
@@ -2753,6 +2786,11 @@
         return { ok: false, message: 'Sin conexión con el servidor.' };
       }
     }
+    async function sendCommandDirect(command) {
+      showToast('Enviando: ' + command + '…');
+      const result = await sendCommand(command);
+      showToast(result.message);
+    }
     function reportCommands(text, error = false) {
       const message = $('commands-message');
       message.textContent = text;
@@ -2793,7 +2831,13 @@
         chip.className = 'chip';
         chip.textContent = name;
         if (desc && desc !== '—') chip.dataset.tip = desc;
-        chip.addEventListener('click', () => startCommand(name, desc));
+        chip.addEventListener('click', () => {
+          if (placeholdersOf(name).length === 0) {
+            sendCommandDirect(name);
+          } else {
+            startCommand(name, desc);
+          }
+        });
         bar.appendChild(chip);
       });
     }
@@ -2912,6 +2956,7 @@
     function initSheets() {
       $('btn-chat-view').innerHTML = icon('sheetChat');
       $('btn-commands-view').innerHTML = icon('sheetCommands');
+      $('btn-sms-view').innerHTML = icon('sheetSms');
       document.querySelectorAll('.sheet-close').forEach((button) => {
         button.innerHTML = icon('close');
         button.addEventListener('click', closeSheets);
@@ -2924,6 +2969,10 @@
       $('btn-commands-view').addEventListener('click', () => {
         if (openSheet('commands-sheet')) { cancelCommand(); loadCommands(); }
       });
+      $('btn-sms-view').addEventListener('click', () => {
+        if (openSheet('sms-sheet')) refreshSmsSheet();
+      });
+      $('btn-sms-sheet-refresh').addEventListener('click', () => loadSms());
       $('btn-toggle-all-commands').addEventListener('click', () => {
         commands.showAll = !commands.showAll;
         const button = $('btn-toggle-all-commands');
@@ -3157,8 +3206,15 @@
     function setObsPreview(visible) {
       obsPreview.active = visible;
       const button = $('btn-obs-preview');
-      button.setAttribute('aria-pressed', String(visible));
-      button.textContent = visible ? 'Ocultar captura OBS' : 'Mostrar captura OBS';
+      if (button) {
+        button.setAttribute('aria-pressed', String(visible));
+        button.textContent = visible ? 'Ocultar captura OBS' : 'Mostrar captura OBS';
+      }
+      const snapButton = $('btn-obs-snapshot');
+      if (snapButton) {
+        snapButton.setAttribute('aria-pressed', String(visible));
+        snapButton.classList.toggle('active', visible);
+      }
       $('obs-preview-bg').hidden = !visible;
       clearTimeout(obsPreview.timer);
       if (visible) captureObs(); else $('obs-preview-bg').removeAttribute('src');
@@ -3518,6 +3574,39 @@
       settingsRow(panel).appendChild(guide);
       settingsHeading(panel, 'Fuentes de OBS');
       settingsButton(settingsRow(panel), 'Ver las direcciones para OBS', () => { $('settings-dialog').close(); showView('welcome'); });
+      settingsHeading(panel, 'Comunidad y apoyo');
+      const supportRow = settingsRow(panel);
+      const kofi = document.createElement('a');
+      kofi.className = 'btn';
+      kofi.href = 'https://ko-fi.com/C0C11TWR1K';
+      kofi.target = '_blank';
+      kofi.rel = 'noopener noreferrer';
+      kofi.textContent = '☕ Invitar a un café';
+      kofi.style.textDecoration = 'none';
+      supportRow.appendChild(kofi);
+      const sponsors = document.createElement('a');
+      sponsors.className = 'btn';
+      sponsors.href = 'https://github.com/sponsors/erbolamm';
+      sponsors.target = '_blank';
+      sponsors.rel = 'noopener noreferrer';
+      sponsors.textContent = '💖 Patrocinar en GitHub';
+      sponsors.style.textDecoration = 'none';
+      supportRow.appendChild(sponsors);
+      settingsButton(supportRow, '📢 Compartir directo', async () => {
+        const shareData = {
+          title: 'ApliArte Directo',
+          text: '¡Directo interactivo con pizarra, avatares y comandos en vivo!',
+          url: 'https://directo.apliarte.com'
+        };
+        if (navigator.share) {
+          try { await navigator.share(shareData); } catch (_) {}
+        } else if (navigator.clipboard) {
+          await navigator.clipboard.writeText('https://directo.apliarte.com');
+          showToast('Enlace directo.apliarte.com copiado al portapapeles');
+        } else {
+          showToast('https://directo.apliarte.com');
+        }
+      });
     };
 
     settingsRenderers.credentials = (panel) => {
@@ -3822,27 +3911,31 @@
       } catch (_) { sms.shownId = null; }
       sms.loaded = true;
       if (tabOpen('sms')) selectSettingsTab('sms');
+      if (!$('sms-sheet').hidden) refreshSmsSheet();
     }
-    async function smsPost(url, body, okMessage) {
-      try {
-        const response = await fetch(url, body
-          ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-          : { method: 'POST' });
-        showToast(response.ok ? okMessage : 'No se pudo completar');
-      } catch (_) { showToast('Error de conexión'); }
-      await loadSms();
+    function refreshSmsSheet() {
+      const message = $('sms-sheet-message');
+      const list = $('sms-sheet-list');
+      if (!message || !list) return;
+      list.replaceChildren();
+      if (!sms.loaded) {
+        message.textContent = 'Cargando buzón de SMS…';
+        message.hidden = false;
+        loadSms();
+        return;
+      }
+      if (sms.error) {
+        message.textContent = sms.error;
+        message.hidden = false;
+      } else if (sms.messages.length === 0) {
+        message.textContent = 'El buzón de SMS está vacío.';
+        message.hidden = false;
+      } else {
+        message.hidden = true;
+      }
+      renderSmsCards(list, false);
     }
-    settingsRenderers.sms = (panel) => {
-      if (!sms.loaded) { settingsNote(panel, 'Cargando buzón…'); loadSms(); return; }
-      const head = settingsRow(panel);
-      const heading = document.createElement('h3');
-      heading.textContent = `Mensajes SMS (${sms.messages.length})`;
-      heading.style.marginRight = 'auto';
-      head.appendChild(heading);
-      settingsButton(head, 'Actualizar', () => loadSms());
-      if (sms.messages.length > 0) armedButton(head, 'Vaciar buzón', 'Pulsa otra vez para vaciar', () => smsPost('/api/directo/sms/limpiar', null, 'Buzón vaciado'));
-      if (sms.error) settingsNote(panel, sms.error);
-      if (sms.messages.length === 0 && !sms.error) settingsNote(panel, 'El buzón está vacío.');
+    function renderSmsCards(container, isSettings = false) {
       sms.messages.forEach((message) => {
         const card = document.createElement('div');
         card.className = 'video-card';
@@ -3858,8 +3951,8 @@
         text.textContent = message.texto;
         text.style.overflowWrap = 'anywhere';
         card.append(top, text);
-        const actions = settingsRow(card);
-        // The eye puts this one message on the stream; pressing it again takes it off.
+        const actions = isSettings ? settingsRow(card) : document.createElement('div');
+        if (!isSettings) actions.className = 'settings-row';
         const onScreen = sms.shownId === message.id;
         const eye = document.createElement('button');
         eye.type = 'button';
@@ -3884,8 +3977,31 @@
         });
         actions.appendChild(eye);
         armedButton(actions, 'Eliminar', 'Pulsa otra vez para eliminar', () => smsPost('/api/directo/sms/borrar', { id: message.id }, 'Mensaje eliminado'));
-        panel.appendChild(card);
+        if (!isSettings) card.appendChild(actions);
+        container.appendChild(card);
       });
+    }
+    async function smsPost(url, body, okMessage) {
+      try {
+        const response = await fetch(url, body
+          ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+          : { method: 'POST' });
+        showToast(response.ok ? okMessage : 'No se pudo completar');
+      } catch (_) { showToast('Error de conexión'); }
+      await loadSms();
+    }
+    settingsRenderers.sms = (panel) => {
+      if (!sms.loaded) { settingsNote(panel, 'Cargando buzón…'); loadSms(); return; }
+      const head = settingsRow(panel);
+      const heading = document.createElement('h3');
+      heading.textContent = `Mensajes SMS (${sms.messages.length})`;
+      heading.style.marginRight = 'auto';
+      head.appendChild(heading);
+      settingsButton(head, 'Actualizar', () => loadSms());
+      if (sms.messages.length > 0) armedButton(head, 'Vaciar buzón', 'Pulsa otra vez para vaciar', () => smsPost('/api/directo/sms/limpiar', null, 'Buzón vaciado'));
+      if (sms.error) settingsNote(panel, sms.error);
+      if (sms.messages.length === 0 && !sms.error) settingsNote(panel, 'El buzón está vacío.');
+      renderSmsCards(panel, true);
     };
 
     const GAME_PHASES = {

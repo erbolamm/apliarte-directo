@@ -1683,7 +1683,7 @@
     </div>
     <iframe id="camera-iframe"
       src=""
-      allow="autoplay; camera; microphone"
+      allow="autoplay; camera"
       allowtransparency="true"
       loading="eager"
       title="Cámara en Directo"></iframe>
@@ -2184,6 +2184,7 @@
     // ─── TTS de Audio para Avatares Adoptados en el Directo ─────────
     const ttsColaAudio = [];
     let ttsAudioEnReproduccion = false;
+    let ttsActivoEnOverlay = false;
     const MAX_TTS_COLA = 8;
 
     // Velocidades y cadencia diferenciadas por avatar para dotarles de personalidad sonora
@@ -2215,6 +2216,13 @@
       if (!textoLimpio) {
         ttsAudioEnReproduccion = false;
         procesarSiguienteTts();
+        return;
+      }
+
+      // En modo transparente (?transparente=1 para OBS), el audio solo se escucha si TTS está activo
+      if (!ttsActivoEnOverlay && initialTransparent) {
+        ttsAudioEnReproduccion = false;
+        setTimeout(procesarSiguienteTts, 150);
         return;
       }
 
@@ -3373,6 +3381,15 @@
     });
 
     async function initCameraOverlay() {
+      if (initialTransparent) {
+        // En capa transparente de OBS (?transparente=1), la cámara tiene su fuente independiente camara.html.
+        // No cargamos VDO.Ninja aquí para evitar conexiones duplicadas y silenciar cualquier audio.
+        if (cameraIframe) {
+          cameraIframe.removeAttribute('src');
+          cameraIframe.style.display = 'none';
+        }
+        return;
+      }
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const paramRoom = urlParams.get('room');
@@ -3380,7 +3397,7 @@
         const paramPass = urlParams.get('password');
         if (paramStream && paramRoom) {
           const passPart = paramPass ? `&password=${encodeURIComponent(paramPass)}` : '';
-          const targetUrl = `https://vdo.ninja/?view=${encodeURIComponent(paramStream)}&room=${encodeURIComponent(paramRoom)}${passPart}&solo&cleanoutput&transparent&autoplay=1&cover=1&buffer=350&sync=0&videobitrate=1500&codec=h264&api`;
+          const targetUrl = `https://vdo.ninja/?view=${encodeURIComponent(paramStream)}&room=${encodeURIComponent(paramRoom)}${passPart}&solo&cleanoutput&transparent&autoplay=1&cover=1&buffer=350&sync=0&videobitrate=1500&codec=h264&api&mute=1&noaudio=1`;
           if (cameraIframe && cameraIframe.src !== targetUrl) {
             cameraIframe.src = targetUrl;
           }
@@ -3390,8 +3407,13 @@
         const res = await fetch('/api/directo/camara/config', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
-          if (data.viewUrl && cameraIframe && cameraIframe.src !== data.viewUrl) {
-            cameraIframe.src = data.viewUrl;
+          let vUrl = data.viewUrl;
+          if (vUrl) {
+            if (!vUrl.includes('&mute=1')) vUrl += '&mute=1';
+            if (!vUrl.includes('&noaudio=1')) vUrl += '&noaudio=1';
+          }
+          if (vUrl && cameraIframe && cameraIframe.src !== vUrl) {
+            cameraIframe.src = vUrl;
           }
           if (data.modo) {
             setModoCamara(data.modo);
@@ -3401,6 +3423,13 @@
       } catch (err) {
         console.warn('Config cámara overlay:', err);
       }
+    }
+    if (cameraIframe) {
+      cameraIframe.addEventListener('load', () => {
+        try {
+          cameraIframe.contentWindow?.postMessage({ action: 'mute' }, '*');
+        } catch (_) {}
+      });
     }
     initCameraOverlay();
 
@@ -3449,8 +3478,10 @@
     let obsVoiceGainNode = null;
     let nextVoicePlayTime = 0;
     let vozActivaTimer = null;
+    let microActivoEnOverlay = false;
 
     function reproducirAudioVozPCM(base64Pcm, sampleRate) {
+      if (!microActivoEnOverlay) return;
       try {
         if (!obsVoiceAudioCtx) {
           const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -3529,15 +3560,20 @@
           if (raw instanceof Blob) raw = await raw.text();
           try {
             const data = JSON.parse(raw);
+            if (data.type === 'tts_estado') {
+              ttsActivoEnOverlay = Boolean(data.activo);
+            }
             if (data.type === 'voz_pcm' && data.pcm) {
               reproducirAudioVozPCM(data.pcm, data.sampleRate);
             }
             if (data.type === 'micro_start') {
+              microActivoEnOverlay = true;
               if (!vozActivaTimer) {
                 window.Oficina3D?.runtime?.say?.('ja', '🎙️ En antena...', performance.now());
               }
             }
-            if (data.type === 'micro_stop') {
+            if (data.type === 'micro_stop' || data.type === 'micro_desactivado') {
+              microActivoEnOverlay = false;
               if (jaSpeechAnimInterval) {
                 clearInterval(jaSpeechAnimInterval);
                 jaSpeechAnimInterval = null;

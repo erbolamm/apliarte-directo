@@ -1933,7 +1933,7 @@ const server = http.createServer((req, res) => {
       return res.end(JSON.stringify({ ok: false, error: 'No autorizado' }));
     }
     const passQuery = VDO_CAM_PASS ? `&password=${encodeURIComponent(VDO_CAM_PASS)}` : '';
-    const viewUrl = `https://vdo.ninja/?view=${encodeURIComponent(VDO_CAM_STREAM)}&room=${encodeURIComponent(VDO_CAM_ROOM)}${passQuery}&solo&cleanoutput&transparent&autoplay=1&cover=1&buffer=350&sync=0&videobitrate=1500&codec=h264&api`;
+    const viewUrl = `https://vdo.ninja/?view=${encodeURIComponent(VDO_CAM_STREAM)}&room=${encodeURIComponent(VDO_CAM_ROOM)}${passQuery}&solo&cleanoutput&transparent&autoplay=1&cover=1&buffer=350&sync=0&videobitrate=1500&codec=h264&api&mute=1&noaudio=1`;
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
     return res.end(JSON.stringify({
       ok: true,

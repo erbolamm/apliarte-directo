@@ -107,6 +107,7 @@ const PUBLIC_EVENTS = new Set([
   'pizarra_undo',
   'pizarra_init',
   'pizarra_solicitar_estado',
+  'tts_estado',
 ]);
 
 const RESTRICTED_EVENTS = new Set([
