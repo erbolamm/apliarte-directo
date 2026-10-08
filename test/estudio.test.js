@@ -131,3 +131,27 @@ test('WS Auth (local y VPS): tts_estado is in PUBLIC_EVENTS', () => {
     assert.match(content, /'tts_estado'/, `[${name}] tts_estado debe estar registrado en PUBLIC_EVENTS`);
   }
 });
+
+test('WS Auth (local y VPS): saludo_chat is in PUBLIC_EVENTS', () => {
+  for (const [name, filePath] of [['Local', wsAuthPath], ['VPS', vpsWsAuthPath]]) {
+    const content = fs.readFileSync(filePath, 'utf8');
+    assert.match(content, /'saludo_chat'/, `[${name}] saludo_chat debe estar registrado en PUBLIC_EVENTS`);
+  }
+});
+
+test('Estudio: Bienvenida button is removed from chat sheet and stays always active', () => {
+  const content = fs.readFileSync(estudioPath, 'utf8');
+  assert.doesNotMatch(content, /id="btn-chat-bienvenida"/, 'El botón de bienvenida no debe existir en el encabezado del chat');
+  assert.doesNotMatch(content, /function toggleBienvenida\(\)/, 'No debe existir toggleBienvenida()');
+});
+
+test('Cámara (local y VPS): Speech bubble for chat greetings exists and never uses innerHTML', () => {
+  for (const [name, filePath] of [['Camara Local', camaraPath], ['Camara VPS', vpsCamaraPath]]) {
+    const content = fs.readFileSync(filePath, 'utf8');
+    assert.match(content, /id="ja-bocadillo-saludo"/, `[${name}] Debe contener el elemento #ja-bocadillo-saludo`);
+    assert.match(content, /id="ja-bocadillo-texto"/, `[${name}] Debe contener el elemento #ja-bocadillo-texto`);
+    assert.match(content, /data\.type === 'saludo_chat'/, `[${name}] Debe escuchar el evento saludo_chat`);
+    assert.match(content, /elTexto\.textContent\s*=\s*texto/, `[${name}] Debe asignar texto con textContent exclusivamente`);
+    assert.doesNotMatch(content, /elTexto\.innerHTML/, `[${name}] Nunca debe usar innerHTML para el texto del saludo`);
+  }
+});

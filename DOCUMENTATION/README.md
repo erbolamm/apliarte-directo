@@ -41,3 +41,11 @@ This repository contains the complete, containerized, and decoupled architecture
 5. [**Architecture Decision Record (`ADR-0001`)**](./ADR-0001-docker-architecture-decoupling.md)
    - Context, decision, discarded alternatives, and technical consequences.
 
+6. [**Guía de Fuentes OBS y Sistema de Bienvenida (`GUIA-OBS-FUENTES-Y-BIENVENIDA.md`)**](./GUIA-OBS-FUENTES-Y-BIENVENIDA.md)
+   - Catálogo exhaustivo de URLs para OBS (plano, contexto, avatares, cámara, SMS).
+   - Explicación detallada del ciclo de vida de bienvenida (6h cooldown, persistencia, exclusiones, fiesta).
+   - Desacople de servicios externos (reemplazo de Botrix por chat nativo sovereign con botón 👁️).
+
+7. [**Guía de Instalación en PC / Windows (`GUIA-PC-WINDOWS.md`)**](./GUIA-PC-WINDOWS.md)
+   - Instrucciones de arranque en local con `Iniciar directo.bat`, configuración de firewall, OBS y tablet.
+

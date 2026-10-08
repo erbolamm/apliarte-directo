@@ -503,6 +503,34 @@ export function tickBronca(state: BroncaState, now: number, dt: number): BroncaS
   return state;
 }
 
+export function advanceBroncaAvatar(state: BroncaState, agentId: string, now: number): BroncaState {
+  const av = state.avatars[agentId];
+  if (!av || state.phase !== 'brawl') return state;
+  const poses: readonly BroncaAvatarPose[] = ['brawl', 'walk', 'brawl', 'fall'];
+  const avatarIdx = Object.keys(state.avatars).indexOf(agentId);
+  const idx = avatarIdx >= 0 ? avatarIdx : 0;
+  const nextWpIdx = (av.epicenterIdx + 3 + (idx % 2)) % BRONCA_WAYPOINTS.length;
+  const target = BRONCA_WAYPOINTS[nextWpIdx];
+  const pose = poses[(idx + Math.floor(now / 1400)) % poses.length];
+  const speed = 360 + ((idx * 23) % 80);
+  const nextChangeAt = now + 1200 + ((idx * 250) % 1000);
+
+  return {
+    ...state,
+    avatars: {
+      ...state.avatars,
+      [agentId]: {
+        ...av,
+        target,
+        pose,
+        speed,
+        epicenterIdx: nextWpIdx,
+        nextChangeAt,
+      },
+    },
+  };
+}
+
 export function stopBronca(state: BroncaState, now: number): BroncaState {
   if (state.phase === 'idle') return state;
   return {

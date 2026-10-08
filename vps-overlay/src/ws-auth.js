@@ -108,6 +108,10 @@ const PUBLIC_EVENTS = new Set([
   'pizarra_init',
   'pizarra_solicitar_estado',
   'tts_estado',
+  'saludo_chat',
+  'contexto_estado',
+  'avatares_estado',
+  'chat_mensaje',
 ]);
 
 const RESTRICTED_EVENTS = new Set([

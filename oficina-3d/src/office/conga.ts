@@ -95,7 +95,7 @@ export function emptyCongaState(broadcaster?: string): CongaState {
 }
 
 function normalizeLogin(login: string): string {
-  return String(login || '').trim().toLowerCase();
+  return String(login || '').trim().toLowerCase().replace(/^@/, '');
 }
 
 function isBroadcaster(login: string, ctx: CongaContext): boolean {

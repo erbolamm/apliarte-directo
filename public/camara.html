@@ -154,6 +154,81 @@
       pointer-events: none;
       transition: opacity 0.3s ease;
     }
+
+    /* ─── Bocadillo de bienvenida al muñeco ───────────────────────────────── */
+    .ja-bocadillo-saludo {
+      position: absolute;
+      top: 36px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.9);
+      max-width: 380px;
+      width: max-content;
+      max-width: calc(100% - 32px);
+      background: #ffffff;
+      border: 2px solid #0284c7;
+      border-radius: 12px;
+      padding: 6px 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      z-index: 20;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), top 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .ja-bocadillo-saludo.activo {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+
+    .ja-bocadillo-texto {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.3;
+      color: #0f172a;
+      word-break: break-word;
+    }
+
+    .ja-bocadillo-cola {
+      position: absolute;
+      bottom: -7px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-top: 7px solid #0284c7;
+    }
+
+    .ja-bocadillo-cola::after {
+      content: '';
+      position: absolute;
+      bottom: 2px;
+      left: -5px;
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 5px solid #ffffff;
+    }
+
+    .camera-container.aspect-cuadrado .ja-bocadillo-saludo {
+      max-width: 270px;
+      top: 40px;
+    }
+
+    .camera-container.modo-camara .ja-bocadillo-saludo {
+      top: 10px;
+    }
+
+    .camera-container.aspect-cuadrado.modo-camara .ja-bocadillo-saludo {
+      top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -217,6 +292,10 @@
         </g>
       </svg>
     </div>
+    <div id="ja-bocadillo-saludo" class="ja-bocadillo-saludo" aria-live="polite">
+      <div class="ja-bocadillo-texto" id="ja-bocadillo-texto"></div>
+      <div class="ja-bocadillo-cola"></div>
+    </div>
     <iframe id="camera-iframe"
       src=""
       allow="autoplay; camera"
@@ -253,6 +332,9 @@
 
     function actualizarVisibilidadCamaraYMonigote() {
       const esCamara = modoCamaraActual === 'camara' || videoCamaraRecibido;
+      if (cameraEl) {
+        cameraEl.classList.toggle('modo-camara', esCamara);
+      }
       if (cameraIframe) {
         cameraIframe.style.opacity = esCamara ? '1' : '0';
         cameraIframe.style.pointerEvents = esCamara ? 'auto' : 'none';
@@ -414,6 +496,48 @@
       } catch (_) {}
     }
 
+    // ─── Cola de saludos y bocadillo para nuevos espectadores ────────────────
+    const colaSaludos = [];
+    let saludoEnPantalla = false;
+    let timerOcultarSaludo = null;
+    const MAX_COLA_SALUDOS = 10;
+    const DURACION_SALUDO_MS = 5000;
+
+    function procesarColaSaludos() {
+      if (saludoEnPantalla) return;
+      if (colaSaludos.length === 0) return;
+
+      const texto = colaSaludos.shift();
+      const elBocadillo = document.getElementById('ja-bocadillo-saludo');
+      const elTexto = document.getElementById('ja-bocadillo-texto');
+      if (!elBocadillo || !elTexto) return;
+
+      // Asignación estricta con textContent (NUNCA innerHTML)
+      elTexto.textContent = texto;
+      elBocadillo.classList.add('activo');
+      saludoEnPantalla = true;
+      animarBocaJa(3);
+
+      if (timerOcultarSaludo) clearTimeout(timerOcultarSaludo);
+      timerOcultarSaludo = setTimeout(() => {
+        elBocadillo.classList.remove('activo');
+        setTimeout(() => {
+          saludoEnPantalla = false;
+          procesarColaSaludos();
+        }, 260);
+      }, DURACION_SALUDO_MS);
+    }
+
+    function mostrarSaludo(texto) {
+      if (!texto || typeof texto !== 'string') return;
+
+      if (colaSaludos.length >= MAX_COLA_SALUDOS) {
+        colaSaludos.shift();
+      }
+      colaSaludos.push(texto.trim());
+      procesarColaSaludos();
+    }
+
     function conectarWs() {
       const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host || 'directo.apliarte.com';
@@ -426,6 +550,12 @@
           if (raw instanceof Blob) raw = await raw.text();
           try {
             const data = JSON.parse(raw);
+            if (data.type === 'saludo_chat') {
+              const texto = data.texto || (data.usuarios && data.usuarios.length ? `¡Bienvenido/a, ${data.usuarios[0].nombreVisible}!` : '');
+              if (texto) {
+                mostrarSaludo(texto);
+              }
+            }
             if (data.type === 'voz_pcm' && data.pcm) {
               procesarAudioVozPCMParaBoca(data.pcm, data.sampleRate);
             }

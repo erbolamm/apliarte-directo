@@ -20,6 +20,7 @@ import {
   startFiesta,
   tickFiesta,
   isFiestaActive,
+  stopFiesta,
 } from './fiesta';
 import {
   type BroncaState,
@@ -27,6 +28,8 @@ import {
   startBronca,
   tickBronca,
   isBroncaActive,
+  advanceBroncaAvatar,
+  stopBronca,
 } from './bronca';
 export type Task={role:AgentId;project:string;title:string;fileName:string;priority:string};
 export type Snapshot={valid:boolean;states:Record<string,Task[]>;orchestrator:AgentId|null};
@@ -230,6 +233,7 @@ export class OfficeRuntime {
       }
     }
     this.avatarOwners = next;
+    this.triggerWake();
   }
 
   setAdoptedViewers(users: string[]) {
@@ -703,7 +707,11 @@ export class OfficeRuntime {
      p.status = 'En la bronca';
      p.speed = bav.speed;
      if (!p.path || equal(p.pos, p.target)) {
-      this.move(p, bav.target);
+      if (equal(p.pos, bav.target)) {
+       this.broncaState = advanceBroncaAvatar(this.broncaState, p.id, now);
+      }
+      const curBav = this.broncaState.avatars[p.id] || bav;
+      this.move(p, curBav.target);
      }
      if (p.path) {
       p.travelled += (p.speed || 380) * dt;
@@ -712,6 +720,12 @@ export class OfficeRuntime {
       if (step.dir) p.facing = step.dir;
       if (step.done) {
        p.path = null;
+       this.broncaState = advanceBroncaAvatar(this.broncaState, p.id, now);
+       const nextBav = this.broncaState.avatars[p.id];
+       if (nextBav) {
+        this.move(p, nextBav.target);
+       }
+       moving = true;
       } else {
        moving = true;
       }
@@ -1044,6 +1058,8 @@ export class OfficeRuntime {
       this.congaState = next;
       this.lastCongaCountdownSec = -1;
       if (this.congaState.phase === 'countdown') {
+        if (this.isFiestaActive()) this.stopFiesta(now);
+        if (this.isBroncaActive()) this.stopBronca(now);
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('erbolamm:conga-credit', { detail: { text: CONGA_CREDIT } }));
         }
@@ -1147,8 +1163,21 @@ export class OfficeRuntime {
  }
  fiesta(now:number){
   if(this.hub)return;
+  if(this.isBroncaActive()) this.stopBronca(now);
+  if(this.congaState.phase === 'dancing' || this.congaState.phase === 'countdown') this.stopConga(now);
   this.fiestaState=startFiesta(this.fiestaState,now,this.people.map(p=>p.id));
   this.say('ja','¡Fiesta en la oficina!',now);
+  this.triggerWake();
+ }
+ stopFiesta(now:number=performance.now()){
+  if(this.fiestaState.phase==='idle')return;
+  this.fiestaState=emptyFiestaState();
+  for(const p of this.people){
+   p.manualUntil=0;
+   p.jumping=false;
+   p.speed=240;
+   this.move(p,this.destination(p,now));
+  }
   this.triggerWake();
  }
  isFiestaActive():boolean{
@@ -1175,8 +1204,36 @@ export class OfficeRuntime {
  }
  bronca(now:number){
   if(this.hub)return;
+  if(this.isFiestaActive()) this.stopFiesta(now);
+  if(this.congaState.phase === 'dancing' || this.congaState.phase === 'countdown') this.stopConga(now);
   this.broncaState=startBronca(this.broncaState,now,this.people.map(p=>p.id));
   this.say('ja','¡Batalla campal en la oficina!',now);
+  this.triggerWake();
+ }
+ stopBronca(now:number=performance.now()){
+  if(this.broncaState.phase==='idle')return;
+  this.broncaState=emptyBroncaState();
+  for(const p of this.people){
+   p.manualUntil=0;
+   p.jumping=false;
+   p.speed=240;
+   this.move(p,this.destination(p,now));
+  }
+  this.triggerWake();
+ }
+ stopConga(now:number=performance.now()){
+  if(this.congaState.phase==='idle')return;
+  this.congaState=emptyCongaState('apliarte');
+  this.congaPositions.clear();
+  for(const p of this.people){
+   p.manualUntil=0;
+   p.jumping=false;
+   p.speed=240;
+   this.move(p,this.destination(p,now));
+  }
+  if(typeof window!=='undefined'){
+   window.dispatchEvent(new CustomEvent('erbolamm:conga-credit',{detail:{text:null}}));
+  }
   this.triggerWake();
  }
  isBroncaActive():boolean{

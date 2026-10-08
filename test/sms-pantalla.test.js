@@ -118,3 +118,29 @@ test('a message deleted from the mailbox leaves the screen, and pictures are cac
   await screen.handle(request('GET'), polled, '/api/directo/sms/pantalla', allow);
   assert.deepEqual(polled.json(), { ok: true, mensaje: null });
 });
+
+test('chat messages can be shown directly on screen without mailbox entry and persist', async () => {
+  const box = mailbox();
+  const screen = createSmsPantalla({
+    getSmsList: box.get,
+    lookupAvatar: async (user) => (user === 'twitchuser' ? 'https://static-cdn.jtvnw.net/twitchuser.png' : null),
+  });
+
+  const shown = response();
+  await screen.handle(request('POST', { usuario: 'twitchuser', texto: '¡Hola desde Twitch!' }), shown, '/api/directo/sms/mostrar', allow);
+  assert.equal(shown.status, 200);
+  const data = shown.json().mensaje;
+  assert.equal(data.usuario, 'twitchuser');
+  assert.equal(data.texto, '¡Hola desde Twitch!');
+  assert.equal(data.avatar, 'https://static-cdn.jtvnw.net/twitchuser.png');
+
+  // Mailbox changes do NOT remove chat messages
+  box.list.length = 0;
+  assert.equal(screen.current.texto, '¡Hola desde Twitch!');
+
+  // Hiding still works
+  const hidden = response();
+  await screen.handle(request('POST', {}), hidden, '/api/directo/sms/ocultar', allow);
+  assert.deepEqual(hidden.json(), { ok: true, mensaje: null });
+  assert.equal(screen.current, null);
+});

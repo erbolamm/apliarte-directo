@@ -1690,7 +1690,7 @@
   </div>
 
   <!-- Script bundle de la oficina 3D -->
-  <script src="/office-3d.js?v=385f4b7629"></script>
+  <script src="/office-3d.js?v=74113563c6"></script>
   <script src="/js/conga-musica.js?v=20261003c"></script>
 
   <!-- Lógica interactiva: Paleta de colores, Twitch IRC, adopción y fondo transparente -->
@@ -1726,15 +1726,29 @@
     const obsAvatarStrip = document.getElementById('obs-avatar-strip');
     const obsContext = document.getElementById('obs-context');
     const CLAVE_CONTEXTO_DIRECTO = 'erbolamm-directo-contexto';
-    function fijarContextoDirecto(texto) {
+
+    const params = new URLSearchParams(window.location.search);
+    const sinContexto = params.get('nocontexto') === '1' || params.get('contexto') === '0';
+    const sinAvatares = params.get('noavatares') === '1' || params.get('avatares') === '0';
+    if (sinContexto && obsContext) obsContext.style.setProperty('display', 'none', 'important');
+    if (sinAvatares && obsAvatarStrip) obsAvatarStrip.style.setProperty('display', 'none', 'important');
+
+    function fijarContextoDirecto(texto, sincronizarServidor = true) {
       const limpio = String(texto || '').replace(/\s+/g, ' ').trim().slice(0, 140);
-      if (obsContext) obsContext.textContent = limpio;
+      if (obsContext && !sinContexto) obsContext.textContent = limpio;
       try {
         if (limpio) localStorage.setItem(CLAVE_CONTEXTO_DIRECTO, limpio);
         else localStorage.removeItem(CLAVE_CONTEXTO_DIRECTO);
       } catch (_) {}
+      if (sincronizarServidor) {
+        fetch('/api/directo/contexto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contexto: limpio })
+        }).catch(() => {});
+      }
     }
-    try { fijarContextoDirecto(localStorage.getItem(CLAVE_CONTEXTO_DIRECTO)); } catch (_) {}
+    try { fijarContextoDirecto(localStorage.getItem(CLAVE_CONTEXTO_DIRECTO), false); } catch (_) {}
     const hudConnectionStatus = document.getElementById('hud-connection-status');
     const btnToggleBg = document.getElementById('btn-toggle-transparency');
     const labelBgMode = document.getElementById('label-bg-mode');
@@ -1742,7 +1756,6 @@
     const paletteButtons = document.querySelectorAll('.palette-btn');
 
     // ─── Gestión de Fondo Transparente para OBS ──────────────────────
-    const params = new URLSearchParams(window.location.search);
     const initialTransparent = params.get('transparente') === '1' || params.get('transparent') === '1' || params.get('fondo') === '0';
     let isTransparent = initialTransparent || localStorage.getItem('erbolamm-directo-transparent') === '1';
 
@@ -2015,6 +2028,7 @@
         }
         destino[agente] = usuario;
         guardarDuenosAvatar(destino);
+        syncAdoptedViewers();
         return true;
       },
       deleteProperty(destino, agente) {
@@ -2022,6 +2036,7 @@
         guardarDuenosAvatar(destino);
         // On the !damas board a released avatar goes back to its desk.
         if (window.Oficina3D?.isBoard?.()) window.Oficina3D.resetAvatar?.(agente);
+        syncAdoptedViewers();
         return true;
       },
     });
@@ -2096,8 +2111,11 @@
 
     function syncAdoptedViewers() {
       window.Oficina3D?.runtime?.setAdoptedViewers?.(adoptedViewers());
+      window.Oficina3D?.runtime?.setAvatarOwners?.(avatarOwners);
+      window.Oficina3D?.setAvatarOwners?.(avatarOwners);
     }
     renderAvatarsGrid(true);
+    window.addEventListener('erbolamm:oficina-ready', () => syncAdoptedViewers());
 
     // Sincronización periódica con /api/directo/comando (dueños, modo cámara y cola de comandos)
     let ultimoSeqComando = -1;
@@ -3710,6 +3728,16 @@
             if (data.type === 'comando_chat' && data.comando) {
               ejecutarComandoLocal(data.comando, data.usuario || 'ja');
             }
+            if (data.type === 'animacion_cortar') {
+              if (data.tipo === 'fiesta') window.Oficina3D?.runtime?.stopFiesta?.();
+              else if (data.tipo === 'bronca') window.Oficina3D?.runtime?.stopBronca?.();
+              else if (data.tipo === 'conga') window.Oficina3D?.runtime?.stopConga?.();
+              else {
+                window.Oficina3D?.runtime?.stopFiesta?.();
+                window.Oficina3D?.runtime?.stopBronca?.();
+                window.Oficina3D?.runtime?.stopConga?.();
+              }
+            }
             if (data.type === 'camara_modo') {
               setModoCamara(data.modo); // 'camara' | 'monigote'
             }
@@ -3719,6 +3747,21 @@
             }
             if (data.type === 'directo_comando' && data.cmd) {
               if (data.cmd.modo) setModoCamara(data.cmd.modo);
+            }
+            if (data.type === 'contexto_estado') {
+              fijarContextoDirecto(data.texto, false);
+            }
+            if (data.type === 'avatares_estado' && data.avatares) {
+              const nuevos = data.avatares;
+              for (const aId of Object.keys(avatarOwners)) {
+                if (aId !== 'ja' && !nuevos[aId]) {
+                  delete avatarOwners[aId];
+                }
+              }
+              for (const [k, v] of Object.entries(nuevos)) {
+                if (v) avatarOwners[k] = v;
+              }
+              renderAvatarsGrid(true);
             }
           } catch (_) {}
         };

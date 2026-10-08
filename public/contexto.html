@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>ApliArte Directo · Contexto del Directo</title>
+  <style>
+    :root {
+      --bg: rgba(15, 23, 42, 0.88);
+      --border: rgba(255, 255, 255, 0.16);
+      --text: #f8fafc;
+      --accent: #38bdf8;
+      --shadow: rgba(0, 0, 0, 0.4);
+    }
+
+    html[data-theme="light"] {
+      --bg: rgba(248, 250, 252, 0.94);
+      --border: rgba(15, 23, 42, 0.14);
+      --text: #0f172a;
+      --accent: #0284c7;
+      --shadow: rgba(0, 0, 0, 0.15);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent !important;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      padding: 12px 16px;
+    }
+
+    .contexto-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px;
+      max-width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-left: 6px solid var(--accent);
+      border-radius: 12px;
+      box-shadow: 0 8px 28px var(--shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: var(--text);
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+      pointer-events: auto;
+    }
+
+    .contexto-container.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .contexto-badge {
+      font-size: calc(0.85rem * var(--zoom-contexto, 1));
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 2px 8px;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+
+    .contexto-texto {
+      font-size: calc(1.55rem * var(--zoom-contexto, 1));
+      font-weight: 700;
+      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .controles-zoom {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      margin-left: auto;
+      opacity: 0.15;
+      transition: opacity 0.2s ease;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .contexto-container:hover .controles-zoom,
+    .controles-zoom:hover,
+    .controles-zoom:focus-within {
+      opacity: 0.95;
+    }
+
+    .btn-zoom {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+
+    .btn-zoom:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: scale(1.1);
+    }
+
+    .btn-zoom:active {
+      transform: scale(0.92);
+    }
+
+    @media (max-width: 600px) {
+      .contexto-texto {
+        font-size: calc(1.2rem * var(--zoom-contexto, 1));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="contexto-container" class="contexto-container" role="status" aria-live="polite">
+    <span class="contexto-badge" id="contexto-badge">Tema</span>
+    <span class="contexto-texto" id="contexto-texto"></span>
+    <div class="controles-zoom" id="controles-zoom" aria-label="Ajustar tamaño de texto">
+      <button type="button" class="btn-zoom" id="btn-zoom-menos" title="Disminuir texto" aria-label="Disminuir tamaño de texto">−</button>
+      <button type="button" class="btn-zoom" id="btn-zoom-mas" title="Aumentar texto" aria-label="Aumentar tamaño de texto">+</button>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+      const container = document.getElementById('contexto-container');
+      const textoEl = document.getElementById('contexto-texto');
+      const badgeEl = document.getElementById('contexto-badge');
+      const CLAVE_CONTEXTO = 'erbolamm-directo-contexto';
+      let textoActual = '';
+
+      const params = new URLSearchParams(window.location.search);
+      const customBadge = params.get('badge') || params.get('etiqueta');
+      if (customBadge) badgeEl.textContent = customBadge;
+      if (params.get('nobadge') === '1' || params.get('badge') === '0') badgeEl.style.display = 'none';
+
+      const CLAVE_ZOOM = 'erbolamm-zoom-contexto';
+      let zoomNivel = 1;
+      try {
+        const z = parseFloat(localStorage.getItem(CLAVE_ZOOM));
+        if (!isNaN(z) && z >= 0.5 && z <= 3) zoomNivel = z;
+      } catch (_) {}
+      function aplicarZoom(z) {
+        zoomNivel = Math.max(0.5, Math.min(3, Math.round(z * 100) / 100));
+        document.documentElement.style.setProperty('--zoom-contexto', String(zoomNivel));
+        try { localStorage.setItem(CLAVE_ZOOM, String(zoomNivel)); } catch (_) {}
+      }
+      aplicarZoom(zoomNivel);
+
+      const btnMenos = document.getElementById('btn-zoom-menos');
+      const btnMas = document.getElementById('btn-zoom-mas');
+      if (btnMenos) btnMenos.addEventListener('click', (e) => { e.stopPropagation(); aplicarZoom(zoomNivel - 0.1); });
+      if (btnMas) btnMas.addEventListener('click', (e) => { e.stopPropagation(); aplicarZoom(zoomNivel + 0.1); });
+
+      function actualizarContexto(texto) {
+        const limpio = String(texto || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+        textoActual = limpio;
+        if (limpio) {
+          textoEl.textContent = limpio;
+          container.classList.add('visible');
+        } else {
+          container.classList.remove('visible');
+          setTimeout(() => {
+            if (!textoActual) textoEl.textContent = '';
+          }, 320);
+        }
+      }
+
+      // 1. Cargar desde localStorage inicial
+      try {
+        const guardado = localStorage.getItem(CLAVE_CONTEXTO);
+        if (guardado) actualizarContexto(guardado);
+      } catch (_) {}
+
+      // 2. Escuchar cambios de localStorage en tiempo real entre pestañas
+      window.addEventListener('storage', (e) => {
+        if (e.key === CLAVE_CONTEXTO) {
+          actualizarContexto(e.newValue);
+        }
+      });
+
+      // 3. Consultar API del servidor
+      async function sincronizarServidor() {
+        try {
+          const res = await fetch('/api/directo/contexto', { cache: 'no-store' });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data.contexto === 'string') {
+              actualizarContexto(data.contexto);
+            }
+          }
+        } catch (_) {}
+      }
+      sincronizarServidor();
+
+      // 4. WebSocket para sincronización instantánea
+      let ws = null;
+      function conectarWs() {
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host || '127.0.0.1:7979';
+        const wsUrl = `${proto}//${host}/ws`;
+
+        try {
+          ws = new WebSocket(wsUrl);
+          ws.onmessage = async (event) => {
+            let raw = event.data;
+            if (raw instanceof Blob) raw = await raw.text();
+            try {
+              const data = JSON.parse(raw);
+              if (data.type === 'contexto_estado') {
+                actualizarContexto(data.texto);
+              }
+              if (data.type === 'categoria' && data.modo) {
+                document.documentElement.dataset.theme = data.modo;
+              }
+            } catch (_) {}
+          };
+          ws.onclose = () => setTimeout(conectarWs, 3000);
+          ws.onerror = () => { try { ws.close(); } catch (_) {} };
+        } catch (_) {
+          setTimeout(conectarWs, 5000);
+        }
+      }
+      conectarWs();
+    })();
+  </script>
+</body>
+</html>

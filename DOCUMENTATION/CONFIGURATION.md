@@ -29,6 +29,8 @@ Stores application persistent state in JSON format:
 - `categoria.json`: Active stream category and theme configuration.
 - `camara.json`: Persisted credentials and parameters for remote camera ingestion.
 - `panel/usuario.json`, `panel/canal.json`, `panel/mensaje.json`, `panel/comandos-bot.json`: saved users, channels, messages and bot commands of the admin panel (see below).
+- `panel/bienvenida.json`: Estado de la bienvenida automática (`{ "activa": true }`, siempre activa).
+- `panel/bienvenida-vistos.json`: Marcas de tiempo de los espectadores saludados para la regla de cooldown de 6 horas.
 
 #### Admin panel lists: the server is the owner (since 2026-09-30)
 
@@ -53,19 +55,13 @@ same `data/panel/` files are shared with every browser and device that opens the
   `directo_panel_mensajes_v1`). They are neither read nor deleted any more, so a
   later explicit import can still recover browser-only entries.
 
-#### Combined chat ("Todos" with Botrix): also on the server (since A3)
+#### Chat unificado y soberano (Twitch + YouTube nativo, sin Botrix)
 
-`/api/panel/chat-config` stores `{ todos, botrixUrl }` in `data/panel/chat.json`,
-so the Admin and the Pizarra show the same chat on every device. Only
-`https://botrix.live/...` addresses (up to 500 characters) or an empty address are
-accepted, and `todos` must be true or false; anything else is `400`. A damaged
-file answers `500 config-danada` and is left untouched. The widget address is
-private: it lives only in `data/panel/` (ignored by Git) and is never logged.
-An address that an older version left in a browser (`erbolamm-botrix-widget-url`)
-is only pre-filled when you open "Todos"; it is uploaded when you press save.
+El panel `/estudio` incorpora lectura directa y simultánea de Twitch (vía WebSocket IRC) y YouTube Live Chat (vía API ligera InnerTube sin cuotas ni servicios privativos).
 
-`vps-overlay/server.js` still has the previous list handlers and does not include
-these protections or the chat configuration endpoint.
+- **Mensajes destacados en pantalla (👁️)**: Cada mensaje en el panel incluye un botón con icono de ojo para mostrarlo inmediatamente en el overlay flotante `/sms-pantalla.html` junto con su avatar y nombre.
+- **Historial de bienvenida**: Los nuevos espectadores son saludados automáticamente si es su primer mensaje hoy, respetando un cooldown de 6 horas por usuario guardado en `data/panel/bienvenida-vistos.json`.
+- *(Nota histórica: El endpoint `/api/panel/chat-config` y el parámetro de widget de Botrix quedan mantenidos únicamente por retrocompatibilidad, pero ya no son necesarios en la suite actual).*
 
 ### `./medios` (Mounted to `/app/medios`)
 User media directory for custom static assets:
@@ -77,14 +73,19 @@ User media directory for custom static assets:
 
 ## 🌐 OBS Studio Integration
 
-To display the 3D overlay in OBS Studio, Streamlabs, or Prism Live Studio:
+To display overlays in OBS Studio, Streamlabs, or Prism Live Studio, add **Browser Sources** (Fuentes de Navegador):
 
-1. Add a new **Browser Source** in OBS.
-2. Enter the overlay URL:
-   - Local: `http://localhost:7979/`
-   - Remote VPS: `https://directo.yourdomain.com/` (or `http://YOUR_VPS_IP:7979/`)
-3. Set the canvas dimensions:
-   - **Width**: `1920`
-   - **Height**: `1080`
-4. Check **Control audio via OBS** if you wish to route overlay sound effects and audio through a dedicated OBS audio channel.
-5. Check **Shutdown source when not visible** to preserve RAM during inactive scenes.
+1. **Plano 3D Integrado**:
+   - URL: `http://localhost:7979/plano?transparente=1`
+   - Tamaño: `1920×1080`
+   - Parámetros opcionales: `&nocontexto=1` (desactiva barra de contexto integrada), `&noavatares=1` (desactiva tira de avatares integrada).
+
+2. **Fuentes Modulares Independientes**:
+   - **Barra de Contexto flotante**: `http://localhost:7979/contexto.html` (transparente, reacciona a `!contexto <tema>`, zoom con `+`/`-`).
+   - **Tira de Avatares flotante**: `http://localhost:7979/avatares.html?modo=horizontal` o `?modo=vertical` (transparente, interactiva con `+`/`-`).
+   - **Overlay de SMS y Chat destacado**: `http://localhost:7979/sms-pantalla.html` (muestra notas de buzón y mensajes destacados del chat con el botón 👁️).
+   - **Cámara conmutable inteligente**: `http://localhost:7979/camara.html` (monigote por defecto, conmuta a vídeo real, bocadillo de saludo en la parte superior).
+
+3. Check **Control audio via OBS** if you wish to route overlay sound effects and audio through a dedicated OBS audio channel.
+4. Check **Shutdown source when not visible** to preserve RAM during inactive scenes.
+5. In OBS, use right-click **Interact** (Interactuar) on browser sources to adjust zoom levels using the discreet `+` and `−` controls.

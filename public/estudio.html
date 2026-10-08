@@ -242,17 +242,148 @@
       bottom: calc(var(--touch) + 2 * var(--gap) + env(safe-area-inset-bottom));
       z-index: 16;
       width: min(420px, 100vw);
+      max-width: 100vw;
+      box-sizing: border-box;
       display: grid;
+      grid-template-columns: minmax(0, 1fr);
       grid-template-rows: auto 1fr;
       border-left: 1px solid var(--line);
       background: var(--bg);
+      min-width: 0;
+      overflow-x: hidden;
     }
-    .chat-sheet { grid-template-rows: auto auto 1fr; }
-    .sheet-extra { display: grid; gap: var(--gap); }
-    .sheet-extra > :not([hidden]) { margin: var(--gap); }
+    .chat-sheet {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto 1fr;
+      min-width: 0;
+      max-width: 100vw;
+    }
+    .sheet-extra {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--gap);
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .sheet-extra > :not([hidden]) {
+      margin: var(--gap);
+      min-width: 0;
+      max-width: calc(100% - 2 * var(--gap));
+    }
     .sheet-extra input { min-height: var(--touch); padding: 0 var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: 1rem; }
-    .stream-box { aspect-ratio: 16 / 9; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--black); }
+    .stream-box { aspect-ratio: 16 / 9; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--black); min-width: 0; }
     .stream-box iframe { width: 100%; height: 100%; border: 0; display: block; }
+    .chat-pantalla-actual {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: rgba(2, 132, 199, 0.15);
+      border: 1px solid rgba(2, 132, 199, 0.4);
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    .chat-pantalla-label {
+      font-weight: 700;
+      color: var(--brand-strong);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .chat-pantalla-texto {
+      flex: 1 1 0%;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text);
+    }
+    .btn-quitar-pantalla {
+      border: 0;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-weight: 700;
+      padding: 0 4px;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .btn-quitar-pantalla:hover { color: #ef4444; }
+    .chat-live-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: var(--gap);
+      overflow-y: auto;
+      overflow-x: hidden;
+      height: 100%;
+      background: var(--bg);
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    .chat-feed-empty {
+      margin: auto;
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .chat-msg-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 8px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.03);
+      font-size: 0.92rem;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    .chat-msg-content {
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .chat-msg-user {
+      color: var(--brand-strong);
+      margin-right: 4px;
+      word-break: break-word;
+    }
+    .btn-ojo-pantalla {
+      flex-shrink: 0;
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      color: var(--text);
+      opacity: 0.7;
+      transition: all 0.2s ease;
+    }
+    .btn-ojo-pantalla:hover {
+      opacity: 1;
+      background: rgba(2, 132, 199, 0.2);
+      border-color: var(--brand-strong);
+      transform: scale(1.1);
+    }
+    .btn-ojo-pantalla.activo {
+      opacity: 1;
+      background: var(--brand-strong);
+      border-color: #38bdf8;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+    }
     .sheet-head .btn[aria-pressed="true"] { border-color: var(--brand-strong); color: var(--brand-strong); }
     .favorites-bar { display: flex; flex-wrap: wrap; gap: var(--gap); padding: 0 var(--gap); }
     .sheet-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); padding: var(--gap); border-bottom: 1px solid var(--line); }
@@ -551,6 +682,7 @@
       <div class="sheet-head">
         <h2>Chat</h2>
         <button type="button" class="btn" id="btn-toggle-stream" aria-pressed="false">Ver stream</button>
+        <button type="button" class="btn" id="btn-chat-feed-toggle" aria-pressed="false" title="Alternar entre lista con ojo y chat web de Twitch">Twitch web</button>
         <button type="button" class="btn" id="btn-chat-todos" aria-pressed="false">Todos</button>
         <button type="button" class="btn" id="btn-reload-chat">Recargar</button>
         <button type="button" class="icon-btn sheet-close" aria-label="Cerrar chat"></button>
@@ -563,9 +695,17 @@
         <div class="stream-box" id="stream-player-box" hidden>
           <iframe id="twitch-player-frame" title="Stream en directo" allow="autoplay; fullscreen"></iframe>
         </div>
+        <div id="chat-pantalla-actual" class="chat-pantalla-actual" hidden>
+          <span class="chat-pantalla-label">👁️ En pantalla:</span>
+          <span class="chat-pantalla-texto" id="chat-pantalla-texto"></span>
+          <button type="button" class="btn-quitar-pantalla" id="btn-quitar-pantalla" title="Quitar de pantalla">✕</button>
+        </div>
       </div>
-      <div class="sheet-body flush">
-        <iframe id="chat-frame" title="Chat del directo"></iframe>
+      <div class="sheet-body flush" id="chat-body-container">
+        <div id="chat-live-feed" class="chat-live-feed">
+          <p class="hint chat-feed-empty" id="chat-feed-empty">Los mensajes del chat de Twitch aparecerán aquí con su ojo 👁️ para ponerlos en pantalla.</p>
+        </div>
+        <iframe id="chat-frame" title="Chat del directo" hidden></iframe>
       </div>
     </aside>
 
@@ -1253,7 +1393,10 @@
     // to the origin this page was opened from. /api/panel/config is not
     // called on purpose: its response also carries credential-bearing URLs.
     const OBS_SOURCES = [
-      { id: 'plano', title: 'Escena 3D (1920×1080)', path: '/plano?transparente=1', note: 'Diorama con avatares, voces del chat y efectos del panel.' },
+      { id: 'plano', title: 'Escena 3D (1920×1080)', path: '/plano?transparente=1', note: 'Diorama con avatares, voces del chat y efectos (usa ?nocontexto=1&noavatares=1 si usas capas separadas).' },
+      { id: 'contexto', title: 'Barra de contexto', path: '/contexto.html', note: 'Tema o título del directo independiente para colocar libremente en OBS.' },
+      { id: 'avatares-v', title: 'Avatares (Vertical)', path: '/avatares.html?orientacion=vertical', note: 'Columna vertical de avatares interactivos libres.' },
+      { id: 'avatares-h', title: 'Avatares (Horizontal)', path: '/avatares.html?orientacion=horizontal', note: 'Fila horizontal de avatares interactivos libres.' },
       { id: 'camara', title: 'Cámara', path: '/camara.html', note: 'Solo vídeo, sin sonido.' },
       { id: 'micro', title: 'Micrófono', path: '/micro-obs.html', note: 'Solo audio. En OBS, activa «Controlar audio vía OBS».' },
       { id: 'chat', title: 'Chat', path: '/chat.html', note: 'Capa de chat en vivo.' },
@@ -1856,6 +1999,7 @@
           let data;
           try { data = JSON.parse(event.data); } catch (_) { return; }
           if (data && data.type === 'camara_modo' && data.modo && panel.onCameraMode) panel.onCameraMode(data.modo);
+          if (data && data.type === 'chat_mensaje') agregarMensajeTwitchFeed(data);
         };
         socket.onclose = () => { setTimeout(connectPanelSocket, 2000); };
         socket.onerror = () => { try { socket.close(); } catch (_) { /* already closed */ } };
@@ -2680,6 +2824,126 @@
       $('btn-chat-todos').setAttribute('aria-pressed', String(chat.config.todos === true && Boolean(botrixSaved())));
       $('btn-toggle-stream').setAttribute('aria-pressed', String(chat.streamOn));
     }
+    let chatPantallaActivo = true;
+    let mensajeEnPantallaActual = null;
+    const chatMensajesTwitch = [];
+
+    function toggleChatPantallaFeed() {
+      chatPantallaActivo = !chatPantallaActivo;
+      const btn = $('btn-chat-feed-toggle');
+      const feed = $('chat-live-feed');
+      const frame = $('chat-frame');
+      if (btn) btn.setAttribute('aria-pressed', String(!chatPantallaActivo));
+      if (feed && frame) {
+        feed.hidden = !chatPantallaActivo;
+        frame.hidden = chatPantallaActivo;
+      }
+      if (!chatPantallaActivo) {
+        loadChatFrame();
+      } else {
+        actualizarEstadoPantalla();
+      }
+    }
+
+    async function actualizarEstadoPantalla() {
+      try {
+        const res = await fetch('/api/directo/sms/pantalla', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          mensajeEnPantallaActual = data.mensaje;
+          const banner = $('chat-pantalla-actual');
+          const txt = $('chat-pantalla-texto');
+          if (banner && txt) {
+            if (mensajeEnPantallaActual) {
+              txt.textContent = `@${mensajeEnPantallaActual.usuario}: ${mensajeEnPantallaActual.texto}`;
+              banner.hidden = false;
+            } else {
+              banner.hidden = true;
+            }
+          }
+          document.querySelectorAll('.btn-ojo-pantalla').forEach(b => {
+            const bTxt = b.dataset.texto;
+            const bUser = b.dataset.usuario;
+            const coincide = mensajeEnPantallaActual && mensajeEnPantallaActual.texto === bTxt && mensajeEnPantallaActual.usuario === bUser;
+            b.classList.toggle('activo', Boolean(coincide));
+          });
+        }
+      } catch (_) {}
+    }
+
+    async function toggleMostrarEnPantalla(usuario, texto, avatar = null) {
+      if (mensajeEnPantallaActual && mensajeEnPantallaActual.texto === texto && mensajeEnPantallaActual.usuario === usuario) {
+        await fetch('/api/directo/sms/ocultar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
+        actualizarEstadoPantalla();
+        return;
+      }
+      await fetch('/api/directo/sms/mostrar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario, texto, avatar: avatar || null })
+      }).catch(() => {});
+      actualizarEstadoPantalla();
+    }
+
+    function agregarMensajeTwitchFeed(msg) {
+      if (!msg || !msg.texto) return;
+      chatMensajesTwitch.push(msg);
+      if (chatMensajesTwitch.length > 100) chatMensajesTwitch.shift();
+
+      const feed = $('chat-live-feed');
+      if (!feed) return;
+
+      const emptyHint = $('chat-feed-empty');
+      if (emptyHint) emptyHint.remove();
+
+      const row = document.createElement('div');
+      row.className = 'chat-msg-row';
+
+      const content = document.createElement('div');
+      content.className = 'chat-msg-content';
+
+      const platIcon = document.createElement('span');
+      platIcon.style.marginRight = '4px';
+      platIcon.textContent = msg.plataforma === 'youtube' ? '🔴' : '🟣';
+      platIcon.title = msg.plataforma === 'youtube' ? 'YouTube' : 'Twitch';
+
+      const userStrong = document.createElement('strong');
+      userStrong.className = 'chat-msg-user';
+      if (msg.color) userStrong.style.color = msg.color;
+      userStrong.textContent = `@${msg.nombreVisible || msg.usuario}: `;
+
+      const textSpan = document.createElement('span');
+      textSpan.className = 'chat-msg-text';
+      textSpan.textContent = msg.texto;
+
+      content.append(platIcon, userStrong, textSpan);
+
+      const btnOjo = document.createElement('button');
+      btnOjo.type = 'button';
+      btnOjo.className = 'btn-ojo-pantalla';
+      btnOjo.dataset.usuario = msg.usuario;
+      btnOjo.dataset.texto = msg.texto;
+      if (msg.avatar) btnOjo.dataset.avatar = msg.avatar;
+      btnOjo.title = 'Mostrar / ocultar mensaje en pantalla (overlay SMS)';
+      btnOjo.textContent = '👁️';
+      if (mensajeEnPantallaActual && mensajeEnPantallaActual.texto === msg.texto && mensajeEnPantallaActual.usuario === msg.usuario) {
+        btnOjo.classList.add('activo');
+      }
+
+      btnOjo.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMostrarEnPantalla(msg.usuario, msg.texto, msg.avatar || null);
+      });
+
+      row.append(content, btnOjo);
+      feed.appendChild(row);
+
+      while (feed.children.length > 100) {
+        feed.removeChild(feed.firstElementChild);
+      }
+      feed.scrollTop = feed.scrollHeight;
+    }
+
     async function chatConfigRequest(changes) {
       try {
         const response = await fetch('/api/panel/chat-config', changes === undefined
@@ -2702,7 +2966,16 @@
       if (!openSheet('chat-sheet')) return;
       await chatConfigRequest();
       paintChatControls();
-      loadChatFrame();
+      chatPantallaActivo = true;
+      const feed = $('chat-live-feed');
+      const frame = $('chat-frame');
+      if (feed && frame) {
+        feed.hidden = false;
+        frame.hidden = true;
+      }
+      const btnFeed = $('btn-chat-feed-toggle');
+      if (btnFeed) btnFeed.setAttribute('aria-pressed', 'false');
+      actualizarEstadoPantalla();
     }
     // "Todos" shows every platform's chat through the Botrix widget.
     async function toggleAllChats() {
@@ -2980,6 +3253,11 @@
         button.addEventListener('click', closeSheets);
       });
       $('btn-chat-view').addEventListener('click', openChat);
+      $('btn-chat-feed-toggle')?.addEventListener('click', toggleChatPantallaFeed);
+      $('btn-quitar-pantalla')?.addEventListener('click', async () => {
+        await fetch('/api/directo/sms/ocultar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
+        actualizarEstadoPantalla();
+      });
       $('btn-chat-todos').addEventListener('click', toggleAllChats);
       $('btn-botrix-guardar').addEventListener('click', saveBotrix);
       $('btn-reload-chat').addEventListener('click', () => loadChatFrame(true));

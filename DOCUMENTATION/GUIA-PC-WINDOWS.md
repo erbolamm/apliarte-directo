@@ -77,8 +77,11 @@ En la ventana negra de la terminal verás un resumen con tus enlaces locales:
 📱 Estudio táctil (Tablet o Móvil en la misma red Wi-Fi):
    http://192.168.1.35:7979/estudio (o ruta antigua /pizarra-plus)
 
-En OBS, añade dos «Fuentes de navegador» de 1920 × 1080:
-  • Capa (avatares y rótulos):  http://127.0.0.1:7979/plano?transparente=1
+En OBS, añade las «Fuentes de navegador» (1920 × 1080 o tamaño libre):
+  • Capa completa 3D:           http://127.0.0.1:7979/plano?transparente=1
+  • Barra de contexto suelta:   http://127.0.0.1:7979/contexto.html
+  • Avatares sueltos:           http://127.0.0.1:7979/avatares.html (o ?modo=vertical)
+  • Overlay SMS y Chat (👁️):    http://127.0.0.1:7979/sms-pantalla.html
   • Cámara (conmutador monigote): http://127.0.0.1:7979/camara.html
   • Fondo animado:              http://127.0.0.1:7979/fondo.html
 
@@ -110,9 +113,16 @@ Abre OBS Studio en tu ordenador y añade las fuentes a tu escena:
    - **URL**: `http://127.0.0.1:7979/camara.html`
    - **Ancho**: `1920` (o ajusta al tamaño y posición que prefieras en tu lienzo).
    - **Alto**: `1080`
-4. Pulsa **Aceptar**. Mientras no actives la cámara desde la tablet, se mostrará el monigote animado de Javier. En cuanto toques el botón de cámara en la tablet, conmutará suavemente al vídeo en vivo.
+4. Pulsa **Aceptar**. Mientras no actives la cámara desde la tablet, se mostrará el monigote animado de Javier. En cuanto toques el botón de cámara en la tablet, conmutará suavemente al vídeo en vivo. En la parte superior verás además el bocadillo animado de bienvenida cuando entren espectadores nuevos.
 
-### 3. (Opcional) Retransmisión simultánea a Twitch y YouTube
+### 3. Fuentes Modulares y Overlays Independientes (Opcional)
+Si quieres personalizar la posición de cada elemento por separado:
+- **Barra de Contexto flotante** (`http://127.0.0.1:7979/contexto.html`): se ubica donde quieras y se actualiza sola al escribir `!contexto <tema>` en el chat.
+- **Tira de Avatares flotante** (`http://127.0.0.1:7979/avatares.html?modo=horizontal` o `?modo=vertical`): para colocar tus avatares en un lateral o en la parte inferior. Si usas fuentes sueltas, puedes añadir `&nocontexto=1&noavatares=1` al plano 3D para no duplicar.
+- **Overlay de SMS y Chat con Ojo 👁️** (`http://127.0.0.1:7979/sms-pantalla.html`): muestra en directo las notas del buzón o cualquier mensaje de Twitch/YouTube que marques con el botón del ojo 👁️ desde el panel.
+- **Ajuste de Zoom**: Haz clic derecho en OBS sobre cualquier fuente y pulsa **Interactuar** para agrandar o achicar el texto con los botones `+` y `−`.
+
+### 4. (Opcional) Retransmisión simultánea a Twitch y YouTube
 Si quieres emitir a las dos plataformas con una sola salida desde OBS:
 1. En OBS, ve a **Ajustes → Emisión**.
 2. **Servicio**: Selecciona `Personalizado...`

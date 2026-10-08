@@ -8,6 +8,9 @@ const { handleStreamingConfig } = require('./src/streaming-config');
 const { handleCentreStatus, handleFinalizarEmision } = require('./src/centro-status');
 const { handleRedLocal } = require('./src/red-local');
 const { createSmsPantalla } = require('./src/sms-pantalla');
+const { crearGestorBienvenida, parsearLineaPrivmsg } = require('./src/bienvenida-chat');
+const { ColaAnimaciones, MAX_COLA_ANIMACIONES, DURACIONES_MS } = require('./src/cola-animaciones');
+const { YoutubeLiveChat } = require('./src/youtube-livechat');
 
 // Local, gitignored launch settings (data/directo.local.json → {"env": {...}}).
 // Applied as defaults so every launcher (npm run directo, erbolamm directo on,
@@ -40,6 +43,42 @@ const LAYERS_FILE    = `${DATA_DIR}/layers.json`;
 const PUBLIC_DIR     = process.env.PUBLIC_DIR || pathMod.join(__dirname, 'public');
 const CATEGORIA_FILE = `${DATA_DIR}/categoria.json`;
 const CAMARA_FILE    = `${DATA_DIR}/camara.json`;
+const BIENVENIDA_FILE = pathMod.join(DATA_DIR, 'panel', 'bienvenida.json');
+
+function leerConfigBienvenida() {
+  return { activa: true };
+}
+
+function guardarConfigBienvenida(cfg) {
+  const panelDir = pathMod.join(DATA_DIR, 'panel');
+  if (!fs.existsSync(panelDir)) {
+    try { fs.mkdirSync(panelDir, { recursive: true }); } catch (_) {}
+  }
+  fs.writeFileSync(BIENVENIDA_FILE, JSON.stringify({ activa: true }, null, 2), 'utf8');
+}
+
+const BIENVENIDA_VISTOS_FILE = pathMod.join(DATA_DIR, 'panel', 'bienvenida-vistos.json');
+
+function leerVistosBienvenida() {
+  if (!fs.existsSync(BIENVENIDA_VISTOS_FILE)) return {};
+  try {
+    const d = JSON.parse(fs.readFileSync(BIENVENIDA_VISTOS_FILE, 'utf8'));
+    if (!d || typeof d !== 'object' || Array.isArray(d)) return {};
+    return d;
+  } catch (_) {
+    return {};
+  }
+}
+
+function guardarVistosBienvenida(vistos) {
+  const panelDir = pathMod.join(DATA_DIR, 'panel');
+  if (!fs.existsSync(panelDir)) {
+    try { fs.mkdirSync(panelDir, { recursive: true }); } catch (_) {}
+  }
+  try {
+    fs.writeFileSync(BIENVENIDA_VISTOS_FILE, JSON.stringify(vistos || {}, null, 2), 'utf8');
+  } catch (_) {}
+}
 
 function loadCamaraConfig() {
   try {
@@ -273,7 +312,38 @@ function createGameHub({ randomIndex = (max) => Math.floor(Math.random() * max),
 }
 const gameHub = createGameHub();
 
-let serverOwners     = {};
+// ─── Dueños de avatares persistidos en data/panel/avatares.json ───
+const AVATARES_FILE = pathMod.join(DATA_DIR, 'panel', 'avatares.json');
+
+function cargarDuenosServidor() {
+  try {
+    if (fs.existsSync(AVATARES_FILE)) {
+      const data = JSON.parse(fs.readFileSync(AVATARES_FILE, 'utf8'));
+      if (data && typeof data === 'object') {
+        const limpios = { ja: 'apliarte' };
+        for (const [k, v] of Object.entries(data)) {
+          if (typeof k === 'string' && typeof v === 'string' && v.trim()) {
+            limpios[k] = v.trim();
+          }
+        }
+        limpios.ja = 'apliarte';
+        return limpios;
+      }
+    }
+  } catch (_) {}
+  return { ja: 'apliarte' };
+}
+
+function guardarDuenosServidor() {
+  try {
+    const dir = pathMod.dirname(AVATARES_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    serverOwners.ja = 'apliarte';
+    fs.writeFileSync(AVATARES_FILE, JSON.stringify(serverOwners, null, 2), 'utf8');
+  } catch (_) {}
+}
+
+let serverOwners     = cargarDuenosServidor();
 
 let seqComandosDirecto = 0;
 const ringComandosDirecto = [];
@@ -281,6 +351,27 @@ let modoCamaraDirecto = 'monigote';
 let aspectoCamaraDirecto = 'horizontal';
 const cooldownComandosTwitch = new Map();
 const COOLDOWN_COMANDO_MS = 2000;
+
+// ─── Contexto del directo (tema mostrado en overlay OBS y sincronizado) ───
+let contextoDirecto = '';
+const CONTEXTO_FILE = pathMod.join(DATA_DIR, 'panel', 'contexto.json');
+try {
+  if (fs.existsSync(CONTEXTO_FILE)) {
+    const rawCtx = JSON.parse(fs.readFileSync(CONTEXTO_FILE, 'utf8'));
+    if (rawCtx && typeof rawCtx.contexto === 'string') contextoDirecto = rawCtx.contexto;
+  }
+} catch (_) {}
+
+function fijarContextoDirecto(texto) {
+  contextoDirecto = String(texto || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+  try {
+    const dir = pathMod.dirname(CONTEXTO_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(CONTEXTO_FILE, JSON.stringify({ contexto: contextoDirecto }), 'utf8');
+  } catch (_) {}
+  broadcast({ type: 'contexto_estado', texto: contextoDirecto });
+  return contextoDirecto;
+}
 
 // ─── Twitch IRC Bot para emisión de comandos al chat real ─────────────────
 const TWITCH_CONFIG_FILE = `${DATA_DIR}/twitch-auth.json`;
@@ -303,6 +394,69 @@ try {
     }
   }
 } catch (_) {}
+
+const configBienvenidaInicial = leerConfigBienvenida();
+const gestorBienvenida = crearGestorBienvenida({
+  canal: () => twitchConfig.canal,
+  botNick: () => twitchConfig.nick,
+  activo: true,
+  cooldownReSaludoMs: 6 * 60 * 60 * 1000,
+  vistosIniciales: leerVistosBienvenida(),
+  onCambioVistos: guardarVistosBienvenida,
+});
+
+const colaAnimaciones = new ColaAnimaciones({
+  onIniciar: (anim) => {
+    broadcast({
+      type: 'comando_chat',
+      comando: `!${anim.tipo}`,
+      usuario: anim.usuario || 'ja',
+    });
+  },
+  onCortar: (anim) => {
+    broadcast({
+      type: 'animacion_cortar',
+      tipo: anim.tipo,
+    });
+  },
+});
+
+function ejecutarBienvenida(accion) {
+  if (!accion || !accion.usuarios || accion.usuarios.length === 0) return;
+  broadcast({
+    type: 'saludo_chat',
+    usuarios: accion.usuarios,
+    total: accion.total,
+    texto: accion.textoBocadillo,
+  });
+
+  if (accion.textoChat) {
+    const textoChat = String(accion.textoChat).replace(/[\r\n]+/g, ' ').trim();
+    enviarATwitchChat(textoChat);
+  }
+
+  if (accion.lanzarFiesta) {
+    colaAnimaciones.encolar({
+      tipo: 'fiesta',
+      usuario: 'ja',
+      esBienvenida: true,
+    }, Date.now());
+  }
+}
+
+setInterval(() => {
+  try {
+    if (gestorBienvenida) {
+      const accion = gestorBienvenida.revisarPendientes(Date.now());
+      if (accion) {
+        ejecutarBienvenida(accion);
+      }
+    }
+    if (colaAnimaciones) {
+      colaAnimaciones.revisar(Date.now());
+    }
+  } catch (_) {}
+}, 500).unref();
 
 function maskSecret(str) {
   if (!str || typeof str !== 'string') return '';
@@ -452,6 +606,36 @@ function conectarTwitchSender() {
         twitchConnected = false;
         console.error('[TwitchIRC] Error: Token rechazado por Twitch (Login authentication failed)');
       }
+
+      const lineas = msg.split(/\r?\n/);
+      for (const linea of lineas) {
+        if (!linea.trim()) continue;
+        const accion = gestorBienvenida.procesarLinea(linea, Date.now());
+        if (accion) {
+          ejecutarBienvenida(accion);
+        }
+        const parsedPrivmsg = parsearLineaPrivmsg(linea);
+        if (parsedPrivmsg) {
+          const uLower = parsedPrivmsg.usuario.toLowerCase();
+          const esJavierUser = (uLower === 'apliarte' || uLower === 'erbolamm' || uLower === 'ja');
+          if (esJavierUser && /^!contexto(?:\s+(.*))?$/i.test(parsedPrivmsg.texto)) {
+            const m = parsedPrivmsg.texto.match(/^!contexto(?:\s+(.*))?$/i);
+            fijarContextoDirecto(m && m[1] ? m[1] : '');
+          }
+          if (esJavierUser && /^!(fiesta|conga|bronca)$/i.test(parsedPrivmsg.texto.trim())) {
+            const m = parsedPrivmsg.texto.trim().match(/^!(fiesta|conga|bronca)$/i);
+            colaAnimaciones.encolar({ tipo: m[1].toLowerCase(), usuario: 'ja' }, Date.now());
+          }
+          broadcast({
+            type: 'chat_mensaje',
+            plataforma: 'twitch',
+            usuario: parsedPrivmsg.usuario,
+            nombreVisible: parsedPrivmsg.nombreVisible,
+            texto: parsedPrivmsg.texto,
+            color: parsedPrivmsg.color || null,
+          });
+        }
+      }
     });
     twitchSenderWs.on('close', () => {
       twitchConnected = false;
@@ -466,8 +650,68 @@ function conectarTwitchSender() {
   }
 }
 
+// ─── YouTube Live Chat: Lector InnerTube ─────────────────────────────────────
+let youtubeChatInstancia = null;
+const youtubeCanalConfig = process.env.DIRECTO_YOUTUBE_CANAL || '@erbolammApliArte';
+
+function iniciarYoutubeLiveChat(canalOVideoId = youtubeCanalConfig) {
+  if (youtubeChatInstancia) {
+    try { youtubeChatInstancia.stop(); } catch (_) {}
+    youtubeChatInstancia = null;
+  }
+  const opts = {};
+  const parsedVid = YoutubeLiveChat.parseVideoId(canalOVideoId);
+  if (parsedVid) {
+    opts.videoId = parsedVid;
+  } else {
+    opts.channel = canalOVideoId;
+  }
+  youtubeChatInstancia = new YoutubeLiveChat(opts);
+
+  youtubeChatInstancia.on('start', (vid) => {
+    console.log(`[YouTubeChat] Conectado a emisión en directo (${vid})`);
+  });
+
+  youtubeChatInstancia.on('chat', (item) => {
+    if (gestorBienvenida) {
+      const accion = gestorBienvenida.procesarUsuario({
+        usuario: item.usuario,
+        nombreVisible: item.usuario,
+        texto: item.texto,
+      }, Date.now());
+      if (accion) {
+        ejecutarBienvenida(accion);
+      }
+    }
+    const uLower = (item.usuario || '').toLowerCase();
+    const esOwner = uLower === 'apliarte' || uLower === 'erbolamm' || uLower === 'ja' || item.isOwner;
+    if (esOwner && /^!contexto(?:\s+(.*))?$/i.test(item.texto)) {
+      const m = item.texto.match(/^!contexto(?:\s+(.*))?$/i);
+      fijarContextoDirecto(m && m[1] ? m[1] : '');
+    }
+    if (esOwner && /^!(fiesta|conga|bronca)$/i.test(item.texto.trim())) {
+      const m = item.texto.trim().match(/^!(fiesta|conga|bronca)$/i);
+      colaAnimaciones.encolar({ tipo: m[1].toLowerCase(), usuario: 'ja' }, Date.now());
+    }
+    broadcast({
+      type: 'chat_mensaje',
+      plataforma: 'youtube',
+      usuario: item.usuario,
+      nombreVisible: item.usuario,
+      texto: item.texto,
+      avatar: item.avatar,
+      color: '#ff0033'
+    });
+  });
+
+  youtubeChatInstancia.on('error', () => {});
+
+  youtubeChatInstancia.start();
+}
+
 if (!process.env.APLIARTE_TEST_DATA_DIR && process.env.NODE_ENV !== 'test') {
   conectarTwitchSender();
+  iniciarYoutubeLiveChat();
 }
 
 function sanearComando(cmdStr) {
@@ -758,10 +1002,12 @@ async function ejecutarAnuncioHelix(cmdStr) {
 
 function enviarATwitchChat(texto) {
   if (!texto) return false;
+  const textoLimpio = String(texto).replace(/[\r\n]+/g, ' ').trim();
+  if (!textoLimpio) return false;
   if (twitchSenderWs && twitchSenderWs.readyState === 1 && twitchConnected) {
     const canal = twitchConfig.canal || 'apliarte';
-    twitchSenderWs.send(`PRIVMSG #${canal} :${texto}\r\n`);
-    console.log(`[TwitchIRC] Enviado a #${canal}: ${texto}`);
+    twitchSenderWs.send(`PRIVMSG #${canal} :${textoLimpio}\r\n`);
+    console.log(`[TwitchIRC] Enviado a #${canal}: ${textoLimpio}`);
     return true;
   }
   return false;
@@ -1971,10 +2217,14 @@ const server = http.createServer((req, res) => {
           const modoPrevioCamara = modoCamaraDirecto;
           const aspectoPrevioCamara = aspectoCamaraDirecto;
           if (cmd.comando === 'adoptar' && cmd.agente && cmd.usuario) {
-            for (const [aId, u] of Object.entries(serverOwners)) {
-              if (u.toLowerCase() === cmd.usuario.toLowerCase()) delete serverOwners[aId];
+            if (cmd.agente !== 'ja') {
+              for (const [aId, u] of Object.entries(serverOwners)) {
+                if (aId !== 'ja' && u.toLowerCase() === cmd.usuario.toLowerCase()) delete serverOwners[aId];
+              }
+              serverOwners[cmd.agente] = cmd.usuario;
             }
-            serverOwners[cmd.agente] = cmd.usuario;
+            serverOwners.ja = 'apliarte';
+            guardarDuenosServidor();
           } else if (cmd.comando === 'liberar') {
             const esJavier = ['ja', 'apliarte', 'erbolamm'].includes(String(cmd.usuario ?? '').toLowerCase());
             if (esJavier && (cmd.agente === 'todos' || cmd.agente === 'all')) {
@@ -1982,17 +2232,19 @@ const server = http.createServer((req, res) => {
                 if (aId !== 'ja') delete serverOwners[aId];
               }
             } else if (esJavier && cmd.agente && serverOwners[cmd.agente]) {
-              delete serverOwners[cmd.agente];
+              if (cmd.agente !== 'ja') delete serverOwners[cmd.agente];
             } else if (esJavier && cmd.usuarioObjetivo) {
               const uObj = String(cmd.usuarioObjetivo).toLowerCase();
               for (const [aId, u] of Object.entries(serverOwners)) {
-                if (u.toLowerCase() === uObj) delete serverOwners[aId];
+                if (aId !== 'ja' && u.toLowerCase() === uObj) delete serverOwners[aId];
               }
             } else if (cmd.usuario) {
               for (const [aId, u] of Object.entries(serverOwners)) {
-                if (u.toLowerCase() === cmd.usuario.toLowerCase()) delete serverOwners[aId];
+                if (aId !== 'ja' && u.toLowerCase() === cmd.usuario.toLowerCase()) delete serverOwners[aId];
               }
             }
+            serverOwners.ja = 'apliarte';
+            guardarDuenosServidor();
           } else if (cmd.comando && typeof cmd.comando === 'string' && cmd.comando.trim().toLowerCase().startsWith('!cam')) {
             const arg = cmd.comando.trim().toLowerCase().split(/\s+/)[1];
             if (arg === 'on' || arg === 'mostrar' || arg === 'camara') modoCamaraDirecto = 'camara';
@@ -2019,6 +2271,10 @@ const server = http.createServer((req, res) => {
             }
             const c = saneado.comando;
             cmd.comando = c;
+            if (/^!contexto(?:\s+(.*))?$/i.test(c)) {
+              const m = c.match(/^!contexto(?:\s+(.*))?$/i);
+              fijarContextoDirecto(m && m[1] ? m[1] : '');
+            }
             const ahora = Date.now();
             const ultimoEnvio = cooldownComandosTwitch.get(c);
             if (ultimoEnvio !== undefined && (ahora - ultimoEnvio < COOLDOWN_COMANDO_MS) && !c.startsWith('/')) {
@@ -2051,6 +2307,7 @@ const server = http.createServer((req, res) => {
             if (ringComandosDirecto.length > 100) ringComandosDirecto.shift();
 
             broadcast({ type: 'directo_comando', cmd, duenos: serverOwners, seq: seqComandosDirecto, modoCamara: modoCamaraDirecto, aspectoCamara: aspectoCamaraDirecto });
+            broadcast({ type: 'avatares_estado', avatares: serverOwners });
             if (modoCamaraDirecto !== modoPrevioCamara && (cmd.modo || (cmd.comando && typeof cmd.comando === 'string' && cmd.comando.startsWith('!cam')))) {
               broadcast({ type: 'camara_modo', modo: modoCamaraDirecto });
             }
@@ -2058,7 +2315,15 @@ const server = http.createServer((req, res) => {
               broadcast({ type: 'camara_aspecto', aspecto: aspectoCamaraDirecto });
             }
             if (cmd.comando && cmd.comando !== 'adoptar' && cmd.comando !== 'liberar') {
-              broadcast({ type: 'comando_chat', comando: cmd.comando, usuario: cmd.usuario || 'ja' });
+              const cClean = String(cmd.comando).trim().toLowerCase().replace(/^!/, '');
+              if (['fiesta', 'conga', 'bronca'].includes(cClean)) {
+                colaAnimaciones.encolar({
+                  tipo: cClean,
+                  usuario: cmd.usuario || 'ja',
+                }, Date.now());
+              } else {
+                broadcast({ type: 'comando_chat', comando: cmd.comando, usuario: cmd.usuario || 'ja' });
+              }
             }
           }
 
@@ -2078,6 +2343,86 @@ const server = http.createServer((req, res) => {
         } catch (e) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'JSON inválido' }));
+        }
+      });
+      return;
+    }
+  }
+
+  // ── Contexto del directo (GET público, POST autenticado) ───────────────────
+  if (path === '/api/directo/contexto') {
+    cors(res);
+    if (req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(JSON.stringify({ ok: true, contexto: contextoDirecto }));
+    }
+    if (req.method === 'POST') {
+      if (!isAuth(req)) {
+        res.writeHead(401, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        return res.end(JSON.stringify({ ok: false, error: 'No autorizado' }));
+      }
+      let body = '';
+      req.on('data', c => { body += c; });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body || '{}');
+          const nuevo = fijarContextoDirecto(parsed.contexto);
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+          return res.end(JSON.stringify({ ok: true, contexto: nuevo }));
+        } catch (_) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ ok: false, error: 'JSON inválido' }));
+        }
+      });
+      return;
+    }
+  }
+
+  // ── Avatares interactivos (GET público, solo lectura) ──────────────────────
+  if (path === '/api/directo/avatares') {
+    cors(res);
+    if (req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(JSON.stringify({ ok: true, avatares: serverOwners }));
+    }
+    res.writeHead(405, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify({ ok: false, error: 'Método no permitido' }));
+  }
+
+  // ── YouTube Live Chat (GET público, POST autenticado) ──────────────────────
+  if (path === '/api/directo/youtube/chat') {
+    cors(res);
+    if (req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(JSON.stringify({
+        ok: true,
+        conectado: Boolean(youtubeChatInstancia && youtubeChatInstancia.running),
+        canal: youtubeChatInstancia ? youtubeChatInstancia.channel : youtubeCanalConfig,
+        videoId: youtubeChatInstancia ? youtubeChatInstancia.videoId : null
+      }));
+    }
+    if (req.method === 'POST') {
+      if (!isAuth(req)) {
+        res.writeHead(401, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        return res.end(JSON.stringify({ ok: false, error: 'No autorizado' }));
+      }
+      let body = '';
+      req.on('data', c => { body += c; });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body || '{}');
+          if (parsed.canal || parsed.videoId) {
+            iniciarYoutubeLiveChat(parsed.videoId || parsed.canal);
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+          return res.end(JSON.stringify({
+            ok: true,
+            canal: youtubeChatInstancia ? youtubeChatInstancia.channel : youtubeCanalConfig,
+            videoId: youtubeChatInstancia ? youtubeChatInstancia.videoId : null
+          }));
+        } catch (_) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ ok: false, error: 'JSON inválido' }));
         }
       });
       return;
@@ -2211,6 +2556,23 @@ const server = http.createServer((req, res) => {
           return responderPanel(res, 500, { error: 'no-se-pudo-guardar' });
         }
         return responderPanel(res, 200, { ok: true, ...nueva });
+      });
+    }
+  }
+
+  if (path === '/api/panel/bienvenida') {
+    cors(res);
+    if (!isAuth(req)) return responderPanel(res, 401, { error: 'No autorizado' });
+    if (req.method === 'GET') {
+      return responderPanel(res, 200, { ok: true, activa: true });
+    }
+    if (req.method === 'POST') {
+      return leerCuerpoPanel(req, res, () => {
+        if (gestorBienvenida) {
+          gestorBienvenida.setActivo(true);
+        }
+        guardarConfigBienvenida({ activa: true });
+        return responderPanel(res, 200, { ok: true, activa: true });
       });
     }
   }
@@ -2767,6 +3129,10 @@ wss.on('connection', (ws, request) => {
   for (const [scene, visible] of Object.entries(scenes)) {
     ws.send(JSON.stringify({ type: 'scene', scene, visible }));
   }
+  if (contextoDirecto) {
+    ws.send(JSON.stringify({ type: 'contexto_estado', texto: contextoDirecto }));
+  }
+  ws.send(JSON.stringify({ type: 'avatares_estado', avatares: serverOwners }));
   ws.on('message', message => {
     const text = typeof message === 'string' ? message : message.toString('utf-8');
 
@@ -2817,7 +3183,8 @@ wss.on('connection', (ws, request) => {
       'sms_nuevo', 'nuevo_sms',
       'juego_estado', 'categoria',
       'pizarra_draw', 'pizarra_clear', 'pizarra_undo', 'pizarra_init', 'pizarra_solicitar_estado',
-      'ping', 'pong'
+      'ping', 'pong',
+      'saludo_chat', 'contexto_estado', 'avatares_estado', 'chat_mensaje'
     ]);
 
     if (!TIPOS_RETRANS_PERMITIDOS.has(msgType)) {
@@ -2991,4 +3358,6 @@ module.exports = {
   getObsUrls,
   broadcast,
   clients,
+  gestorBienvenida,
+  ejecutarBienvenida,
 };

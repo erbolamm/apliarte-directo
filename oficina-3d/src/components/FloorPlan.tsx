@@ -20,6 +20,7 @@ import {
 import { ERBOLAMM_LOGO_DATA_URI } from '../office/logo';
 import type { FiestaState } from '../office/fiesta';
 import type { BroncaState } from '../office/bronca';
+import type { CongaState } from '../office/conga';
 
 export const CHAR_SCALE = 0.62;
 
@@ -30,6 +31,8 @@ type Props = {
   activeGame?: ActiveGame | null;
   fiesta?: FiestaState | null;
   bronca?: BroncaState | null;
+  conga?: CongaState | null;
+  avatarOwners?: Record<string, string>;
   selected: AgentId | null;
   onSelect: (id: AgentId | null) => void;
   hovered: AgentId | null;
@@ -572,7 +575,7 @@ function BroncaLayer({ bronca }: { bronca: BroncaState }) {
 }
 
 export default function FloorPlan(props: Props) {
-  const { fill, visitor, agents, activeGame, fiesta, bronca, selected, onSelect, hovered, onHover, mailCount = 0, motion = true, onMail } = props;
+  const { fill, visitor, agents, activeGame, fiesta, bronca, conga, avatarOwners: propAvatarOwners, selected, onSelect, hovered, onHover, mailCount = 0, motion = true, onMail } = props;
 
   useEffect(() => {
     let disposed = false;
@@ -665,6 +668,15 @@ export default function FloorPlan(props: Props) {
   const [speeches, setSpeeches] = useState<Partial<Record<AgentId, Speech>>>({});
   // Dueños de avatares adoptados en Twitch chat (agente -> usuario)
   const [avatarOwners, setAvatarOwners] = useState<Record<string, string>>({});
+  const baseOwners = propAvatarOwners ?? avatarOwners;
+  const effectiveOwners: Record<string, string> = { ...baseOwners };
+  if (conga && (conga.phase === 'countdown' || conga.phase === 'dancing')) {
+    for (const d of conga.dancers) {
+      if (d.agentId && !effectiveOwners[d.agentId]) {
+        effectiveOwners[d.agentId] = d.displayName || d.login;
+      }
+    }
+  }
 
   const cameraRef = useRef(camera);
   const points = useRef(new Map<number, TouchPoint>());
@@ -961,6 +973,8 @@ export default function FloorPlan(props: Props) {
             const body = (await response.json()) as { seq?: number; eventos?: OfficeCommand[]; duenos?: Record<string, string> };
             if (body.duenos) {
               setAvatarOwners(body.duenos);
+              window.Oficina3D?.runtime?.setAvatarOwners?.(body.duenos);
+              window.Oficina3D?.setAvatarOwners?.(body.duenos);
             }
             const office = window.Oficina3D;
             if (cursor >= 0 && office) {
@@ -1106,7 +1120,7 @@ export default function FloorPlan(props: Props) {
               />
             )}
             <AgentPillTag
-              name={avatarOwners[r.id] ? `${a.name} · @${avatarOwners[r.id]}` : a.name}
+              name={effectiveOwners[r.id] ? `${a.name} · @${effectiveOwners[r.id]}` : a.name}
               color={a.color}
               focus={focus}
             />
@@ -1426,7 +1440,7 @@ export default function FloorPlan(props: Props) {
                         </svg>
                       </div>
                       <span className="person-name">
-                        {a.name}{avatarOwners[r.id] ? ` · @${avatarOwners[r.id]}` : ''}
+                        {a.name}{effectiveOwners[r.id] ? ` · @${effectiveOwners[r.id]}` : ''}
                       </span>
                       {(isBubbleActive || spoken) && (
                         <svg

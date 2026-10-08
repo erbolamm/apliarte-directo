@@ -317,6 +317,31 @@
     .msg-texto {
       color: #eaeaea;
     }
+    .btn-ojo-pantalla {
+      margin-left: auto;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      padding: 1px 6px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      color: #fff;
+      opacity: 0.6;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    .btn-ojo-pantalla:hover {
+      opacity: 1;
+      background: rgba(2, 132, 199, 0.25);
+      border-color: #0284c7;
+      transform: scale(1.1);
+    }
+    .btn-ojo-pantalla.activo {
+      opacity: 1;
+      background: #0284c7;
+      border-color: #38bdf8;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+    }
     /* VISTA 3: Botrix */
     #vista-botrix {
       flex: 1;
@@ -466,6 +491,10 @@
   </style>
 </head>
 <body>
+  <div style="background:#005fa9;color:#fff;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-size:0.88rem;font-weight:600;gap:12px;border-bottom:1px solid #5ecef5;">
+    <span>🎙️ El panel oficial de control con botón de ojo 👁️ para OBS es: <strong>/estudio</strong></span>
+    <a href="/estudio" style="background:#fff;color:#005fa9;padding:4px 12px;border-radius:5px;text-decoration:none;font-weight:700;">Abrir Panel Estudio ↗</a>
+  </div>
   <header>
     <div class="brand-wrap">
       <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" width="24" height="24">
@@ -481,9 +510,6 @@
       </button>
       <button type="button" class="btn-vista" id="btn-vista-muro" title="Muro unificado en tiempo real">
         📜 Muro en Vivo
-      </button>
-      <button type="button" class="btn-vista" id="btn-vista-botrix" title="Widget Botrix">
-        🤖 Botrix
       </button>
     </div>
 
@@ -646,9 +672,21 @@
 
     actualizarIframes();
 
+    let timerYtServer = null;
     inputYt.addEventListener('input', () => {
-      localStorage.setItem('directo_yt_canal_o_id', inputYt.value.trim());
+      const val = inputYt.value.trim();
+      localStorage.setItem('directo_yt_canal_o_id', val);
       actualizarIframes();
+      clearTimeout(timerYtServer);
+      timerYtServer = setTimeout(() => {
+        if (val) {
+          fetch('/api/directo/youtube/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoId: val })
+          }).catch(() => {});
+        }
+      }, 800);
     });
 
     // ── Selector de Vistas ──────────────────────────────────────────────────
@@ -885,7 +923,7 @@
     // ── Conexión en vivo para el Muro Unificado (Twitch + Kick nativos) ──
     const elMuroMensajes = document.getElementById('muro-mensajes');
 
-    function agregarMensajeMuro({ plataforma, usuario, texto, color }) {
+    function agregarMensajeMuro({ plataforma, usuario, texto, color, avatar }) {
       if (!elMuroMensajes) return;
       if (usuariosIgnorados.has((usuario || '').toLowerCase())) return;
 
@@ -911,6 +949,34 @@
       txtSpan.textContent = texto;
 
       fila.append(badge, userSpan, txtSpan);
+
+      if (plataforma === 'twitch' || plataforma === 'youtube') {
+        const btnOjo = document.createElement('button');
+        btnOjo.type = 'button';
+        btnOjo.className = 'btn-ojo-pantalla';
+        btnOjo.title = 'Mostrar / ocultar mensaje en pantalla (overlay SMS)';
+        btnOjo.textContent = '👁️';
+        btnOjo.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const activo = btnOjo.classList.contains('activo');
+          if (activo) {
+            await fetch('/api/directo/sms/ocultar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
+            btnOjo.classList.remove('activo');
+          } else {
+            document.querySelectorAll('.btn-ojo-pantalla.activo').forEach(b => b.classList.remove('activo'));
+            const res = await fetch('/api/directo/sms/mostrar', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ usuario, texto, avatar: avatar || null })
+            }).catch(() => {});
+            if (res && res.ok) {
+              btnOjo.classList.add('activo');
+            }
+          }
+        });
+        fila.appendChild(btnOjo);
+      }
+
       elMuroMensajes.appendChild(fila);
 
       while (elMuroMensajes.children.length > 250) {
@@ -926,6 +992,34 @@
         fuenteTwitch.conectar();
       }
     } catch (_) {}
+
+    function conectarWsChat() {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host || '127.0.0.1:7979';
+      try {
+        const ws = new WebSocket(`${proto}//${host}/ws`);
+        ws.onmessage = async (event) => {
+          let raw = event.data;
+          if (raw instanceof Blob) raw = await raw.text();
+          try {
+            const data = JSON.parse(raw);
+            if (data.type === 'chat_mensaje') {
+              agregarMensajeMuro({
+                plataforma: data.plataforma || 'twitch',
+                usuario: data.nombreVisible || data.usuario,
+                texto: data.texto,
+                color: data.color,
+                avatar: data.avatar || null
+              });
+            }
+          } catch (_) {}
+        };
+        ws.onclose = () => setTimeout(conectarWsChat, 4000);
+      } catch (_) {
+        setTimeout(conectarWsChat, 5000);
+      }
+    }
+    conectarWsChat();
 
     cargarSilenciados();
   </script>

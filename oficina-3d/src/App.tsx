@@ -5,6 +5,7 @@ import { AGENTS, type AgentId } from './office/agents';
 import { OfficeRuntime, normalizeSnapshot, type ActiveGame } from './office/runtime';
 import type { FiestaState } from './office/fiesta';
 import type { BroncaState } from './office/bronca';
+import type { CongaState } from './office/conga';
 import { isBoardMode } from './office/geometry';
 
 export default function App({fill}:{fill?:boolean}={}){
@@ -14,12 +15,14 @@ export default function App({fill}:{fill?:boolean}={}){
  const [activeGame,setActiveGame]=useState<ActiveGame|null>(()=>runtime.current.activeGame?{...runtime.current.activeGame}:null);
  const [fiesta,setFiesta]=useState<FiestaState>(()=>({...runtime.current.fiestaState}));
  const [bronca,setBronca]=useState<BroncaState>(()=>({...runtime.current.broncaState}));
+ const [conga,setConga]=useState<CongaState>(()=>({...runtime.current.congaState}));
+ const [avatarOwners,setAvatarOwners]=useState<Record<string,string>>(()=>({...runtime.current.avatarOwners}));
  const [motion,setMotion]=useState(()=>!window.matchMedia('(prefers-reduced-motion: reduce)').matches),[visible,setVisible]=useState(!document.hidden),[mailCount,setMailCount]=useState(0);
  const wake=useRef<()=>void>(()=>{});
  const openWindows=useRef(new Map<AgentId,Window>());
  useEffect(()=>{
   const rt=runtime.current;let frame=0,last=performance.now(),previous='',disposed=false;
-  const publish=()=>{setPeople(rt.people.map(p=>({...p})));setActiveGame(rt.activeGame?{...rt.activeGame}:null);setFiesta({...rt.fiestaState,particles:[...rt.fiestaState.particles]});setBronca({...rt.broncaState,particles:[...rt.broncaState.particles]});};
+  const publish=()=>{setPeople(rt.people.map(p=>({...p})));setActiveGame(rt.activeGame?{...rt.activeGame}:null);setFiesta({...rt.fiestaState,particles:[...rt.fiestaState.particles]});setBronca({...rt.broncaState,particles:[...rt.broncaState.particles]});setConga({...rt.congaState,dancers:[...rt.congaState.dancers]});setAvatarOwners({...rt.avatarOwners});};
   const loop=(now:number)=>{frame=0;if(document.hidden||disposed)return;const dt=Math.min(.1,(now-last)/1000);if(dt<1/30){frame=requestAnimationFrame(loop);return;}last=now;let keep=false;try{keep=rt.tick(now,dt);publish();}catch(err){console.error('Office loop error:',err);keep=true;}if(keep)frame=requestAnimationFrame(loop);};
   const start=()=>{if(!frame&&!document.hidden){last=performance.now();frame=requestAnimationFrame(loop);}};wake.current=start;
   const receive=(raw:unknown)=>{
@@ -118,7 +121,13 @@ export default function App({fill}:{fill?:boolean}={}){
    },
    isGameActive:()=>rt.isGameActive(),
    isCinematicActive:()=>rt.isCinematicActive(),
+   setAvatarOwners:(owners:Record<string,string>)=>{
+     rt.setAvatarOwners(owners);
+     publish();
+     wake.current();
+   },
   };
+  window.dispatchEvent(new CustomEvent('erbolamm:oficina-ready',{detail:window.Oficina3D}));
    const idleTimer=window.setInterval(()=>{if(document.hidden||disposed)return;if(rt.rotateIdlePose(performance.now()))publish();},150000);
    return()=>{disposed=true;cancelAnimationFrame(frame);unsubWake();window.clearInterval(idleTimer);window.removeEventListener('erbolamm:snapshot',onSnapshot);window.removeEventListener('erbolamm:traer-cafe',onTraerCafe);document.removeEventListener('visibilitychange',onVisibility);delete window.Oficina3D;};
  },[]);
@@ -153,7 +162,7 @@ export default function App({fill}:{fill?:boolean}={}){
   openAgentWindow(id);
  }
  return <div className={`real-office ${!motion?'scene-still':''} ${!visible?'scene-paused':''}`}>
-  <FloorPlan fill={fill} agents={people} activeGame={activeGame} fiesta={fiesta} bronca={bronca} selected={selected} onSelect={id=>{if(id)select(id);}} hovered={hovered} onHover={setHovered} mailCount={mailCount} motion={motion} onMotionChange={setMotion} onMail={()=>window.dispatchEvent(new CustomEvent('erbolamm:open-inbox'))}/>
+  <FloorPlan fill={fill} agents={people} activeGame={activeGame} fiesta={fiesta} bronca={bronca} conga={conga} avatarOwners={avatarOwners} selected={selected} onSelect={id=>{if(id)select(id);}} hovered={hovered} onHover={setHovered} mailCount={mailCount} motion={motion} onMotionChange={setMotion} onMail={()=>window.dispatchEvent(new CustomEvent('erbolamm:open-inbox'))}/>
   <div className="office-roster" aria-label="Personajes de la oficina">{AGENTS.map(a=>{const p=people.find(p=>p.id===a.id)!;return <button key={a.id} type="button" className="roster-person" onClick={()=>select(a.id)} style={{borderColor:a.color}} aria-label={`Abrir ficha de ${a.name}: ${p.status}`} title={`${a.name} · ${p.status}`}><svg className="roster-avatar" width="36" height="36" viewBox="-24 -70 48 76"><g transform="scale(.8)"><Character agent={a} pose={p.pose} flip={p.facing===-1} selected={selected===a.id}/></g></svg></button>;})}</div>
  </div>;
 }

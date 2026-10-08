@@ -44,6 +44,7 @@ function readJsonBody(req) {
 
 function createSmsPantalla({ getSmsList, lookupAvatar = async () => null, now = () => Date.now() }) {
   let current = null;
+  let currentIsChat = false;
   const avatars = new Map();
 
   async function avatarFor(user) {
@@ -56,15 +57,28 @@ function createSmsPantalla({ getSmsList, lookupAvatar = async () => null, now = 
     return url;
   }
 
-  // A message deleted from the mailbox must not stay on screen.
+  // A message deleted from the mailbox must not stay on screen (chat messages stay until hidden).
   function currentIfStillThere() {
-    if (current && !getSmsList().some(message => message && message.id === current.id)) current = null;
+    if (current && !currentIsChat && !getSmsList().some(message => message && message.id === current.id)) current = null;
     return current;
   }
 
-  async function show(id) {
-    const message = getSmsList().find(entry => entry && entry.id === id);
+  async function show(idOrPayload) {
+    if (idOrPayload && typeof idOrPayload === 'object') {
+      const usuario = String(idOrPayload.usuario || 'anónimo').trim();
+      const texto = String(idOrPayload.texto || '').trim();
+      currentIsChat = true;
+      current = {
+        id: String(idOrPayload.id || `chat-${Date.now()}`),
+        usuario: usuario || 'anónimo',
+        texto: texto,
+        avatar: idOrPayload.avatar ? safeAvatar(idOrPayload.avatar) : await avatarFor(usuario),
+      };
+      return current;
+    }
+    const message = getSmsList().find(entry => entry && entry.id === idOrPayload);
     if (!message) return null;
+    currentIsChat = false;
     current = {
       id: message.id,
       usuario: String(message.usuario || 'anónimo'),
@@ -74,7 +88,7 @@ function createSmsPantalla({ getSmsList, lookupAvatar = async () => null, now = 
     return current;
   }
 
-  function hide() { current = null; }
+  function hide() { current = null; currentIsChat = false; }
 
   const matches = path => ROUTES.has(path);
 
@@ -94,6 +108,16 @@ function createSmsPantalla({ getSmsList, lookupAvatar = async () => null, now = 
     }
     let body;
     try { body = await readJsonBody(req); } catch (_) { sendJson(res, 400, { ok: false, error: 'Petición no válida' }); return; }
+    if (typeof body.texto === 'string' && body.texto.trim()) {
+      const shown = await show({
+        id: body.id,
+        usuario: body.usuario,
+        texto: body.texto,
+        avatar: body.avatar,
+      });
+      sendJson(res, 200, { ok: true, mensaje: shown });
+      return;
+    }
     if (typeof body.id !== 'string' || !body.id) { sendJson(res, 400, { ok: false, error: 'Falta el mensaje' }); return; }
     const shown = await show(body.id);
     if (!shown) { sendJson(res, 404, { ok: false, error: 'Ese mensaje ya no está en el buzón' }); return; }

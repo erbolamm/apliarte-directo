@@ -41,9 +41,12 @@
 4. En la consola verás tus enlaces listos para usar:
    - **Panel en PC**: `http://127.0.0.1:7979/estudio` (panel unificado; `/admin` sigue funcionando como ruta antigua)
    - **Pizarra táctil (tablet o móvil)**: `http://<TU-IP-LOCAL>:7979/estudio` (o `/pizarra-plus`)
-   - **Fuentes OBS (1920×1080)**:
-     - Capa transparente (avatares 3D, chat y rótulos): `http://127.0.0.1:7979/plano?transparente=1`
-     - Cámara conmutable (monigote / vídeo): `http://127.0.0.1:7979/camara.html`
+   - **Fuentes OBS (1920×1080 o modulares)**:
+     - Capa completa 3D: `http://127.0.0.1:7979/plano?transparente=1` (soporta `?nocontexto=1&noavatares=1`)
+     - Barra de contexto suelta: `http://127.0.0.1:7979/contexto.html` (reacciona a `!contexto <tema>`)
+     - Avatares sueltos: `http://127.0.0.1:7979/avatares.html` (o `?modo=vertical`)
+     - Overlay SMS y Chat con Ojo 👁️: `http://127.0.0.1:7979/sms-pantalla.html`
+     - Cámara conmutable (monigote / vídeo + bocadillo de bienvenida): `http://127.0.0.1:7979/camara.html`
      - Fondo animado: `http://127.0.0.1:7979/fondo.html`
 
 Arranca la capa 3D, el panel y el centro de retransmisión Twitch + YouTube juntos; al cerrar la ventana se apaga todo limpiamente. Para emitir simultáneamente a Twitch y YouTube se recomienda instalar [ffmpeg](https://ffmpeg.org/download.html) (en Windows: `winget install ffmpeg`). Desde terminal se puede arrancar con `npm run directo`.
@@ -142,6 +145,8 @@ The complete documentation suite is located in [`DOCUMENTATION/`](./DOCUMENTATIO
   - [**Architecture (`ARCHITECTURE.md`)**](./DOCUMENTATION/ARCHITECTURE.md) — Container topology and internal APIs.
   - [**Deployment Guide (`DEPLOYMENT.md`)**](./DOCUMENTATION/DEPLOYMENT.md) — 5-minute Docker setup and operational commands.
   - [**Configuration Reference (`CONFIGURATION.md`)**](./DOCUMENTATION/CONFIGURATION.md) — Environment variables, persistence volumes, and OBS configuration.
+  - [**Guía de Fuentes OBS y Sistema de Bienvenida (`GUIA-OBS-FUENTES-Y-BIENVENIDA.md`)**](./DOCUMENTATION/GUIA-OBS-FUENTES-Y-BIENVENIDA.md) — Catálogo de URLs para OBS, modularidad, controles de zoom interactivos y ciclo de vida de bienvenida (6h cooldown, persistencia).
+  - [**Guía de PC Windows (`GUIA-PC-WINDOWS.md`)**](./DOCUMENTATION/GUIA-PC-WINDOWS.md) — Arranque con doble clic, firewall, tablet y emisión dual.
   - [**Security Audit (`SECURITY.md`)**](./DOCUMENTATION/SECURITY.md) — Defensive boundaries, privilege containment, and threat model.
   - [**Architecture Decision Record (`ADR-0001`)**](./DOCUMENTATION/ADR-0001-docker-architecture-decoupling.md) — Foundation ADR on containerization and decoupling.
 
