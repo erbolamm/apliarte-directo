@@ -68,3 +68,37 @@ Out of scope: YouTube Data API / OAuth client, new dependencies.
 ## Next step
 
 T2: Javier decides who turns on auto-start / auto-stop on the YouTube channel. Then a live check with real OBS.
+
+## Scope change (2026-10-09, approved by Javier)
+
+T2 as first written was wrong: the "Emitir" tab of YouTube Studio has no auto-start / auto-stop toggles (checked in his Chrome with his permission; nothing changed). Research (Google docs, OBS forum): YouTube no longer keeps a default broadcast per channel, so video sent to a key with no waiting broadcast is not guaranteed to go live. This matches Javier's report that on 2026-10-08 YouTube sometimes went live and sometimes did not (inference, not confirmed on his channel).
+
+Approved approach: the centre asks the YouTube Data API for a public broadcast with `enableAutoStart` and `enableAutoStop`, bound to the existing stream (his key), each time OBS starts.
+
+Javier's condition (hard requirement): if the API fails for any reason (quota exhausted, no credentials, network, Google error), Twitch keeps going and the YouTube relay behaves exactly as today. The API call must never block or delay Twitch.
+
+Cost studied: 10,000 quota units per day per project. Worst case about 160 units per live stream, so 5 per day is about 8%. Not confirmed from a source: that the API is free of charge; whether YouTube caps broadcasts created per day.
+
+### Design decisions
+
+- No new dependency: plain `fetch` against the REST API and `oauth2.googleapis.com/token`.
+- OAuth client of type "Desktop app" with a loopback redirect; one-time consent by Javier.
+- Secrets (client id, client secret, refresh token) live in `DATA_DIR/youtube-oauth.json`, mode 0600, git-ignored (same pattern as `data/twitch-auth.json`). Never logged.
+- One-time connection through a script (`scripts/youtube-conectar.mjs`) that imports the JSON downloaded from Google Cloud and runs the consent flow. No panel UI in this feature.
+- The stream is found by comparing the saved stream key with `cdn.ingestionInfo.streamName` locally; the key is never logged or sent anywhere new.
+- A waiting broadcast already bound to that stream with auto-start is reused instead of creating another.
+- Title and description are copied from the channel's most recent broadcast; fallback title "Directo ApliArte".
+- The YouTube relay waits for the broadcast preparation with a short timeout; Twitch starts at once.
+
+### Tasks (revised)
+
+- [x] T1 — done, commit 85bc38d.
+- [~] T2 — superseded by T3-T6 (no toggle exists on the "Emitir" tab).
+- [ ] T3 — YouTube API client and OAuth credentials store, with the connection script and tests. Route: delegated direct (new modules, 2+ non-trivial files).
+- [ ] T4 — Centre wiring on `postPublish` with the fail-safe, status in `/api/estado`, docs. Route: delegated direct.
+- [ ] T5 — One-time Google Cloud setup and consent with Javier (outside the repo; needs his explicit permission per step).
+- [ ] T6 — Live check: start OBS, both platforms go live; stop OBS, both end.
+
+### Delivery (revised)
+
+Forecast now about 700 authored changed lines, over the 400 heuristic. Strategy chosen for this feature: `exception-ok`. Reason: the workspace convention is one worktree branch per task card, the owner is not a programmer, and push / PR / merge stay his decision. Work-unit commits keep the slices readable: T1 = 85bc38d; T3 and T4 one commit each.
