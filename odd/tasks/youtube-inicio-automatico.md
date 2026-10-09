@@ -96,7 +96,7 @@ Cost studied: 10,000 quota units per day per project. Worst case about 160 units
 - [~] T2 — superseded by T3-T6 (no toggle exists on the "Emitir" tab).
 - [x] T3 — YouTube API client and OAuth credentials store, with the connection script and tests. Route: delegated direct (new modules, 2+ non-trivial files).
 - [x] T4 — Centre wiring on `postPublish` with the fail-safe, status in `/api/estado`, docs. Route: delegated direct.
-- [ ] T5 — One-time Google Cloud setup and consent with Javier (outside the repo; needs his explicit permission per step).
+- [~] T5 — One-time Google Cloud setup and consent with Javier (outside the repo; needs his explicit permission per step).
 - [ ] T6 — Live check: start OBS, both platforms go live; stop OBS, both end.
 
 ### Delivery (revised)
@@ -134,3 +134,29 @@ Forecast now about 700 authored changed lines, over the 400 heuristic. Strategy 
 ## Next step
 
 T5 with Javier's explicit permission per step, then T6 (live check).
+
+## T5 — Google connection (2026-10-09, done in Javier's Chrome with his permission)
+
+- [x] Google Cloud project "ApliArte Directo" (id `apliarte-directo`), billing account `erbolamm` (the form made one mandatory; Javier said to use whichever worked).
+- [x] YouTube Data API v3 enabled (Javier did this step himself; confirmed "Habilitada").
+- [x] OAuth consent screen: app "ApliArte Directo", external users, his email as support and contact; Google API Services User Data Policy accepted with his yes.
+- [x] OAuth client "Centro de directo", type desktop app.
+- [x] His email added as test user. Publishing status is still "Prueba": "Publicar app" is disabled until the branding page is completed. So the refresh token will expire in 7 days.
+- [x] Connected with `scripts/youtube-conectar.mjs`. First attempt granted the personal account, whose channel is "El Bola De Marbella" (wrong). Second attempt granted the brand account "TutoGrati Javier ApliArte", whose channel is "ApliArte Tutoriales @erbolammapliarte" (the live channel). Credentials are in the main checkout's `data/youtube-oauth.json`, mode 0600, git-ignored.
+- The client JSON download opened a native "save" dialog in Chrome (Chrome is set to ask where to save). It was left pending; a private copy was used and then deleted.
+
+### Read-only check against the real API (no broadcast created)
+
+- Token refresh: 200, scope `youtube`.
+- Channel: "ApliArte Tutoriales".
+- `liveStreams.list`: 18 streams. **None matches the stream key saved in the centre** (`data/config.json`, `streaming.youtubeStreamKey`, last written 2026-10-08 18:59; compared by fingerprint, never printed). With this key the feature would answer `stream_no_encontrado` and YouTube would behave as before.
+- `liveStreams.list` returned HTTP 500 `backendError` in 2 of 3 consecutive calls, then 200. The client does not retry, so it would report `error_google` on those.
+- Upcoming broadcasts: one `ready`, public, auto-start and auto-stop on, bound to the stream "¿Cantando, dibujando, trabajando...?" (created when the "Emitir" tab was opened); two unlisted "POMODORO" ones without auto-start.
+
+### Open
+
+- The saved key does not belong to the connected channel: needs Javier's decision (which key the centre should use).
+- A retry for transient 5xx on read calls in `src/youtube-api.js`.
+- Publishing status "In production".
+- The feature is NOT active: the live centre runs the main checkout, and this branch is not merged. Merge and restart are Javier's decisions.
+- T6 live check still pending.
