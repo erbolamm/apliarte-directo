@@ -44,6 +44,13 @@ import { iniciarObsBridge } from "./obs-bridge.js";
 import { esParadaDeliberada, hayEmisionQueCerrar } from "./cierre-obs.js";
 import { bridgeOptions } from "./obs-bridge-config.js";
 import { resolveDestinationKey } from "./stream-credentials.js";
+import { prepararEmisionYoutube } from "./youtube-api.js";
+import { leerCredenciales } from "./youtube-credenciales.js";
+import {
+  crearPreparadorYoutube,
+  esDestinoYoutube,
+  youtubeApiHabilitada,
+} from "./youtube-emision.js";
 import { cargarHistorial, crearGuardador } from "./pizarra-historial.js";
 import ContextoNms from "node-media-server/src/core/context.js";
 
@@ -255,6 +262,25 @@ const centro = new CentroEstado({
 });
 const procesos = new GestorProcesos({ registrar: anotar, claveDeDestino: destinationKey });
 
+// Pide a YouTube una emisión en espera antes de reenviarle la señal. Es una ayuda: si falla o
+// tarda, el reenvío a YouTube sale igual. En pruebas no se toca la red.
+const enPruebas = process.env.NODE_ENV === "test";
+const preparadorYoutube = crearPreparadorYoutube({
+  leerCredenciales: () => leerCredenciales(DATA_DIR),
+  prepararEmisionYoutube,
+  anotar,
+  habilitado: !enPruebas && youtubeApiHabilitada(process.env),
+  causaApagado: enPruebas ? "entorno de pruebas" : "YOUTUBE_API=off",
+  tiempoMaximoMs: 8000,
+});
+
+// Lo que ven el panel y /api/estado.
+const estadoPublico = () => ({
+  ...centro.instantanea(),
+  youtube: preparadorYoutube.ultimo(),
+  registro: registro.slice(-40),
+});
+
 function refreshDestination(destination) {
   destination.listo = destination.variableClave ? Boolean(destinationKey(destination)) : true;
   const state = centro.destinos.get(destination.nombre);
@@ -262,11 +288,7 @@ function refreshDestination(destination) {
   return destination.listo;
 }
 
-const difundir = () =>
-  io?.emit("estado", {
-    ...centro.instantanea(),
-    registro: registro.slice(-40),
-  });
+const difundir = () => io?.emit("estado", estadoPublico());
 
 const reintentos = new ReintentosRelay();
 
@@ -279,9 +301,46 @@ async function arrancarRelays(rutaEntrada) {
       anotar(`[${destino.nombre}] omitido: falta la clave de emisión.`);
       continue;
     }
+    if (esDestinoYoutube(destino)) {
+      // YouTube espera a su emisión; los demás destinos no esperan por él.
+      lanzarRelayYoutube(destino, entrada, revision);
+      continue;
+    }
     await lanzarRelay(destino, entrada, revision);
   }
   difundir();
+}
+
+// Solo al empezar OBS: primero se prepara la emisión de YouTube (como mucho 8 s) y después el
+// reenvío sale igual que siempre, haya ido bien o mal la preparación.
+//
+// Durante la espera el centro cuenta a YouTube como un reenvío a punto de salir (la ficha): si
+// cae otro destino se reintenta ese destino, y si OBS corta, YouTube recibe el respaldo.
+function lanzarRelayYoutube(destino, entrada, revision) {
+  const ficha = centro.relayEnPreparacion(destino.nombre);
+  Promise.resolve()
+    .then(() => preparadorYoutube.preparar(destinationKey(destino)))
+    .catch(() => {})
+    .then(async () => {
+      // La ficha deja de valer con todo lo que habría parado un reenvío lanzado al empezar OBS:
+      // otra publicación, el corte, el cierre de la emisión, un vídeo manual o la parada a mano
+      // de YouTube. Entonces este reenvío ya no toca, y quien la retiró ya hizo lo suyo.
+      if (!centro.preparacionVigente(destino.nombre, ficha)) return;
+      if (revision !== revisionEntrada || cerrando) {
+        // OBS cortó y el paso a respaldo aún no ha llegado a mirar: que cuente a YouTube.
+        centro.preparacionCortada(destino.nombre, ficha);
+        return;
+      }
+      try {
+        await lanzarRelay(destino, entrada, revision);
+      } finally {
+        centro.preparacionTerminada(destino.nombre, ficha);
+      }
+    })
+    .then(difundir)
+    .catch((error) =>
+      anotar(`[${destino.nombre}] no se pudo iniciar reenvío: ${error.message}`),
+    );
 }
 
 async function lanzarRelay(destino, entrada, revision) {
@@ -340,6 +399,7 @@ async function finalizarEmisionVoluntaria(motivo) {
   cierreVoluntario = true;
   // Si el respaldo estaba arrancando, que no llegue a salir tras el cierre.
   revisionEntrada++;
+  centro.cancelarPreparaciones(); // ni el reenvío a YouTube que aún esperaba a su emisión
   relevoPendiente = false;
   relevoEnMarcha = false;
   for (const d of configuracion.destinos) {
@@ -592,7 +652,7 @@ app.get("/pizarra", (_req, res) =>
 );
 app.get("/api/estado", (_req, res) => {
   for (const destination of configuracion.destinos) refreshDestination(destination);
-  res.json({ ...centro.instantanea(), cierreVoluntario, registro: registro.slice(-40) });
+  res.json({ ...estadoPublico(), cierreVoluntario });
 });
 
 app.get("/api/tts", async (req, res) => {
@@ -626,9 +686,11 @@ app.get("/api/tts", async (req, res) => {
 });
 
 app.post("/api/destino/:nombre/detener", async (req, res) => {
+  // Si el destino aún esperaba a su emisión de YouTube, pararlo es que ese reenvío no salga.
+  const esperaba = centro.cancelarPreparacion(req.params.nombre);
   let parado;
   try {
-    parado = await procesos.detener(req.params.nombre);
+    parado = (await procesos.detener(req.params.nombre)) || esperaba;
   } catch (error) {
     res.status(500).json({ parado: false, error: error.message });
     return;
@@ -1063,7 +1125,7 @@ app.post("/api/directo/comando", (req, res) => {
 const http = createServer(app);
 const io = new ServidorSocket(http, { cors: { origin: false } });
 io.on("connection", (s) =>
-  s.emit("estado", { ...centro.instantanea(), registro: registro.slice(-40) }),
+  s.emit("estado", estadoPublico()),
 );
 
 // ─── Modo paseo (paso 3): signaling WebRTC P2P hacia walk.html ───────────
@@ -1200,6 +1262,7 @@ const cerrar = async () => {
   if (cerrando) return;
   cerrando = true;
   revisionEntrada++;
+  centro.cancelarPreparaciones();
   console.log(
     "\nCerrando: se detienen solo los FFmpeg lanzados por este centro.",
   );

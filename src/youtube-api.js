@@ -43,7 +43,7 @@ const RAZONES_SIN_DIRECTO = new Set(['liveStreamingNotEnabled', 'livePermissionB
 const RAZONES_SIN_PERMISO = new Set(['forbidden', 'insufficientPermissions', 'insufficientLivePermissions']);
 
 const TIEMPO_MAXIMO_MS = 10_000;
-const TIEMPO_LIMPIEZA_MS = 3_000; // plazo propio para borrar una emisión que quedó sin vincular
+const TIEMPO_LIMPIEZA_MS = 3_000; // plazo propio para borrar una emisión que YouTube no dejó vincular
 const PLAZO_TOPE_MS = 60_000;     // ningún plazo pasa de aquí, por grande que sea el valor recibido
 const MARGEN_TOKEN_MS = 60_000;   // el token se renueva un minuto antes de caducar
 const MARGEN_INICIO_MS = 60_000;  // YouTube exige una hora de inicio futura y cercana
@@ -51,9 +51,11 @@ const MAX_PAGINAS = 5;            // 250 streams: tope para que una paginación 
 const MAX_TITULO = 100;           // límite documentado de snippet.title
 
 class FalloYoutube extends Error {
-  constructor(motivo, detalle) {
+  /** `status`: el código HTTP con el que respondió Google, solo cuando hubo respuesta de error. */
+  constructor(motivo, detalle, status = null) {
     super(detalle);
     this.motivo = motivo;
+    this.status = status;
   }
 }
 
@@ -138,7 +140,7 @@ async function tokenDeAcceso(ctx) {
   return cuerpo.access_token;
 }
 
-/** Una llamada a la API de datos. Cada una cuesta 1 unidad de cuota y se cuenta en `ctx.llamadas`. */
+/** Una llamada a la API de datos. Se cuenta en `ctx.llamadas`; el coste en cuota de cada tipo no se ha comprobado. */
 async function llamarApi(ctx, operacion, metodo, ruta, parametros, cuerpoJson) {
   ctx.llamadas += 1;
   const opciones = { method: metodo, headers: { Authorization: `Bearer ${ctx.token}` } };
@@ -159,8 +161,11 @@ async function llamarApi(ctx, operacion, metodo, ruta, parametros, cuerpoJson) {
   else if (status === 401 || RAZONES_SIN_PERMISO.has(razon)) motivo = MOTIVOS.NO_AUTORIZADO;
   // Un token rechazado no se vuelve a usar: la siguiente preparación pide otro.
   if (status === 401) tokens.delete(claveDeCache(ctx.credenciales));
-  throw new FalloYoutube(motivo, detalle);
+  throw new FalloYoutube(motivo, detalle, status);
 }
+
+/** ¿Google rechazó la petición con claridad (4xx)? Un 5xx, un corte o el plazo no dicen qué pasó. */
+const rechazoClaro = (error) => error instanceof FalloYoutube && error.status >= 400 && error.status < 500;
 
 /**
  * Busca el stream del canal cuya clave es `clave`. La comparación se hace aquí: la clave no
@@ -244,10 +249,15 @@ async function secuencia(ctx, clave) {
   if (typeof creada.id !== 'string' || !creada.id) {
     throw new FalloYoutube(MOTIVOS.RESPUESTA_INESPERADA, 'YouTube no devolvió el identificador de la emisión creada');
   }
-  // Mientras no esté vinculada es una emisión suelta: si algo falla desde aquí, se borra.
-  ctx.emisionSinVincular = creada.id;
-  await llamarApi(ctx, 'liveBroadcasts.bind', 'POST', 'liveBroadcasts/bind', { id: creada.id, part: 'id,contentDetails', streamId });
-  ctx.emisionSinVincular = null;
+  try {
+    await llamarApi(ctx, 'liveBroadcasts.bind', 'POST', 'liveBroadcasts/bind', { id: creada.id, part: 'id,contentDetails', streamId });
+  } catch (error) {
+    // Solo si YouTube rechaza la vinculación con claridad queda una emisión suelta que borrar.
+    // Si venció el plazo, falló la red o el servidor dio un error, puede haberse vinculado y
+    // estar a punto de salir en directo: esa no se toca.
+    if (rechazoClaro(error)) ctx.emisionSinVincular = creada.id;
+    throw error;
+  }
   return {
     ok: true,
     emisionId: creada.id,
@@ -262,8 +272,8 @@ async function secuencia(ctx, clave) {
 }
 
 /**
- * Borra la emisión creada que no se llegó a vincular, para no dejarla suelta en el canal.
- * Es un intento: tiene su propio plazo (el general puede estar ya vencido) y nunca lanza.
+ * Borra la emisión creada cuya vinculación rechazó YouTube, para no dejarla suelta en el canal.
+ * Es un intento: tiene su propio plazo y nunca lanza.
  */
 async function borrarEmisionSuelta(ctx, plazoMs) {
   const control = new AbortController();
@@ -289,9 +299,10 @@ const textoNoVacio = (valor) => (typeof valor === 'string' ? valor.trim() : '');
 /**
  * Deja una emisión pública esperando en el stream de `claveEmision`, o reutiliza la que ya haya.
  * Nunca lanza ni rechaza. Todo el trabajo queda bajo `tiempoMaximoMs`: al vencer se cancelan las
- * peticiones en curso y se responde aunque un `fetch` no haga caso de la cancelación. Si el fallo
- * llega con la emisión ya creada pero sin vincular, antes de responder se intenta borrarla, con
- * `tiempoLimpiezaMs` como plazo aparte.
+ * peticiones en curso y se responde aunque un `fetch` no haga caso de la cancelación. Si YouTube
+ * rechaza con claridad (HTTP 4xx) la vinculación de la emisión recién creada, antes de responder
+ * se intenta borrarla, con `tiempoLimpiezaMs` como plazo aparte. Si la vinculación acaba sin
+ * respuesta clara (plazo, red, error del servidor) no se borra nada: puede haberse vinculado.
  *
  * @param {object} opciones
  * @param {string} opciones.claveEmision       clave de emisión de YouTube guardada en el centro

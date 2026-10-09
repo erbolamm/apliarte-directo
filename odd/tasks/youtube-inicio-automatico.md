@@ -94,11 +94,43 @@ Cost studied: 10,000 quota units per day per project. Worst case about 160 units
 
 - [x] T1 — done, commit 85bc38d.
 - [~] T2 — superseded by T3-T6 (no toggle exists on the "Emitir" tab).
-- [ ] T3 — YouTube API client and OAuth credentials store, with the connection script and tests. Route: delegated direct (new modules, 2+ non-trivial files).
-- [ ] T4 — Centre wiring on `postPublish` with the fail-safe, status in `/api/estado`, docs. Route: delegated direct.
+- [x] T3 — YouTube API client and OAuth credentials store, with the connection script and tests. Route: delegated direct (new modules, 2+ non-trivial files).
+- [x] T4 — Centre wiring on `postPublish` with the fail-safe, status in `/api/estado`, docs. Route: delegated direct.
 - [ ] T5 — One-time Google Cloud setup and consent with Javier (outside the repo; needs his explicit permission per step).
 - [ ] T6 — Live check: start OBS, both platforms go live; stop OBS, both end.
 
 ### Delivery (revised)
 
 Forecast now about 700 authored changed lines, over the 400 heuristic. Strategy chosen for this feature: `exception-ok`. Reason: the workspace convention is one worktree branch per task card, the owner is not a programmer, and push / PR / merge stay his decision. Work-unit commits keep the slices readable: T1 = 85bc38d; T3 and T4 one commit each.
+
+## Progress and evidence (T3, T4) — 2026-10-09
+
+- [x] T3 — commit b4b6e83. Writer, then independent verifier (pass with notes, no secret leak found, no throw or hang found), then 8 corrections applied.
+- [x] T4 — this commit. Writer, then independent verifier (verdict: fail, one blocking finding), then one scoped correction, then parent readback of `src/estado.js` and re-run of the suite. No second independent verification was run after the correction.
+  - Blocking finding fixed: while the YouTube relay waited for the API step, a lone Twitch relay failure made the centre switch Twitch to the backup video with OBS live. `CentroEstado` now records destinations "en preparación" and counts them as about to relay.
+  - Also fixed: an OBS cut during the wait now sends the backup video to YouTube too; the cleanup delete runs only after a definite 4xx from bind; a manual video or a hand stop during the wait cancels the pending relay.
+  - Risk tier applied: high (credentials, state machine).
+  - `node scripts/run-tests.mjs` on the 9 focused files: 123 pass, 0 fail (writer); `node --check src/server.js`: OK (parent); `npm test`: 975 tests, 965 pass, 5 fail, 5 skipped (parent). The 5 failures are the known environmental ones.
+  - Covered only by reading: all the wiring in `src/server.js` (the file starts servers on import).
+  - Not tried against real Google, YouTube, OBS or ffmpeg.
+
+### Remaining differences from the pre-feature behaviour
+
+- The YouTube relay starts after the API step: negligible when off or not connected, up to 8 s when Google is slow.
+- During that wait only, an OBS cut reaches the backup video through `donePublish` (about 3 s grace) instead of relay death.
+- A timeout, network error or 5xx during bind can leave an unused, unbound broadcast on the channel.
+- `/api/estado` and the socket `estado` event carry an extra `youtube` field.
+- Stopping the YouTube destination by hand during the wait now cancels the pending relay.
+
+### Corrections to earlier notes
+
+- Quota: the official cost table read on 2026-10-09 lists 1 unit for each liveBroadcasts / liveStreams call, so one start costs about 4 to 6 units. The earlier "worst case about 160 units" in this document was too high. The delete call's cost is not stated in the docs.
+
+### Open items for T5 (with Javier)
+
+- Google Cloud project, YouTube Data API v3 enabled, OAuth consent screen, OAuth client of type Desktop app, JSON downloaded, then `node scripts/youtube-conectar.mjs <json>`.
+- Publishing status must be "In production": in "Testing" the refresh token expires after 7 days. Whether Google then asks for app verification is not confirmed.
+
+## Next step
+
+T5 with Javier's explicit permission per step, then T6 (live check).

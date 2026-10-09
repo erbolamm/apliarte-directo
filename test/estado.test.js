@@ -246,3 +246,126 @@ test('la instantanea expone obsActivo y archivoManual', () => {
   assert.equal(foto.obsActivo, true);
   assert.equal(foto.archivoManual, 'anuncios.mp4');
 });
+
+// ── Destino en preparación ───────────────────────────────────────────────────
+// YouTube espera unos segundos a su emisión antes de recibir el reenvío. Mientras espera no tiene
+// proceso, pero para el centro cuenta como un reenvío a punto de salir: si no, la caída de otro
+// destino en esa espera pondría el vídeo de respaldo con OBS en directo.
+
+test('con un destino en preparacion, la caida del unico relay no pide el respaldo', () => {
+  const c = new CentroEstado({ destinos, tieneRespaldo: true });
+  c.obsPublica();
+  const ficha = c.relayEnPreparacion('youtube');
+  c.relayArrancado('twitch', 4321);
+  c.procesoFallo('twitch', 'ffmpeg salio con codigo 1');
+  assert.equal(c.debePasarARespaldo(), false);
+  assert.equal(c.estado, ESTADOS.REENVIANDO, 'tampoco se da el centro por caido');
+  assert.equal(c.obsActivo, true);
+  assert.equal(c.preparacionVigente('youtube', ficha), true);
+  assert.deepEqual(c.destinosEnPreparacion(), ['youtube']);
+  assert.deepEqual(c.destinosActivos(), [], 'en preparacion no hay proceso que contar ni que matar');
+});
+
+test('terminada la preparacion sin relay, la decision vuelve a ser la de siempre', () => {
+  const c = new CentroEstado({ destinos, tieneRespaldo: true });
+  c.obsPublica();
+  const ficha = c.relayEnPreparacion('youtube');
+  c.relayArrancado('twitch', 4321);
+  c.procesoFallo('twitch', 'x');
+  assert.equal(c.preparacionTerminada('youtube', ficha), true);
+  assert.equal(c.preparacionVigente('youtube', ficha), false);
+  assert.equal(c.debePasarARespaldo(), true);
+  assert.equal(c.preparacionTerminada('youtube', ficha), false, 'soltarla dos veces no hace nada');
+});
+
+test('terminada la preparacion con el relay arrancado, el otro destino sigue cubierto', () => {
+  const c = new CentroEstado({ destinos, tieneRespaldo: true });
+  c.obsPublica();
+  const ficha = c.relayEnPreparacion('youtube');
+  c.relayArrancado('twitch', 4321);
+  c.procesoFallo('twitch', 'x');
+  c.relayArrancado('youtube', 4322);
+  c.preparacionTerminada('youtube', ficha);
+  assert.equal(c.debePasarARespaldo(), false);
+  assert.equal(c.estado, ESTADOS.REENVIANDO);
+  c.procesoFallo('youtube', 'y');
+  assert.equal(c.debePasarARespaldo(), true);
+});
+
+test('un destino en preparacion recibe el respaldo cuando OBS corta', () => {
+  const c = new CentroEstado({ destinos, tieneRespaldo: true });
+  c.obsPublica();
+  c.relayEnPreparacion('youtube');
+  c.relayArrancado('twitch', 4321);
+  const plan = c.decidirTrasCorte();
+  assert.deepEqual(plan.matar, [4321], 'solo se mata lo que tiene proceso');
+  assert.deepEqual(plan.arrancarRespaldoEn, ['twitch', 'youtube']);
+
+  const sinRespaldo = new CentroEstado({ destinos, tieneRespaldo: false });
+  sinRespaldo.obsPublica();
+  sinRespaldo.relayEnPreparacion('youtube');
+  assert.deepEqual(sinRespaldo.decidirTrasCorte().arrancarRespaldoEn, []);
+});
+
+test('si la publicacion se corta antes de que salga el relay, el destino cuenta como relay cortado', () => {
+  const c = new CentroEstado({ destinos, tieneRespaldo: true });
+  c.obsPublica();
+  const ficha = c.relayEnPreparacion('youtube');
+  assert.equal(c.preparacionCortada('youtube', ficha), true);
+  assert.equal(c.preparacionVigente('youtube', ficha), false);
+  assert.equal(c.destinos.get('youtube').ultimoModo, 'relay');
+  assert.deepEqual(c.destinosEnPreparacion(), []);
+  assert.equal(c.preparacionCortada('youtube', ficha), false);
+});
+
+test('el corte de OBS, el cierre, el video manual y la parada a mano terminan la preparacion', () => {
+  const salidas = {
+    'OBS deja de publicar': (c) => c.obsDejaDePublicar(),
+    'cierre voluntario': (c) => c.finalizarEmision(),
+    'video manual': (c) => c.activarManual('anuncios.mp4'),
+    'parada a mano del destino': (c) => assert.equal(c.cancelarPreparacion('youtube'), true),
+    'apagado del centro': (c) => c.cancelarPreparaciones(),
+  };
+  for (const [nombre, salir] of Object.entries(salidas)) {
+    const c = new CentroEstado({ destinos, tieneRespaldo: true });
+    c.obsPublica();
+    const ficha = c.relayEnPreparacion('youtube');
+    salir(c);
+    assert.equal(c.preparacionVigente('youtube', ficha), false, nombre);
+    assert.deepEqual(c.destinosEnPreparacion(), [], nombre);
+    assert.equal(c.preparacionCortada('youtube', ficha), false, `${nombre}: la ficha vieja ya no cambia nada`);
+    assert.notEqual(c.destinos.get('youtube').ultimoModo, 'relay', nombre);
+  }
+  const c = new CentroEstado({ destinos, tieneRespaldo: true });
+  assert.equal(c.cancelarPreparacion('youtube'), false, 'sin preparacion no hay nada que cancelar');
+});
+
+test('el video manual puesto y quitado durante la espera no deja salir el relay pendiente', () => {
+  const c = new CentroEstado({ destinos, tieneRespaldo: true });
+  c.obsPublica();
+  const ficha = c.relayEnPreparacion('youtube');
+  c.activarManual('anuncios.mp4');
+  assert.equal(c.preparacionVigente('youtube', ficha), false);
+  c.salirDeManual();
+  assert.equal(c.estado, ESTADOS.RECIBIENDO);
+  assert.equal(c.preparacionVigente('youtube', ficha), false, 'volver de manual no la recupera');
+});
+
+test('la ficha de una publicacion anterior no toca la preparacion de la nueva', () => {
+  const c = new CentroEstado({ destinos, tieneRespaldo: true });
+  c.obsPublica();
+  const vieja = c.relayEnPreparacion('youtube');
+  c.obsPublica();
+  assert.equal(c.preparacionVigente('youtube', vieja), false, 'una publicacion nueva empieza sin esperas heredadas');
+  const nueva = c.relayEnPreparacion('youtube');
+  assert.equal(c.preparacionTerminada('youtube', vieja), false);
+  assert.equal(c.preparacionCortada('youtube', vieja), false);
+  assert.equal(c.preparacionVigente('youtube', nueva), true);
+  assert.equal(c.preparacionVigente('youtube', undefined), false);
+  assert.equal(c.preparacionVigente('twitch', nueva), false);
+});
+
+test('solo se prepara un destino conocido', () => {
+  const c = new CentroEstado({ destinos, tieneRespaldo: true });
+  assert.throws(() => c.relayEnPreparacion('vimeo'), /desconocido/i);
+});

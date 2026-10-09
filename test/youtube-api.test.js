@@ -398,17 +398,40 @@ test('que el borrado falle, lance o se cuelgue no cambia el resultado ni hace re
   }
 });
 
-test('si el plazo vence con la emisión ya creada y sin vincular, también se borra', async () => {
+test('si el plazo vence o la red falla durante la vinculación, NO se borra: puede haberse vinculado', async () => {
+  // No se sabe si YouTube llegó a vincularla: borrarla podría quitar una emisión a punto de salir.
   const google = googleFalso({ bind: () => new Promise(() => {}) });
   const r = await preparar(google, { tiempoMaximoMs: 40 });
   assert.equal(r.ok, false);
   assert.equal(r.motivo, MOTIVOS.TIEMPO_AGOTADO);
-  const [borrado] = google.de('delete');
-  assert.ok(borrado, 'se pide el borrado');
-  assert.equal(borrado.u.searchParams.get('id'), 'emision-nueva');
-  assert.equal(borrado.opciones.signal.aborted, false, 'no reutiliza la señal ya cancelada');
+  assert.equal(google.de('bind').length, 1);
+  assert.equal(google.de('delete').length, 0);
 
-  // Si vence antes de crear nada, no se borra nada.
+  olvidarTokens();
+  const cancelada = googleFalso({ bind: ({ opciones }) => new Promise((_, rechazar) => {
+    opciones.signal.addEventListener('abort', () => rechazar(opciones.signal.reason));
+  }) });
+  assert.equal((await preparar(cancelada, { tiempoMaximoMs: 40 })).motivo, MOTIVOS.TIEMPO_AGOTADO);
+  assert.equal(cancelada.de('delete').length, 0);
+
+  olvidarTokens();
+  const sinRed = googleFalso({ bind: () => { throw Object.assign(new TypeError('fetch failed'), { cause: { code: 'ECONNRESET' } }); } });
+  const red = await preparar(sinRed);
+  assert.equal(red.motivo, MOTIVOS.ERROR_RED);
+  assert.match(red.detalle, /liveBroadcasts\.bind/);
+  assert.equal(sinRed.de('delete').length, 0);
+
+  // Un error del servidor o una respuesta ilegible tampoco dicen si se vinculó.
+  for (const bind of [errorGoogle(503, 'backendError'), { status: 200, body: '<html>' }]) {
+    olvidarTokens();
+    const dudoso = googleFalso({ bind });
+    const d = await preparar(dudoso);
+    assert.equal(d.ok, false);
+    assert.match(d.detalle, /liveBroadcasts\.bind/);
+    assert.equal(dudoso.de('delete').length, 0);
+  }
+
+  // Si vence antes de crear nada, tampoco hay nada que borrar.
   olvidarTokens();
   const antes = googleFalso({ upcoming: () => new Promise(() => {}) });
   assert.equal((await preparar(antes, { tiempoMaximoMs: 40 })).motivo, MOTIVOS.TIEMPO_AGOTADO);

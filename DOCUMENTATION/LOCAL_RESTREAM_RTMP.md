@@ -74,17 +74,158 @@ OBS Bridge usa por defecto el bus **local** `ws://127.0.0.1:${PORT:-7979}/ws`; s
 
 ## Inicio y fin del directo en YouTube
 
-El centro solo empuja vídeo a YouTube con FFmpeg. No usa la API de YouTube ni tiene acceso a la
-cuenta, así que **no puede publicar ni cerrar la emisión por su cuenta**: eso lo decide YouTube
-según los ajustes de la emisión en el propio canal.
+### Por qué YouTube a veces no salía en directo
 
-- **Inicio.** YouTube pasa la emisión a público al recibir señal solo si esa emisión tiene activado
-  el inicio automático. Si no, la deja en vista previa hasta que alguien la publique a mano.
-- **Fin.** YouTube da la emisión por terminada al dejar de recibir señal solo si tiene activada la
-  finalización automática.
+El centro empuja el vídeo a YouTube con FFmpeg, igual que a Twitch. La diferencia está en el lado
+de YouTube: allí el vídeo que llega necesita una **emisión** (el evento que ve el público) que lo
+esté esperando.
 
-Los dos ajustes se cambian una vez en la configuración de la emisión del canal de YouTube; este
-repositorio no puede activarlos.
+- La documentación de YouTube dice que, desde septiembre de 2020, YouTube dejó de crear la emisión
+  y el stream «por defecto» de cada canal y que solo admite emisiones creadas para cada directo.
+  Cada emisión tiene que estar vinculada a un stream antes de poder empezar
+  ([guía de migración de YouTube](https://developers.google.com/youtube/v3/live/guides/migration-guide-default-broadcasts)).
+- La misma guía dice que el inicio y el fin automáticos son opcionales y hay que activarlos en cada
+  emisión (`enableAutoStart` y `enableAutoStop`).
+
+De ahí se deduce el fallo: si OBS empieza y no hay ninguna emisión esperando en esa clave, o la que
+hay no tiene el inicio automático, YouTube puede no salir en público. Es una deducción a partir de
+esa guía; la guía no describe ese caso con esas palabras y no se ha confirmado en el canal.
+
+### Qué hace el centro al empezar OBS
+
+Cada vez que OBS empieza a transmitir, el centro hace dos cosas a la vez:
+
+1. **Twitch y los demás destinos** arrancan como siempre. No esperan a YouTube.
+2. **YouTube**: antes de enviarle el vídeo, el centro pide por la API de YouTube que haya una
+   emisión lista en la clave guardada:
+   - si ya hay una emisión en directo o esperando en esa clave (con inicio automático), **la
+     reutiliza**; es lo que ocurre cuando OBS reconecta tras un corte;
+   - si no hay ninguna, **crea una**: pública, con inicio automático y fin automático, con el
+     título y la descripción del directo anterior (o «Directo ApliArte» si no hay anterior), y la
+     vincula a la clave guardada.
+
+   Después arranca el reenvío a YouTube. La espera es de 8 segundos como mucho.
+
+Solo se hace al empezar OBS. No se hace al entrar el vídeo de respaldo, al poner un vídeo a mano,
+al parar un destino desde el panel ni cuando FFmpeg se reinicia tras una caída.
+
+### Qué pasa durante la espera
+
+Mientras YouTube espera a su emisión todavía no tiene FFmpeg, pero el centro lo cuenta como un
+reenvío a punto de salir:
+
+| Qué ocurre en la espera | Qué hace el centro |
+| :--- | :--- |
+| Cae el reenvío de otro destino (por ejemplo Twitch) | Reintenta ese destino, como en cualquier caída. No pone el vídeo de respaldo |
+| OBS se cae o pierde la conexión | El reenvío a YouTube ya no sale. Con vídeo de respaldo, YouTube lo recibe igual que los demás destinos |
+| Se detiene la transmisión en OBS o se finaliza la emisión desde el panel | El reenvío a YouTube ya no sale |
+| Se pone un vídeo a mano | YouTube recibe ese vídeo y el reenvío pendiente ya no sale, aunque el vídeo termine antes que la espera |
+| Se para YouTube desde el panel | El reenvío a YouTube ya no sale |
+| OBS corta y vuelve a empezar | Vale la espera de la última vez que empezó; la anterior se descarta |
+
+Una diferencia con el centro sin este paso: si OBS corta durante la espera, el centro no pasa al
+respaldo en cuanto caen los reenvíos, porque en ese momento no sabe si ha caído OBS o solo un
+destino. Pasa al respaldo cuando llega el aviso de corte (unos 3 segundos si el centro pudo acortar
+ese aviso; el registro lo dice al empezar OBS).
+
+### Si algo falla, el directo sigue
+
+Esta ayuda nunca es un requisito. Si YouTube no contesta, no hay permiso, se acaba el cupo, no hay
+red o pasa cualquier otra cosa:
+
+- **Twitch no depende de este paso**: arranca sin esperarlo y, si su reenvío cae, se reintenta
+  como siempre.
+- **YouTube recibe el vídeo igual que antes de existir este paso**, con un retraso de 8 segundos
+  como mucho. Que salga en público o no depende entonces de lo que haya en YouTube, como antes.
+- Si el paso está apagado o YouTube no está conectado, no se hace ninguna petición y el reenvío a
+  YouTube sale sin esa espera.
+
+El registro del panel dice qué ha pasado en cada arranque:
+
+| Mensaje en el registro | Qué significa | Qué hacer |
+| :--- | :--- | :--- |
+| `YouTube: emisión pública preparada…` | Se creó una emisión nueva y saldrá sola | Nada |
+| `YouTube: ya había una emisión esperando y se reutiliza…` | Se aprovecha la que ya existía | Nada |
+| `AVISO YouTube: la emisión de YouTube no es pública (privada / oculta)…` | La emisión reutilizada no la verá el público | Cambiar la visibilidad en YouTube Studio |
+| `AVISO YouTube: no se ha podido saber si la emisión de YouTube es pública…` | YouTube no dijo la visibilidad | Comprobarla en YouTube Studio |
+| `AVISO YouTube: esa emisión no tiene el fin automático…` | Al parar OBS, YouTube no la cerrará sola | Cerrarla en YouTube Studio al terminar |
+| `YouTube: el inicio automático no está conectado…` | No se ha hecho la conexión con YouTube (se dice una vez) | Seguir «Conectar YouTube (una sola vez)», si se quiere |
+| `YouTube: la preparación automática de la emisión está apagada (YOUTUBE_API=off)…` | Se apagó a propósito (se dice una vez). En las pruebas automáticas el paso también está apagado y el mensaje dice `(entorno de pruebas)` | Nada |
+| `AVISO YouTube: el permiso de YouTube ha caducado o se ha retirado y hay que volver a conectar YouTube…` | El permiso guardado ya no vale | Repetir la conexión |
+| `AVISO YouTube: YouTube no acepta el permiso guardado y hay que volver a conectar YouTube…` | YouTube rechaza el permiso o el cliente | Repetir la conexión |
+| `AVISO YouTube: se ha agotado el cupo diario de peticiones a YouTube…` | Se gastó el cupo del día | Esperar al día siguiente |
+| `AVISO YouTube: el canal de YouTube no tiene activada la emisión en directo…` | El canal no puede emitir en directo | Activarlo en YouTube |
+| `AVISO YouTube: la clave de emisión guardada no es de ninguna emisión del canal de YouTube conectado…` | La clave del panel es de otro canal o ya no existe | Revisar la clave o conectar el canal correcto |
+| `AVISO YouTube: no hay clave de emisión de YouTube guardada…` | Falta la clave | Guardarla en el panel |
+| `AVISO YouTube: YouTube no respondió a tiempo…` | YouTube tardó más de lo permitido | Nada; mirar si YouTube salió |
+| `AVISO YouTube: no se pudo contactar con YouTube…` | Fallo de red | Revisar la conexión |
+| `AVISO YouTube: YouTube devolvió un error…` | Error del lado de YouTube | Mirar el detalle entre corchetes |
+| `AVISO YouTube: YouTube respondió algo que no se esperaba…` | Respuesta que el centro no entiende | Avisar a quien mantiene el centro |
+| `AVISO YouTube: falló la preparación dentro del propio centro…` | Error del propio centro | Avisar a quien mantiene el centro |
+
+Todos los avisos de fallo terminan con «el directo sigue como siempre». Algunos añaden entre
+corchetes un detalle técnico (por ejemplo `[HTTP 403 (quotaExceeded) en liveStreams.list]`), que
+nunca contiene claves ni permisos.
+
+El último resultado también sale en `GET /api/estado` y en el evento `estado` del panel, en el campo
+`youtube`: `estado` (`preparada`, `no_configurada`, `desactivada` o `fallo`), `motivo`, `cuando`,
+`reutilizada`, `privacidad` y `autoStop`. Vale `null` hasta el primer arranque de OBS.
+
+### Conectar YouTube (una sola vez)
+
+Hace falta una cuenta de Google con acceso al canal. Los nombres exactos de los menús de Google
+Cloud cambian con el tiempo; aquí se describe qué hay que conseguir en cada paso.
+
+1. Entra en la consola de Google Cloud y **crea un proyecto** (el nombre es libre).
+2. En ese proyecto, **activa la API «YouTube Data API v3»**.
+3. **Configura la pantalla de consentimiento de OAuth** del proyecto, para usuarios externos, y deja
+   su estado de publicación en **«En producción»** («In production»). En «Prueba» («Testing»),
+   Google caduca el permiso a los 7 días y habría que repetir la conexión cada semana
+   ([documentación de OAuth 2.0 de Google](https://developers.google.com/identity/protocols/oauth2)).
+   No se ha confirmado si, al pasar a producción, Google pide además verificar la aplicación.
+4. **Crea un cliente de OAuth de tipo «Aplicación de escritorio»** («Desktop app»). Con un cliente
+   de tipo web la conexión no funciona, y el programa lo rechaza con un mensaje claro.
+5. **Descarga el archivo JSON** de ese cliente. Contiene un secreto: no lo compartas ni lo enseñes
+   en pantalla.
+6. En la carpeta del proyecto, ejecuta:
+
+   ```bash
+   node scripts/youtube-conectar.mjs <ruta-del-json>
+   ```
+
+7. Se abre el navegador con la página de permiso de Google. **Elige la cuenta del canal y acepta.**
+   Cuando la página diga «YouTube conectado», ya está. Si el navegador no se abre solo, el programa
+   muestra la dirección para copiarla a mano; solo en ese caso la enseña.
+
+El programa espera el permiso 5 minutos. La conexión se repite únicamente si el permiso caduca o se
+retira; el registro lo avisa con «hay que volver a conectar YouTube».
+
+### Dónde quedan los secretos y cómo desconectar
+
+- El permiso se guarda en `DATA_DIR/youtube-oauth.json` (`data/youtube-oauth.json` por defecto),
+  con permisos `0600` y fuera de Git. Contiene el identificador y el secreto del cliente y el
+  permiso permanente. El centro no los escribe en el registro, en el panel ni en `/api/estado`.
+- El archivo JSON descargado de Google Cloud ya no hace falta después de conectar; guárdalo en un
+  sitio seguro o bórralo.
+- **Desconectar:** borra `youtube-oauth.json`, o retira el acceso de la aplicación en los ajustes de
+  seguridad de la cuenta de Google. El centro sigue emitiendo como antes de esta función.
+- **Apagarlo sin desconectar:** arranca el centro con `YOUTUBE_API=off` (por ejemplo
+  `YOUTUBE_API=off npm run centro`). El centro no llama a YouTube y reenvía como antes.
+
+### Cupo de la API
+
+Cada arranque de OBS hace entre 4 y 6 llamadas a la API: 4 si reutiliza una emisión (buscar la
+clave y tres listas de emisiones) y 6 si crea una (además, crearla y vincularla). Buscar la clave
+puede necesitar más de una llamada si el canal tiene más de 50 claves. Si YouTube rechaza la
+vinculación de la emisión recién creada, el centro hace una llamada más para borrarla; si la
+vinculación se queda sin respuesta (plazo, red o error del servidor) no la borra, porque puede
+haberse vinculado, y en ese caso puede quedar en el canal una emisión sin usar.
+
+El gasto en unidades de cupo es una **estimación**: contando 1 unidad por llamada serían entre 4 y
+6 unidades por arranque, sobre un cupo que se ha tomado como 10 000 unidades al día por proyecto.
+Ni el coste de cada tipo de llamada ni ese cupo se han comprobado en la cuenta; las llamadas que
+crean, vinculan o borran pueden costar más que las de consulta. El gasto real se ve en la consola de
+Google Cloud. La documentación consultada no dice si el uso de la API es gratuito.
 
 ### Detener la transmisión en OBS cierra la emisión
 
@@ -93,8 +234,9 @@ repositorio no puede activarlos.
 | Se detiene la transmisión en OBS a propósito | Corta el envío a **todos** los destinos y deja el centro en `detenido`. No arranca el respaldo |
 | OBS se cae o pierde la conexión | Igual que antes: emite el vídeo de respaldo en bucle |
 
-Al cortarse el envío, YouTube deja de recibir señal y, con la finalización automática activada,
-cierra la emisión. El botón de finalizar del panel sigue funcionando y hace lo mismo.
+Al cortarse el envío, YouTube deja de recibir señal y cierra la emisión si esta tiene el fin
+automático. Las emisiones que crea el centro lo tienen; si reutilizó una que no lo tiene, el
+registro lo avisa al empezar. El botón de finalizar del panel sigue funcionando y hace lo mismo.
 
 Límite conocido, sin comprobar con OBS real: si OBS da la transmisión por detenida él solo (por
 ejemplo, tras agotar sus reintentos de reconexión), puede enviar el mismo aviso que una parada a
@@ -225,7 +367,12 @@ directo/
 │   ├── sesion-rtmp.js     adaptador de los eventos de node-media-server
 │   ├── gracia.js          acorta la ventana de gracia de 30 s
 │   ├── cierre-obs.js      decide si una parada de OBS cierra la emisión
+│   ├── youtube-emision.js      pide la emisión de YouTube antes de reenviar, sin frenar nada
+│   ├── youtube-api.js          cliente de la API de YouTube (crear, reutilizar y vincular la emisión)
+│   ├── youtube-credenciales.js lee y guarda el permiso de YouTube (DATA_DIR/youtube-oauth.json)
 │   └── relevo.js          margen entre matar el reenvío y arrancar el respaldo
+├── scripts/
+│   └── youtube-conectar.mjs    conexión única con YouTube (permiso de Google)
 ├── public/                panel (modo claro por defecto, interruptor sol/luna)
 ├── test/                  54 pruebas con node:test
 └── medios/                vídeos de respaldo (fuera de Git)
