@@ -41,6 +41,7 @@ import { planificarRelevo, PAUSA_RELEVO_MS } from "./relevo.js";
 import { WalkSignaling } from "./walk-signaling.js";
 import { crearRutasPanel } from "./panel-rutas.js";
 import { iniciarObsBridge } from "./obs-bridge.js";
+import { esParadaDeliberada, hayEmisionQueCerrar } from "./cierre-obs.js";
 import { bridgeOptions } from "./obs-bridge-config.js";
 import { resolveDestinationKey } from "./stream-credentials.js";
 import { cargarHistorial, crearGuardador } from "./pizarra-historial.js";
@@ -334,6 +335,45 @@ let relevoPendiente = false;
 let revisionEntrada = 0;
 let cierreVoluntario = false;
 
+// Cierre a propósito: lo piden el panel y OBS al detener la transmisión.
+async function finalizarEmisionVoluntaria(motivo) {
+  cierreVoluntario = true;
+  // Si el respaldo estaba arrancando, que no llegue a salir tras el cierre.
+  revisionEntrada++;
+  relevoPendiente = false;
+  relevoEnMarcha = false;
+  for (const d of configuracion.destinos) {
+    if (centro.destinos.has(d.nombre)) {
+      centro.destinos.get(d.nombre).ultimoModo = "respaldo";
+    }
+  }
+  await procesos.detenerTodos();
+  centro.finalizarEmision();
+  anotar(motivo);
+  difundir();
+}
+
+let cierrePorObsEnCurso = false;
+
+// Aviso del OBS Bridge (evento StreamStateChanged). Un corte de red no pasa de aquí.
+function alCambiarEmisionObs(datosEvento) {
+  if (cerrando || !esParadaDeliberada(datosEvento)) return;
+  // OBS avisa dos veces (parando y parado): la segunda ya no encuentra nada que cerrar.
+  const pendiente = hayEmisionQueCerrar({
+    obsActivo: centro.obsActivo,
+    estado: centro.estado,
+    relevoEnMarcha,
+  });
+  // El cierre tarda lo que tarde FFmpeg en morir: el segundo aviso puede llegar a mitad.
+  if (!pendiente || cierrePorObsEnCurso) return;
+  cierrePorObsEnCurso = true;
+  finalizarEmisionVoluntaria("Emisión finalizada: se detuvo la transmisión en OBS")
+    .catch((error) => anotar(`Error al finalizar emisión: ${error.message}`))
+    .finally(() => {
+      cierrePorObsEnCurso = false;
+    });
+}
+
 async function pasarARespaldo() {
   if (relevoEnMarcha) {
     relevoPendiente = true;
@@ -603,19 +643,10 @@ app.post("/api/destino/:nombre/detener", async (req, res) => {
 });
 
 app.post("/api/emision/finalizar", async (_req, res) => {
-  cierreVoluntario = true;
-  relevoPendiente = false;
-  relevoEnMarcha = false;
   try {
-    for (const d of configuracion.destinos) {
-      if (centro.destinos.has(d.nombre)) {
-        centro.destinos.get(d.nombre).ultimoModo = "respaldo";
-      }
-    }
-    await procesos.detenerTodos();
-    centro.finalizarEmision();
-    anotar("Emisión finalizada voluntariamente desde el panel");
-    difundir();
+    await finalizarEmisionVoluntaria(
+      "Emisión finalizada voluntariamente desde el panel",
+    );
     res.json({ ok: true, mensaje: "Emisión finalizada correctamente" });
   } catch (error) {
     anotar(`Error al finalizar emisión: ${error.message}`);
@@ -1144,7 +1175,10 @@ http.listen(configuracion.puertoPanel, hostPanel, () => {
   if (process.env.NODE_ENV !== "test") {
     try {
       const bridge = bridgeOptions(process.env);
-      if (bridge.enabled) obsBridge = iniciarObsBridge({ busWsUrl: bridge.url });
+      if (bridge.enabled) obsBridge = iniciarObsBridge({
+          busWsUrl: bridge.url,
+          onCambioEmision: alCambiarEmisionObs,
+        });
     } catch (e) {
       console.warn(`[OBS-Bridge] Error al iniciar: ${e.message}`);
     }

@@ -55,6 +55,7 @@ export function crearClienteObsWebSocket({
   onDesconectado = null,
   onCambioEscena = null,
   onCambioMute = null,
+  onCambioEmision = null,
 } = {}) {
   let ws = null;
   let conectado = false;
@@ -157,6 +158,9 @@ export function crearClienteObsWebSocket({
             onCambioEscena?.(msg.d.eventData?.sceneName);
           } else if (msg.d?.eventType === 'InputMuteStateChanged') {
             onCambioMute?.(msg.d.eventData);
+          } else if (msg.d?.eventType === 'StreamStateChanged') {
+            // Sin `eventSubscriptions` en Identify, OBS ya manda la categoría Outputs.
+            onCambioEmision?.(msg.d.eventData);
           }
         }
       } catch (_) {}
@@ -235,6 +239,7 @@ export function crearClienteObsWebSocket({
 export function iniciarObsBridge({
   busWsUrl = process.env.OBS_BRIDGE_WS_URL || `ws://127.0.0.1:${process.env.PORT || 8790}/ws`,
   configObs = null,
+  onCambioEmision = null,
 } = {}) {
   const cfg = configObs || obtenerConfiguracionObsLocal();
   let escenaActual = 'CON_CAMARA';
@@ -284,6 +289,9 @@ export function iniciarObsBridge({
         inputName: datosMute?.inputName,
         inputMuted: Boolean(datosMute?.inputMuted),
       });
+    },
+    onCambioEmision: (datosEmision) => {
+      onCambioEmision?.(datosEmision);
     },
   });
 

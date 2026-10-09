@@ -72,6 +72,40 @@ OBS Bridge usa por defecto el bus **local** `ws://127.0.0.1:${PORT:-7979}/ws`; s
 
 > ⚠️ Un destino sin `variableClave` emite a una URL sin nombre de flujo. Úsalo solo en pruebas locales.
 
+## Inicio y fin del directo en YouTube
+
+El centro solo empuja vídeo a YouTube con FFmpeg. No usa la API de YouTube ni tiene acceso a la
+cuenta, así que **no puede publicar ni cerrar la emisión por su cuenta**: eso lo decide YouTube
+según los ajustes de la emisión en el propio canal.
+
+- **Inicio.** YouTube pasa la emisión a público al recibir señal solo si esa emisión tiene activado
+  el inicio automático. Si no, la deja en vista previa hasta que alguien la publique a mano.
+- **Fin.** YouTube da la emisión por terminada al dejar de recibir señal solo si tiene activada la
+  finalización automática.
+
+Los dos ajustes se cambian una vez en la configuración de la emisión del canal de YouTube; este
+repositorio no puede activarlos.
+
+### Detener la transmisión en OBS cierra la emisión
+
+| Qué ocurre | Qué hace el centro |
+| :--- | :--- |
+| Se detiene la transmisión en OBS a propósito | Corta el envío a **todos** los destinos y deja el centro en `detenido`. No arranca el respaldo |
+| OBS se cae o pierde la conexión | Igual que antes: emite el vídeo de respaldo en bucle |
+
+Al cortarse el envío, YouTube deja de recibir señal y, con la finalización automática activada,
+cierra la emisión. El botón de finalizar del panel sigue funcionando y hace lo mismo.
+
+Límite conocido, sin comprobar con OBS real: si OBS da la transmisión por detenida él solo (por
+ejemplo, tras agotar sus reintentos de reconexión), puede enviar el mismo aviso que una parada a
+propósito. En ese caso el centro cerraría también el vídeo de respaldo.
+
+El centro distingue los dos casos porque OBS avisa de la parada por su WebSocket (evento
+`StreamStateChanged`). Por eso **hace falta el OBS Bridge**, con el servidor WebSocket de OBS
+activado. Con `OBS_BRIDGE=off`, o si el bridge no está conectado a OBS, el centro no recibe ese
+aviso y trata cualquier parada como un corte: con vídeo de respaldo configurado, el respaldo
+arranca y hay que cerrar la emisión desde el panel.
+
 ## Probarlo sin emitir a ningún sitio real
 
 ```bash
@@ -190,6 +224,7 @@ directo/
 │   ├── procesos.js        único sitio que lanza y mata FFmpeg
 │   ├── sesion-rtmp.js     adaptador de los eventos de node-media-server
 │   ├── gracia.js          acorta la ventana de gracia de 30 s
+│   ├── cierre-obs.js      decide si una parada de OBS cierra la emisión
 │   └── relevo.js          margen entre matar el reenvío y arrancar el respaldo
 ├── public/                panel (modo claro por defecto, interruptor sol/luna)
 ├── test/                  54 pruebas con node:test
