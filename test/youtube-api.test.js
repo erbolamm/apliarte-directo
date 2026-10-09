@@ -244,7 +244,7 @@ test('stream de esa clave no encontrado: no se crea nada', async () => {
   const r = await preparar(google);
   assert.equal(r.ok, false);
   assert.equal(r.motivo, MOTIVOS.STREAM_NO_ENCONTRADO);
-  assert.deepEqual(google.rutas(), ['token', 'streams']);
+  assert.deepEqual(google.rutas(), ['token', 'streams', 'all']);
   sinSecretos(r, google);
 
   // Una paginación que no termina nunca tampoco deja la preparación dando vueltas.
@@ -252,6 +252,45 @@ test('stream de esa clave no encontrado: no se crea nada', async () => {
   const infinito = googleFalso({ streams: { status: 200, body: { nextPageToken: 'otra', items: [] } } });
   assert.equal((await preparar(infinito)).motivo, MOTIVOS.STREAM_NO_ENCONTRADO);
   assert.ok(infinito.de('streams').length <= 10);
+});
+
+test('stream no listado en mine=true: lo recupera por el id de emisiones anteriores', async () => {
+  // Simula el caso real de YouTube: mine=true no lista streams vinculados a directos previos,
+  // pero el stream existe y se encuentra a través de los boundStreamId de emisiones anteriores.
+  const google = googleFalso({
+    streams: (llamada) => {
+      const idParam = llamada.u.searchParams.get('id');
+      if (idParam === 'stream-previo') {
+        return { status: 200, body: { items: [stream('stream-previo', CLAVE)] } };
+      }
+      return { status: 200, body: { items: [stream('otro', 'otra-clave')] } };
+    },
+    all: {
+      status: 200,
+      body: { items: [{ id: 'emision-pasada', contentDetails: { boundStreamId: 'stream-previo' } }] },
+    },
+    bind: { status: 200, body: { id: 'emision-nueva', contentDetails: { boundStreamId: 'stream-previo' } } },
+  });
+  const r = await preparar(google);
+  assert.equal(r.ok, true);
+  assert.equal(r.emisionId, 'emision-nueva');
+  assert.equal(google.rutas().includes('all'), true);
+  sinSecretos(r, google);
+});
+
+test('reintenta peticiones GET ante un error 500 transitorio de Google', async () => {
+  let intentos = 0;
+  const google = googleFalso({
+    streams: () => {
+      intentos += 1;
+      if (intentos === 1) return errorGoogle(500, 'backendError');
+      return { status: 200, body: { items: [stream('stream-1', CLAVE)] } };
+    },
+  });
+  const r = await preparar(google);
+  assert.equal(r.ok, true);
+  assert.equal(intentos, 2);
+  sinSecretos(r, google);
 });
 
 test('reutiliza la emisión en espera vinculada a ese stream y con auto-inicio', async () => {

@@ -141,7 +141,7 @@ async function tokenDeAcceso(ctx) {
 }
 
 /** Una llamada a la API de datos. Se cuenta en `ctx.llamadas`; el coste en cuota de cada tipo no se ha comprobado. */
-async function llamarApi(ctx, operacion, metodo, ruta, parametros, cuerpoJson) {
+async function llamarApi(ctx, operacion, metodo, ruta, parametros, cuerpoJson, intento = 1) {
   ctx.llamadas += 1;
   const opciones = { method: metodo, headers: { Authorization: `Bearer ${ctx.token}` } };
   if (cuerpoJson) {
@@ -152,6 +152,13 @@ async function llamarApi(ctx, operacion, metodo, ruta, parametros, cuerpoJson) {
   if (correcta(status)) {
     if (!cuerpo) throw new FalloYoutube(MOTIVOS.RESPUESTA_INESPERADA, `respuesta no válida en ${operacion}`);
     return cuerpo;
+  }
+  // Reintento único para fallos transitorios 5xx de Google en consultas idempotentes (GET)
+  if (metodo === 'GET' && status >= 500 && status < 600 && intento === 1 && !ctx.signal?.aborted) {
+    await new Promise((r) => setTimeout(r, 200));
+    if (!ctx.signal?.aborted) {
+      return llamarApi(ctx, operacion, metodo, ruta, parametros, cuerpoJson, intento + 1);
+    }
   }
   const razon = etiqueta(cuerpo?.error?.errors?.[0]?.reason);
   const detalle = `HTTP ${status}${entreParentesis(razon)} en ${operacion}`;
@@ -182,6 +189,29 @@ async function buscarStream(ctx, clave) {
     if (encontrado) return encontrado.id;
     pageToken = cuerpo.nextPageToken;
     if (!pageToken) break;
+  }
+  // Si no está listado en mine=true (stream creado desde emisiones o con isReusable: false),
+  // buscamos en las emisiones recientes del canal para localizar su boundStreamId.
+  try {
+    const cuerpoBc = await llamarApi(ctx, 'liveBroadcasts.list (streams)', 'GET', 'liveBroadcasts', {
+      part: 'contentDetails',
+      broadcastStatus: 'all',
+      maxResults: '10',
+    });
+    const ids = [...new Set((Array.isArray(cuerpoBc.items) ? cuerpoBc.items : [])
+      .map((b) => b?.contentDetails?.boundStreamId)
+      .filter((id) => typeof id === 'string'))];
+    if (ids.length > 0) {
+      const cuerpoStreams = await llamarApi(ctx, 'liveStreams.list (por id)', 'GET', 'liveStreams', {
+        part: 'id,cdn',
+        id: ids.join(','),
+      });
+      const encontrado = (Array.isArray(cuerpoStreams.items) ? cuerpoStreams.items : [])
+        .find((s) => s?.cdn?.ingestionInfo?.streamName === clave && typeof s.id === 'string');
+      if (encontrado) return encontrado.id;
+    }
+  } catch (error) {
+    if (error?.motivo === MOTIVOS.TIEMPO_AGOTADO || error?.motivo === MOTIVOS.CUOTA_AGOTADA) throw error;
   }
   throw new FalloYoutube(MOTIVOS.STREAM_NO_ENCONTRADO, 'ningún stream del canal usa la clave de emisión guardada');
 }

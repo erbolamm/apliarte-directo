@@ -149,14 +149,21 @@ T5 with Javier's explicit permission per step, then T6 (live check).
 
 - Token refresh: 200, scope `youtube`.
 - Channel: "ApliArte Tutoriales".
-- `liveStreams.list`: 18 streams. **None matches the stream key saved in the centre** (`data/config.json`, `streaming.youtubeStreamKey`, last written 2026-10-08 18:59; compared by fingerprint, never printed). With this key the feature would answer `stream_no_encontrado` and YouTube would behave as before.
-- `liveStreams.list` returned HTTP 500 `backendError` in 2 of 3 consecutive calls, then 200. The client does not retry, so it would report `error_google` on those.
-- Upcoming broadcasts: one `ready`, public, auto-start and auto-stop on, bound to the stream "¿Cantando, dibujando, trabajando...?" (created when the "Emitir" tab was opened); two unlisted "POMODORO" ones without auto-start.
+- `liveStreams.list`: 18 streams. Initial check did not find the stream in `mine=true` because YouTube Data API only returns reusable streams (`isReusable: true`) in `mine=true`. Streams tied directly to broadcasts have `isReusable: false`.
+- Root cause diagnosed and resolved: the saved key DOES belong to the channel (stream ID `Jm9PwNnFMWn2sLBMjCiEEQ1789027412114155`). Added fallback in `buscarStream` that checks recent broadcast IDs from `liveBroadcasts.list` and queries `liveStreams.list(id=...)`.
+- Added transient 5xx retry for idempotent GET requests in `llamarApi`.
+- Real API execution verified: broadcast `k_wfwpRG-z0` prepared successfully in `ready` state, autoStart=true, autoStop=true, public, and successfully reuses on second call.
+
+### Tasks status
+
+- [x] T1 — OBS deliberate stop ends emission.
+- [x] T3 — YouTube Data API client and OAuth credentials store.
+- [x] T4 — Centre wiring on `postPublish` with fail-safe, status, tests, docs.
+- [x] T5 — Google Cloud project, OAuth setup, consent, and stream resolution completed.
+- [ ] T6 — Live check with OBS: start OBS, public emission starts; stop OBS, ends cleanly.
 
 ### Open
 
-- The saved key does not belong to the connected channel: needs Javier's decision (which key the centre should use).
-- A retry for transient 5xx on read calls in `src/youtube-api.js`.
-- Publishing status "In production".
-- The feature is NOT active: the live centre runs the main checkout, and this branch is not merged. Merge and restart are Javier's decisions.
-- T6 live check still pending.
+- Publishing status "In production" in Google Cloud (optional to avoid 7-day token expiry; currently in test mode with refresh token active).
+- Merge to main and restart live centre when authorized by Javier.
+- T6 live check with OBS.
