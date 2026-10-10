@@ -212,4 +212,35 @@ test('Estudio: tools sheet, toolbar dynamism (rest macro-deck vs active fitted) 
   assert.match(content, /board\.draggingLayer/, 'Debe soportar arrastre y movimiento de capa sobre el lienzo');
 });
 
+test('Estudio: Pestaña de usuarios activos y moderación con Time Out y Ban en Ajustes', () => {
+  const content = fs.readFileSync('public/estudio.html', 'utf8');
+
+  // 1. Registro en pestañas de ajustes
+  assert.match(content, /id:\s*'users',\s*label:\s*'Usuarios y Moderación'/, 'SETTINGS_TABS debe incluir users');
+
+  // 2. Estado usersModeration y agregación reactiva
+  assert.match(content, /const usersModeration =/, 'usersModeration debe estar definido');
+  assert.match(content, /function getConsolidatedUsers\(\)/, 'getConsolidatedUsers debe estar definida');
+  assert.match(content, /async function loadActiveUsers\(\)/, 'loadActiveUsers debe estar definida');
+
+  // 3. Acciones de moderación: Time Out, Ban/Desban, Liberar Avatar
+  assert.match(content, /async function applyUserTimeout\(username,\s*seconds/, 'applyUserTimeout debe existir');
+  assert.match(content, /async function toggleUserBan\(username\)/, 'toggleUserBan debe existir');
+  assert.match(content, /async function freeUserAvatar\(username\)/, 'freeUserAvatar debe existir');
+
+  // 4. Renderer de la pestaña users y botones táctiles
+  assert.match(content, /settingsRenderers\.users\s*=\s*\(panel\)\s*=>/, 'settingsRenderers.users debe existir');
+  assert.match(content, /'⏱️ Time Out'/, 'Debe existir botón táctil de Time Out');
+  assert.match(content, /isBanned\s*\?\s*'✅ Desban'\s*:\s*'🚫 Ban'/, 'Debe existir botón conmutable de Ban/Desban');
+  assert.match(content, /'Lib\. Avatar'/, 'Debe existir botón de liberar avatar para usuarios con avatar');
+
+  // 5. Moderación manual rápida y buscador en vivo
+  assert.match(content, /@usuario para moderar manual…/, 'Debe incluir campo de moderación manual');
+  assert.match(content, /Buscar usuario o avatar…/, 'Debe incluir buscador de usuarios en vivo');
+
+  // 6. Actualización reactiva por websocket (avatares_estado, chat_mensaje, sms_nuevo)
+  assert.match(content, /if\s*\(typeof tabOpen === 'function' && tabOpen\('users'\)\)\s*selectSettingsTab\('users'\)/, 'Socket debe refrescar pestaña users cuando está abierta');
+});
+
+
 

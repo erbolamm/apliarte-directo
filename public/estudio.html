@@ -227,6 +227,10 @@
     .meter-bar { height: 100%; width: 0; background: var(--brand-strong); }
     .video-card { display: grid; gap: 0.25rem; padding: var(--gap); border: 1px solid var(--line); border-radius: var(--radius); }
     .video-card small { color: var(--text-muted); }
+    .user-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: var(--surface); border: 1px solid var(--line); color: var(--text-muted); font-weight: 500; }
+    .user-badge.avatar { border-color: var(--brand); color: var(--brand-strong); }
+    .user-badge.banned { border-color: #ef4444; color: #ef4444; }
+    .user-badge.muted { border-color: #f59e0b; color: #f59e0b; }
     .tts-log { max-height: 180px; overflow: auto; padding: var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); font-size: 0.85rem; display: grid; gap: 0.2rem; }
     .tts-log .skipped { color: var(--text-muted); font-style: italic; }
     .settings-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
@@ -2530,6 +2534,7 @@
     // ── Panel socket ─────────────────────────────────────────────────────
     // The same /ws the old panel uses: it carries the microphone audio and
     // the camera start/stop orders, and reports camera mode changes back.
+    const usersModeration = { loaded: false, filter: '', avatares: {}, bannedUsers: new Set(), lastActionStatus: '' };
     const panel = { ws: null, started: false, onCameraMode: null };
     const panelSocketOpen = () => Boolean(panel.ws && panel.ws.readyState === WebSocket.OPEN);
     function panelSend(payload) {
@@ -2551,7 +2556,17 @@
           let data;
           try { data = JSON.parse(event.data); } catch (_) { return; }
           if (data && data.type === 'camara_modo' && data.modo && panel.onCameraMode) panel.onCameraMode(data.modo);
-          if (data && data.type === 'chat_mensaje') agregarMensajeTwitchFeed(data);
+          if (data && data.type === 'chat_mensaje') {
+            agregarMensajeTwitchFeed(data);
+            if (typeof tabOpen === 'function' && tabOpen('users')) selectSettingsTab('users');
+          }
+          if (data && data.type === 'avatares_estado' && data.avatares) {
+            usersModeration.avatares = data.avatares;
+            if (typeof tabOpen === 'function' && tabOpen('users')) selectSettingsTab('users');
+          }
+          if (data && (data.type === 'sms_nuevo' || data.type === 'nuevo_sms')) {
+            loadSms().then(() => { if (typeof tabOpen === 'function' && tabOpen('users')) selectSettingsTab('users'); });
+          }
         };
         socket.onclose = () => { setTimeout(connectPanelSocket, 2000); };
         socket.onerror = () => { try { socket.close(); } catch (_) { /* already closed */ } };
@@ -4191,6 +4206,7 @@
       { id: 'audio', label: 'Audio y Filtros' },
       { id: 'tts', label: 'Voz del chat' },
       { id: 'stage', label: 'Escenario y Avatares 3D' },
+      { id: 'users', label: 'Usuarios y Moderación' },
       { id: 'commands', label: 'Comandos' },
       { id: 'sms', label: 'Mensajes SMS' },
       { id: 'games', label: 'Juegos' },
@@ -4231,6 +4247,13 @@
       panel.appendChild(note);
     }
     const rerender = (id) => selectSettingsTab(id);
+    function tabOpen(id) {
+      const sheet = $('settings-sheet') || $('settings-dialog');
+      if (!sheet) return false;
+      const isOpen = (typeof sheet.open === 'boolean' && sheet.open) || (!sheet.hidden && sheet.getAttribute('aria-hidden') !== 'true');
+      const tab = $(`settings-tab-${id}`);
+      return Boolean(isOpen && tab && tab.getAttribute('aria-selected') === 'true');
+    }
 
     // Device picker shared by the camera and audio tabs. Browsers only show
     // device names after permission was granted on this page, hence the
@@ -4775,6 +4798,309 @@
       });
     };
 
+    // ── Active users and moderation tab ──────────────────────────────────
+    async function loadActiveUsers() {
+      try {
+        const response = await fetch('/api/directo/avatares', { cache: 'no-store' });
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.avatares) usersModeration.avatares = data.avatares;
+        }
+      } catch (_) { /* local fallback */ }
+      usersModeration.loaded = true;
+      if (tabOpen('users')) selectSettingsTab('users');
+    }
+
+    function getConsolidatedUsers() {
+      const usersMap = new Map();
+
+      function ensureUser(rawName) {
+        if (!rawName || typeof rawName !== 'string') return null;
+        const name = rawName.trim().replace(/^@+/, '');
+        if (!name) return null;
+        const key = name.toLowerCase();
+        if (!usersMap.has(key)) {
+          usersMap.set(key, {
+            username: name,
+            key,
+            avatarId: null,
+            sources: new Set(),
+            lastMessage: ''
+          });
+        }
+        return usersMap.get(key);
+      }
+
+      if (usersModeration.avatares && typeof usersModeration.avatares === 'object') {
+        for (const [avatarId, owner] of Object.entries(usersModeration.avatares)) {
+          if (owner && typeof owner === 'string') {
+            const u = ensureUser(owner);
+            if (u) {
+              u.avatarId = avatarId;
+              u.sources.add('avatar');
+            }
+          }
+        }
+      }
+
+      if (Array.isArray(chatMensajesTwitch)) {
+        chatMensajesTwitch.forEach((msg) => {
+          if (msg && msg.usuario) {
+            const u = ensureUser(msg.usuario);
+            if (u) {
+              u.sources.add('chat');
+              if (msg.texto) u.lastMessage = msg.texto;
+            }
+          }
+        });
+      }
+
+      if (typeof sms !== 'undefined' && sms && Array.isArray(sms.messages)) {
+        sms.messages.forEach((msg) => {
+          if (msg && msg.usuario) {
+            const u = ensureUser(msg.usuario);
+            if (u) {
+              u.sources.add('sms');
+              if (msg.texto && !u.lastMessage) u.lastMessage = msg.texto;
+            }
+          }
+        });
+      }
+
+      if (typeof tts !== 'undefined' && tts && tts.muted) {
+        tts.muted.forEach((name) => {
+          const u = ensureUser(name);
+          if (u) u.sources.add('tts');
+        });
+      }
+
+      if (usersModeration.bannedUsers) {
+        usersModeration.bannedUsers.forEach((name) => {
+          const u = ensureUser(name);
+          if (u) u.sources.add('baneado');
+        });
+      }
+
+      const list = Array.from(usersMap.values());
+      list.sort((a, b) => {
+        if (a.avatarId && !b.avatarId) return -1;
+        if (!a.avatarId && b.avatarId) return 1;
+        return a.username.localeCompare(b.username);
+      });
+      return list;
+    }
+
+    async function applyUserTimeout(username, seconds = 600) {
+      if (!username) return;
+      const cleanName = username.trim().replace(/^@+/, '');
+      const key = cleanName.toLowerCase();
+      if (typeof tts !== 'undefined' && tts && tts.muted) {
+        tts.muted.add(key);
+        if (typeof saveMutedUsers === 'function') saveMutedUsers();
+      }
+      usersModeration.lastActionStatus = `⏱️ Time Out aplicado a @${cleanName} (${seconds}s)`;
+      await sendPanelCommand(`/timeout ${cleanName} ${seconds}`);
+      if (tabOpen('users')) selectSettingsTab('users');
+    }
+
+    async function toggleUserBan(username) {
+      if (!username) return;
+      const cleanName = username.trim().replace(/^@+/, '');
+      const key = cleanName.toLowerCase();
+      const isBanned = usersModeration.bannedUsers.has(key);
+      if (isBanned) {
+        usersModeration.bannedUsers.delete(key);
+        if (typeof tts !== 'undefined' && tts && tts.muted) {
+          tts.muted.delete(key);
+          if (typeof saveMutedUsers === 'function') saveMutedUsers();
+        }
+        usersModeration.lastActionStatus = `✅ Desbaneado: @${cleanName}`;
+        await sendPanelCommand(`/unban ${cleanName}`);
+      } else {
+        usersModeration.bannedUsers.add(key);
+        if (typeof tts !== 'undefined' && tts && tts.muted) {
+          tts.muted.add(key);
+          if (typeof saveMutedUsers === 'function') saveMutedUsers();
+        }
+        usersModeration.lastActionStatus = `🚫 Baneado: @${cleanName}`;
+        await sendPanelCommand(`/ban ${cleanName}`);
+        await sendPanelCommand('liberar', { usuarioObjetivo: cleanName });
+      }
+      if (tabOpen('users')) selectSettingsTab('users');
+    }
+
+    async function freeUserAvatar(username) {
+      if (!username) return;
+      const cleanName = username.trim().replace(/^@+/, '');
+      usersModeration.lastActionStatus = `Libertad de avatar para @${cleanName}`;
+      await sendPanelCommand('liberar', { usuarioObjetivo: cleanName });
+      if (usersModeration.avatares) {
+        for (const [aId, owner] of Object.entries(usersModeration.avatares)) {
+          if (typeof owner === 'string' && owner.toLowerCase() === cleanName.toLowerCase()) {
+            delete usersModeration.avatares[aId];
+          }
+        }
+      }
+      if (tabOpen('users')) selectSettingsTab('users');
+    }
+
+    settingsRenderers.users = (panel) => {
+      if (!usersModeration.loaded) {
+        settingsNote(panel, 'Localizando usuarios activos…');
+        loadActiveUsers();
+        return;
+      }
+      const users = getConsolidatedUsers();
+      const head = settingsRow(panel);
+      const heading = document.createElement('h3');
+      heading.textContent = `Usuarios activos y moderación (${users.length})`;
+      heading.style.marginRight = 'auto';
+      head.appendChild(heading);
+      settingsButton(head, 'Actualizar', () => { loadActiveUsers(); if (typeof loadSms === 'function' && !sms.loaded) loadSms(); });
+
+      if (usersModeration.lastActionStatus) {
+        const feedback = document.createElement('p');
+        feedback.className = 'hint';
+        feedback.style.color = 'var(--brand-strong)';
+        feedback.style.fontWeight = '500';
+        feedback.textContent = usersModeration.lastActionStatus;
+        panel.appendChild(feedback);
+      }
+
+      // Fila de moderación manual rápida por nombre
+      const manualRow = settingsRow(panel);
+      manualRow.style.marginTop = '0.5rem';
+      const manualInput = document.createElement('input');
+      manualInput.type = 'text';
+      manualInput.placeholder = '@usuario para moderar manual…';
+      manualInput.setAttribute('aria-label', 'Usuario para moderar manualmente');
+      manualInput.style.flex = '1';
+      manualInput.style.minWidth = '160px';
+      manualInput.style.minHeight = 'var(--touch)';
+      manualInput.style.padding = '0 var(--gap)';
+      manualInput.style.border = '1px solid var(--line)';
+      manualInput.style.borderRadius = 'var(--radius)';
+      manualInput.style.background = 'var(--bg)';
+      manualInput.style.color = 'var(--text)';
+      manualRow.appendChild(manualInput);
+
+      settingsButton(manualRow, '⏱️ Time Out', () => {
+        const target = manualInput.value.trim();
+        if (target) { applyUserTimeout(target); manualInput.value = ''; }
+      });
+      settingsButton(manualRow, '🚫 Ban', () => {
+        const target = manualInput.value.trim();
+        if (target) { toggleUserBan(target); manualInput.value = ''; }
+      });
+
+      // Buscador / filtro en vivo
+      const searchRow = settingsRow(panel);
+      const searchInput = document.createElement('input');
+      searchInput.type = 'search';
+      searchInput.placeholder = 'Buscar usuario o avatar…';
+      searchInput.value = usersModeration.filter;
+      searchInput.setAttribute('aria-label', 'Buscar usuario');
+      searchInput.style.flex = '1';
+      searchInput.style.minHeight = 'var(--touch)';
+      searchInput.style.padding = '0 var(--gap)';
+      searchInput.style.border = '1px solid var(--line)';
+      searchInput.style.borderRadius = 'var(--radius)';
+      searchInput.style.background = 'var(--bg)';
+      searchInput.style.color = 'var(--text)';
+      searchInput.addEventListener('input', (e) => {
+        usersModeration.filter = e.target.value;
+        const q = (usersModeration.filter || '').trim().toLowerCase();
+        panel.querySelectorAll('.user-mod-card').forEach((card) => {
+          const match = !q || card.dataset.search.includes(q);
+          card.hidden = !match;
+        });
+      });
+      searchRow.appendChild(searchInput);
+
+      const q = (usersModeration.filter || '').trim().toLowerCase();
+      const filtered = users.filter((u) => {
+        if (!q) return true;
+        if (u.username.toLowerCase().includes(q)) return true;
+        if (u.avatarId && u.avatarId.toLowerCase().includes(q)) return true;
+        if (u.lastMessage && u.lastMessage.toLowerCase().includes(q)) return true;
+        return false;
+      });
+
+      if (filtered.length === 0) {
+        settingsNote(panel, users.length === 0 ? 'No se detecta ningún usuario activo aún.' : 'Ningún usuario coincide con la búsqueda.');
+      }
+
+      users.forEach((user) => {
+        const isBanned = usersModeration.bannedUsers.has(user.key);
+        const isMuted = Boolean(typeof tts !== 'undefined' && tts && tts.muted && tts.muted.has(user.key));
+        const card = document.createElement('div');
+        card.className = 'video-card user-mod-card';
+        card.dataset.search = `${user.username} ${user.avatarId || ''} ${user.lastMessage || ''}`.toLowerCase();
+        if (q && !card.dataset.search.includes(q)) card.hidden = true;
+
+        const top = document.createElement('div');
+        top.className = 'settings-row';
+
+        const nameLabel = document.createElement('strong');
+        nameLabel.textContent = '@' + user.username;
+        nameLabel.style.marginRight = 'auto';
+        top.appendChild(nameLabel);
+
+        if (user.avatarId) {
+          const badge = document.createElement('span');
+          badge.className = 'user-badge avatar';
+          badge.textContent = `👤 Avatar: ${user.avatarId}`;
+          top.appendChild(badge);
+        }
+        if (user.sources.has('chat')) {
+          const badge = document.createElement('span');
+          badge.className = 'user-badge';
+          badge.textContent = '💬 Chat';
+          top.appendChild(badge);
+        }
+        if (user.sources.has('sms')) {
+          const badge = document.createElement('span');
+          badge.className = 'user-badge';
+          badge.textContent = '📱 SMS';
+          top.appendChild(badge);
+        }
+        if (isMuted) {
+          const badge = document.createElement('span');
+          badge.className = 'user-badge muted';
+          badge.textContent = '🔇 Silenciado';
+          top.appendChild(badge);
+        }
+        if (isBanned) {
+          const badge = document.createElement('span');
+          badge.className = 'user-badge banned';
+          badge.textContent = '🚫 BANEADO';
+          top.appendChild(badge);
+        }
+        card.appendChild(top);
+
+        if (user.lastMessage) {
+          const lastMsg = document.createElement('small');
+          lastMsg.textContent = `«${user.lastMessage}»`;
+          card.appendChild(lastMsg);
+        }
+
+        const actions = settingsRow(card);
+        settingsButton(actions, '⏱️ Time Out', () => applyUserTimeout(user.username, 600));
+        settingsButton(actions, isBanned ? '✅ Desban' : '🚫 Ban', () => toggleUserBan(user.username), isBanned);
+        if (user.avatarId) {
+          settingsButton(actions, 'Lib. Avatar', () => freeUserAvatar(user.username));
+        }
+        settingsButton(actions, isMuted ? '🔊 Activar voz' : '🔇 Silenciar voz', () => {
+          if (isMuted) tts.muted.delete(user.key);
+          else tts.muted.add(user.key);
+          if (typeof saveMutedUsers === 'function') saveMutedUsers();
+          if (tabOpen('users')) selectSettingsTab('users');
+        }, isMuted);
+
+        panel.appendChild(card);
+      });
+    };
+
     // ── SMS mailbox and chat game tabs ───────────────────────────────────
     // Ported from the old panel: /api/directo/sms and /api/directo/juego.
     // Destructive actions ask for a second press instead of a browser dialog.
@@ -4793,7 +5119,6 @@
       });
       return button;
     }
-    const tabOpen = (id) => $('settings-dialog').open && $(`settings-tab-${id}`).getAttribute('aria-selected') === 'true';
 
     const sms = { loaded: false, messages: [], error: '', shownId: null };
     async function loadSms() {
@@ -5335,7 +5660,7 @@
       'toggle-theme': toggleTheme,
       'toggle-secret': (button) => setSecretVisible(button, button.getAttribute('aria-pressed') !== 'true'),
       'open-settings': () => {
-        commandsTabLoaded = false; stage.loaded = false; sms.loaded = false; game.loaded = false; broadcast.loaded = false;
+        commandsTabLoaded = false; stage.loaded = false; sms.loaded = false; game.loaded = false; broadcast.loaded = false; usersModeration.loaded = false;
         if (openSheet('settings-sheet')) selectSettingsTab(SETTINGS_TABS[0].id);
       },
       'close-settings': () => closeSheets(),
