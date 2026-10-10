@@ -1002,14 +1002,14 @@ export class OfficeRuntime {
   return CHAT_ZONE_COMMANDS[raw]??null;
  }
  /** Avatar that should walk: explicit agent, the login's adopted avatar, or Javier himself. */
- private avatarForCommand(cmd:OfficeCommand):AgentId|null{
+ avatarForCommand(cmd:OfficeCommand):AgentId|null{
   if(cmd.agente&&roles.has(cmd.agente as AgentId))return cmd.agente as AgentId;
   const user=String(cmd.usuario??'').trim().toLowerCase();
   if(!user)return null;
   for(const [avatar,owner] of Object.entries(this.avatarOwners)){
    if(String(owner).trim().toLowerCase()===user&&roles.has(avatar as AgentId))return avatar as AgentId;
   }
-  if(user==='ja'||user==='apliarte'||user==='erbolamm')return 'ja';
+  if(user==='ja'||user==='apliarte'||user==='erbolamm'||user==='javier')return 'ja';
   if(roles.has(user as AgentId))return user as AgentId;
   return null;
  }
@@ -1030,6 +1030,9 @@ export class OfficeRuntime {
   p.isRear=end.y<p.pos.y;
   p.pose=p.isRear?'work':'walk';
   p.manualUntil=isBoardMode()?Infinity:now+45000;
+  if(typeof window !== 'undefined'){
+   window.dispatchEvent(new CustomEvent('erbolamm:track-agent', { detail: { id, zone } }));
+  }
   this.triggerWake();
   return true;
  }

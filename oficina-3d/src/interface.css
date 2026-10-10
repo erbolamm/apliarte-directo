@@ -511,6 +511,10 @@ html[data-theme="dark"] .real-office .live-chat-item code {
 .real-office .volume-viewport:not(.is-dragging) .diorama-stage {
   transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
 }
+.real-office .volume-viewport.is-tracking:not(.is-dragging) .world-anchor{transition:transform .18s ease-out;}
+.real-office .volume-viewport.is-tracking:not(.is-dragging) .world{transition:transform .18s ease-out;}
+.real-office .volume-viewport.is-tracking:not(.is-dragging) .diorama-anchor{transition:transform .18s ease-out;}
+.real-office .volume-viewport.is-tracking:not(.is-dragging) .diorama-stage{transition:transform .18s ease-out;}
 
 /* ─── Diana / Meta 3D para el Mini-Juego !juego / !carrera ─── */
 .real-office .game-target-marker {
@@ -675,8 +679,8 @@ body.hub-frozen .real-office .world *::after {
 }
 
 /* !damas board (3D view): squares laid on the floor with chess-style labels */
-.real-office .damas-board{position:absolute;display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:repeat(8,1fr);box-shadow:0 0 0 40px #efe9df;pointer-events:none;}
+.real-office .damas-board{position:absolute;display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:repeat(8,1fr);box-shadow:0 0 0 40px #efe9df;transform-style:preserve-3d;pointer-events:none;}
 .real-office .damas-square{display:block;}
-.real-office .damas-label{position:absolute;font:800 26px/1 Inter,system-ui,sans-serif;color:#111;transform:translate(-50%,-50%);}
+.real-office .damas-label{position:absolute;font:900 24px/1 'Inter',system-ui,sans-serif;color:#111;transform:translate(-50%,-50%) translateZ(4px);pointer-events:none;user-select:none;text-transform:uppercase;text-shadow:0 1px 2px rgba(255,255,255,.95),0 -1px 2px rgba(255,255,255,.95),1px 0 2px rgba(255,255,255,.95),-1px 0 2px rgba(255,255,255,.95);z-index:20;}
 .real-office .damas-col{top:-20px;}
 .real-office .damas-row{left:-20px;}

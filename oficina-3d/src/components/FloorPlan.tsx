@@ -316,7 +316,7 @@ function DamasBoard3D() {
         ))
       )}
       {Array.from(BOARD_COLUMNS).map((letter, col) => (
-        <b key={letter} className="damas-label damas-col" style={{ left: col * BOARD.cell + BOARD.cell / 2 }}>{letter}</b>
+        <b key={letter} className="damas-label damas-col" style={{ left: col * BOARD.cell + BOARD.cell / 2 }}>{letter.toUpperCase()}</b>
       ))}
       {boardRows.map((row, i) => (
         <b key={row} className="damas-label damas-row" style={{ top: i * BOARD.cell + BOARD.cell / 2 }}>{row}</b>
@@ -720,6 +720,11 @@ export default function FloorPlan(props: Props) {
         window.clearTimeout(autoCameraTimer.current);
         autoCameraTimer.current = null;
       }
+      if (trackingState.current?.arriveTimer) {
+        window.clearTimeout(trackingState.current.arriveTimer);
+      }
+      trackingState.current = null;
+      setTrackingAgent(null);
       e.preventDefault();
       const delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 300 : 1);
       apply(wheelCamera(cameraRef.current, delta));
@@ -738,11 +743,77 @@ export default function FloorPlan(props: Props) {
   const [spotlightAgent, setSpotlightAgent] = useState<AgentId | null>(null);
   const autoCameraTimer = useRef<number | null>(null);
 
+  // Seguimiento dinámico de cámara para avatares caminando a zonas o metas
+  const [trackingAgent, setTrackingAgent] = useState<AgentId | null>(null);
+  const trackingAgentRef = useRef<AgentId | null>(null);
+  trackingAgentRef.current = trackingAgent;
+  const trackingState = useRef<{ id: AgentId; arrived: boolean; arriveTimer: number | null; startMs: number; startedMoving: boolean } | null>(null);
+
+  const trackAgent = useCallback(
+    (id: AgentId) => {
+      if (window.Oficina3D?.isCinematicActive?.()) return;
+      if (autoCameraTimer.current !== null) {
+        window.clearTimeout(autoCameraTimer.current);
+        autoCameraTimer.current = null;
+      }
+      if (trackingState.current?.arriveTimer) {
+        window.clearTimeout(trackingState.current.arriveTimer);
+      }
+      setSpotlightAgent(null);
+      setTrackingAgent(id);
+      trackingState.current = {
+        id,
+        arrived: false,
+        arriveTimer: null,
+        startMs: performance.now(),
+        startedMoving: false,
+      };
+
+      const agent = people.find((p) => p.id === id);
+      if (!agent) return;
+
+      const dx = agent.pos.x - 640;
+      const dy = agent.pos.y - 430;
+      const currentScale = scaleRef.current;
+      const targetZoom = viewMode === '3d' ? 2.0 : 1.75;
+      if (viewMode === '3d') {
+        const turnRad = (DEFAULT_CAMERA.turn * Math.PI) / 180;
+        const tiltRad = (DEFAULT_CAMERA.tilt * Math.PI) / 180;
+        const rx = dx * Math.cos(turnRad) - dy * Math.sin(turnRad);
+        const ry = dx * Math.sin(turnRad) + dy * Math.cos(turnRad);
+        const targetZ = 50;
+        const screenX = rx * (currentScale * targetZoom);
+        const screenY = (ry * Math.cos(tiltRad) - targetZ * Math.sin(tiltRad)) * (currentScale * targetZoom);
+        apply({
+          ...DEFAULT_CAMERA,
+          zoom: targetZoom,
+          panX: Math.round(-screenX),
+          panY: Math.round(-screenY),
+        });
+      } else {
+        const screenX = dx * currentScale * targetZoom;
+        const screenY = (dy - 45) * currentScale * targetZoom;
+        apply({
+          ...DEFAULT_CAMERA,
+          zoom: targetZoom,
+          panX: Math.round(-screenX),
+          panY: Math.round(-screenY),
+        });
+      }
+    },
+    [people, viewMode]
+  );
+
   const focusOnAgent = useCallback(
     (id: AgentId, durationMs = 5000) => {
       if (window.Oficina3D?.isCinematicActive?.()) {
         return;
       }
+      if (trackingState.current?.arriveTimer) {
+        window.clearTimeout(trackingState.current.arriveTimer);
+      }
+      trackingState.current = null;
+      setTrackingAgent(null);
       setSpotlightAgent(id);
       const agent = people.find((p) => p.id === id);
       if (!agent) return;
@@ -800,6 +871,11 @@ export default function FloorPlan(props: Props) {
       window.clearTimeout(autoCameraTimer.current);
       autoCameraTimer.current = null;
     }
+    if (trackingState.current?.arriveTimer) {
+      window.clearTimeout(trackingState.current.arriveTimer);
+    }
+    trackingState.current = null;
+    setTrackingAgent(null);
     setSpotlightAgent(null);
     apply({ ...DEFAULT_CAMERA });
   }, []);
@@ -809,6 +885,11 @@ export default function FloorPlan(props: Props) {
       if (autoCameraTimer.current !== null) {
         window.clearTimeout(autoCameraTimer.current);
       }
+      if (trackingState.current?.arriveTimer) {
+        window.clearTimeout(trackingState.current.arriveTimer);
+      }
+      trackingState.current = null;
+      setTrackingAgent(null);
       setSpotlightAgent(null);
       const dx = 628 - 640;
       const dy = 456 - 430;
@@ -849,6 +930,81 @@ export default function FloorPlan(props: Props) {
     [viewMode]
   );
 
+  // Seguimiento dinámico en tiempo real de la posición del avatar mientras camina
+  useEffect(() => {
+    if (!trackingAgent || !trackingState.current) return;
+    const current = trackingState.current;
+    if (current.id !== trackingAgent || current.arrived) return;
+
+    const agent = people.find((p) => p.id === current.id);
+    if (!agent) {
+      setTrackingAgent(null);
+      trackingState.current = null;
+      apply({ ...DEFAULT_CAMERA });
+      return;
+    }
+
+    const isMoving = Boolean(agent.path && agent.path.length > 0) || agent.pose === 'walk';
+    if (isMoving) {
+      current.startedMoving = true;
+    }
+
+    // El agente ha llegado a destino tras haber estado en marcha
+    if (current.startedMoving && !isMoving) {
+      current.arrived = true;
+      current.arriveTimer = window.setTimeout(() => {
+        setTrackingAgent(null);
+        trackingState.current = null;
+        apply({ ...DEFAULT_CAMERA });
+      }, 3500);
+      return;
+    }
+
+    // Timeout de seguridad a los 20 segundos
+    if (performance.now() - current.startMs > 20000) {
+      setTrackingAgent(null);
+      trackingState.current = null;
+      apply({ ...DEFAULT_CAMERA });
+      return;
+    }
+
+    // Actualizar coordenadas de la cámara siguiendo al avatar en movimiento
+    const dx = agent.pos.x - 640;
+    const dy = agent.pos.y - 430;
+    const currentScale = scaleRef.current;
+    const targetZoom = viewMode === '3d' ? 2.0 : 1.75;
+    let newPanX = 0;
+    let newPanY = 0;
+
+    if (viewMode === '3d') {
+      const turnRad = (DEFAULT_CAMERA.turn * Math.PI) / 180;
+      const tiltRad = (DEFAULT_CAMERA.tilt * Math.PI) / 180;
+      const rx = dx * Math.cos(turnRad) - dy * Math.sin(turnRad);
+      const ry = dx * Math.sin(turnRad) + dy * Math.cos(turnRad);
+      const targetZ = 50;
+      const screenX = rx * (currentScale * targetZoom);
+      const screenY = (ry * Math.cos(tiltRad) - targetZ * Math.sin(tiltRad)) * (currentScale * targetZoom);
+      newPanX = Math.round(-screenX);
+      newPanY = Math.round(-screenY);
+    } else {
+      const screenX = dx * currentScale * targetZoom;
+      const screenY = (dy - 45) * currentScale * targetZoom;
+      newPanX = Math.round(-screenX);
+      newPanY = Math.round(-screenY);
+    }
+
+    if (Math.abs(cameraRef.current.panX - newPanX) > 1 || Math.abs(cameraRef.current.panY - newPanY) > 1 || cameraRef.current.zoom !== targetZoom) {
+      apply({
+        ...DEFAULT_CAMERA,
+        zoom: targetZoom,
+        panX: newPanX,
+        panY: newPanY,
+      });
+    }
+  }, [people, trackingAgent, viewMode]);
+
+  const trackAgentRef = useRef(trackAgent);
+  trackAgentRef.current = trackAgent;
   const focusOnAgentRef = useRef(focusOnAgent);
   focusOnAgentRef.current = focusOnAgent;
   const focusCenterRef = useRef(focusCenter);
@@ -857,6 +1013,10 @@ export default function FloorPlan(props: Props) {
   resetCameraRef.current = resetCamera;
 
   useEffect(() => {
+    const onTrackAgent = (e: Event) => {
+      const id = (e as CustomEvent<{ id: AgentId }>).detail?.id;
+      if (id) trackAgentRef.current(id);
+    };
     const onFocusCenter = (e: Event) => {
       const ms = (e as CustomEvent<{ durationMs?: number }>).detail?.durationMs ?? 5000;
       focusCenterRef.current(ms);
@@ -864,9 +1024,11 @@ export default function FloorPlan(props: Props) {
     const onResetCamera = () => {
       resetCameraRef.current();
     };
+    window.addEventListener('erbolamm:track-agent', onTrackAgent);
     window.addEventListener('erbolamm:focus-center', onFocusCenter);
     window.addEventListener('erbolamm:reset-camera', onResetCamera);
     return () => {
+      window.removeEventListener('erbolamm:track-agent', onTrackAgent);
       window.removeEventListener('erbolamm:focus-center', onFocusCenter);
       window.removeEventListener('erbolamm:reset-camera', onResetCamera);
     };
@@ -875,6 +1037,7 @@ export default function FloorPlan(props: Props) {
   useEffect(() => {
     if (window.Oficina3D) {
       window.Oficina3D.focusAgent = (id, ms) => focusOnAgentRef.current(id, ms);
+      window.Oficina3D.trackAgent = (id) => trackAgentRef.current(id);
       window.Oficina3D.focusCenter = (ms) => focusCenterRef.current(ms);
       window.Oficina3D.resetCamera = () => resetCameraRef.current();
     }
@@ -984,6 +1147,12 @@ export default function FloorPlan(props: Props) {
                   office.traerCafe(id);
                   const runnerId = office.runtime?.coffeeRun?.agentId ?? id ?? 'ge';
                   focusOnAgentRef.current(runnerId, 5000);
+                } else if (event.comando === 'zona') {
+                  const walkerId = office.runtime?.avatarForCommand?.(event);
+                  const ok = office.runtime.applyCommand(event, performance.now());
+                  if (ok && walkerId) {
+                    trackAgentRef.current(walkerId);
+                  }
                 } else {
                   office.runtime.applyCommand(event, performance.now());
                   const speaker = office.runtime.speaker(event.agente);
@@ -1160,6 +1329,11 @@ export default function FloorPlan(props: Props) {
       window.clearTimeout(autoCameraTimer.current);
       autoCameraTimer.current = null;
     }
+    if (trackingState.current?.arriveTimer) {
+      window.clearTimeout(trackingState.current.arriveTimer);
+    }
+    trackingState.current = null;
+    setTrackingAgent(null);
     if (!points.current.size) {
       dragged.current = false;
       panGesture.current = viewMode === '3d' ? (e.pointerType === 'mouse' && e.button === 2) : true;
@@ -1307,7 +1481,7 @@ export default function FloorPlan(props: Props) {
       {/* Viewport interactivo del plano */}
       <div
         ref={host}
-        className={`volume-viewport ${viewMode === '3d' ? 'office-3d-viewport' : 'diorama-viewport'} ${dragging ? 'is-dragging' : ''} ${locked ? 'is-locked' : ''}`}
+        className={`volume-viewport ${viewMode === '3d' ? 'office-3d-viewport' : 'diorama-viewport'} ${dragging ? 'is-dragging' : ''} ${locked ? 'is-locked' : ''} ${trackingAgent ? 'is-tracking' : ''}`}
         style={{
           ...(fill ? undefined : { height: Math.max(280, scale * (viewMode === '3d' ? 970 : 860)) }),
           ...(bronca && motion && (bronca.shakeX || bronca.shakeY)

@@ -943,6 +943,20 @@ html[data-theme="dark"] .real-office .live-chat-item code {
   transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Transiciones rápidas y suaves mientras se sigue dinámicamente al avatar */
+.real-office .volume-viewport.is-tracking:not(.is-dragging) .world-anchor {
+  transition: transform 0.18s ease-out;
+}
+.real-office .volume-viewport.is-tracking:not(.is-dragging) .world {
+  transition: transform 0.18s ease-out;
+}
+.real-office .volume-viewport.is-tracking:not(.is-dragging) .diorama-anchor {
+  transition: transform 0.18s ease-out;
+}
+.real-office .volume-viewport.is-tracking:not(.is-dragging) .diorama-stage {
+  transition: transform 0.18s ease-out;
+}
+
 /* ─── Diana / Meta 3D para el Mini-Juego !juego / !carrera ─── */
 .real-office .game-target-marker {
   position: absolute;
@@ -1112,6 +1126,7 @@ body.hub-frozen .real-office .world *::after {
   grid-template-columns: repeat(12, 1fr);
   grid-template-rows: repeat(8, 1fr);
   box-shadow: 0 0 0 40px #efe9df;
+  transform-style: preserve-3d;
   pointer-events: none;
 }
 .real-office .damas-square {
@@ -1120,24 +1135,21 @@ body.hub-frozen .real-office .world *::after {
 }
 .real-office .damas-label {
   position: absolute;
-  font: 800 26px/1 Inter, system-ui, sans-serif;
+  font: 900 24px/1 'Inter', system-ui, sans-serif;
   color: #111;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) translateZ(4px);
   pointer-events: none;
-}
-.real-office .damas-col {
-  top: auto;
-  bottom: -2px;
-  transform-origin: bottom center;
-  transform: translateX(-50%) rotateX(-90deg);
-  font: 900 28px/1 'Inter', system-ui, sans-serif;
-  color: #000000 !important;
+  user-select: none;
   text-transform: uppercase;
   text-shadow:
     0 1px 2px rgba(255, 255, 255, 0.95),
     0 -1px 2px rgba(255, 255, 255, 0.95),
     1px 0 2px rgba(255, 255, 255, 0.95),
     -1px 0 2px rgba(255, 255, 255, 0.95);
+  z-index: 20;
+}
+.real-office .damas-col {
+  top: -20px;
 }
 .real-office .damas-row {
   left: -20px;
