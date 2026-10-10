@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>ApliArte Directo · Panel de Avatares</title>
+  <style>
+    :root {
+      --bg: rgba(15, 23, 42, 0.82);
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --chip-bg: rgba(255, 255, 255, 0.08);
+      --chip-border: rgba(255, 255, 255, 0.14);
+      --shadow: rgba(0, 0, 0, 0.45);
+    }
+
+    html[data-theme="light"] {
+      --bg: rgba(248, 250, 252, 0.92);
+      --border: rgba(15, 23, 42, 0.12);
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #0284c7;
+      --chip-bg: rgba(0, 0, 0, 0.05);
+      --chip-border: rgba(0, 0, 0, 0.1);
+      --shadow: rgba(0, 0, 0, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent !important;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      display: flex;
+      padding: 10px;
+      user-select: none;
+      pointer-events: auto;
+    }
+
+    .avatares-panel {
+      display: flex;
+      gap: 6px;
+      padding: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 8px 30px var(--shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .avatares-chips {
+      display: contents;
+    }
+
+    /* Orientación Vertical (por defecto o ?orientacion=vertical) */
+    .avatares-panel.vertical {
+      flex-direction: column;
+      max-height: calc(100vh - 20px);
+      width: max-content;
+    }
+
+    /* Orientación Horizontal (?orientacion=horizontal o ?horizontal=1) */
+    .avatares-panel.horizontal {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      max-width: calc(100vw - 20px);
+      width: max-content;
+    }
+
+    .hud-avatar-chip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: calc(12px * var(--zoom-avatares, 1));
+      padding: calc(4px * var(--zoom-avatares, 1)) calc(10px * var(--zoom-avatares, 1));
+      min-width: calc(175px * var(--zoom-avatares, 1));
+      background: var(--chip-bg);
+      border: 1px solid var(--chip-border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: calc(1.25rem * var(--zoom-avatares, 1));
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .avatares-panel.horizontal .hud-avatar-chip {
+      min-width: calc(155px * var(--zoom-avatares, 1));
+      font-size: calc(1.15rem * var(--zoom-avatares, 1));
+    }
+
+    .hud-avatar-header {
+      display: flex;
+      align-items: center;
+      gap: calc(7px * var(--zoom-avatares, 1));
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .hud-avatar-dot {
+      width: calc(13px * var(--zoom-avatares, 1));
+      height: calc(13px * var(--zoom-avatares, 1));
+      border-radius: 50%;
+      box-shadow: 0 0 8px currentColor;
+      flex-shrink: 0;
+    }
+
+    .hud-avatar-owner {
+      font-size: calc(1.05rem * var(--zoom-avatares, 1));
+      font-weight: 700;
+      color: var(--accent);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: calc(110px * var(--zoom-avatares, 1));
+      text-align: right;
+    }
+
+    .hud-avatar-owner.libre {
+      color: var(--muted);
+      font-weight: 500;
+      font-style: italic;
+    }
+
+    .controles-zoom {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 2px;
+      opacity: 0.15;
+      transition: opacity 0.2s ease;
+      user-select: none;
+      pointer-events: auto;
+      align-self: center;
+    }
+
+    .avatares-panel.vertical .controles-zoom {
+      flex-direction: row;
+      border-top: 1px dashed rgba(255, 255, 255, 0.12);
+      width: 100%;
+      padding-top: 4px;
+      margin-top: 2px;
+    }
+
+    .avatares-panel.horizontal .controles-zoom {
+      flex-direction: column;
+      border-left: 1px dashed rgba(255, 255, 255, 0.12);
+      padding-left: 4px;
+      margin-left: 2px;
+    }
+
+    .avatares-panel:hover .controles-zoom,
+    .controles-zoom:hover,
+    .controles-zoom:focus-within {
+      opacity: 0.95;
+    }
+
+    .btn-zoom {
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+
+    .btn-zoom:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: scale(1.1);
+    }
+
+    .btn-zoom:active {
+      transform: scale(0.92);
+    }
+  </style>
+</head>
+<body>
+  <div id="avatares-panel" class="avatares-panel vertical" aria-label="Avatares del directo">
+    <div id="avatares-chips" class="avatares-chips"></div>
+    <div class="controles-zoom" id="controles-zoom" aria-label="Ajustar tamaño de avatares">
+      <button type="button" class="btn-zoom" id="btn-zoom-menos" title="Reducir avatares" aria-label="Reducir tamaño de avatares">−</button>
+      <button type="button" class="btn-zoom" id="btn-zoom-mas" title="Aumentar avatares" aria-label="Aumentar tamaño de avatares">+</button>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+      const panelEl = document.getElementById('avatares-panel');
+      const CLAVE_DUENOS = 'erbolamm-directo-avatar-owners';
+
+      const AGENTS_INFO = [
+        { id: 'ja', name: 'Javier', color: '#e91916' },
+        { id: 'ge', name: 'Gemini', color: '#1a73e8' },
+        { id: 'cl', name: 'Claude', color: '#d97706' },
+        { id: 'pi', name: 'Pi', color: '#0d9488' },
+        { id: 'co', name: 'Codex', color: '#10b981' },
+        { id: 'om', name: 'Ollama', color: '#8b5cf6' },
+        { id: 'gr', name: 'Groq', color: '#f97316' },
+        { id: 'op', name: 'OpenAI', color: '#06b6d4' },
+        { id: 'ex', name: 'Externo', color: '#ec4899' },
+        { id: 'be', name: 'Vigía', color: '#64748b' },
+      ];
+
+      const params = new URLSearchParams(window.location.search);
+      const orientacion = (params.get('orientacion') || params.get('modo') || '').toLowerCase();
+      const esHorizontal = orientacion === 'horizontal' || orientacion === 'h' || params.get('horizontal') === '1';
+
+      if (esHorizontal) {
+        panelEl.classList.remove('vertical');
+        panelEl.classList.add('horizontal');
+      }
+
+      let avatarOwners = { ja: 'apliarte' };
+      const avatarTiers = { ja: 3 };
+
+      function escaparHtml(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      const chipsEl = document.getElementById('avatares-chips');
+
+      const CLAVE_ZOOM = 'erbolamm-zoom-avatares';
+      let zoomNivel = 1;
+      try {
+        const z = parseFloat(localStorage.getItem(CLAVE_ZOOM));
+        if (!isNaN(z) && z >= 0.5 && z <= 2.5) zoomNivel = z;
+      } catch (_) {}
+      function aplicarZoom(z) {
+        zoomNivel = Math.max(0.5, Math.min(2.5, Math.round(z * 100) / 100));
+        document.documentElement.style.setProperty('--zoom-avatares', String(zoomNivel));
+        try { localStorage.setItem(CLAVE_ZOOM, String(zoomNivel)); } catch (_) {}
+      }
+      aplicarZoom(zoomNivel);
+
+      const btnMenos = document.getElementById('btn-zoom-menos');
+      const btnMas = document.getElementById('btn-zoom-mas');
+      if (btnMenos) btnMenos.addEventListener('click', (e) => { e.stopPropagation(); aplicarZoom(zoomNivel - 0.1); });
+      if (btnMas) btnMas.addEventListener('click', (e) => { e.stopPropagation(); aplicarZoom(zoomNivel + 0.1); });
+
+      function renderAvatares() {
+        if (!chipsEl) return;
+        chipsEl.innerHTML = AGENTS_INFO.map(a => {
+          const owner = avatarOwners[a.id];
+          const tier = avatarTiers[a.id] || 1;
+          const star = tier >= 2 ? ' ⭐' : '';
+          const ownerEsc = escaparHtml(owner ? `@${owner}${star}` : 'Libre');
+          const libreClass = owner ? '' : 'libre';
+
+          return `
+            <div class="hud-avatar-chip">
+              <div class="hud-avatar-header">
+                <span class="hud-avatar-dot" style="background:${a.color}; color:${a.color};"></span>
+                <span>!${escaparHtml(a.id)}</span>
+              </div>
+              <div class="hud-avatar-owner ${libreClass}">${ownerEsc}</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function actualizarDuenos(nuevos) {
+        if (!nuevos || typeof nuevos !== 'object') return;
+        avatarOwners = { ...nuevos, ja: 'apliarte' };
+        renderAvatares();
+      }
+
+      // 1. Cargar desde localStorage inicial
+      try {
+        const guardado = JSON.parse(localStorage.getItem(CLAVE_DUENOS) || '{}');
+        if (guardado && typeof guardado === 'object') {
+          actualizarDuenos(guardado);
+        }
+      } catch (_) {}
+      renderAvatares();
+
+      // 2. Escuchar cambios de localStorage en tiempo real
+      window.addEventListener('storage', (e) => {
+        if (e.key === CLAVE_DUENOS) {
+          try {
+            actualizarDuenos(JSON.parse(e.newValue || '{}'));
+          } catch (_) {}
+        }
+      });
+
+      // 3. Consultar API del servidor
+      async function sincronizarServidor() {
+        try {
+          const res = await fetch('/api/directo/avatares', { cache: 'no-store' });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.avatares) actualizarDuenos(data.avatares);
+          } else {
+            const fallbackRes = await fetch('/api/directo/comando?desde=-1', { cache: 'no-store' });
+            if (fallbackRes.ok) {
+              const fbData = await fallbackRes.json();
+              if (fbData && fbData.duenos) actualizarDuenos(fbData.duenos);
+            }
+          }
+        } catch (_) {}
+      }
+      sincronizarServidor();
+
+      // 4. WebSocket para sincronización instantánea
+      let ws = null;
+      function conectarWs() {
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host || '127.0.0.1:7979';
+        const wsUrl = `${proto}//${host}/ws`;
+
+        try {
+          ws = new WebSocket(wsUrl);
+          ws.onmessage = async (event) => {
+            let raw = event.data;
+            if (raw instanceof Blob) raw = await raw.text();
+            try {
+              const data = JSON.parse(raw);
+              if (data.type === 'avatares_estado' && data.avatares) {
+                actualizarDuenos(data.avatares);
+              }
+              if (data.type === 'directo_comando' && data.duenos) {
+                actualizarDuenos(data.duenos);
+              }
+              if (data.type === 'categoria' && data.modo) {
+                document.documentElement.dataset.theme = data.modo;
+              }
+            } catch (_) {}
+          };
+          ws.onclose = () => setTimeout(conectarWs, 3000);
+          ws.onerror = () => { try { ws.close(); } catch (_) {} };
+        } catch (_) {
+          setTimeout(conectarWs, 5000);
+        }
+      }
+      conectarWs();
+    })();
+  </script>
+</body>
+</html>
