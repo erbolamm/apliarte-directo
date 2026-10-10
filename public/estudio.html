@@ -530,7 +530,7 @@
     }
     .toolbar .icon-btn:active,
     .toolbar .icon-btn[aria-pressed="true"],
-    .toolbar .icon-btn[aria-expanded="true"] { box-shadow: none; transform: translateY(2px); }
+    .toolbar .icon-btn[aria-expanded="true"] { box-shadow: inset 0 -3px 0 var(--edge); transform: translateY(2px); }
     .toolbar .icon-btn:disabled { box-shadow: none; transform: none; }
     @media (prefers-reduced-motion: reduce) { .toolbar .icon-btn { transition: none; } }
     .toolbar-sep { width: 1px; align-self: stretch; background: var(--line); }
@@ -578,17 +578,130 @@
       display: none;
     }
 
-    /* Pizarra activa: barra inferior fitted elástica estilo Row + FittedBox */
+    /* Pizarra activa: Cuadrícula integral de 3 columnas (Colores izquierda, Lienzo 16:9 centro, Herramientas/Capas derecha) */
+    #view-studio.board-is-active {
+      display: grid;
+      grid-template-columns: minmax(210px, 240px) minmax(0, 1fr) minmax(210px, 250px);
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        "header header header"
+        "props  stage  tools"
+        "bar    bar    bar";
+      height: 100dvh;
+      overflow: hidden;
+    }
+    #view-studio.board-is-active .studio-header {
+      grid-area: header;
+    }
+    #view-studio.board-is-active .mock-banner {
+      display: none;
+    }
     #view-studio.board-is-active .stage {
+      grid-area: stage;
       display: flex;
       flex: 1;
       min-height: 0;
+      min-width: 0;
       position: relative;
       align-items: center;
       justify-content: center;
       overflow: hidden;
+      background: rgba(0, 0, 0, 0.45);
+    }
+    #view-studio.board-is-active .board-props {
+      grid-area: props;
+      display: grid;
+      position: static;
+      top: auto;
+      left: auto;
+      width: 100%;
+      max-width: none;
+      max-height: none;
+      border: none;
+      border-right: 1px solid var(--line);
+      border-radius: 0;
+      background: var(--surface);
+      box-shadow: none;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      overflow-y: auto;
+      padding: 10px;
+      gap: 12px;
+      z-index: 10;
+    }
+    #view-studio.board-is-active .board-topbar {
+      grid-area: tools;
+      display: flex;
+      flex-direction: column;
+      position: static;
+      top: auto;
+      left: auto;
+      transform: none;
+      width: 100%;
+      max-width: none;
+      max-height: none;
+      border: none;
+      border-left: 1px solid var(--line);
+      border-radius: 0;
+      background: var(--surface);
+      box-shadow: none;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      overflow-y: auto;
+      padding: 10px 8px;
+      gap: 8px;
+      z-index: 10;
+    }
+    #view-studio.board-is-active .board-topbar #tools-group {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      width: 100%;
+    }
+    #view-studio.board-is-active .board-topbar .icon-btn {
+      width: 100%;
+      height: 38px;
+      min-height: 38px;
+      border-radius: 8px;
+    }
+    #view-studio.board-is-active .board-topbar .draw-check {
+      font-size: 0.82rem;
+    }
+    #view-studio.board-is-active .layers-panel {
+      position: static;
+      transform: none;
+      width: 100%;
+      max-width: none;
+      box-shadow: none;
+      border: none;
+      border-top: 1px solid var(--line);
+      border-radius: 0;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-height: 180px;
+      padding-top: 8px;
+    }
+    #view-studio.board-is-active .layers-panel .layers-tab-btn {
+      display: none;
+    }
+    #view-studio.board-is-active .layers-panel .layers-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0 6px;
+    }
+    #view-studio.board-is-active .layers-panel .layers-help {
+      font-size: 0.76rem;
+      margin: 2px 0 6px;
+    }
+    #view-studio.board-is-active .layers-panel .layers-list {
+      max-height: 180px;
+      overflow-y: auto;
     }
     #view-studio.board-is-active .toolbar {
+      grid-area: bar;
       position: relative;
       z-index: 25;
       display: flex;
@@ -617,6 +730,7 @@
       margin: 0 2px;
       flex-shrink: 0;
     }
+
 
     /* ── Pizarra estilo Excalidraw: barra cenital y panel lateral flotantes ──
        Solo visibles con la pizarra activa; por encima del lienzo y del panel
@@ -1084,31 +1198,6 @@
         <canvas id="drawing-canvas"></canvas>
         <canvas id="preview-canvas"></canvas>
       </div>
-      <!-- Panel de capas estilo Excalidraw en el lateral derecho.
-           Una capa es todo lo que comparte strokeId: un trazo libre entero
-           (cientos de segmentos), una figura o un texto. La lista se pinta
-           con updateLayersList() a partir de board.history; aquí no hay
-           estado propio. Tocar una capa la selecciona; con una capa
-           seleccionada aparece #layers-actions-bar (subir, bajar, eliminar)
-           y se puede arrastrar sobre el lienzo para moverla. -->
-
-      <aside class="layers-panel" id="layers-panel" aria-label="Capas de dibujo" hidden>
-        <button type="button" class="layers-tab-btn" id="btn-toggle-layers" aria-label="Alternar panel de capas" title="Capas de dibujo">
-          <span>📑</span>
-          <span class="layers-badge" id="layers-count-badge">0</span>
-        </button>
-        <div class="layers-head">
-          <h3>Capas</h3>
-          <button type="button" class="icon-btn" id="btn-close-layers" aria-label="Cerrar panel de capas" style="width:28px;height:28px;min-height:0;padding:0;">✕</button>
-        </div>
-        <p class="layers-help">Toca una capa para seleccionarla y arrástrala sobre el lienzo para moverla.</p>
-        <div class="layers-actions-bar" id="layers-actions-bar" hidden>
-          <button type="button" class="btn btn-sm" id="btn-layer-up" title="Traer hacia adelante">⬆ Subir</button>
-          <button type="button" class="btn btn-sm" id="btn-layer-down" title="Enviar hacia atrás">⬇ Bajar</button>
-          <button type="button" class="btn btn-sm btn-danger" id="btn-layer-delete" title="Eliminar capa">🗑</button>
-        </div>
-        <ul class="layers-list" id="layers-list"></ul>
-      </aside>
       <p class="hint" id="board-rest-note">Pizarra en reposo. Toca el botón de dibujo para activar.</p>
     </main>
     <footer class="toolbar" id="studio-toolbar">
@@ -1151,11 +1240,32 @@
          eraser. Un único listener delegado en #tools-group los atiende.
          Relleno solo afecta a rectángulo y elipse; Discontinua a las cinco
          figuras (SHAPE_TOOLS). Las dos casillas se recuerdan por dispositivo. -->
-    <div class="board-topbar" id="board-topbar" role="toolbar" aria-label="Herramientas de dibujo">
-      <div class="draw-row" id="tools-group"></div>
-      <span class="toolbar-sep" aria-hidden="true"></span>
-      <label class="draw-check" title="Relleno (rectángulo y elipse)"><input id="shape-fill" type="checkbox"> Relleno</label>
-      <label class="draw-check" title="Línea discontinua"><input id="shape-dash" type="checkbox"> Discontinua</label>
+    <div class="board-topbar" id="board-topbar" role="toolbar" aria-label="Herramientas y capas de dibujo">
+      <div class="tools-top-section">
+        <div class="draw-row" id="tools-group"></div>
+        <div class="draw-row shape-options-row" style="margin-top: 6px; gap: 8px;">
+          <span class="toolbar-sep" aria-hidden="true" style="display:none;"></span>
+          <label class="draw-check" title="Relleno (rectángulo, elipse, diamante, estrella, nube y bocadillo)"><input id="shape-fill" type="checkbox"> Relleno</label>
+          <label class="draw-check" title="Línea discontinua"><input id="shape-dash" type="checkbox"> Discontinua</label>
+        </div>
+      </div>
+      <aside class="layers-panel" id="layers-panel" aria-label="Capas de dibujo" hidden>
+        <button type="button" class="layers-tab-btn" id="btn-toggle-layers" aria-label="Alternar panel de capas" title="Capas de dibujo">
+          <span>📑</span>
+          <span class="layers-badge" id="layers-count-badge">0</span>
+        </button>
+        <div class="layers-head">
+          <h3 style="font-size:0.95rem;margin:0;color:var(--brand-strong);">Capas</h3>
+          <button type="button" class="icon-btn" id="btn-close-layers" aria-label="Cerrar panel de capas" style="width:28px;height:28px;min-height:0;padding:0;">✕</button>
+        </div>
+        <p class="layers-help" style="font-size:0.76rem;margin:4px 0 6px;color:var(--text-muted);">Toca una capa para seleccionarla y arrástrala sobre el lienzo para moverla.</p>
+        <div class="layers-actions-bar" id="layers-actions-bar" hidden style="display:flex;gap:4px;margin-bottom:6px;">
+          <button type="button" class="btn btn-sm" id="btn-layer-up" title="Traer hacia adelante">⬆ Subir</button>
+          <button type="button" class="btn btn-sm" id="btn-layer-down" title="Enviar hacia atrás">⬇ Bajar</button>
+          <button type="button" class="btn btn-sm btn-danger" id="btn-layer-delete" title="Eliminar capa">🗑</button>
+        </div>
+        <ul class="layers-list" id="layers-list"></ul>
+      </aside>
     </div>
     <!-- Panel lateral #board-props: CÓMO se dibuja y qué se hace con el lienzo.
          Tres tarjetas: color, grosor y acciones rápidas. -->
@@ -1190,7 +1300,7 @@
           <input id="size-range" type="range" min="1" max="40" step="1" value="6" aria-label="Grosor del trazo continuo">
           <output id="size-value" for="size-range">6</output>
         </div>
-        <label class="draw-check" style="margin-top: 8px;"><input id="allow-touch" type="checkbox"> Dibujar también con el dedo</label>
+        <label class="draw-check" style="margin-top: 8px;"><input id="allow-touch" type="checkbox" checked> Dibujar también con el dedo</label>
       </section>
 
       <!-- Acciones rápidas: las que antes ocupaban la botonera inferior.
@@ -1444,6 +1554,10 @@
       "tool-arrow2": "<line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/><polyline points=\"15 8 19 12 15 16\"/><polyline points=\"9 8 5 12 9 16\"/>",
       "tool-rect": "<rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/>",
       "tool-ellipse": "<circle cx=\"12\" cy=\"12\" r=\"9\"/>",
+      "tool-diamond": "<polygon points=\"12 2 22 12 12 22 2 12\"/>",
+      "tool-star": "<polygon points=\"12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2\"/>",
+      "tool-cloud": "<path d=\"M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z\"/>",
+      "tool-bubble": "<path d=\"M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z\"/>",
       "tool-text": "<path d=\"M5 6V4h14v2M12 4v16M9 20h6\"/>",
       "tool-eraser": "<path d=\"m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21\"/><path d=\"M22 21H7\"/><path d=\"m5 11 9 9\"/>"
     };
@@ -2105,7 +2219,7 @@
      * `text` opens the inline #text-entry box instead of starting a stroke.
      * @type {Array<[string, string]>}
      */
-    const BOARD_TOOLS = [["select", "Selección y mover"], ["pen", "Trazo libre"], ["highlighter", "Marcador translúcido"], ["line", "Línea recta"], ["arrow", "Flecha"], ["arrow2", "Flecha doble"], ["rect", "Rectángulo"], ["ellipse", "Elipse o círculo"], ["text", "Texto"], ["eraser", "Borrador"]];
+    const BOARD_TOOLS = [["select", "Selección y mover"], ["pen", "Trazo libre"], ["highlighter", "Marcador translúcido"], ["line", "Línea recta"], ["arrow", "Flecha"], ["arrow2", "Flecha doble"], ["rect", "Rectángulo"], ["ellipse", "Elipse o círculo"], ["diamond", "Diamante o rombo"], ["star", "Estrella"], ["cloud", "Nube"], ["bubble", "Bocadillo de diálogo"], ["text", "Texto"], ["eraser", "Borrador"]];
     /**
      * The 16 quick colours of #palette-group, as [hex, Spanish label].
      * Chosen for streaming: every tone has to stay readable both over a
@@ -2141,7 +2255,7 @@
      * the pointer moves. While dragging, a figure only exists on the preview
      * canvas. These are also the tools the "dashed" option applies to.
      */
-    const SHAPE_TOOLS = ['rect', 'ellipse', 'arrow', 'arrow2', 'line'];
+    const SHAPE_TOOLS = ['rect', 'ellipse', 'diamond', 'star', 'cloud', 'bubble', 'arrow', 'arrow2', 'line'];
     /** localStorage key for per-device drawing preferences; shared with pizarra-plus on purpose. */
     const BOARD_PREFS_KEY = 'pizarra-plus-prefs';
     /**
@@ -2239,7 +2353,7 @@
     function createPointerOwner() {
       let active = null;
       return {
-        begin(event, allowTouch = false) {
+        begin(event, allowTouch = true) {
           if (event.pointerType === 'touch' && !allowTouch) return false;
           if (active !== null) return false;
           active = event.pointerId;
@@ -2426,7 +2540,7 @@
        */
       function shapeOptions(tool) {
         const options = {};
-        if (shapeFill.checked && (tool === 'rect' || tool === 'ellipse')) options.fill = true;
+        if (shapeFill.checked && (tool === 'rect' || tool === 'ellipse' || tool === 'diamond' || tool === 'star' || tool === 'cloud' || tool === 'bubble')) options.fill = true;
         if (shapeDash.checked && SHAPE_TOOLS.includes(tool)) options.dash = true;
         return options;
       }
@@ -2447,12 +2561,13 @@
         const maxTop = Math.max(8, window.innerHeight - 64);
         textEntry.style.left = Math.min(Math.max(8, clientX), maxLeft) + 'px';
         textEntry.style.top = Math.min(Math.max(8, clientY - 56), maxTop) + 'px';
-        textInput.value = '';
+        if (!textInput.value) textInput.value = '';
         textInput.focus();
       }
       function closeTextEntry() {
         textEntry.hidden = true;
         board.textPoint = null;
+        textInput.value = '';
       }
       /**
        * Turns the typed text into one board item (shape 'text', from === to).
@@ -2465,7 +2580,8 @@
         if (!socketOpen()) { setStatus('Sin conexión: el texto no se ha enviado'); return; }
         const item = {
           type: 'pizarra_draw', shape: 'text', strokeId: newStrokeId(),
-          from: board.textPoint, to: board.textPoint,
+          from: { x: board.textPoint.x, y: board.textPoint.y },
+          to: { x: board.textPoint.x, y: board.textPoint.y },
           color: board.color, size: board.size, tool: 'pen', text
         };
         board.history.push(item);
@@ -2473,7 +2589,10 @@
         sendWs(item);
         board.redo = [];
         closeTextEntry();
+        selectTool('pen');
+        board.selectedStrokeId = item.strokeId;
         updateLayersList();
+        drawSelectionOverlay();
       }
       $('text-entry-ok').addEventListener('click', commitText);
       $('text-entry-cancel').addEventListener('click', closeTextEntry);
@@ -2515,7 +2634,7 @@
         if (!socketOpen()) { setStatus('Sin conexión: espera antes de dibujar'); return; }
         if (!pointerOwner.begin(event, allowTouch.checked)) return;
         event.preventDefault();
-        canvas.setPointerCapture(event.pointerId);
+        try { canvas.setPointerCapture(event.pointerId); } catch (_) {}
 
         const clickPos = getNormalizedPos(event);
         const rect = canvas.getBoundingClientRect();
@@ -2529,7 +2648,7 @@
               clickPos.y >= (bounds.minY - padNormY) && clickPos.y <= (bounds.maxY + padNormY));
         };
 
-        // Si hay una capa seleccionada, comprobar si el toque cae dentro para moverla
+        // Si hay una capa seleccionada, comprobar si el toque cae dentro para arrastrarla directamente
         if (board.selectedStrokeId) {
           const layers = getLayers();
           const selLayer = layers.find((l) => l.id === board.selectedStrokeId);
@@ -2538,7 +2657,7 @@
             board.dragPrev = clickPos;
             return;
           }
-          // Toque fuera de la capa seleccionada -> deseleccionar
+          // Toque fuera de la capa seleccionada -> deseleccionar y permitir dibujar libremente
           board.selectedStrokeId = null;
           updateLayersList();
           drawSelectionOverlay();
@@ -2553,6 +2672,7 @@
           board.dragPrev = clickPos;
           updateLayersList();
           drawSelectionOverlay();
+          reflectSelectedLayerProps();
           return;
         }
 
@@ -2594,17 +2714,31 @@
         if (!pointerOwner.owns(event)) return;
         if (board.draggingLayer && board.selectedStrokeId) {
           const currentPos = getNormalizedPos(event);
-          const dx = currentPos.x - board.dragPrev.x;
-          const dy = currentPos.y - board.dragPrev.y;
+          let dx = currentPos.x - board.dragPrev.x;
+          let dy = currentPos.y - board.dragPrev.y;
           board.dragPrev = currentPos;
+          const layers = getLayers();
+          const selLayer = layers.find((l) => l.id === board.selectedStrokeId);
+          const bounds = selLayer ? getLayerBounds(selLayer) : null;
+          if (bounds) {
+            if (bounds.minX + dx < 0) dx = -bounds.minX;
+            if (bounds.maxX + dx > 1) dx = 1 - bounds.maxX;
+            if (bounds.minY + dy < 0) dy = -bounds.minY;
+            if (bounds.maxY + dy > 1) dy = 1 - bounds.maxY;
+          }
           board.history.forEach((item) => {
             if (item.strokeId === board.selectedStrokeId) {
               if (item.from) { item.from.x = Math.max(0, Math.min(1, item.from.x + dx)); item.from.y = Math.max(0, Math.min(1, item.from.y + dy)); }
               if (item.to) { item.to.x = Math.max(0, Math.min(1, item.to.x + dx)); item.to.y = Math.max(0, Math.min(1, item.to.y + dy)); }
             }
           });
-          redrawAll();
-          drawSelectionOverlay();
+          if (!board.dragRaf) {
+            board.dragRaf = requestAnimationFrame(() => {
+              board.dragRaf = null;
+              redrawAll();
+              drawSelectionOverlay();
+            });
+          }
           return;
         }
         if (!board.drawing || !board.last) return;
@@ -2636,8 +2770,14 @@
        */
       function endDrawing(event) {
         if (!pointerOwner.end(event)) return;
+        if (board.dragRaf) {
+          cancelAnimationFrame(board.dragRaf);
+          board.dragRaf = null;
+        }
         if (board.draggingLayer) {
           board.draggingLayer = false;
+          redrawAll();
+          drawSelectionOverlay();
           syncWholeHistoryWs();
           return;
         }
@@ -2665,6 +2805,8 @@
       }
       canvas.addEventListener('pointerup', endDrawing);
       canvas.addEventListener('pointercancel', endDrawing);
+      window.addEventListener('pointerup', (e) => { if (board.drawing || board.draggingLayer) endDrawing(e); });
+      window.addEventListener('pointercancel', (e) => { if (board.drawing || board.draggingLayer) endDrawing(e); });
 
       // Per-device drawing preferences, shared with pizarra-plus on purpose.
       /**
@@ -2704,6 +2846,32 @@
       function selectTool(tool) {
         board.tool = tool;
         document.querySelectorAll('[data-tool]').forEach((button) => button.classList.toggle('active', button.dataset.tool === tool));
+        if (tool !== 'select' && board.selectedStrokeId) {
+          board.selectedStrokeId = null;
+          updateLayersList();
+          drawSelectionOverlay();
+        }
+      }
+      /** Sincroniza la paleta y los controles de tamaño para reflejar los atributos de la capa seleccionada. */
+      function reflectSelectedLayerProps() {
+        if (!board.selectedStrokeId) return;
+        const layer = getLayers().find((l) => l.id === board.selectedStrokeId);
+        if (!layer || !layer.items.length) return;
+        const item = layer.items[0];
+        if (item.color) {
+          board.color = item.color;
+          document.querySelectorAll('.color-swatch').forEach((swatch) => swatch.classList.toggle('active', swatch.dataset.color.toLowerCase() === item.color.toLowerCase()));
+          $('custom-color').value = item.color;
+          drawButton.style.setProperty('--edge', item.color);
+        }
+        if (item.size) {
+          board.size = Math.max(1, Math.min(40, parseInt(item.size, 10) || 6));
+          sizeRange.value = String(board.size);
+          sizeValue.textContent = String(board.size);
+          document.querySelectorAll('.stroke-btn').forEach((btn) => {
+            btn.classList.toggle('active', parseInt(btn.dataset.size, 10) === board.size);
+          });
+        }
       }
       /**
        * Sets the stroke colour and mirrors it in three places: the active ring
@@ -2718,6 +2886,15 @@
         $('custom-color').value = color;
         // The pencil's raised edge takes the current drawing colour.
         drawButton.style.setProperty('--edge', color);
+
+        if (board.selectedStrokeId) {
+          board.history.forEach((item) => {
+            if (item.strokeId === board.selectedStrokeId) item.color = color;
+          });
+          redrawAll();
+          drawSelectionOverlay();
+          syncWholeHistoryWs();
+        }
       }
       $('tools-group').addEventListener('click', (event) => {
         const button = event.target.closest('[data-tool]');
@@ -2734,6 +2911,12 @@
       });
       // The free picker previews on every `input` while dragging but only
       // saves on `change`, when the user settles on a colour.
+      $('custom-color').addEventListener('pointerdown', () => {
+        if (board.drawing) {
+          board.drawing = false;
+          wipe(previewCtx, preview);
+        }
+      });
       $('custom-color').addEventListener('input', (event) => selectColor(event.target.value));
       $('custom-color').addEventListener('change', savePrefs);
       /**
@@ -2743,22 +2926,49 @@
        * none active. Invalid input falls back to 6.
        * @param {number|string} size
        */
+      let syncSizeTimer = null;
       function selectSize(size) {
+        const syncImmediate = arguments.length < 2 || Boolean(arguments[1]);
         board.size = Math.max(1, Math.min(40, parseInt(size, 10) || 6));
         sizeRange.value = String(board.size);
         sizeValue.textContent = String(board.size);
         document.querySelectorAll('.stroke-btn').forEach((btn) => {
           btn.classList.toggle('active', parseInt(btn.dataset.size, 10) === board.size);
         });
+
+        if (board.selectedStrokeId) {
+          board.history.forEach((item) => {
+            if (item.strokeId === board.selectedStrokeId) item.size = board.size;
+          });
+          redrawAll();
+          drawSelectionOverlay();
+          if (syncImmediate) {
+            if (syncSizeTimer) { clearTimeout(syncSizeTimer); syncSizeTimer = null; }
+            syncWholeHistoryWs();
+          } else {
+            if (syncSizeTimer) clearTimeout(syncSizeTimer);
+            syncSizeTimer = setTimeout(() => {
+              syncSizeTimer = null;
+              syncWholeHistoryWs();
+            }, 80);
+          }
+        }
       }
       $('stroke-presets')?.addEventListener('click', (event) => {
         const btn = event.target.closest('.stroke-btn');
         if (!btn) return;
-        selectSize(btn.dataset.size);
+        selectSize(btn.dataset.size, true);
         savePrefs();
       });
       sizeRange.addEventListener('input', () => {
-        selectSize(sizeRange.value);
+        selectSize(sizeRange.value, false);
+        savePrefs();
+      });
+      sizeRange.addEventListener('change', () => {
+        if (board.selectedStrokeId) {
+          if (syncSizeTimer) { clearTimeout(syncSizeTimer); syncSizeTimer = null; }
+          syncWholeHistoryWs();
+        }
         savePrefs();
       });
       [allowTouch, shapeFill, shapeDash].forEach((input) => input.addEventListener('change', savePrefs));
@@ -2767,7 +2977,7 @@
       selectTool(prefs.tool || 'pen');
       selectColor(prefs.color || '#005fa9');
       selectSize(prefs.size || 6);
-      allowTouch.checked = Boolean(prefs.touch);
+      allowTouch.checked = true;
       shapeFill.checked = Boolean(prefs.fill);
       shapeDash.checked = Boolean(prefs.dash);
 
@@ -2905,6 +3115,17 @@
         let minX = 1, minY = 1, maxX = 0, maxY = 0;
         let hasPoints = false;
         layer.items.forEach((item) => {
+          if (item.shape === 'text' && item.from) {
+            const charCount = (item.text || '').length || 1;
+            const fontSizeNormY = Math.max(16, (item.size || 3) * 4) / 1080;
+            const textWidthNormX = (Math.max(16, (item.size || 3) * 4) * 0.65 * charCount) / 1920;
+            minX = Math.min(minX, item.from.x);
+            maxX = Math.max(maxX, item.from.x + textWidthNormX);
+            minY = Math.min(minY, item.from.y);
+            maxY = Math.max(maxY, item.from.y + fontSizeNormY * 1.25);
+            hasPoints = true;
+            return;
+          }
           if (item.from) {
             minX = Math.min(minX, item.from.x);
             maxX = Math.max(maxX, item.from.x);
@@ -3019,6 +3240,10 @@
           if (layer.shape === 'text') label = `Texto: "${layer.text || '...'}"`;
           else if (layer.shape === 'rect') label = 'Rectángulo';
           else if (layer.shape === 'ellipse') label = 'Elipse';
+          else if (layer.shape === 'diamond') label = 'Diamante';
+          else if (layer.shape === 'star') label = 'Estrella';
+          else if (layer.shape === 'cloud') label = 'Nube';
+          else if (layer.shape === 'bubble') label = 'Bocadillo';
           else if (layer.shape === 'line') label = 'Línea';
           else if (layer.shape === 'arrow' || layer.shape === 'arrow2') label = 'Flecha';
           else if (layer.tool === 'highlighter') label = 'Subrayador';
@@ -3032,6 +3257,7 @@
               board.selectedStrokeId = null;
             } else {
               board.selectedStrokeId = layer.id;
+              reflectSelectedLayerProps();
             }
             updateLayersList();
             drawSelectionOverlay();
@@ -3162,6 +3388,8 @@
           board.selectedStrokeId = null;
           drawSelectionOverlay();
           updateLayersList();
+        } else if (!board.ws || !board.connected) {
+          board.connect();
         }
         resizeBoard();
       }

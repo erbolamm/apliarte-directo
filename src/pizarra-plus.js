@@ -14,7 +14,7 @@ function privateHost(req) {
 
 // Drawing messages the private tablet may send. New shapes travel with only
 // these optional fields: fill/dash (booleans) and text (text shape, 1-120 chars).
-const DRAW_SHAPES = ['stroke', 'rect', 'ellipse', 'arrow', 'arrow2', 'line', 'text'];
+const DRAW_SHAPES = ['stroke', 'rect', 'ellipse', 'diamond', 'star', 'cloud', 'bubble', 'arrow', 'arrow2', 'line', 'text'];
 const MAX_TEXT = 120;
 
 function drawingMessage(data) {

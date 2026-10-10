@@ -419,6 +419,39 @@ test('Estudio: Rediseño de la paleta de colores, presets de grosor e integraci�
     'Las muestras activas deben tener indicador visual prominente de selección');
 });
 
+test('Estudio: Creación y arrastre ergonómico de texto sin bloqueos de dibujo ni desincronización', () => {
+  const content = fs.readFileSync('public/estudio.html', 'utf8');
+
+  // 1. commitText desacopla los puntos from y to (evita doble incremento de velocidad al arrastrar)
+  assert.match(content, /from:\s*\{\s*x:\s*board\.textPoint\.x,\s*y:\s*board\.textPoint\.y\s*\}/,
+    'commitText debe desacoplar from para no compartir referencia con to');
+  assert.match(content, /to:\s*\{\s*x:\s*board\.textPoint\.x,\s*y:\s*board\.textPoint\.y\s*\}/,
+    'commitText debe desacoplar to para no compartir referencia con from');
+  assert.match(content, /selectTool\('pen'\);[\s\S]*board\.selectedStrokeId\s*=\s*item\.strokeId;/,
+    'commitText debe conmutar a pen y auto-seleccionar la capa creada para permitir arrastre o dibujo inmediato');
+
+  // 2. getLayerBounds calcula el tamaño real del texto para que la caja envolvente abarque toda la cadena
+  assert.match(content, /item\.shape\s*===\s*'text'[\s\S]*textWidthNormX[\s\S]*charCount/,
+    'getLayerBounds debe calcular el ancho del texto según su número de caracteres');
+
+  // 3. pointerdown permite arrastre directo de la capa seleccionada y deselección suave al pintar fuera
+  assert.match(content, /if\s*\(board\.selectedStrokeId\)\s*\{[\s\S]*hitsLayer\(selLayer\)[\s\S]*board\.draggingLayer\s*=\s*true;/,
+    'pointerdown debe permitir arrastrar directamente la capa seleccionada sin exigir cambiar a herramienta select');
+
+  // 4. pointermove limita el desplazamiento según los bordes globales de la capa para no deformarla
+  assert.match(content, /bounds\.minX\s*\+\s*dx\s*<\s*0[\s\S]*bounds\.maxX\s*\+\s*dx\s*>\s*1/,
+    'pointermove debe acotar dx y dy según los límites globales de la capa para evitar deformaciones');
+
+  // 5. selectSize modifica el tamaño de la capa seleccionada (texto, formas, trazos) y sincroniza
+  assert.match(content, /if\s*\(board\.selectedStrokeId\)\s*\{[\s\S]*item\.strokeId\s*===\s*board\.selectedStrokeId[\s\S]*item\.size\s*=\s*board\.size/,
+    'selectSize debe actualizar item.size en la capa seleccionada');
+
+  // 6. reflectSelectedLayerProps sincroniza color y tamaño en la UI al seleccionar una capa
+  assert.match(content, /function reflectSelectedLayerProps\(\)[\s\S]*board\.color\s*=\s*item\.color[\s\S]*board\.size\s*=/,
+    'reflectSelectedLayerProps debe reflejar color y tamaño de la capa en los controles');
+});
+
+
 
 
 
