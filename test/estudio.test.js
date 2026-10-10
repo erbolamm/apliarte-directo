@@ -262,6 +262,34 @@ test('Estudio: Botones de alta rápida en Ajustes > Comandos (+ Usuario, + Mensa
   assert.match(content, /settingsButton\(quickBar,\s*'\+\s*Añadir Comando',\s*\(\)\s*=>\s*openItem\('comando'\)\)/, 'Debe existir botón + Añadir Comando');
 });
 
+test('Estudio: Rediseño cabecera de chat, popup stream flotante manejable, corrección Twitch web y retiro de Botrix', () => {
+  const content = fs.readFileSync('public/estudio.html', 'utf8');
+
+  // 1. Iconificación de botones de cabecera de chat (stream flotante, Twitch web, recarga)
+  assert.match(content, /id="btn-toggle-stream"[^>]*title="Ver stream flotante"[^>]*aria-label="Ver stream flotante"/, 'btn-toggle-stream debe tener título y aria-label accesible');
+  assert.match(content, /id="btn-chat-feed-toggle"[^>]*title="Alternar entre lista interactiva y chat web de Twitch"/, 'btn-chat-feed-toggle debe tener título');
+  assert.match(content, /id="btn-reload-chat"[^>]*title="Recargar chat"[^>]*aria-label="Recargar chat"/, 'btn-reload-chat debe tener título y aria-label');
+  assert.match(content, /icon\('streamTv'\)/, 'btn-toggle-stream debe renderizarse con icono streamTv');
+  assert.match(content, /icon\('chatWeb'\)/, 'btn-chat-feed-toggle debe renderizarse con icono chatWeb');
+  assert.match(content, /icon\('refresh'\)/, 'btn-reload-chat debe renderizarse con icono refresh');
+
+  // 2. Retiro completo de Botrix («Todos»)
+  assert.doesNotMatch(content, /id="btn-chat-todos"/, 'btn-chat-todos debe haberse retirado de la cabecera');
+  assert.doesNotMatch(content, /id="botrix-config"/, 'botrix-config debe haberse retirado');
+  assert.doesNotMatch(content, /function toggleAllChats\(/, 'toggleAllChats debe haberse retirado');
+  assert.doesNotMatch(content, /function saveBotrix\(/, 'saveBotrix debe haberse retirado');
+
+  // 3. Popup flotante manejable (draggable) para el stream
+  assert.match(content, /class="floating-stream-popup" id="stream-player-box"/, 'stream-player-box debe ser popup flotante');
+  assert.match(content, /id="stream-player-drag-handle"/, 'Debe incluir handle para arrastrar');
+  assert.match(content, /id="btn-stream-popup-close"/, 'Debe incluir botón para cerrar el popup flotante');
+  assert.match(content, /function initFloatingStreamDrag\(\)/, 'initFloatingStreamDrag debe existir');
+
+  // 4. Adaptación y corrección 100% de Twitch web iframe
+  assert.match(content, /#chat-view-section #chat-frame\s*\{[^}]*width:\s*100%[^}]*height:\s*100%/, 'chat-frame debe ocupar el 100% de ancho y alto');
+});
+
+
 
 
 

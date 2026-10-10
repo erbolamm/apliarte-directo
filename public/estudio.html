@@ -280,6 +280,102 @@
       max-width: calc(100% - 2 * var(--gap));
     }
     .sheet-extra input { min-height: var(--touch); padding: 0 var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: 1rem; }
+    /* ── Stream flotante manejable (draggable) ────────────────────────── */
+    .floating-stream-popup {
+      position: fixed;
+      bottom: calc(var(--touch) + 2 * var(--gap) + 12px + env(safe-area-inset-bottom));
+      right: max(var(--gap), env(safe-area-inset-right));
+      width: min(380px, 90vw);
+      height: 240px;
+      background: #111;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.65);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      touch-action: none;
+    }
+    .floating-stream-popup[hidden] {
+      display: none !important;
+    }
+    .floating-stream-header {
+      height: 32px;
+      min-height: 32px;
+      background: #1e1e1e;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .floating-stream-header:active {
+      cursor: grabbing;
+    }
+    .floating-stream-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .floating-stream-content {
+      flex: 1;
+      width: 100%;
+      height: calc(100% - 32px);
+      background: #000;
+    }
+    .floating-stream-content iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
+    .icon-btn-tiny {
+      background: transparent;
+      border: 0;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .icon-btn-tiny:hover {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+    /* ── Corrección Twitch web iframe 100% ────────────────────────────── */
+    .chat-sheet .sheet-body {
+      display: flex !important;
+      flex-direction: column !important;
+      height: 100% !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+    .chat-sheet #chat-view-section {
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 1 0% !important;
+      height: 100% !important;
+      width: 100% !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+    #chat-view-section #chat-frame {
+      width: 100% !important;
+      height: 100% !important;
+      flex: 1 1 0% !important;
+      border: 0;
+      display: block;
+      min-height: 0 !important;
+    }
+    #chat-view-section #chat-frame[hidden] {
+      display: none !important;
+    }
     .stream-box { aspect-ratio: 16 / 9; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--black); min-width: 0; }
     .stream-box iframe { width: 100%; height: 100%; border: 0; display: block; }
     .chat-pantalla-actual {
@@ -952,10 +1048,9 @@
           <button type="button" class="btn" id="btn-msg-tab-sms" role="tab" aria-selected="false">📱 Buzón SMS</button>
         </div>
         <div id="chat-head-controls" style="display:inline-flex;gap:var(--gap);align-items:center;">
-          <button type="button" class="btn" id="btn-toggle-stream" aria-pressed="false">Ver stream</button>
-          <button type="button" class="btn" id="btn-chat-feed-toggle" aria-pressed="false" title="Alternar entre lista con ojo y chat web de Twitch">Twitch web</button>
-          <button type="button" class="btn" id="btn-chat-todos" aria-pressed="false">Todos</button>
-          <button type="button" class="btn" id="btn-reload-chat">Recargar</button>
+          <button type="button" class="icon-btn" id="btn-toggle-stream" aria-pressed="false" title="Ver stream flotante" aria-label="Ver stream flotante"></button>
+          <button type="button" class="icon-btn" id="btn-chat-feed-toggle" aria-pressed="false" title="Alternar entre lista interactiva y chat web de Twitch" aria-label="Alternar entre lista interactiva y chat web de Twitch"></button>
+          <button type="button" class="icon-btn" id="btn-reload-chat" title="Recargar chat" aria-label="Recargar chat"></button>
         </div>
         <div id="sms-head-controls" style="display:inline-flex;gap:var(--gap);align-items:center;" hidden>
           <button type="button" class="btn" id="btn-sms-sheet-refresh">Actualizar</button>
@@ -963,17 +1058,19 @@
         <button type="button" class="icon-btn sheet-close" aria-label="Cerrar mensajería"></button>
       </div>
       <div class="sheet-extra">
-        <div class="input-row" id="botrix-config" hidden>
-          <input id="botrix-url" type="text" inputmode="url" autocomplete="off" placeholder="https://botrix.live/…" aria-label="Dirección del widget de chat de Botrix">
-          <button type="button" class="btn" id="btn-botrix-guardar">Guardar</button>
-        </div>
-        <div class="stream-box" id="stream-player-box" hidden>
-          <iframe id="twitch-player-frame" title="Stream en directo" allow="autoplay; fullscreen"></iframe>
-        </div>
         <div id="chat-pantalla-actual" class="chat-pantalla-actual" hidden>
           <span class="chat-pantalla-label">👁️ En pantalla:</span>
           <span class="chat-pantalla-texto" id="chat-pantalla-texto"></span>
           <button type="button" class="btn-quitar-pantalla" id="btn-quitar-pantalla" title="Quitar de pantalla">✕</button>
+        </div>
+      </div>
+      <div class="floating-stream-popup" id="stream-player-box" hidden>
+        <div class="floating-stream-header" id="stream-player-drag-handle">
+          <span class="floating-stream-title">📺 Stream en directo</span>
+          <button type="button" class="icon-btn-tiny" id="btn-stream-popup-close" aria-label="Cerrar reproductor">✕</button>
+        </div>
+        <div class="floating-stream-content">
+          <iframe id="twitch-player-frame" title="Stream en directo" allow="autoplay; fullscreen"></iframe>
         </div>
       </div>
       <div class="sheet-body flush" id="chat-body-container">
@@ -1139,6 +1236,9 @@
       sheetChat: "<path d=\"M3 4h18v13H8l-5 4zM7 8h10M7 12h7\"/>",
       sheetCommands: "<path d=\"M4 6l6 6-6 6M13 18h7\"/>",
       sheetSms: "<path d=\"M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z\"/><polyline points=\"22,6 12,13 2,6\"/>",
+      streamTv: "<rect x=\"2\" y=\"7\" width=\"20\" height=\"15\" rx=\"2\"/><polyline points=\"17 2 12 7 7 2\"/>",
+      chatWeb: "<path d=\"M21 2H3v16h5v4l4-4h5l4-4V2zm-10 9V7m5 4V7\"/>",
+      refresh: "<path d=\"M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15\"/>",
       obsSnapshot: "<path d=\"M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z\"/><circle cx=\"12\" cy=\"13\" r=\"4\"/>",
       // One-tap toggle icons, taken unchanged from pizarra-plus.
       liveCamera: "<rect x=\"3\" y=\"5\" width=\"12\" height=\"14\" rx=\"2\"/><path d=\"M15 10l6-4v12l-6-4\"/>",
@@ -3435,21 +3535,17 @@
       return true;
     }
 
-    // Chat: Twitch chat, or the Botrix widget when the server says so.
+    // Chat: Twitch chat
     const CHAT_CHANNEL = 'apliarte';
-    const isBotrixUrl = (value) => typeof value === 'string' && /^https:\/\/botrix\.live\/[^\s"'<>]*$/i.test(value.trim());
-    function chatUrl(config, host, channel) {
-      const botrix = config && typeof config.botrixUrl === 'string' ? config.botrixUrl : '';
-      if (config && config.todos === true && isBotrixUrl(botrix)) return botrix.trim();
+    function chatUrl(host, channel) {
       const parents = [...new Set([host, 'directo.apliarte.com'])].filter(Boolean);
       const query = parents.map((parent) => 'parent=' + encodeURIComponent(parent)).join('&');
       return 'https://www.twitch.tv/embed/' + encodeURIComponent(channel) + '/chat?' + query + '&darkpopout';
     }
-    const chat = { config: { todos: false, botrixUrl: '' }, streamOn: false };
-    const botrixSaved = () => (isBotrixUrl(chat.config.botrixUrl) ? chat.config.botrixUrl : '');
+    const chat = { streamOn: false };
     function paintChatControls() {
-      $('btn-chat-todos').setAttribute('aria-pressed', String(chat.config.todos === true && Boolean(botrixSaved())));
-      $('btn-toggle-stream').setAttribute('aria-pressed', String(chat.streamOn));
+      $('btn-toggle-stream')?.setAttribute('aria-pressed', String(chat.streamOn));
+      $('btn-chat-feed-toggle')?.setAttribute('aria-pressed', String(!chatPantallaActivo));
     }
     let chatPantallaActivo = true;
     let mensajeEnPantallaActual = null;
@@ -3571,23 +3667,13 @@
       feed.scrollTop = feed.scrollHeight;
     }
 
-    async function chatConfigRequest(changes) {
-      try {
-        const response = await fetch('/api/panel/chat-config', changes === undefined
-          ? { cache: 'no-store' }
-          : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes) });
-        const data = await response.json().catch(() => null);
-        if (response.ok && data && typeof data.todos === 'boolean' && typeof data.botrixUrl === 'string') {
-          chat.config = { todos: data.todos, botrixUrl: data.botrixUrl };
-          return true;
-        }
-      } catch (_) { /* reported by the caller */ }
-      return false;
+    async function chatConfigRequest() {
+      return true;
     }
     function loadChatFrame(force = false) {
-      const target = chatUrl(chat.config, window.location.hostname, CHAT_CHANNEL);
+      const target = chatUrl(window.location.hostname, CHAT_CHANNEL);
       const frame = $('chat-frame');
-      if (force || frame.getAttribute('src') !== target) frame.src = target;
+      if (frame && (force || frame.getAttribute('src') !== target)) frame.src = target;
     }
     function selectMensajeriaTab(tab = 'chat') {
       const isChat = tab === 'chat';
@@ -3633,38 +3719,70 @@
       selectMensajeriaTab(initialTab);
       actualizarEstadoPantalla();
     }
-    // "Todos" shows every platform's chat through the Botrix widget.
-    async function toggleAllChats() {
-      if (!botrixSaved()) {
-        $('botrix-config').hidden = false;
-        $('botrix-url').focus();
-        showToast('Pega la dirección de tu widget de chat de Botrix y pulsa guardar');
-        return;
-      }
-      if (!await chatConfigRequest({ todos: !chat.config.todos })) { showToast('No se guardó la configuración del chat'); return; }
-      paintChatControls();
-      loadChatFrame(true);
-      showToast(chat.config.todos ? 'Todos los chats juntos (Botrix)' : 'Solo chat de Twitch');
-    }
-    async function saveBotrix() {
-      const value = $('botrix-url').value.trim();
-      if (!isBotrixUrl(value)) { showToast('Tiene que ser una dirección https://botrix.live/…'); return; }
-      if (!await chatConfigRequest({ botrixUrl: value, todos: true })) { showToast('No se guardó la configuración del chat'); return; }
-      $('botrix-config').hidden = true;
-      paintChatControls();
-      loadChatFrame(true);
-      showToast('Guardado en el servidor: todos los chats juntos (Botrix)');
-    }
-    // Muted Twitch player above the chat, unloaded when hidden.
-    function toggleStreamPlayer() {
-      chat.streamOn = !chat.streamOn;
+    // Muted Twitch player in floating draggable popup
+    function toggleStreamPlayer(forcedState) {
+      chat.streamOn = typeof forcedState === 'boolean' ? forcedState : !chat.streamOn;
       const parents = [...new Set([window.location.hostname, 'directo.apliarte.com'])].filter(Boolean)
         .map((parent) => 'parent=' + encodeURIComponent(parent)).join('&');
-      $('stream-player-box').hidden = !chat.streamOn;
-      $('twitch-player-frame').src = chat.streamOn
-        ? `https://player.twitch.tv/?channel=${CHAT_CHANNEL}&${parents}&muted=true&autoplay=true&playsinline=true`
-        : 'about:blank';
+      const box = $('stream-player-box');
+      const frame = $('twitch-player-frame');
+      if (box) box.hidden = !chat.streamOn;
+      if (frame) {
+        frame.src = chat.streamOn
+          ? `https://player.twitch.tv/?channel=${CHAT_CHANNEL}&${parents}&muted=true&autoplay=true&playsinline=true`
+          : 'about:blank';
+      }
       paintChatControls();
+    }
+
+    function initFloatingStreamDrag() {
+      const handle = $('stream-player-drag-handle');
+      const box = $('stream-player-box');
+      if (!handle || !box) return;
+
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let initialLeft = 0;
+      let initialTop = 0;
+
+      handle.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('#btn-stream-popup-close')) return;
+        isDragging = true;
+        handle.setPointerCapture(e.pointerId);
+        startX = e.clientX;
+        startY = e.clientY;
+        const rect = box.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
+        box.style.right = 'auto';
+        box.style.bottom = 'auto';
+        box.style.left = `${initialLeft}px`;
+        box.style.top = `${initialTop}px`;
+      });
+
+      handle.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        let newLeft = initialLeft + dx;
+        let newTop = initialTop + dy;
+        const maxX = window.innerWidth - box.offsetWidth - 8;
+        const maxY = window.innerHeight - box.offsetHeight - 8;
+        newLeft = Math.max(8, Math.min(newLeft, maxX));
+        newTop = Math.max(8, Math.min(newTop, maxY));
+        box.style.left = `${newLeft}px`;
+        box.style.top = `${newTop}px`;
+      });
+
+      const stopDrag = (e) => {
+        if (isDragging) {
+          isDragging = false;
+          try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+      };
+      handle.addEventListener('pointerup', stopDrag);
+      handle.addEventListener('pointercancel', stopDrag);
     }
 
     // Commands: the server owns the list; favourites are per device and
@@ -3918,15 +4036,27 @@
       });
       $('btn-msg-tab-chat')?.addEventListener('click', () => selectMensajeriaTab('chat'));
       $('btn-msg-tab-sms')?.addEventListener('click', () => selectMensajeriaTab('sms'));
-      $('btn-chat-feed-toggle')?.addEventListener('click', toggleChatPantallaFeed);
+      const btnFeedToggle = $('btn-chat-feed-toggle');
+      if (btnFeedToggle) {
+        btnFeedToggle.innerHTML = icon('chatWeb');
+        btnFeedToggle.addEventListener('click', toggleChatPantallaFeed);
+      }
       $('btn-quitar-pantalla')?.addEventListener('click', async () => {
         await fetch('/api/directo/sms/ocultar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
         actualizarEstadoPantalla();
       });
-      $('btn-chat-todos')?.addEventListener('click', toggleAllChats);
-      $('btn-botrix-guardar')?.addEventListener('click', saveBotrix);
-      $('btn-reload-chat')?.addEventListener('click', () => loadChatFrame(true));
-      $('btn-toggle-stream')?.addEventListener('click', toggleStreamPlayer);
+      const btnReload = $('btn-reload-chat');
+      if (btnReload) {
+        btnReload.innerHTML = icon('refresh');
+        btnReload.addEventListener('click', () => loadChatFrame(true));
+      }
+      const btnToggleStream = $('btn-toggle-stream');
+      if (btnToggleStream) {
+        btnToggleStream.innerHTML = icon('streamTv');
+        btnToggleStream.addEventListener('click', () => toggleStreamPlayer());
+      }
+      $('btn-stream-popup-close')?.addEventListener('click', () => toggleStreamPlayer(false));
+      initFloatingStreamDrag();
       $('btn-commands-view')?.addEventListener('click', () => {
         if (openSheet('commands-sheet')) { cancelCommand(); loadCommands(); }
       });
