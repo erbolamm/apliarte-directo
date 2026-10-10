@@ -142,6 +142,7 @@ export function createPracticeSession({
       const target = command.agente && command.agente !== selected && Object.hasOwn(PRACTICE_AGENTS, command.agente) ? command.agente : null;
       events = target ? [{ type: 'kiss', agent: selected, target }] : [{ type: 'notice', text: 'Indica otro avatar: !beso cl, por ejemplo.' }];
     } else if (command.comando === 'bronca') events = [{ type: 'scold' }];
+    else if (command.comando === 'fiesta') events = [{ type: 'party' }];
     else if (command.comando === 'trabajar') events = [{ type: 'work', agent: selected }];
     else if (command.comando === 'reset') {
       offsets[selected] = 0;

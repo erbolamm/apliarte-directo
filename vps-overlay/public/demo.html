@@ -63,6 +63,7 @@
     .btn-support-pill.highlight:hover { opacity:0.9; color:#fff; }
   </style>
   <script defer src="./office-3d.js?v=b07df57cfc"></script>
+  <script defer src="./js/fiesta-bronca-audio.js?v=20261010"></script>
 </head>
 <body>
   <header>
@@ -202,6 +203,7 @@ docker compose up -d</div></section>
         else if (event.type === 'board') { office()?.setBoard?.(event.enabled); $('boardToggle').textContent = `Tablero: ${event.enabled ? 'encendido' : 'apagado'}`; }
         else if (event.type === 'kiss') office()?.ejecutarBeso?.(event.agent, event.target);
         else if (event.type === 'scold') office()?.ejecutarBronca?.();
+        else if (event.type === 'party') office()?.ejecutarFiesta?.();
         else if (event.type === 'work') office()?.ejecutarTrabajar?.(event.agent);
         else if (event.type === 'race_start') { office()?.resetAvatar?.(event.agent); office()?.runtime?.say(event.agent, event.text, performance.now()); log('Demo', event.text); }
         else if (event.type === 'race_win' || event.type === 'notice') log('Demo', event.text);
@@ -217,7 +219,7 @@ docker compose up -d</div></section>
     $('view2d').addEventListener('click', () => window.dispatchEvent(new CustomEvent('erbolamm:set-view', { detail:'diorama' })));
     $('boardToggle').addEventListener('click', () => render(session.submit('!damas')));
     $('themeToggle').addEventListener('click', () => { const dark=document.documentElement.dataset.theme !== 'dark'; document.documentElement.dataset.theme=dark?'dark':'light'; $('themeToggle').textContent=dark?'☀':'☾'; });
-    for (const command of ['!w','!a','!s','!d','!damas','!a1','!beso cl','!bronca','!trabajar','!carrera','!salta','!r']) { const button=document.createElement('button'); button.type='button'; button.textContent=command; button.addEventListener('click', () => send(command)); $('commands').append(button); }
+    for (const command of ['!w','!a','!s','!d','!damas','!a1','!beso cl','!bronca','!fiesta','!trabajar','!carrera','!salta','!r']) { const button=document.createElement('button'); button.type='button'; button.textContent=command; button.addEventListener('click', () => send(command)); $('commands').append(button); }
     window.setInterval(() => { const race=session.getState().race; $('practiceRaceStatus').textContent=race.phase==='countdown' ? `🏁 Cuenta atrás: ${race.secondsLeft}. Meta: ${race.target}` : race.phase==='racing' ? `🏁 Muévete a ${race.target} con !a o !d.` : race.phase==='finished' ? `🏁 Carrera terminada. Ganador: ${PRACTICE_AGENTS[race.winner]}.` : ''; }, 250);
     $('deployOpen').addEventListener('click', () => $('deployModal').showModal());
     $('deployClose').addEventListener('click', () => $('deployModal').close());

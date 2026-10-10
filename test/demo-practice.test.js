@@ -37,6 +37,7 @@ test('practice emits real overlay actions for movement, board squares and reacti
   assert.deepEqual(session.submit('!a1').events[0], { type: 'square', agent: 'co', square: 'a1' });
   assert.equal(session.submit('!beso cl').events[0].type, 'kiss');
   assert.equal(session.submit('!bronca').events[0].type, 'scold');
+  assert.equal(session.submit('!fiesta').events[0].type, 'party');
   assert.equal(session.submit('!trabajar').events[0].type, 'work');
 });
 
