@@ -16,22 +16,29 @@ const vpsServerPath = path.join(__dirname, '..', 'vps-overlay', 'server.js');
 const wsAuthPath = path.join(__dirname, '..', 'src', 'ws-auth.js');
 const vpsWsAuthPath = path.join(__dirname, '..', 'vps-overlay', 'src', 'ws-auth.js');
 
-test('Estudio: SMS button and sheet exist in toolbar and markup', () => {
+test('Estudio: Unificación de Mensajería (Chat en vivo y Buzón SMS) en botón y vista conmutada', () => {
   const content = fs.readFileSync(estudioPath, 'utf8');
 
-  // Toolbar contains SMS button
-  assert.match(content, /id="btn-sms-view"/, 'El botón de SMS debe existir en la barra de herramientas');
-  assert.match(content, /aria-label="Mensajes SMS"/, 'El botón de SMS debe tener aria-label accesible');
+  // 1. Botón unificado de mensajería en la barra inferior (reemplazando botones redundantes)
+  assert.match(content, /id="btn-mensajeria-view"/, 'El botón unificado de mensajería debe existir en la barra de herramientas');
+  assert.match(content, /aria-label="Mensajería \(Chat y SMS\)"/, 'El botón de mensajería debe tener aria-label accesible');
+  assert.doesNotMatch(content, /id="btn-chat-view"/, 'btn-chat-view independiente ya no debe existir en la barra');
+  assert.doesNotMatch(content, /id="btn-sms-view"/, 'btn-sms-view independiente ya no debe existir en la barra');
 
-  // SMS Sheet markup exists
-  assert.match(content, /<aside class="sheet" id="sms-sheet"/, 'El aside #sms-sheet debe existir');
-  assert.match(content, /id="btn-sms-sheet-refresh"/, 'El botón de actualizar debe existir en el sheet de SMS');
+  // 2. Selector de pestañas interno en la vista modal de mensajería
+  assert.match(content, /id="btn-msg-tab-chat"/, 'Debe existir la pestaña [💬 Chat en Vivo]');
+  assert.match(content, /id="btn-msg-tab-sms"/, 'Debe existir la pestaña [📱 Buzón SMS]');
+  assert.match(content, /function selectMensajeriaTab\(/, 'Debe existir selectMensajeriaTab()');
+
+  // 3. Contenedores de chat y sms en la misma vista
+  assert.match(content, /id="chat-live-feed"/, 'El contenedor de chat en vivo debe existir');
   assert.match(content, /id="sms-sheet-list"/, 'El contenedor de lista #sms-sheet-list debe existir');
+  assert.match(content, /id="btn-sms-sheet-refresh"/, 'El botón de actualizar debe existir en la sección SMS');
 
-  // Included in SHEETS array for exclusive opening
-  assert.match(content, /\['sms-sheet',\s*'btn-sms-view'\]/, 'El sheet de SMS debe estar registrado en el array SHEETS');
+  // 4. Ingesta combinada de chat (Twitch y YouTube)
+  assert.match(content, /msg\.plataforma === 'youtube'\s*\?\s*'🔴'\s*:\s*'🟣'/, 'El feed debe mostrar distintivo para YouTube y Twitch');
 
-  // Handlers and rendering functions
+  // 5. Handlers y renderizado
   assert.match(content, /function refreshSmsSheet\(\)/, 'Debe existir refreshSmsSheet()');
   assert.match(content, /function renderSmsCards\(/, 'Debe existir renderSmsCards() para renderizar tarjetas SMS');
 });

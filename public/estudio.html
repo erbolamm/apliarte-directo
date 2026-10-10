@@ -231,6 +231,9 @@
     .user-badge.avatar { border-color: var(--brand); color: var(--brand-strong); }
     .user-badge.banned { border-color: #ef4444; color: #ef4444; }
     .user-badge.muted { border-color: #f59e0b; color: #f59e0b; }
+    .mensajeria-tabs { display: flex; gap: 6px; align-items: center; }
+    .mensajeria-tabs .btn[aria-selected="true"],
+    .mensajeria-tabs .btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
     .tts-log { max-height: 180px; overflow: auto; padding: var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); font-size: 0.85rem; display: grid; gap: 0.2rem; }
     .tts-log .skipped { color: var(--text-muted); font-style: italic; }
     .settings-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
@@ -888,9 +891,8 @@
       <button type="button" class="icon-btn" id="btn-tablet-mic" aria-pressed="false" aria-label="Micrófono de este dispositivo: silenciado" data-tip="Envía el micrófono de este dispositivo a OBS. Otro toque lo silencia."></button>
       <button type="button" class="icon-btn" id="btn-tts" aria-pressed="false" aria-label="Voz del chat (TTS) apagada: pulsa para activarla" data-tip="Lee en voz alta los mensajes del chat. Otro toque la detiene."></button>
       <span class="toolbar-sep" aria-hidden="true"></span>
-      <button type="button" class="icon-btn" id="btn-chat-view" aria-expanded="false" aria-label="Chat" data-tip="Abre el chat del directo."></button>
+      <button type="button" class="icon-btn" id="btn-mensajeria-view" aria-expanded="false" aria-label="Mensajería (Chat y SMS)" data-tip="Abre la mensajería del directo (Chat en vivo de Twitch/YouTube y Buzón SMS)."></button>
       <button type="button" class="icon-btn" id="btn-commands-view" aria-expanded="false" aria-label="Comandos" data-tip="Abre tus comandos favoritos."></button>
-      <button type="button" class="icon-btn" id="btn-sms-view" aria-expanded="false" aria-label="Mensajes SMS" data-tip="Abre los mensajes SMS recibidos en directo."></button>
       <button type="button" class="icon-btn" id="btn-obs-menu" aria-expanded="false" aria-label="Controles OBS" data-tip="Abre las escenas, el audio y las fuentes de OBS."></button>
       <button type="button" class="icon-btn" id="btn-pantalla-negra" data-action="black-screen" aria-label="Pantalla negra de ahorro" data-tip="Pone la pantalla en negro para ahorrar batería sin cortar el directo. Para volver, toca tres veces seguidas o con tres dedos."></button>
       <button type="button" class="icon-btn" id="btn-settings-view" data-action="open-settings" aria-expanded="false" aria-label="Abrir ajustes" data-tip="Abre los ajustes del estudio."></button>
@@ -943,14 +945,22 @@
     </aside>
 
 
-    <aside class="sheet chat-sheet" id="chat-sheet" aria-label="Chat" hidden>
+    <aside class="sheet chat-sheet" id="chat-sheet" aria-label="Mensajería (Chat y SMS)" hidden>
       <div class="sheet-head">
-        <h2>Chat</h2>
-        <button type="button" class="btn" id="btn-toggle-stream" aria-pressed="false">Ver stream</button>
-        <button type="button" class="btn" id="btn-chat-feed-toggle" aria-pressed="false" title="Alternar entre lista con ojo y chat web de Twitch">Twitch web</button>
-        <button type="button" class="btn" id="btn-chat-todos" aria-pressed="false">Todos</button>
-        <button type="button" class="btn" id="btn-reload-chat">Recargar</button>
-        <button type="button" class="icon-btn sheet-close" aria-label="Cerrar chat"></button>
+        <div class="mensajeria-tabs" role="tablist" style="display:flex;gap:6px;align-items:center;">
+          <button type="button" class="btn active" id="btn-msg-tab-chat" role="tab" aria-selected="true">💬 Chat en Vivo</button>
+          <button type="button" class="btn" id="btn-msg-tab-sms" role="tab" aria-selected="false">📱 Buzón SMS</button>
+        </div>
+        <div id="chat-head-controls" style="display:inline-flex;gap:var(--gap);align-items:center;">
+          <button type="button" class="btn" id="btn-toggle-stream" aria-pressed="false">Ver stream</button>
+          <button type="button" class="btn" id="btn-chat-feed-toggle" aria-pressed="false" title="Alternar entre lista con ojo y chat web de Twitch">Twitch web</button>
+          <button type="button" class="btn" id="btn-chat-todos" aria-pressed="false">Todos</button>
+          <button type="button" class="btn" id="btn-reload-chat">Recargar</button>
+        </div>
+        <div id="sms-head-controls" style="display:inline-flex;gap:var(--gap);align-items:center;" hidden>
+          <button type="button" class="btn" id="btn-sms-sheet-refresh">Actualizar</button>
+        </div>
+        <button type="button" class="icon-btn sheet-close" aria-label="Cerrar mensajería"></button>
       </div>
       <div class="sheet-extra">
         <div class="input-row" id="botrix-config" hidden>
@@ -967,10 +977,16 @@
         </div>
       </div>
       <div class="sheet-body flush" id="chat-body-container">
-        <div id="chat-live-feed" class="chat-live-feed">
-          <p class="hint chat-feed-empty" id="chat-feed-empty">Los mensajes del chat de Twitch aparecerán aquí con su ojo 👁️ para ponerlos en pantalla.</p>
+        <div id="chat-view-section" style="display:flex;flex-direction:column;height:100%;width:100%;">
+          <div id="chat-live-feed" class="chat-live-feed">
+            <p class="hint chat-feed-empty" id="chat-feed-empty">Los mensajes del chat de Twitch y YouTube aparecerán aquí con su ojo 👁️ para ponerlos en pantalla.</p>
+          </div>
+          <iframe id="chat-frame" title="Chat del directo" hidden></iframe>
         </div>
-        <iframe id="chat-frame" title="Chat del directo" hidden></iframe>
+        <div id="sms-view-section" style="display:none;flex-direction:column;height:100%;width:100%;padding:var(--gap);overflow:auto;">
+          <p class="hint" id="sms-sheet-message" role="status">Cargando buzón de SMS…</p>
+          <div class="groups" id="sms-sheet-list"></div>
+        </div>
       </div>
     </aside>
 
@@ -987,17 +1003,6 @@
       </div>
     </aside>
 
-    <aside class="sheet" id="sms-sheet" aria-label="Mensajes SMS" hidden>
-      <div class="sheet-head">
-        <h2>SMS</h2>
-        <button type="button" class="btn" id="btn-sms-sheet-refresh">Actualizar</button>
-        <button type="button" class="icon-btn sheet-close" aria-label="Cerrar mensajes SMS"></button>
-      </div>
-      <div class="sheet-body" id="sms-sheet-body">
-        <p class="hint" id="sms-sheet-message" role="status">Cargando buzón de SMS…</p>
-        <div class="groups" id="sms-sheet-list"></div>
-      </div>
-    </aside>
 
     <aside class="sheet" id="obs-sheet" aria-label="Controles OBS" hidden>
       <div class="sheet-head">
@@ -1118,7 +1123,7 @@
   (() => {
     'use strict';
 
-    const $ = (id) => document.getElementById(id === 'settings-dialog' ? 'settings-sheet' : id);
+    const $ = (id) => document.getElementById(id === 'settings-dialog' ? 'settings-sheet' : (id === 'btn-chat-view' || id === 'btn-sms-view' ? 'btn-mensajeria-view' : id));
 
     // ── Icons ────────────────────────────────────────────────────────────
     const ICONS = {
@@ -3402,25 +3407,31 @@
     // Ported from pizarra-plus. One sheet open at a time.
     const SHEETS = [
       ['tools-sheet', 'btn-draw-menu'],
-      ['chat-sheet', 'btn-chat-view'],
+      ['chat-sheet', 'btn-mensajeria-view'],
       ['commands-sheet', 'btn-commands-view'],
-      ['sms-sheet', 'btn-sms-view'],
       ['obs-sheet', 'btn-obs-menu'],
       ['settings-sheet', 'btn-settings-view']
     ];
     function closeSheets() {
       SHEETS.forEach(([sheetId, buttonId]) => {
-        $(sheetId).hidden = true;
-        $(buttonId).setAttribute('aria-expanded', 'false');
+        const s = $(sheetId);
+        if (s) s.hidden = true;
+        const b = $(buttonId);
+        if (b) b.setAttribute('aria-expanded', 'false');
       });
     }
     // Returns true when the sheet ends up open.
     function openSheet(sheetId) {
+      if (sheetId === 'sms-sheet') {
+        openChat('sms');
+        return true;
+      }
       const wasOpen = !$(sheetId).hidden;
       closeSheets();
       if (wasOpen) return false;
       $(sheetId).hidden = false;
-      $(SHEETS.find(([id]) => id === sheetId)[1]).setAttribute('aria-expanded', 'true');
+      const mapping = SHEETS.find(([id]) => id === sheetId);
+      if (mapping && $(mapping[1])) $(mapping[1]).setAttribute('aria-expanded', 'true');
       return true;
     }
 
@@ -3578,7 +3589,35 @@
       const frame = $('chat-frame');
       if (force || frame.getAttribute('src') !== target) frame.src = target;
     }
-    async function openChat() {
+    function selectMensajeriaTab(tab = 'chat') {
+      const isChat = tab === 'chat';
+      const btnChat = $('btn-msg-tab-chat');
+      const btnSms = $('btn-msg-tab-sms');
+      if (btnChat) {
+        btnChat.setAttribute('aria-selected', String(isChat));
+        btnChat.classList.toggle('active', isChat);
+      }
+      if (btnSms) {
+        btnSms.setAttribute('aria-selected', String(!isChat));
+        btnSms.classList.toggle('active', !isChat);
+      }
+      const chatControls = $('chat-head-controls');
+      const smsControls = $('sms-head-controls');
+      if (chatControls) chatControls.hidden = !isChat;
+      if (smsControls) smsControls.hidden = isChat;
+
+      const chatSection = $('chat-view-section');
+      const smsSection = $('sms-view-section');
+      if (chatSection) chatSection.style.display = isChat ? 'flex' : 'none';
+      if (smsSection) {
+        smsSection.style.display = isChat ? 'none' : 'flex';
+        if (!isChat) {
+          if (!sms.loaded) loadSms();
+          else refreshSmsSheet();
+        }
+      }
+    }
+    async function openChat(initialTab = 'chat') {
       if (!openSheet('chat-sheet')) return;
       await chatConfigRequest();
       paintChatControls();
@@ -3591,6 +3630,7 @@
       }
       const btnFeed = $('btn-chat-feed-toggle');
       if (btnFeed) btnFeed.setAttribute('aria-pressed', 'false');
+      selectMensajeriaTab(initialTab);
       actualizarEstadoPantalla();
     }
     // "Todos" shows every platform's chat through the Botrix widget.
@@ -3861,30 +3901,36 @@
       else { $('cmd-step-message').textContent = result.message; $('cmd-send').disabled = false; }
     }
     function initSheets() {
-      $('btn-chat-view').innerHTML = icon('sheetChat');
+      const btnMensajeria = document.getElementById('btn-mensajeria-view') || document.getElementById('btn-chat-view');
+      if (btnMensajeria) {
+        btnMensajeria.innerHTML = icon('sheetChat');
+        btnMensajeria.addEventListener('click', () => openChat('chat'));
+      }
+      const btnSms = document.getElementById('btn-sms-view');
+      if (btnSms) {
+        btnSms.innerHTML = icon('sheetSms');
+        btnSms.addEventListener('click', () => openChat('sms'));
+      }
       $('btn-commands-view').innerHTML = icon('sheetCommands');
-      $('btn-sms-view').innerHTML = icon('sheetSms');
       document.querySelectorAll('.sheet-close').forEach((button) => {
         button.innerHTML = icon('close');
         button.addEventListener('click', closeSheets);
       });
-      $('btn-chat-view').addEventListener('click', openChat);
+      $('btn-msg-tab-chat')?.addEventListener('click', () => selectMensajeriaTab('chat'));
+      $('btn-msg-tab-sms')?.addEventListener('click', () => selectMensajeriaTab('sms'));
       $('btn-chat-feed-toggle')?.addEventListener('click', toggleChatPantallaFeed);
       $('btn-quitar-pantalla')?.addEventListener('click', async () => {
         await fetch('/api/directo/sms/ocultar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
         actualizarEstadoPantalla();
       });
-      $('btn-chat-todos').addEventListener('click', toggleAllChats);
-      $('btn-botrix-guardar').addEventListener('click', saveBotrix);
-      $('btn-reload-chat').addEventListener('click', () => loadChatFrame(true));
-      $('btn-toggle-stream').addEventListener('click', toggleStreamPlayer);
-      $('btn-commands-view').addEventListener('click', () => {
+      $('btn-chat-todos')?.addEventListener('click', toggleAllChats);
+      $('btn-botrix-guardar')?.addEventListener('click', saveBotrix);
+      $('btn-reload-chat')?.addEventListener('click', () => loadChatFrame(true));
+      $('btn-toggle-stream')?.addEventListener('click', toggleStreamPlayer);
+      $('btn-commands-view')?.addEventListener('click', () => {
         if (openSheet('commands-sheet')) { cancelCommand(); loadCommands(); }
       });
-      $('btn-sms-view').addEventListener('click', () => {
-        if (openSheet('sms-sheet')) refreshSmsSheet();
-      });
-      $('btn-sms-sheet-refresh').addEventListener('click', () => loadSms());
+      $('btn-sms-sheet-refresh')?.addEventListener('click', () => loadSms());
       $('btn-toggle-all-commands').addEventListener('click', () => {
         commands.showAll = !commands.showAll;
         const button = $('btn-toggle-all-commands');
@@ -5135,7 +5181,7 @@
       } catch (_) { sms.shownId = null; }
       sms.loaded = true;
       if (tabOpen('sms')) selectSettingsTab('sms');
-      if (!$('sms-sheet').hidden) refreshSmsSheet();
+      if ((!$('sms-sheet')?.hidden) || (!$('chat-sheet')?.hidden && $('btn-msg-tab-sms') && $('btn-msg-tab-sms').getAttribute('aria-selected') === 'true')) refreshSmsSheet();
     }
     function refreshSmsSheet() {
       const message = $('sms-sheet-message');
