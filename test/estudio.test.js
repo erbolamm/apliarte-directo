@@ -242,5 +242,19 @@ test('Estudio: Pestaña de usuarios activos y moderación con Time Out y Ban en 
   assert.match(content, /if\s*\(typeof tabOpen === 'function' && tabOpen\('users'\)\)\s*selectSettingsTab\('users'\)/, 'Socket debe refrescar pestaña users cuando está abierta');
 });
 
+test('Estudio: Botones de alta rápida en Ajustes > Comandos (+ Usuario, + Mensaje, + Canal, + Comando)', () => {
+  const content = fs.readFileSync('public/estudio.html', 'utf8');
+
+  // 1. Barra de acciones rápidas superior en settingsRenderers.commands
+  assert.match(content, /commands-quick-bar/, 'Debe existir la barra de acciones rápidas commands-quick-bar');
+
+  // 2. Botones de alta inmediata conectados a openItem
+  assert.match(content, /settingsButton\(quickBar,\s*'\+\s*Añadir Usuario',\s*\(\)\s*=>\s*openItem\('usuario'\)\)/, 'Debe existir botón + Añadir Usuario');
+  assert.match(content, /settingsButton\(quickBar,\s*'\+\s*Añadir Mensaje',\s*\(\)\s*=>\s*openItem\('mensaje'\)\)/, 'Debe existir botón + Añadir Mensaje');
+  assert.match(content, /settingsButton\(quickBar,\s*'\+\s*Añadir Canal',\s*\(\)\s*=>\s*openItem\('canal'\)\)/, 'Debe existir botón + Añadir Canal');
+  assert.match(content, /settingsButton\(quickBar,\s*'\+\s*Añadir Comando',\s*\(\)\s*=>\s*openItem\('comando'\)\)/, 'Debe existir botón + Añadir Comando');
+});
+
+
 
 

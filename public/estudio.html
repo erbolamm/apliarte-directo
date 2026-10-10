@@ -5530,6 +5530,14 @@
       search.autocomplete = 'off';
       search.value = commandsTabFilter;
       panel.appendChild(search);
+
+      const quickBar = settingsRow(panel);
+      quickBar.className = 'settings-row commands-quick-bar';
+      settingsButton(quickBar, '+ Añadir Usuario', () => openItem('usuario'));
+      settingsButton(quickBar, '+ Añadir Mensaje', () => openItem('mensaje'));
+      settingsButton(quickBar, '+ Añadir Canal', () => openItem('canal'));
+      settingsButton(quickBar, '+ Añadir Comando', () => openItem('comando'));
+
       // Filtering hides rows in place, so typing keeps the focus.
       const applyFilter = () => {
         commandsTabFilter = search.value;
