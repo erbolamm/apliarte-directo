@@ -16,6 +16,15 @@ const vpsServerPath = path.join(__dirname, '..', 'vps-overlay', 'server.js');
 const wsAuthPath = path.join(__dirname, '..', 'src', 'ws-auth.js');
 const vpsWsAuthPath = path.join(__dirname, '..', 'vps-overlay', 'src', 'ws-auth.js');
 
+function sliceBetween(content, startMarker, endMarker) {
+  const start = content.indexOf(startMarker);
+  assert.notEqual(start, -1, `No se encuentra "${startMarker}"`);
+  const end = content.indexOf(endMarker, start + startMarker.length);
+  assert.notEqual(end, -1, `No se encuentra "${endMarker}" tras "${startMarker}"`);
+  return content.slice(start, end);
+}
+const boardPropsMarkup = (content) => sliceBetween(content, '<aside class="board-props" id="board-props"', '</aside>');
+
 test('Estudio: Unificación de Mensajería (Chat en vivo y Buzón SMS) en botón y vista conmutada', () => {
   const content = fs.readFileSync(estudioPath, 'utf8');
 
@@ -43,18 +52,21 @@ test('Estudio: Unificación de Mensajería (Chat en vivo y Buzón SMS) en botón
   assert.match(content, /function renderSmsCards\(/, 'Debe existir renderSmsCards() para renderizar tarjetas SMS');
 });
 
-test('Estudio: OBS snapshot button exists in toolbar and triggers setObsPreview', () => {
+test('Estudio: OBS snapshot button lives in the floating board panel and triggers setObsPreview', () => {
   const content = fs.readFileSync(estudioPath, 'utf8');
 
-  // Toolbar contains OBS snapshot button next to drawing tools
-  assert.match(content, /id="btn-obs-snapshot"/, 'El botón de captura fija de OBS debe existir en la toolbar');
-  assert.match(content, /aria-label="Captura fija de OBS en la pizarra"/, 'Debe tener etiqueta aria accesible');
+  // The snapshot button moved from the bottom toolbar to the floating board panel
+  assert.doesNotMatch(content, /id="btn-obs-snapshot"/, 'El botón de captura OBS ya no debe existir en la toolbar');
+  assert.match(boardPropsMarkup(content), /id="btn-sheet-obs-snapshot"[^>]*aria-pressed="false"/,
+    'El botón de captura OBS debe existir en el panel flotante de la pizarra');
 
   // Initialization in initBoard
+  assert.match(content, /const snapBtn = \$\('btn-sheet-obs-snapshot'\)/, 'initBoard debe usar el botón del panel flotante');
   assert.match(content, /snapBtn\.addEventListener\('click'/, 'El botón de captura OBS debe tener listener de click');
   assert.match(content, /setObsPreview\(!obsPreview\.active\)/, 'Debe alternar setObsPreview');
 
   // Synced state in setObsPreview
+  assert.match(content, /const snapButton = \$\('btn-sheet-obs-snapshot'\)/, 'setObsPreview debe sincronizar el botón del panel flotante');
   assert.match(content, /snapButton\.setAttribute\('aria-pressed',\s*String\(visible\)\)/, 'Debe sincronizar aria-pressed en setObsPreview');
 });
 
@@ -182,17 +194,60 @@ test('Estudio: sheets are full screen with toolbar prioritized and Alerats mappe
   assert.match(content, /id="btn-settings-view"/, 'El botón de ajustes debe tener id btn-settings-view en la botonera');
 });
 
-test('Estudio: tools sheet, toolbar dynamism (rest macro-deck vs active fitted) and layers panel', () => {
+test('Estudio: Excalidraw-style floating board UI, toolbar dynamism (rest macro-deck vs active fitted) and layers panel', () => {
   const content = fs.readFileSync(estudioPath, 'utf8');
+  const toolbar = sliceBetween(content, '<footer class="toolbar" id="studio-toolbar">', '</footer>');
+  const topbar = sliceBetween(content, '<div class="board-topbar" id="board-topbar"', '<aside class="board-props"');
+  const props = boardPropsMarkup(content);
 
-  // 1. Herramientas de dibujo en hoja a pantalla completa (tools-sheet)
-  assert.match(content, /<aside class="sheet tools-sheet" id="tools-sheet"/, 'tools-sheet debe existir como un sheet a pantalla completa');
-  assert.match(content, /\['tools-sheet',\s*'btn-draw-menu'\]/, 'tools-sheet debe estar registrado en el array SHEETS');
-  assert.match(content, /id="btn-deactivate-board"/, 'Debe incluir botón para poner pizarra en reposo');
-  assert.match(content, /id="btn-sheet-undo"/, 'Debe incluir botón deshacer en tools-sheet');
-  assert.match(content, /id="btn-sheet-redo"/, 'Debe incluir botón rehacer en tools-sheet');
-  assert.match(content, /id="btn-sheet-obs-snapshot"/, 'Debe incluir botón captura OBS en tools-sheet');
-  assert.match(content, /id="btn-sheet-clear"/, 'Debe incluir botón limpiar en tools-sheet');
+  // 1a. La botonera inferior solo conserva el pincel para la pizarra
+  assert.match(toolbar, /id="btn-draw-menu"[^>]*aria-pressed="false"/, 'btn-draw-menu debe seguir en la toolbar como conmutador');
+  ['btn-obs-snapshot', 'btn-undo', 'btn-redo', 'btn-clear'].forEach((id) => {
+    assert.doesNotMatch(content, new RegExp(`id="${id}"`), `${id} debe desaparecer de la toolbar inferior`);
+    assert.doesNotMatch(content, new RegExp(`\\$\\('${id}'\\)`), `El código no debe buscar ya ${id}`);
+  });
+  assert.match(toolbar, /id="btn-draw-menu"[^>]*><\/button>\s*<button[^>]*id="btn-device-camera"/,
+    'Tras el pincel no deben quedar botones ni separadores de dibujo');
+  ['btn-device-camera', 'btn-tablet-mic', 'btn-tts', 'btn-mensajeria-view', 'btn-commands-view', 'btn-obs-menu', 'btn-pantalla-negra', 'btn-settings-view'].forEach((id) => {
+    assert.match(toolbar, new RegExp(`id="${id}"`), `${id} debe mantenerse en la toolbar`);
+  });
+
+  // 1b. Ya no hay hoja modal de herramientas: el pincel conmuta la pizarra
+  assert.doesNotMatch(content, /id="tools-sheet"/, 'tools-sheet no debe existir como hoja modal');
+  assert.doesNotMatch(content, /'tools-sheet'/, 'tools-sheet no debe registrarse en SHEETS ni abrirse');
+  assert.match(content, /drawButton\.addEventListener\('click',\s*\(\)\s*=>\s*\{\s*closeSheets\(\);\s*setBoardActive\(!board\.active\);/,
+    'btn-draw-menu debe alternar la pizarra entre activa y reposo');
+  assert.match(content, /drawButton\.classList\.toggle\('active',\s*board\.active\)/, 'Debe sincronizar la clase active del pincel');
+  assert.match(content, /drawButton\.setAttribute\('aria-pressed',\s*String\(board\.active\)\)/, 'Debe sincronizar aria-pressed del pincel');
+  assert.doesNotMatch(sliceBetween(content, "canvas.addEventListener('pointerdown'", '});'), /closeSheets\(\)/,
+    'Dibujar sobre el lienzo no debe cerrar paneles');
+
+  // 1c. Barra cenital flotante de herramientas
+  assert.match(topbar, /id="tools-group"/, 'La barra cenital debe contener tools-group');
+  assert.match(topbar, /id="shape-fill"/, 'La barra cenital debe incluir el control de relleno');
+  assert.match(topbar, /id="shape-dash"/, 'La barra cenital debe incluir el control de línea discontinua');
+  assert.match(content, /\.board-topbar,\s*\.board-props\s*\{[^}]*display:\s*none;[^}]*position:\s*fixed;[^}]*z-index:\s*19;/,
+    'Los paneles flotantes deben estar ocultos por defecto, fijos y bajo las hojas');
+  assert.match(content, /\.board-topbar\s*\{[^}]*top:\s*12px;[^}]*left:\s*50%;[^}]*transform:\s*translateX\(-50%\);/,
+    'La barra cenital debe flotar centrada arriba');
+  assert.match(content, /#view-studio\.board-is-active\s+\.board-topbar\s*\{\s*display:\s*flex;/, 'La barra cenital solo se ve con la pizarra activa');
+  ['select', 'pen', 'highlighter', 'line', 'arrow', 'arrow2', 'rect', 'ellipse', 'text', 'eraser'].forEach((tool) => {
+    assert.match(content, new RegExp(`\\["${tool}",`), `BOARD_TOOLS debe incluir ${tool}`);
+  });
+
+  // 1d. Panel lateral flotante de estilos y acciones
+  assert.match(content, /\.board-props\s*\{[^}]*left:\s*12px;[^}]*top:\s*72px;[^}]*max-width:\s*280px;[^}]*max-height:\s*calc\(100vh - 160px\);[^}]*overflow-y:\s*auto;/,
+    'El panel lateral debe flotar a la izquierda con tamaño acotado');
+  assert.match(content, /#view-studio\.board-is-active\s+\.board-props\s*\{\s*display:\s*grid;/, 'El panel lateral solo se ve con la pizarra activa');
+  ['palette-group', 'custom-color', 'stroke-presets', 'size-range', 'allow-touch', 'btn-sheet-undo', 'btn-sheet-redo',
+    'btn-sheet-obs-snapshot', 'obs-interval', 'btn-sheet-clear', 'btn-deactivate-board'].forEach((id) => {
+    assert.match(props, new RegExp(`id="${id}"`), `El panel lateral debe incluir ${id}`);
+  });
+  assert.match(content, /\$\('btn-sheet-undo'\)\.addEventListener\('click',\s*undoStroke\)/, 'Deshacer debe funcionar desde el panel flotante');
+  assert.match(content, /\$\('btn-sheet-redo'\)\.addEventListener\('click',\s*redoStroke\)/, 'Rehacer debe funcionar desde el panel flotante');
+  assert.match(content, /const clearButton = \$\('btn-sheet-clear'\)/, 'Limpiar debe funcionar desde el panel flotante');
+  assert.match(content, /\$\('btn-deactivate-board'\)\.addEventListener\('click',\s*\(\)\s*=>\s*setBoardActive\(false\)\)/,
+    'Poner en reposo debe desactivar la pizarra');
 
   // 2. Unificación y eliminación del botón independiente btn-toggle-board
   assert.doesNotMatch(content, /id="btn-toggle-board"/, 'btn-toggle-board debe desaparecer de la barra de herramientas');
@@ -311,10 +366,12 @@ test('Estudio: Unificar OBS en botón único con pestañas superiores (Escenas y
   // 3. Vistas internas conmutadas por pestañas y limpieza de controles heredados
   assert.match(content, /id="obs-scenes-view"/, 'Debe existir la sección de escenas');
   assert.match(content, /id="obs-sources-view"/, 'Debe existir la sección de fuentes');
-  assert.doesNotMatch(content, /<select id="obs-input"/, 'obs-input heredado debe estar retirado');
-  assert.doesNotMatch(content, /id="btn-obs-mute"/, 'btn-obs-mute heredado debe estar retirado');
-  assert.doesNotMatch(content, /id="btn-obs-preview"/, 'btn-obs-preview debe estar retirado de la pestaña de escenas');
-  assert.doesNotMatch(content, /id="obs-interval"/, 'obs-interval debe estar retirado de la pestaña de escenas');
+  const obsSheetMatch = content.match(/<aside class="sheet" id="obs-sheet"[^>]*>([\s\S]*?)<\/aside>/);
+  assert.ok(obsSheetMatch, 'obs-sheet debe existir');
+  assert.doesNotMatch(obsSheetMatch[1], /<select id="obs-input"/, 'obs-input heredado debe estar retirado');
+  assert.doesNotMatch(obsSheetMatch[1], /id="btn-obs-mute"/, 'btn-obs-mute heredado debe estar retirado');
+  assert.doesNotMatch(obsSheetMatch[1], /id="btn-obs-preview"/, 'btn-obs-preview debe estar retirado de la pestaña de escenas');
+  assert.doesNotMatch(obsSheetMatch[1], /id="obs-interval"/, 'obs-interval debe estar retirado de la pestaña de escenas');
   assert.match(content, /function selectObsTab/, 'Debe existir la función selectObsTab');
   assert.match(content, /function openObs/, 'Debe existir la función openObs');
 
@@ -327,6 +384,39 @@ test('Estudio: Unificar OBS en botón único con pestañas superiores (Escenas y
   // 5. Deduplicación de fuentes por nombre y soporte multi-escena
   assert.match(content, /seen\.has\(source\.name\)/, 'renderSources debe deduplicar fuentes por nombre para que no se repitan');
   assert.match(content, /source\.instances\.forEach/, 'Al conmutar una fuente deduplicada debe sincronizar todas sus instancias');
+});
+
+test('Estudio: Rediseño de la paleta de colores, presets de grosor e integración de captura de OBS en panel de dibujo', () => {
+  const content = fs.readFileSync('public/estudio.html', 'utf8');
+
+  // 1. Integración de captura de OBS en el panel flotante de la pizarra
+  assert.match(content, /id="btn-sheet-obs-snapshot"[^>]*title="Capturar OBS para dibujar encima"/,
+    'Debe existir el botón de captura OBS dentro del panel flotante');
+  assert.match(content, /<select id="obs-interval"/,
+    'El selector de refresco de captura obs-interval debe estar integrado en el panel flotante');
+
+  // 2. Presets rápidos de grosor de trazo
+  assert.match(content, /<div class="stroke-presets" id="stroke-presets">/,
+    'Debe existir el contenedor stroke-presets para selección rápida de 1 toque');
+  assert.match(content, /data-size="3"/, 'Debe incluir preset fino de 3px');
+  assert.match(content, /data-size="6"/, 'Debe incluir preset normal de 6px');
+  assert.match(content, /data-size="12"/, 'Debe incluir preset grueso de 12px');
+  assert.match(content, /data-size="24"/, 'Debe incluir preset marcador de 24px');
+  assert.match(content, /function selectSize\(size\)/,
+    'Debe existir la función selectSize para sincronizar presets y slider');
+
+  // 3. Paleta de colores optimizada para streaming
+  assert.match(content, /\["#005fa9",\s*"Azul ApliArte"\]/, 'Debe preservar el azul oficial de ApliArte');
+  assert.match(content, /\["#ffffff",\s*"Blanco puro"\]/, 'Debe incluir blanco puro');
+  assert.match(content, /\["#38bdf8",\s*"Azul cielo"\]/, 'Debe incluir azul cielo vibrante');
+  assert.match(content, /\["#10b981",\s*"Verde esmeralda"\]/, 'Debe incluir verde esmeralda de alta visibilidad');
+  assert.match(content, /\["#facc15",\s*"Amarillo sol"\]/, 'Debe incluir amarillo sol');
+
+  // 4. Estilos visuales de swatch y feedback táctil
+  assert.match(content, /\.color-swatch\s*\{[^}]*border-radius:\s*50%/,
+    'Las muestras de color deben ser circulares con diseño moderno');
+  assert.match(content, /\.color-swatch\.active\s*\{/,
+    'Las muestras activas deben tener indicador visual prominente de selección');
 });
 
 
