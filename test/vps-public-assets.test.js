@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 test('VPS public demo and docs match the source served by the local server', () => {
-  for (const name of ['demo.html', 'docs/index.html', 'avatares.html']) {
+  for (const name of ['demo.html', 'docs/index.html', 'avatares.html', 'contexto.html', 'sms-pantalla.html']) {
     const source = readFileSync(new URL(`../public/${name}`, import.meta.url), 'utf8');
     const vps = readFileSync(new URL(`../vps-overlay/public/${name}`, import.meta.url), 'utf8');
     assert.equal(vps, source, `${name} differs between local and VPS`);
