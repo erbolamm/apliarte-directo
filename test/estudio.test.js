@@ -289,6 +289,47 @@ test('Estudio: Rediseño cabecera de chat, popup stream flotante manejable, corr
   assert.match(content, /#chat-view-section #chat-frame\s*\{[^}]*width:\s*100%[^}]*height:\s*100%/, 'chat-frame debe ocupar el 100% de ancho y alto');
 });
 
+test('Estudio: Unificar OBS en botón único con pestañas superiores (Escenas y Fuentes)', () => {
+  const content = fs.readFileSync('public/estudio.html', 'utf8');
+
+  // 1. Botón unificado en la toolbar sin duplicidades ni saturación
+  assert.match(content, /id="btn-obs-menu"[^>]*aria-label="Abre OBS \(escenas y fuentes\)"[^>]*data-tip="Abre el control de OBS \(escenas, audio y fuentes\)\."/,
+    'btn-obs-menu debe unificar escenas, audio y fuentes en la toolbar');
+  assert.doesNotMatch(content, /id="btn-sources-view"/,
+    'No debe existir un botón separado btn-sources-view en la toolbar para no saturarla');
+
+  // 2. Panel unificado obs-sheet con pestañas superiores
+  assert.match(content, /<aside class="sheet" id="obs-sheet" aria-label="Controles OBS" hidden>/,
+    'Debe existir el panel obs-sheet unificado');
+  assert.match(content, /id="btn-obs-tab-scenes"/, 'Debe existir la pestaña de Escenas');
+  assert.match(content, /id="btn-obs-tab-sources"/, 'Debe existir la pestaña de Fuentes');
+  assert.match(content, /id="btn-sources-refresh"[^>]*aria-label="Recargar fuentes de OBS"/,
+    'Debe existir btn-sources-refresh para refrescar fuentes al instante');
+  assert.match(content, /id="sources-filter"/, 'Debe incluir buscador en tiempo real de fuentes');
+  assert.match(content, /class="sources-grid" id="sources-grid"/, 'Debe incluir grid para fuentes');
+
+  // 3. Vistas internas conmutadas por pestañas y limpieza de controles heredados
+  assert.match(content, /id="obs-scenes-view"/, 'Debe existir la sección de escenas');
+  assert.match(content, /id="obs-sources-view"/, 'Debe existir la sección de fuentes');
+  assert.doesNotMatch(content, /<select id="obs-input"/, 'obs-input heredado debe estar retirado');
+  assert.doesNotMatch(content, /id="btn-obs-mute"/, 'btn-obs-mute heredado debe estar retirado');
+  assert.doesNotMatch(content, /id="btn-obs-preview"/, 'btn-obs-preview debe estar retirado de la pestaña de escenas');
+  assert.doesNotMatch(content, /id="obs-interval"/, 'obs-interval debe estar retirado de la pestaña de escenas');
+  assert.match(content, /function selectObsTab/, 'Debe existir la función selectObsTab');
+  assert.match(content, /function openObs/, 'Debe existir la función openObs');
+
+  // 4. Lógica de carga global y soporte conmutable visual/audio
+  assert.match(content, /async function loadAllSources\(\)/, 'Debe existir loadAllSources()');
+  assert.match(content, /sources\?all=1/, 'loadAllSources() debe consultar todas las fuentes');
+  assert.match(content, /icon\(on \? 'volume' : 'volumeX'\)/, 'Fuentes de audio deben usar conmutador táctil de volumen/mute');
+  assert.match(content, /icon\(on \? 'eye' : 'eyeOff'\)/, 'Fuentes visuales deben usar conmutador táctil de ojo');
+
+  // 5. Deduplicación de fuentes por nombre y soporte multi-escena
+  assert.match(content, /seen\.has\(source\.name\)/, 'renderSources debe deduplicar fuentes por nombre para que no se repitan');
+  assert.match(content, /source\.instances\.forEach/, 'Al conmutar una fuente deduplicada debe sincronizar todas sus instancias');
+});
+
+
 
 
 

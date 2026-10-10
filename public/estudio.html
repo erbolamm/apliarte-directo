@@ -231,9 +231,11 @@
     .user-badge.avatar { border-color: var(--brand); color: var(--brand-strong); }
     .user-badge.banned { border-color: #ef4444; color: #ef4444; }
     .user-badge.muted { border-color: #f59e0b; color: #f59e0b; }
-    .mensajeria-tabs { display: flex; gap: 6px; align-items: center; }
+    .mensajeria-tabs, .obs-tabs { display: flex; gap: 6px; align-items: center; }
     .mensajeria-tabs .btn[aria-selected="true"],
-    .mensajeria-tabs .btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+    .mensajeria-tabs .btn.active,
+    .obs-tabs .btn[aria-selected="true"],
+    .obs-tabs .btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
     .tts-log { max-height: 180px; overflow: auto; padding: var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); font-size: 0.85rem; display: grid; gap: 0.2rem; }
     .tts-log .skipped { color: var(--text-muted); font-style: italic; }
     .settings-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
@@ -505,6 +507,7 @@
     .scene-btn { flex-direction: column; align-items: flex-start; gap: 0; padding: var(--gap); text-align: left; overflow-wrap: anywhere; }
     .scene-btn small { font-weight: 400; color: var(--text-muted); }
     .scene-btn.active { border-color: var(--brand-strong); color: var(--brand-strong); }
+    .sources-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--gap); }
     .source-card { display: flex; align-items: center; gap: var(--gap); padding: var(--gap); border: 1px solid var(--line); border-radius: var(--radius); }
     .source-card.off { opacity: 0.6; }
     .source-info { display: grid; margin-right: auto; min-width: 0; overflow-wrap: anywhere; }
@@ -989,7 +992,7 @@
       <span class="toolbar-sep" aria-hidden="true"></span>
       <button type="button" class="icon-btn" id="btn-mensajeria-view" aria-expanded="false" aria-label="Mensajería (Chat y SMS)" data-tip="Abre la mensajería del directo (Chat en vivo de Twitch/YouTube y Buzón SMS)."></button>
       <button type="button" class="icon-btn" id="btn-commands-view" aria-expanded="false" aria-label="Comandos" data-tip="Abre tus comandos favoritos."></button>
-      <button type="button" class="icon-btn" id="btn-obs-menu" aria-expanded="false" aria-label="Controles OBS" data-tip="Abre las escenas, el audio y las fuentes de OBS."></button>
+      <button type="button" class="icon-btn" id="btn-obs-menu" aria-expanded="false" aria-label="Abre OBS (escenas y fuentes)" data-tip="Abre el control de OBS (escenas, audio y fuentes)."></button>
       <button type="button" class="icon-btn" id="btn-pantalla-negra" data-action="black-screen" aria-label="Pantalla negra de ahorro" data-tip="Pone la pantalla en negro para ahorrar batería sin cortar el directo. Para volver, toca tres veces seguidas o con tres dedos."></button>
       <button type="button" class="icon-btn" id="btn-settings-view" data-action="open-settings" aria-expanded="false" aria-label="Abrir ajustes" data-tip="Abre los ajustes del estudio."></button>
       <span class="toolbar-status" id="board-status" role="status"></span>
@@ -1103,29 +1106,27 @@
 
     <aside class="sheet" id="obs-sheet" aria-label="Controles OBS" hidden>
       <div class="sheet-head">
-        <h2>OBS</h2>
-        <button type="button" class="btn" id="btn-obs-refresh">Actualizar</button>
+        <div class="obs-tabs" role="tablist" style="display:flex;gap:6px;align-items:center;">
+          <button type="button" class="btn active" id="btn-obs-tab-scenes" role="tab" aria-selected="true">🎬 Escenas</button>
+          <button type="button" class="btn" id="btn-obs-tab-sources" role="tab" aria-selected="false">📑 Fuentes</button>
+        </div>
+        <div id="obs-scenes-head-controls" style="display:inline-flex;gap:var(--gap);align-items:center;">
+          <button type="button" class="btn" id="btn-obs-refresh">Actualizar</button>
+        </div>
+        <div id="obs-sources-head-controls" style="display:inline-flex;gap:var(--gap);align-items:center;" hidden>
+          <button type="button" class="icon-btn" id="btn-sources-refresh" title="Recargar fuentes de OBS" aria-label="Recargar fuentes de OBS"></button>
+        </div>
         <button type="button" class="icon-btn sheet-close" aria-label="Cerrar controles OBS"></button>
       </div>
       <div class="sheet-body">
-        <p class="hint" id="obs-message" role="status"></p>
-        <div class="scenes-grid" id="obs-scenes-grid"></div>
-        <select id="obs-input" aria-label="Entrada de audio de OBS" disabled></select>
-        <button type="button" class="btn" id="btn-obs-mute" aria-pressed="false" disabled>Audio de OBS sin estado confirmado</button>
-        <button type="button" class="btn" id="btn-obs-preview" aria-pressed="false">Mostrar captura OBS</button>
-        <select id="obs-interval" aria-label="Cada cuánto se renueva la captura de OBS">
-          <option value="0" selected>Solo al pulsar captura</option>
-          <option value="1000">1 s</option>
-          <option value="2000">2 s</option>
-          <option value="5000">5 s</option>
-          <option value="10000">10 s</option>
-        </select>
-        <button type="button" class="btn" id="btn-open-sources">Ver fuentes de la escena activa</button>
-        <div id="sources-section" class="groups" hidden>
-          <h3 id="sources-title">Fuentes</h3>
+        <div id="obs-scenes-view" style="display:flex;flex-direction:column;gap:var(--gap);width:100%;">
+          <p class="hint" id="obs-message" role="status"></p>
+          <div class="scenes-grid" id="obs-scenes-grid"></div>
+        </div>
+        <div id="obs-sources-view" style="display:none;flex-direction:column;gap:var(--gap);width:100%;">
           <input id="sources-filter" type="search" placeholder="Buscar fuente" aria-label="Buscar fuente" autocomplete="off">
           <p class="hint" id="sources-message" role="status"></p>
-          <div class="groups" id="sources-grid"></div>
+          <div class="sources-grid" id="sources-grid"></div>
         </div>
       </div>
     </aside>
@@ -1231,8 +1232,10 @@
       gear: '<circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
       close: '<path d="M6 6l12 12M18 6L6 18"/>',
       screenOff: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M5 6l14 9"/>',
-      // Sheet icons, taken unchanged from pizarra-plus.
       sheetObs: "<rect x=\"3\" y=\"4\" width=\"18\" height=\"13\" rx=\"2\"/><path d=\"M8 21h8M12 17v4\"/>",
+      sheetSources: "<polygon points=\"12 2 2 7 12 12 22 7 12 2\"/><polyline points=\"2 17 12 22 22 17\"/><polyline points=\"2 12 12 17 22 12\"/>",
+      volume: "<polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"/><path d=\"M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07\"/>",
+      volumeX: "<polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"/><line x1=\"23\" y1=\"9\" x2=\"17\" y2=\"15\"/><line x1=\"17\" y1=\"9\" x2=\"23\" y2=\"15\"/>",
       sheetChat: "<path d=\"M3 4h18v13H8l-5 4zM7 8h10M7 12h7\"/>",
       sheetCommands: "<path d=\"M4 6l6 6-6 6M13 18h7\"/>",
       sheetSms: "<path d=\"M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z\"/><polyline points=\"22,6 12,13 2,6\"/>",
@@ -3526,6 +3529,10 @@
         openChat('sms');
         return true;
       }
+      if (sheetId === 'sources-sheet') {
+        openObs('sources');
+        return true;
+      }
       const wasOpen = !$(sheetId).hidden;
       closeSheets();
       if (wasOpen) return false;
@@ -4125,8 +4132,9 @@
     function updateMute(muted) {
       obs.muted = muted;
       const button = $('btn-obs-mute');
+      if (!button) return;
       button.disabled = muted === null || obs.actionBusy;
-      const name = $('obs-input').value || 'entrada';
+      const name = $('obs-input')?.value || 'entrada';
       button.textContent = muted === null ? 'Audio de OBS sin estado confirmado' : (muted ? 'Activar en OBS: ' : 'Silenciar en OBS: ') + name;
       button.setAttribute('aria-pressed', String(muted === false));
     }
@@ -4149,28 +4157,27 @@
         button.addEventListener('click', async () => {
           if (obs.actionBusy) return;
           await obsAction('scene', scene);
-          if (!$('sources-section').hidden) loadSources(scene);
+          if ($('obs-sources-view') && $('obs-sources-view').style.display !== 'none') loadAllSources();
         });
         grid.appendChild(button);
       });
-      const displayActive = obs.scene === 'Alerats' ? 'Alertas' : (obs.scene || 'la escena activa');
-      $('btn-open-sources').textContent = 'Ver fuentes de ' + displayActive;
-      $('sources-title').textContent = 'Fuentes: ' + (obs.scene === 'Alerats' ? 'Alertas' : (obs.scene || 'Escena'));
     }
     async function refreshObs() {
       if (obs.stateBusy) return;
       obs.stateBusy = true;
       const input = $('obs-input');
       try {
-        let data = await obsRequest('state' + (input.value ? '?input=' + encodeURIComponent(input.value) : ''));
+        let data = await obsRequest('state' + (input && input.value ? '?input=' + encodeURIComponent(input.value) : ''));
         const inputs = Array.isArray(data.inputs) ? data.inputs : [];
-        populateSelect(input, inputs, input.value || (inputs.includes('Mic/Aux') ? 'Mic/Aux' : inputs[0]));
-        if (input.value && data.muted === null) data = await obsRequest('state?input=' + encodeURIComponent(input.value));
+        if (input) {
+          populateSelect(input, inputs, input.value || (inputs.includes('Mic/Aux') ? 'Mic/Aux' : inputs[0]));
+          if (input.value && data.muted === null) data = await obsRequest('state?input=' + encodeURIComponent(input.value));
+        }
         updateMute(data.muted);
         renderScenes(data.scenes, data.scene);
         reportObs('OBS conectado.');
       } catch (error) {
-        input.disabled = true;
+        if (input) input.disabled = true;
         updateMute(null);
         renderScenes([], '');
         reportObs(error.name === 'AbortError' ? 'OBS no responde.' : error.message, true);
@@ -4179,7 +4186,8 @@
     async function obsAction(action, name) {
       if (obs.actionBusy || !name) return;
       obs.actionBusy = true;
-      $('btn-obs-mute').disabled = true;
+      const muteBtn = $('btn-obs-mute');
+      if (muteBtn) muteBtn.disabled = true;
       try {
         await obsRequest('action', { action, name });
         await refreshObs();
@@ -4188,28 +4196,44 @@
         reportObs(error.message, true);
       } finally {
         obs.actionBusy = false;
-        $('btn-obs-mute').disabled = obs.muted === null;
+        if (muteBtn) muteBtn.disabled = obs.muted === null;
       }
     }
     // Audio sources follow their real mute state; the rest toggle visibility.
     const sourceToggleRequest = (source, scene, enabled) => (source.audio
       ? { action: 'mute', name: source.name, muted: !enabled }
-      : { action: 'toggle_source', scene, id: source.id, enabled });
+      : { action: 'toggle_source', name: source.name, instances: source.instances, scene: source.scene || scene || obs.scene, id: source.id, enabled });
     function paintSource(card, toggle, source) {
       const on = Boolean(source.enabled);
       card.className = 'source-card' + (on ? '' : ' off');
-      toggle.innerHTML = icon(on ? 'eye' : 'eyeOff');
-      toggle.setAttribute('aria-pressed', String(on));
-      toggle.setAttribute('aria-label', source.audio
-        ? (on ? 'Silenciar ' : 'Activar ') + source.name
-        : (on ? 'Ocultar ' : 'Mostrar ') + source.name);
+      if (source.audio) {
+        toggle.innerHTML = icon(on ? 'volume' : 'volumeX');
+        toggle.setAttribute('aria-pressed', String(on));
+        toggle.setAttribute('aria-label', (on ? 'Silenciar ' : 'Activar ') + source.name);
+      } else {
+        toggle.innerHTML = icon(on ? 'eye' : 'eyeOff');
+        toggle.setAttribute('aria-pressed', String(on));
+        toggle.setAttribute('aria-label', (on ? 'Ocultar ' : 'Mostrar ') + source.name);
+      }
     }
     function renderSources() {
-      const query = $('sources-filter').value.trim().toLowerCase();
+      const filterEl = $('sources-filter');
+      const query = filterEl ? filterEl.value.trim().toLowerCase() : '';
       const grid = $('sources-grid');
+      if (!grid) return;
       grid.replaceChildren();
+      const seen = new Set();
       obs.sources
-        .filter((source) => !query || source.name.toLowerCase().includes(query) || (source.type || '').toLowerCase().includes(query))
+        .filter((source) => {
+          if (!source || !source.name || seen.has(source.name)) return false;
+          seen.add(source.name);
+          if (!query) return true;
+          const scenesText = Array.isArray(source.scenes) ? source.scenes.join(' ').toLowerCase() : '';
+          return (source.name || '').toLowerCase().includes(query) ||
+            (source.type || '').toLowerCase().includes(query) ||
+            (source.scene || '').toLowerCase().includes(query) ||
+            scenesText.includes(query);
+        })
         .forEach((source) => {
           const card = document.createElement('div');
           const info = document.createElement('div');
@@ -4217,7 +4241,19 @@
           const name = document.createElement('strong');
           name.textContent = source.name;
           const type = document.createElement('small');
-          type.textContent = source.audio ? 'audio' : (source.type ? source.type.replace(/_/g, ' ') : 'fuente');
+          const typeLabel = source.audio ? 'Audio' : (source.type ? source.type.replace(/_/g, ' ') : 'Fuente');
+          const scenesCount = Array.isArray(source.scenes) ? source.scenes.length : 0;
+          let sceneLabel = '';
+          if (scenesCount > 1) {
+            sceneLabel = ' • En ' + scenesCount + ' escenas (' + source.scenes.join(', ') + ')';
+          } else if (scenesCount === 1) {
+            sceneLabel = ' • Escena: ' + source.scenes[0];
+          } else if (source.scene) {
+            sceneLabel = ' • Escena: ' + source.scene;
+          } else if (source.audio) {
+            sceneLabel = ' • Global';
+          }
+          type.textContent = typeLabel + sceneLabel;
           info.append(name, type);
           const toggle = document.createElement('button');
           toggle.type = 'button';
@@ -4232,6 +4268,9 @@
             toggle.disabled = true;
             try {
               const data = await obsRequest('action', sourceToggleRequest(source, obs.scene, next));
+              if (source.instances) {
+                source.instances.forEach((inst) => { inst.enabled = next; });
+              }
               if (source.audio) {
                 source.muted = Boolean(data.muted);
                 source.enabled = !source.muted;
@@ -4250,32 +4289,29 @@
           grid.appendChild(card);
         });
     }
-    async function loadSources(scene = obs.scene) {
+    async function loadAllSources() {
       if (obs.sourcesBusy) return;
       obs.sourcesBusy = true;
       reportSources('Cargando fuentes de OBS…');
       try {
-        const target = scene || obs.scene;
-        const data = await obsRequest('sources' + (target ? '?scene=' + encodeURIComponent(target) : ''));
+        const data = await obsRequest('sources?all=1');
         obs.sources = Array.isArray(data.sources) ? data.sources : [];
-        if (target) {
-          obs.scene = target;
-          $('sources-title').textContent = 'Fuentes: ' + target;
-        }
         renderSources();
-        reportSources(obs.sources.length === 0 ? 'No hay fuentes en esta escena.' : (obs.sources.length + ' fuentes encontradas.'));
+        reportSources(obs.sources.length === 0 ? 'No se encontraron fuentes en OBS.' : (obs.sources.length + ' fuentes encontradas.'));
       } catch (error) {
         obs.sources = [];
         renderSources();
         reportSources(error.message, true);
       } finally { obs.sourcesBusy = false; }
     }
+    const loadSources = loadAllSources;
     // Still capture of OBS behind the whiteboard: single images, never video.
     const obsPreview = { active: false, busy: false, timer: 0 };
     function scheduleObsCapture() {
       clearTimeout(obsPreview.timer);
       obsPreview.timer = 0;
-      const interval = Number($('obs-interval').value);
+      const intervalEl = $('obs-interval');
+      const interval = intervalEl ? Number(intervalEl.value) : 0;
       if (obsPreview.active && !document.hidden && interval > 0) obsPreview.timer = setTimeout(captureObs, interval);
     }
     async function captureObs() {
@@ -4309,21 +4345,59 @@
       if (visible) captureObs(); else $('obs-preview-bg').removeAttribute('src');
     }
 
+    function selectObsTab(tab = 'scenes') {
+      const isScenes = tab === 'scenes';
+      const btnScenes = $('btn-obs-tab-scenes');
+      const btnSources = $('btn-obs-tab-sources');
+      if (btnScenes) {
+        btnScenes.setAttribute('aria-selected', String(isScenes));
+        btnScenes.classList.toggle('active', isScenes);
+      }
+      if (btnSources) {
+        btnSources.setAttribute('aria-selected', String(!isScenes));
+        btnSources.classList.toggle('active', !isScenes);
+      }
+      const scenesControls = $('obs-scenes-head-controls');
+      const sourcesControls = $('obs-sources-head-controls');
+      if (scenesControls) scenesControls.hidden = !isScenes;
+      if (sourcesControls) sourcesControls.hidden = isScenes;
+
+      const scenesView = $('obs-scenes-view');
+      const sourcesView = $('obs-sources-view');
+      if (scenesView) scenesView.style.display = isScenes ? 'flex' : 'none';
+      if (sourcesView) {
+        sourcesView.style.display = isScenes ? 'none' : 'flex';
+        if (!isScenes) loadAllSources();
+      }
+    }
+    function openObs(initialTab = 'scenes') {
+      if (!openSheet('obs-sheet')) return false;
+      selectObsTab(initialTab);
+      if (initialTab === 'scenes') refreshObs();
+      else loadAllSources();
+      return true;
+    }
+
     function initObs() {
-      $('btn-obs-preview').addEventListener('click', () => setObsPreview(!obsPreview.active));
-      $('obs-interval').addEventListener('change', scheduleObsCapture);
+      $('btn-obs-preview')?.addEventListener('click', () => setObsPreview(!obsPreview.active));
+      $('obs-interval')?.addEventListener('change', scheduleObsCapture);
       document.addEventListener('visibilitychange', () => { if (!document.hidden && obsPreview.active) captureObs(); });
       $('btn-obs-menu').innerHTML = icon('sheetObs');
       $('btn-obs-menu').addEventListener('click', () => {
-        if (openSheet('obs-sheet')) refreshObs();
+        if ($('obs-sheet').hidden) {
+          openObs('scenes');
+        } else {
+          closeSheets();
+        }
       });
       $('btn-obs-refresh').addEventListener('click', refreshObs);
-      $('obs-input').addEventListener('change', refreshObs);
-      $('btn-obs-mute').addEventListener('click', () => obsAction('mute', $('obs-input').value));
-      $('btn-open-sources').addEventListener('click', () => {
-        $('sources-section').hidden = false;
-        loadSources(obs.scene);
-      });
+      $('obs-input')?.addEventListener('change', refreshObs);
+      $('btn-obs-mute')?.addEventListener('click', () => obsAction('mute', $('obs-input')?.value));
+      // Pestañas superiores de OBS (Escenas y Fuentes)
+      $('btn-obs-tab-scenes')?.addEventListener('click', () => selectObsTab('scenes'));
+      $('btn-obs-tab-sources')?.addEventListener('click', () => selectObsTab('sources'));
+      $('btn-sources-refresh').innerHTML = icon('refresh');
+      $('btn-sources-refresh').addEventListener('click', loadAllSources);
       $('sources-filter').addEventListener('input', renderSources);
     }
 

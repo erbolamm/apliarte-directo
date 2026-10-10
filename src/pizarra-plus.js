@@ -132,7 +132,19 @@ function createPizarraPlus({ enabled = false, authorize, trustedOrigin, root, cr
             reply(res, 200, { ok: true, input: body.name, muted: Boolean(mute.inputMuted) });
           }
         } else {
-          if (typeof body.id !== 'number' || typeof body.enabled !== 'boolean') {
+          if (typeof body.enabled !== 'boolean') {
+            reply(res, 400, { error: 'invalid-action' }); return true;
+          }
+          if (Array.isArray(body.instances) && body.instances.length > 0) {
+            await Promise.all(body.instances.map(inst => client.enviarPeticion('SetSceneItemEnabled', {
+              sceneName: inst.scene,
+              sceneItemId: inst.id,
+              sceneItemEnabled: body.enabled,
+            }).catch(() => null)));
+            reply(res, 200, { ok: true, instances: body.instances, enabled: body.enabled });
+            return true;
+          }
+          if (typeof body.id !== 'number') {
             reply(res, 400, { error: 'invalid-action' }); return true;
           }
           const state = await client.obtenerEscenas();
@@ -147,22 +159,86 @@ function createPizarraPlus({ enabled = false, authorize, trustedOrigin, root, cr
       } else if (pathname === '/api/pizarra-plus/obs/sources' && req.method === 'GET') {
         const client = await obs();
         const state = await client.obtenerEscenas();
-        const requestedScene = url.searchParams.get('scene') || state.currentProgramSceneName;
-        const [items, inputList] = await Promise.all([
-          client.enviarPeticion('GetSceneItemList', { sceneName: requestedScene }).catch(() => ({ sceneItems: [] })),
-          client.enviarPeticion('GetInputList').catch(() => ({ inputs: [] })),
-        ]);
-        const audioInputs = new Set((inputList.inputs || [])
-          .filter(i => AUDIO_INPUT_KIND.test(i.unversionedInputKind || i.inputKind || ''))
-          .map(i => i.inputName));
-        const sources = await Promise.all((items.sceneItems || []).map(async i => {
-          const mute = audioInputs.has(i.sourceName) ? await client.obtenerMute(i.sourceName).catch(() => null) : null;
-          const source = { id: i.sceneItemId, name: i.sourceName, enabled: Boolean(i.sceneItemEnabled), type: i.sourceType || '', audio: Boolean(mute) };
-          // For audio the eye mirrors the real mute state, not the scene item visibility.
-          if (mute) { source.muted = Boolean(mute.inputMuted); source.enabled = !source.muted; }
-          return source;
-        }));
-        reply(res, 200, { ok: true, scene: requestedScene, sources });
+        const all = url.searchParams.get('all') === '1' || url.searchParams.get('all') === 'true' || url.searchParams.get('scene') === 'all';
+        if (all) {
+          const scenes = (state.scenes || []).map(s => s.sceneName);
+          const [inputList, ...sceneItemsList] = await Promise.all([
+            client.enviarPeticion('GetInputList').catch(() => ({ inputs: [] })),
+            ...scenes.map(sceneName => client.enviarPeticion('GetSceneItemList', { sceneName }).catch(() => ({ sceneItems: [] }))),
+          ]);
+          const audioInputs = new Set((inputList.inputs || [])
+            .filter(i => AUDIO_INPUT_KIND.test(i.unversionedInputKind || i.inputKind || ''))
+            .map(i => i.inputName));
+          const sourcesMap = new Map();
+          for (let idx = 0; idx < scenes.length; idx++) {
+            const sceneName = scenes[idx];
+            const items = sceneItemsList[idx]?.sceneItems || [];
+            for (const i of items) {
+              const name = i.sourceName;
+              if (!sourcesMap.has(name)) {
+                const isAudio = audioInputs.has(name);
+                const mute = isAudio ? await client.obtenerMute(name).catch(() => null) : null;
+                const source = {
+                  id: i.sceneItemId,
+                  name,
+                  scene: sceneName,
+                  scenes: [sceneName],
+                  instances: [{ scene: sceneName, id: i.sceneItemId, enabled: Boolean(i.sceneItemEnabled) }],
+                  enabled: Boolean(i.sceneItemEnabled),
+                  type: i.sourceType || '',
+                  audio: Boolean(mute),
+                };
+                if (mute) {
+                  source.muted = Boolean(mute.inputMuted);
+                  source.enabled = !source.muted;
+                }
+                sourcesMap.set(name, source);
+              } else {
+                const existing = sourcesMap.get(name);
+                if (!existing.scenes.includes(sceneName)) existing.scenes.push(sceneName);
+                existing.instances.push({ scene: sceneName, id: i.sceneItemId, enabled: Boolean(i.sceneItemEnabled) });
+                if (Boolean(i.sceneItemEnabled) && !existing.audio) {
+                  existing.enabled = true;
+                }
+              }
+            }
+          }
+          for (const input of (inputList.inputs || [])) {
+            if (audioInputs.has(input.inputName) && !sourcesMap.has(input.inputName)) {
+              const mute = await client.obtenerMute(input.inputName).catch(() => null);
+              sourcesMap.set(input.inputName, {
+                id: null,
+                name: input.inputName,
+                scene: null,
+                scenes: [],
+                instances: [],
+                enabled: mute ? !mute.inputMuted : true,
+                muted: mute ? Boolean(mute.inputMuted) : false,
+                type: input.unversionedInputKind || input.inputKind || 'audio',
+                audio: true,
+              });
+            }
+          }
+          const sources = Array.from(sourcesMap.values());
+          reply(res, 200, { ok: true, all: true, scenes, currentScene: state.currentProgramSceneName, sources });
+        } else {
+          const requestedScene = url.searchParams.get('scene') || state.currentProgramSceneName;
+          const [items, inputList] = await Promise.all([
+            client.enviarPeticion('GetSceneItemList', { sceneName: requestedScene }).catch(() => ({ sceneItems: [] })),
+            client.enviarPeticion('GetInputList').catch(() => ({ inputs: [] })),
+          ]);
+          const audioInputs = new Set((inputList.inputs || [])
+            .filter(i => AUDIO_INPUT_KIND.test(i.unversionedInputKind || i.inputKind || ''))
+            .map(i => i.inputName));
+          const sources = await Promise.all((items.sceneItems || []).map(async i => {
+            const mute = audioInputs.has(i.sourceName) ? await client.obtenerMute(i.sourceName).catch(() => null) : null;
+            const source = { id: i.sceneItemId, name: i.sourceName, scene: requestedScene, enabled: Boolean(i.sceneItemEnabled), type: i.sourceType || '', audio: Boolean(mute) };
+            // For audio the eye mirrors the real mute state, not the scene item visibility.
+            if (mute) { source.muted = Boolean(mute.inputMuted); source.enabled = !source.muted; }
+            return source;
+          }));
+          reply(res, 200, { ok: true, scene: requestedScene, sources });
+        }
       } else if (pathname === '/api/pizarra-plus/obs/state' && req.method === 'GET') {
         const client = await obs();
         const [state, inputs] = await Promise.all([client.obtenerEscenas(), client.enviarPeticion('GetInputList')]);
