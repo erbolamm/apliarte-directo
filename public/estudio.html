@@ -578,6 +578,74 @@
       display: none;
     }
 
+    /* En reposo, si hay una hoja (sheet) abierta (Chat, Comandos, OBS, Ajustes),
+       la barra de herramientas se acopla abajo con botones compactos (42px)
+       exactamente igual que con la pizarra activa, dejando el contenido de la hoja
+       completamente visible y sin botones flotando en el medio. */
+    #view-studio.board-at-rest:has(.sheet:not([hidden])) .toolbar,
+    #view-studio.board-at-rest.has-sheet-open .toolbar,
+    body:has(#settings-sheet:not([hidden])) #view-studio.board-at-rest .toolbar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 25;
+      display: flex;
+      flex-wrap: nowrap;
+      width: 100%;
+      max-width: 100%;
+      flex: none;
+      margin: 0;
+      justify-content: space-between;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 6px;
+      padding-bottom: max(4px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line);
+      background: var(--surface);
+    }
+    #view-studio.board-at-rest:has(.sheet:not([hidden])) .toolbar .icon-btn,
+    #view-studio.board-at-rest.has-sheet-open .toolbar .icon-btn,
+    body:has(#settings-sheet:not([hidden])) #view-studio.board-at-rest .toolbar .icon-btn {
+      flex: 1 1 0;
+      min-width: 0;
+      max-width: 52px;
+      height: 42px;
+      min-height: 42px;
+      padding: 0;
+      border-radius: 8px;
+      font-size: 1.25rem;
+      box-shadow: inset 0 -4px 0 var(--edge);
+      transform: none;
+    }
+    #view-studio.board-at-rest:has(.sheet:not([hidden])) .toolbar .icon-btn:hover,
+    #view-studio.board-at-rest.has-sheet-open .toolbar .icon-btn:hover,
+    body:has(#settings-sheet:not([hidden])) #view-studio.board-at-rest .toolbar .icon-btn:hover {
+      transform: none;
+      box-shadow: inset 0 -4px 0 var(--edge);
+    }
+    #view-studio.board-at-rest:has(.sheet:not([hidden])) .toolbar .icon-btn:active,
+    #view-studio.board-at-rest:has(.sheet:not([hidden])) .toolbar .icon-btn[aria-pressed="true"],
+    #view-studio.board-at-rest:has(.sheet:not([hidden])) .toolbar .icon-btn[aria-expanded="true"],
+    #view-studio.board-at-rest.has-sheet-open .toolbar .icon-btn:active,
+    #view-studio.board-at-rest.has-sheet-open .toolbar .icon-btn[aria-pressed="true"],
+    #view-studio.board-at-rest.has-sheet-open .toolbar .icon-btn[aria-expanded="true"],
+    body:has(#settings-sheet:not([hidden])) #view-studio.board-at-rest .toolbar .icon-btn:active,
+    body:has(#settings-sheet:not([hidden])) #view-studio.board-at-rest .toolbar .icon-btn[aria-pressed="true"],
+    body:has(#settings-sheet:not([hidden])) #view-studio.board-at-rest .toolbar .icon-btn[aria-expanded="true"] {
+      box-shadow: inset 0 -3px 0 var(--edge);
+      transform: translateY(2px);
+    }
+    #view-studio.board-at-rest:has(.sheet:not([hidden])) .toolbar .toolbar-sep,
+    #view-studio.board-at-rest.has-sheet-open .toolbar .toolbar-sep,
+    body:has(#settings-sheet:not([hidden])) #view-studio.board-at-rest .toolbar .toolbar-sep {
+      display: block;
+      width: 1px;
+      height: 22px;
+      margin: 0 2px;
+      flex-shrink: 0;
+    }
+
     /* Pizarra activa: Cuadrícula integral de 3 columnas (Colores izquierda, Lienzo 16:9 centro, Herramientas/Capas derecha) */
     #view-studio.board-is-active {
       display: grid;
@@ -590,6 +658,7 @@
       height: 100dvh;
       overflow: hidden;
     }
+    #view-studio.board-is-active .app-bar,
     #view-studio.board-is-active .studio-header {
       grid-area: header;
     }
@@ -1432,19 +1501,19 @@
       <button type="button" class="icon-btn" id="text-entry-ok" aria-label="Poner el texto"></button>
       <button type="button" class="icon-btn" id="text-entry-cancel" aria-label="Cancelar el texto"></button>
     </div>
-  </div>
 
-  <!-- ═════════════ Settings: full screen sheet matching other sheets ═════════════ -->
-  <aside class="sheet settings-sheet" id="settings-sheet" aria-labelledby="settings-title" hidden>
-    <div class="sheet-head">
-      <h2 id="settings-title">Ajustes</h2>
-      <button type="button" class="icon-btn sheet-close" data-action="close-settings" aria-label="Cerrar ajustes" data-tip="Cierra los ajustes."></button>
-    </div>
-    <div class="sheet-body flush settings-body" id="settings-body">
-      <div class="settings-tabs" role="tablist" aria-orientation="vertical" id="settings-tabs"></div>
-      <div class="settings-panel" role="tabpanel" id="settings-panel" tabindex="0"></div>
-    </div>
-  </aside>
+    <!-- ═════════════ Settings: full screen sheet matching other sheets ═════════════ -->
+    <aside class="sheet settings-sheet" id="settings-sheet" aria-labelledby="settings-title" hidden>
+      <div class="sheet-head">
+        <h2 id="settings-title">Ajustes</h2>
+        <button type="button" class="icon-btn sheet-close" data-action="close-settings" aria-label="Cerrar ajustes" data-tip="Cierra los ajustes."></button>
+      </div>
+      <div class="sheet-body flush settings-body" id="settings-body">
+        <div class="settings-tabs" role="tablist" aria-orientation="vertical" id="settings-tabs"></div>
+        <div class="settings-panel" role="tabpanel" id="settings-panel" tabindex="0"></div>
+      </div>
+    </aside>
+  </div>
 
   <dialog class="confirm" id="cmd-dialog" aria-labelledby="cmd-step-title">
     <div class="confirm-body">
@@ -2977,7 +3046,7 @@
       selectTool(prefs.tool || 'pen');
       selectColor(prefs.color || '#005fa9');
       selectSize(prefs.size || 6);
-      allowTouch.checked = true;
+      allowTouch.checked = typeof prefs.touch === 'boolean' ? prefs.touch : true;
       shapeFill.checked = Boolean(prefs.fill);
       shapeDash.checked = Boolean(prefs.dash);
 
@@ -4381,6 +4450,7 @@
         const b = $(buttonId);
         if (b) b.setAttribute('aria-expanded', 'false');
       });
+      $('view-studio')?.classList.remove('has-sheet-open');
     }
     // Returns true when the sheet ends up open.
     function openSheet(sheetId) {
@@ -4398,6 +4468,7 @@
       $(sheetId).hidden = false;
       const mapping = SHEETS.find(([id]) => id === sheetId);
       if (mapping && $(mapping[1])) $(mapping[1]).setAttribute('aria-expanded', 'true');
+      $('view-studio')?.classList.add('has-sheet-open');
       return true;
     }
 

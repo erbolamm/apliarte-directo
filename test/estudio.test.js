@@ -231,7 +231,7 @@ test('Estudio: Excalidraw-style floating board UI, toolbar dynamism (rest macro-
   assert.match(content, /\.board-topbar\s*\{[^}]*top:\s*12px;[^}]*left:\s*50%;[^}]*transform:\s*translateX\(-50%\);/,
     'La barra cenital debe flotar centrada arriba');
   assert.match(content, /#view-studio\.board-is-active\s+\.board-topbar\s*\{\s*display:\s*flex;/, 'La barra cenital solo se ve con la pizarra activa');
-  ['select', 'pen', 'highlighter', 'line', 'arrow', 'arrow2', 'rect', 'ellipse', 'text', 'eraser'].forEach((tool) => {
+  ['select', 'pen', 'highlighter', 'line', 'arrow', 'arrow2', 'rect', 'ellipse', 'diamond', 'star', 'cloud', 'bubble', 'text', 'eraser'].forEach((tool) => {
     assert.match(content, new RegExp(`\\["${tool}",`), `BOARD_TOOLS debe incluir ${tool}`);
   });
 
@@ -259,6 +259,15 @@ test('Estudio: Excalidraw-style floating board UI, toolbar dynamism (rest macro-
   assert.match(content, /#view-studio\.board-is-active\s+\.toolbar\s*\{[^}]*width:\s*100%/, 'La toolbar activa debe ocupar el 100% estilo fitted');
   assert.match(content, /studioView\.classList\.toggle\('board-is-active',\s*board\.active\)/, 'setBoardActive debe conmutar board-is-active');
   assert.match(content, /studioView\.classList\.toggle\('board-at-rest',\s*!board\.active\)/, 'setBoardActive debe conmutar board-at-rest');
+  // 3.1. En reposo con hoja abierta: toolbar acoplada inferior para no tapar el contenido
+  assert.match(content, /#view-studio\.board-at-rest:has\(\.sheet:not\(\[hidden\]\)\)\s+\.toolbar/,
+    'Debe existir regla para acoplar toolbar abajo en reposo si hay una hoja abierta');
+  assert.match(content, /#view-studio\.board-at-rest\.has-sheet-open\s+\.toolbar/,
+    'Debe existir selector has-sheet-open de respaldo');
+  assert.match(content, /\$\('view-studio'\)\?\.classList\.add\('has-sheet-open'\)/,
+    'openSheet debe activar has-sheet-open');
+  assert.match(content, /\$\('view-studio'\)\?\.classList\.remove\('has-sheet-open'\)/,
+    'closeSheets debe retirar has-sheet-open');
 
   // 4. Capas móviles estilo Excalidraw en lateral derecho
   assert.match(content, /<aside class="layers-panel" id="layers-panel"/, 'El panel de capas #layers-panel debe existir');

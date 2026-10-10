@@ -107,13 +107,38 @@ function createGameHub({ randomIndex = randomInt, now = Date.now } = {}) {
     phase("lobby_votacion");
     return publicState();
   }
-  function startTraitor(owners) {
+  function startTraitor(owners, options = {}) {
     expire();
     if (state.fase !== "lobby_votacion") throw new Error("Traitor can start only from the lobby");
-    const entries = Object.entries(owners ?? {}).filter(([id, user]) =>
+    let entries = Object.entries(owners ?? {}).filter(([id, user]) =>
       id !== "ja" && /^[a-z]{2}$/.test(id) && typeof user === "string" && /^[a-zA-Z0-9_]{1,25}$/.test(user));
-    const uniqueUsers = new Set(entries.map(([, user]) => user.toLowerCase()));
-    if (entries.length < 3 || uniqueUsers.size !== entries.length) throw new Error("At least three distinct adopted avatars are required");
+    const seenUsers = new Set();
+    const distinctEntries = [];
+    for (const [id, user] of entries) {
+      const u = user.toLowerCase();
+      if (!seenUsers.has(u)) {
+        seenUsers.add(u);
+        distinctEntries.push([id, user]);
+      }
+    }
+    if (options && options.allowBots) {
+      entries = distinctEntries;
+      if (entries.length < 3) {
+        const existingIds = new Set(entries.map(([id]) => id));
+        const allAgentIds = ['cl', 'co', 'pi', 'ge', 'gr', 'op', 'om', 'ex', 'be'];
+        const agentNames = { cl: 'Claude', co: 'Codex', pi: 'Pi', ge: 'Gemini', gr: 'Groq', op: 'OpenAI', om: 'Ollama', ex: 'Externo', be: 'Vigia' };
+        for (const id of allAgentIds) {
+          if (entries.length >= 3) break;
+          if (!existingIds.has(id)) {
+            entries.push([id, `Bot_${agentNames[id] || id}`]);
+            existingIds.add(id);
+          }
+        }
+      }
+    } else {
+      const uniqueUsers = new Set(entries.map(([, user]) => user.toLowerCase()));
+      if (entries.length < 3 || uniqueUsers.size !== entries.length) throw new Error("At least three distinct adopted avatars are required");
+    }
     state.players = entries.map(([id]) => id);
     state.owners = Object.fromEntries(entries);
     state.traitorId = state.players[randomIndex(state.players.length)];
@@ -149,6 +174,17 @@ function createGameHub({ randomIndex = randomInt, now = Date.now } = {}) {
   }
   function resolveExpulsion() {
     if (state.fase !== "traidor_expulsion") throw new Error("Expulsion is not open");
+    const aliveIndices = state.players.map((_, i) => String(i + 1));
+    const aliveBots = state.players.filter(p => String(state.owners[p] || '').startsWith('Bot_'));
+    for (const bp of aliveBots) {
+      const key = (state.owners[bp] || bp).toLowerCase();
+      if (!state.votes.has(key)) {
+        const otherAlive = aliveIndices.filter(idx => state.players[Number(idx) - 1] !== bp);
+        if (otherAlive.length > 0) {
+          state.votes.set(key, otherAlive[randomIndex(otherAlive.length)]);
+        }
+      }
+    }
     const tally = counts();
     const max = Math.max(0, ...Object.values(tally));
     const leaders = Object.keys(tally).filter((key) => tally[key] === max);
@@ -610,7 +646,7 @@ gameRouter.post("/iniciar-traidor", requireGamePanel, gameAction(async () => {
     signal: AbortSignal.timeout(3000), cache: "no-store",
   });
   if (!response.ok) throw new TypeError("Office avatar roster is unavailable");
-  return gameHub.startTraitor((await response.json()).duenos);
+  return gameHub.startTraitor((await response.json()).duenos, { allowBots: true });
 }));
 gameRouter.post("/probar-traidor", requireGamePanel, gameAction(() => gameHub.startMockTraitor()));
 gameRouter.post("/modo-prueba", requireGamePanel, gameAction(() => gameHub.startMockTraitor()));

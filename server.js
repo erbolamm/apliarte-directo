@@ -137,10 +137,20 @@ function createGameHub({ randomIndex = (max) => Math.floor(Math.random() * max),
     return result;
   }
   function finishVoting() {
-    const tally = counts();
     const aliveIndices = state.players
       .map((p, i) => (!state.expelledPlayers.has(p) ? String(i + 1) : null))
       .filter(Boolean);
+    const aliveBots = state.players.filter(p => !state.expelledPlayers.has(p) && String(state.owners[p] || '').startsWith('Bot_'));
+    for (const bp of aliveBots) {
+      const key = (state.owners[bp] || bp).toLowerCase();
+      if (!state.votes.has(key)) {
+        const otherAlive = aliveIndices.filter(idx => state.players[Number(idx) - 1] !== bp);
+        if (otherAlive.length > 0) {
+          state.votes.set(key, otherAlive[randomIndex(otherAlive.length)]);
+        }
+      }
+    }
+    const tally = counts();
     const max = Math.max(0, ...aliveIndices.map(k => tally[k] || 0));
     const leaders = aliveIndices.filter((key) => (tally[key] || 0) === max && max > 0);
 
@@ -227,13 +237,38 @@ function createGameHub({ randomIndex = (max) => Math.floor(Math.random() * max),
     phase('lobby_votacion');
     return publicState();
   }
-  function startTraitor(owners) {
+  function startTraitor(owners, options = {}) {
     expire();
-    const entries = Object.entries(owners ?? {}).filter(([id, user]) =>
+    let entries = Object.entries(owners ?? {}).filter(([id, user]) =>
       id !== 'ja' && /^[a-z]{2}$/.test(id) && typeof user === 'string' && user.length > 0);
-    const uniqueUsers = new Set(entries.map(([, user]) => user.toLowerCase()));
-    if (entries.length < 4 || uniqueUsers.size !== entries.length) {
-      throw new Error('Se necesitan al menos 4 avatares adoptados por distintos espectadores (o usa Modo Prueba)');
+    const seenUsers = new Set();
+    const distinctEntries = [];
+    for (const [id, user] of entries) {
+      const u = user.toLowerCase();
+      if (!seenUsers.has(u)) {
+        seenUsers.add(u);
+        distinctEntries.push([id, user]);
+      }
+    }
+    if (options && options.allowBots) {
+      entries = distinctEntries;
+      if (entries.length < 4) {
+        const existingIds = new Set(entries.map(([id]) => id));
+        const allAgentIds = ['cl', 'co', 'pi', 'ge', 'gr', 'op', 'om', 'ex', 'be'];
+        const agentNames = { cl: 'Claude', co: 'Codex', pi: 'Pi', ge: 'Gemini', gr: 'Groq', op: 'OpenAI', om: 'Ollama', ex: 'Externo', be: 'Vigía' };
+        for (const id of allAgentIds) {
+          if (entries.length >= 4) break;
+          if (!existingIds.has(id)) {
+            entries.push([id, `Bot_${agentNames[id] || id}`]);
+            existingIds.add(id);
+          }
+        }
+      }
+    } else {
+      const uniqueUsers = new Set(entries.map(([, user]) => user.toLowerCase()));
+      if (entries.length < 4 || uniqueUsers.size !== entries.length) {
+        throw new Error('Se necesitan al menos 4 avatares adoptados por distintos espectadores (o usa Modo Prueba)');
+      }
     }
     state.players = entries.map(([id]) => id);
     state.owners = Object.fromEntries(entries);
@@ -1856,8 +1891,8 @@ const server = http.createServer((req, res) => {
           const payload = body ? JSON.parse(body) : {};
           let result;
           if (sub === 'lobby') result = gameHub.lobby();
-          else if (sub === 'iniciar-traidor') result = gameHub.startTraitor(serverOwners);
-          else if (sub === 'modo-prueba') {
+          else if (sub === 'iniciar-traidor') result = gameHub.startTraitor(serverOwners, { allowBots: true });
+          else if (sub === 'modo-prueba' || sub === 'probar-traidor') {
             serverOwners = {
               'cl': 'Bot_Alpha',
               'co': 'Bot_Beta',

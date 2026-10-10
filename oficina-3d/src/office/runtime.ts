@@ -58,6 +58,7 @@ export interface ActiveGame {
   winner?: { id: AgentId; user?: string };
   winTime?: number;
   lastCountdownSec?: number;
+  bots?: AgentId[];
 }
 export const GAME_TARGET_SPOTS: Pt[] = [
   { x: 628, y: 456 },
@@ -211,6 +212,8 @@ export class OfficeRuntime {
   avatarOwners: Record<string, string> = {};
   /** The quorum guard applies once the live overlay reports its viewers; the plain office has none. */
   quorumEnforced = false;
+  /** Whether unadopted avatars act as autonomous bots in minigames (overcoming quorum limits). */
+  botsEnabled = true;
   /** !conga circuit state. Pure state machine in `./conga`. */
   congaState: CongaState = emptyCongaState('apliarte');
   /** !fiesta celebration state. Pure state machine in `./fiesta`. */
@@ -247,7 +250,19 @@ export class OfficeRuntime {
     });
   }
 
+  setBotsEnabled(enabled: boolean) {
+    this.botsEnabled = Boolean(enabled);
+    this.triggerWake();
+  }
+
+  toggleBots(): boolean {
+    this.botsEnabled = !this.botsEnabled;
+    this.triggerWake();
+    return this.botsEnabled;
+  }
+
   hasQuorum(): boolean {
+    if (this.botsEnabled) return true;
     return !this.quorumEnforced || this.adoptedViewers.length >= GAME_QUORUM;
   }
 
@@ -375,8 +390,8 @@ export class OfficeRuntime {
     return this.activeGame !== null;
   }
 
-  /** Starts the `!trofeo` race. Requires quorum of adopted viewers (Javier excluded). */
-  iniciarJuego(now: number, caller?: AgentId): { ok: boolean; reason?: string; segundosRestantes?: number; faltan?: number } {
+  /** Starts the `!trofeo` race. When botsEnabled is true, unadopted avatars join as autonomous runners. */
+  iniciarJuego(now: number, caller?: AgentId): { ok: boolean; reason?: string; segundosRestantes?: number; faltan?: number; bots?: AgentId[] } {
     if (this.hub) {
       return { ok: false, reason: 'running' };
     }
@@ -394,6 +409,17 @@ export class OfficeRuntime {
       return { ok: false, reason: 'quorum', faltan: GAME_QUORUM - this.adoptedViewers.length };
     }
 
+    let bots: AgentId[] = [];
+    if (this.botsEnabled) {
+      const unadopted = this.people
+        .filter(p => p.id !== 'ja' && !this.avatarOwners[p.id])
+        .map(p => p.id);
+      const humanCount = this.adoptedViewers.length + (caller === 'ja' ? 1 : 0);
+      const needed = Math.max(0, GAME_QUORUM - humanCount);
+      const pickCount = Math.max(needed, Math.min(unadopted.length, 3));
+      bots = unadopted.slice(0, pickCount);
+    }
+
     const target = GAME_TARGET_SPOTS[Math.floor(Math.random() * GAME_TARGET_SPOTS.length)];
     this.activeGame = {
       phase: 'countdown',
@@ -401,17 +427,19 @@ export class OfficeRuntime {
       startTime: now,
       countdownEnd: now + 5000,
       lastCountdownSec: 5,
+      bots,
     };
 
-    this.say('ja', '🏁 ¡¡ATENCIÓN!! ¡Arranca !trofeo! Objetivo marcado en el mapa 🏆. ¡Empieza en 5s...!', now);
+    const botsNotice = bots.length > 0 ? ` 🤖 (${bots.length} corredores autónomos)` : '';
+    this.say('ja', `🏁 ¡¡ATENCIÓN!! ¡Arranca !trofeo! Objetivo marcado en el mapa 🏆${botsNotice}. ¡Empieza en 5s...!`, now);
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('erbolamm:game-start', {
-        detail: { target, countdownSec: 5 }
+        detail: { target, countdownSec: 5, bots }
       }));
     }
     this.triggerWake();
-    return { ok: true };
+    return { ok: true, bots };
   }
 
   private wakeListeners = new Set<() => void>();
@@ -898,27 +926,68 @@ export class OfficeRuntime {
      if (now >= this.activeGame.countdownEnd) {
       this.activeGame.phase = 'running';
       this.say('ja', '🏁 ¡¡YA, A POR LA COPA!! 🏆 ¡El primero que llegue gana!', now);
+      if (this.activeGame.bots && this.activeGame.bots.length > 0) {
+       for (const botId of this.activeGame.bots) {
+        const p = this.people.find(person => person.id === botId);
+        if (!p) continue;
+        p.manualUntil = now + 40000;
+        p.speed = 175 + Math.floor(Math.random() * 35);
+        p.isRear = false;
+        p.pose = 'walk';
+        try {
+         p.path = navigate(p.pos, this.activeGame.target);
+        } catch (_) {
+         p.path = [p.pos, this.activeGame.target];
+        }
+        p.target = { ...this.activeGame.target };
+        p.travelled = 0;
+       }
+      }
       if (typeof window !== 'undefined') {
        window.dispatchEvent(new CustomEvent('erbolamm:game-go', {
-        detail: { target: this.activeGame.target }
+        detail: { target: this.activeGame.target, bots: this.activeGame.bots }
        }));
       }
       this.triggerWake();
      }
     } else if (this.activeGame.phase === 'running') {
      const target = this.activeGame.target;
+     if (this.activeGame.bots && this.activeGame.bots.length > 0) {
+      for (const botId of this.activeGame.bots) {
+       const p = this.people.find(person => person.id === botId);
+       if (!p || !p.manualUntil || p.manualUntil <= now) continue;
+       const dist = Math.hypot(p.pos.x - target.x, p.pos.y - target.y);
+       if (dist > 68 && (!p.path || equal(p.pos, p.target))) {
+        try {
+         p.path = navigate(p.pos, target);
+        } catch (_) {
+         p.path = [p.pos, target];
+        }
+        p.target = { ...target };
+        p.travelled = 0;
+       }
+      }
+     }
      for (const p of this.people) {
       if (!p.manualUntil || p.manualUntil <= now) continue;
       const d = Math.hypot(p.pos.x - target.x, p.pos.y - target.y);
       if (d <= 68) {
        this.activeGame.phase = 'won';
-       this.activeGame.winner = { id: p.id };
+       const isBot = Boolean(this.activeGame.bots?.includes(p.id));
+       const owner = this.avatarOwners[p.id];
+       this.activeGame.winner = { id: p.id, user: owner || (isBot ? `Bot_${p.id}` : undefined) };
        this.activeGame.winTime = now;
        p.jumping = true;
        p.path = null;
+       for (const other of this.people) {
+        if (other.id !== p.id && other.manualUntil) {
+         other.manualUntil = 0;
+         other.path = null;
+        }
+       }
        if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('erbolamm:game-won', {
-         detail: { winnerId: p.id, target }
+         detail: { winnerId: p.id, target, isBot }
         }));
        }
        this.triggerWake();
@@ -932,6 +1001,7 @@ export class OfficeRuntime {
        const wp = this.people.find(p => p.id === this.activeGame!.winner!.id);
        if (wp) {
         wp.jumping = false;
+        wp.manualUntil = 0;
        }
       }
       this.lastGameEndTime = now;
@@ -1081,6 +1151,19 @@ export class OfficeRuntime {
    case 'trofeo':
    case 'carrera':{if(this.isFrozen())return this.castLobbyVote(cmd.usuario??'',1);this.iniciarJuego(now, cmd.agente as AgentId);return true;}
    case 'traidor':{if(this.isFrozen())return this.castLobbyVote(cmd.usuario??'',2);return false;}
+   case 'bots':{
+    const arg=String(cmd.texto||'').trim().toLowerCase();
+    if(arg==='off'||arg==='no'||arg==='0'||arg==='desactivar'){
+     this.setBotsEnabled(false);
+     return this.say(this.speaker(cmd.agente),'🤖 Avatares autónomos DESACTIVADOS en juegos.',now);
+    }
+    if(arg==='on'||arg==='si'||arg==='1'||arg==='activar'){
+     this.setBotsEnabled(true);
+     return this.say(this.speaker(cmd.agente),'🤖 Avatares autónomos ACTIVADOS en juegos.',now);
+    }
+    const next=this.toggleBots();
+    return this.say(this.speaker(cmd.agente),`🤖 Avatares autónomos ${next?'ACTIVADOS':'DESACTIVADOS'} en juegos.`,now);
+   }
    default:return false;
   }
  }

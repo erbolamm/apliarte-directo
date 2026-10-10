@@ -1690,7 +1690,7 @@
   </div>
 
   <!-- Script bundle de la oficina 3D -->
-  <script src="/office-3d.js?v=b07df57cfc"></script>
+  <script src="/office-3d.js?v=f4d4d414ed"></script>
   <script src="/js/conga-musica.js?v=20261003c"></script>
   <script src="/js/fiesta-bronca-audio.js?v=20261010"></script>
 
@@ -3095,10 +3095,13 @@
     let gameTimerInterval = null;
 
     window.addEventListener('erbolamm:game-start', (e) => {
-      const { countdownSec } = e.detail || {};
+      const { countdownSec, bots } = e.detail || {};
       gameBanner.classList.remove('winner');
       gameBannerTitle.textContent = '🏁 ¡!TROFEO!';
-      gameBannerSub.textContent = 'Objetivo marcado en el mapa 🏆. ¡Mueve tu avatar con WASD!';
+      const botCount = Array.isArray(bots) ? bots.length : 0;
+      gameBannerSub.textContent = botCount > 0
+        ? `Objetivo marcado en el mapa 🏆 · ¡Mueve con WASD! (${botCount} bots compitiendo)`
+        : 'Objetivo marcado en el mapa 🏆. ¡Mueve tu avatar con WASD!';
       let rem = countdownSec || 5;
       gameBannerTimer.textContent = `${rem}s`;
       gameBanner.classList.add('visible');
@@ -3124,21 +3127,25 @@
 
     window.addEventListener('erbolamm:game-won', (e) => {
       if (gameTimerInterval) { clearInterval(gameTimerInterval); gameTimerInterval = null; }
-      const { winnerId } = e.detail || {};
+      const { winnerId, isBot } = e.detail || {};
       const owner = avatarOwners[winnerId];
       const agentObj = AGENTS_INFO.find(a => a.id === winnerId);
       const agentName = agentObj?.name || winnerId;
-      const winnerName = owner ? `@${owner} (${agentName})` : agentName;
+      const winnerName = owner ? `@${owner} (${agentName})` : (isBot ? `🤖 Bot ${agentName}` : agentName);
 
       gameBanner.classList.add('winner');
-      gameBannerTitle.textContent = '🏆 ¡¡TENEMOS GANADOR!!';
-      gameBannerSub.textContent = `¡Enhorabuena ${winnerName} por ganar el !trofeo!`;
+      gameBannerTitle.textContent = isBot ? '🤖 ¡¡GANA UN BOT AUTÓNOMO!!' : '🏆 ¡¡TENEMOS GANADOR!!';
+      gameBannerSub.textContent = isBot ? `¡El avatar autónomo ${agentName} ha ganado el !trofeo!` : `¡Enhorabuena ${winnerName} por ganar el !trofeo!`;
       gameBannerTimer.textContent = '👑';
       gameBanner.classList.add('visible');
 
       const office = window.Oficina3D;
       if (office?.runtime) {
-        office.runtime.say(winnerId, `🏆 ¡¡HE GANADO EL !TROFEO!! (${owner ? '@' + owner : agentName})`, performance.now());
+        if (isBot) {
+          office.runtime.say(winnerId, `🤖 ¡¡He ganado el !trofeo de forma autónoma!! (${agentName})`, performance.now());
+        } else {
+          office.runtime.say(winnerId, `🏆 ¡¡HE GANADO EL !TROFEO!! (${owner ? '@' + owner : agentName})`, performance.now());
+        }
         if (winnerId !== 'ja') {
           office.runtime.say('ja', `🎉 ¡Enhorabuena a ${winnerName} por la victoria!`, performance.now() + 1200);
         }
@@ -3184,7 +3191,7 @@
       syncAdoptedViewers();
       const res = office?.iniciarJuego ? office.iniciarJuego('ja') : office?.runtime?.iniciarJuego?.(performance.now(), 'ja');
       if (!res || res.ok) return;
-      if (res.reason === 'quorum') hubSay(`👥 !trofeo necesita ${HUB_QUORUM} espectadores con avatar adoptado (faltan ${res.faltan}).`);
+      if (res.reason === 'quorum') hubSay(`👥 !trofeo necesita ${HUB_QUORUM} espectadores con avatar adoptado (faltan ${res.faltan}). O activa avatares autónomos con !bots.`);
       else if (res.reason === 'cooldown') hubSay(`⏳ Enfriamiento: espera ${res.segundosRestantes}s para el próximo !trofeo.`);
       else hubSay('¡Ya hay un juego o animación en curso!');
     }
@@ -3194,7 +3201,7 @@
       const rt = window.Oficina3D?.runtime;
       if (!rt || typeof rt.openLobby !== 'function') return false;
       const raw = text.trim().toLowerCase();
-      const name = (/^!(juegos?|game|trofeo|carrera|traidor)\b/.exec(raw) || [])[1] || (cmd && ['juego', 'trofeo', 'traidor'].includes(cmd.comando) ? cmd.comando : null);
+      const name = (/^!(juegos?|game|trofeo|carrera|traidor|bots?|autonomos?)\b/.exec(raw) || [])[1] || (cmd && ['juego', 'trofeo', 'traidor', 'bots', 'autonomos'].includes(cmd.comando) ? cmd.comando : null);
       const hub = rt.hub;
       if (hub && hub.fase === 'lobby_votacion') {
         const num = /^\s*([12])\s*$/.exec(raw)?.[1];
@@ -3208,6 +3215,24 @@
       }
       if (!name) return false;
       const autorJavier = Boolean(isJavier || esJavier(user));
+      if (name === 'bots' || name === 'bot' || name === 'autonomo' || name === 'autonomos') {
+        if (!autorJavier) {
+          rt.say('ja', `🔒 @${user}, solo Javier configura los avatares autónomos.`, performance.now());
+          return true;
+        }
+        const arg = raw.replace(/^!(bots?|autonomos?)\s*/i, '').trim().toLowerCase();
+        if (arg === 'off' || arg === 'no' || arg === 'desactivar') {
+          rt.setBotsEnabled?.(false);
+          hubSay('🤖 Avatares autónomos DESACTIVADOS en minijuegos.');
+        } else if (arg === 'on' || arg === 'si' || arg === 'activar') {
+          rt.setBotsEnabled?.(true);
+          hubSay('🤖 Avatares autónomos ACTIVADOS en minijuegos.');
+        } else {
+          const next = rt.toggleBots ? rt.toggleBots() : true;
+          hubSay(`🤖 Avatares autónomos ${next ? 'ACTIVADOS' : 'DESACTIVADOS'} en minijuegos.`);
+        }
+        return true;
+      }
       if (name === 'juego' || name === 'juegos' || name === 'game') {
         if (!autorJavier) {
           rt.say('ja', `🔒 @${user}, solo Javier abre la votación de juegos.`, performance.now());
@@ -3250,6 +3275,7 @@
 
     function renderLobby(votes, secs) {
       const count = adoptedViewers().length;
+      const rt = window.Oficina3D?.runtime;
       hubCard.classList.remove('traidor');
       hubOverlay.classList.remove('compact');
       hubTitle.textContent = '🎮 ¿A QUÉ JUGAMOS?';
@@ -3259,8 +3285,13 @@
         ['1', '!trofeo', 'Carrera'],
         ['2', '!traidor', 'Misterio'],
       ].map(([n, c, label]) => `<li class="hub-option"><span>${n}. <code>${c}</code> (${label})</span><span class="hub-votes">${Number(votes?.[n]) || 0}</span></li>`).join('');
-      hubQuorum.textContent = `👥 Espectadores con avatar: ${count}/${HUB_QUORUM}`;
-      hubQuorum.classList.toggle('ok', count >= HUB_QUORUM);
+      if (rt?.botsEnabled && count < HUB_QUORUM) {
+        hubQuorum.textContent = `🤖 Relleno autónomo activo: ${count} humanos + ${HUB_QUORUM - count} bots`;
+        hubQuorum.classList.add('ok');
+      } else {
+        hubQuorum.textContent = `👥 Espectadores con avatar: ${count}/${HUB_QUORUM}`;
+        hubQuorum.classList.toggle('ok', count >= HUB_QUORUM);
+      }
       hubExpel.hidden = true;
     }
 
