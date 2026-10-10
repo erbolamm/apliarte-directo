@@ -432,26 +432,227 @@
     .toolbar-status { align-self: center; color: var(--text-muted); font-size: 0.8rem; }
     .icon-btn.active { border-color: var(--brand-strong); color: var(--brand-strong); }
     #btn-clear[aria-pressed="true"] { border-color: var(--warn); color: var(--warn); }
-    .draw-panel {
-      position: fixed;
-      left: 50%;
-      bottom: calc(var(--touch) + 2 * var(--gap) + env(safe-area-inset-bottom) + var(--gap));
-      transform: translateX(-50%);
-      z-index: 15;
-      width: min(520px, 100vw - 1rem);
-      max-height: calc(100dvh - 140px);
-      overflow: auto;
+    /* ── Dinamismo Toolbar: Reposo macro-deck centrado vs Activa fitted inferior ── */
+    #view-studio.board-at-rest .stage {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: calc(100dvh - 140px);
+    }
+    #view-studio.board-at-rest .toolbar {
+      position: static;
+      margin: auto;
+      max-width: 820px;
+      width: 95%;
+      padding: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 1.25rem;
+      background: transparent;
+      border-top: none;
+    }
+    #view-studio.board-at-rest .toolbar .icon-btn {
+      width: 68px;
+      height: 68px;
+      min-width: 68px;
+      min-height: 68px;
+      border-radius: 16px;
+      font-size: 1.6rem;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), inset 0 -4px 0 var(--edge);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    #view-studio.board-at-rest .toolbar .icon-btn:hover {
+      transform: translateY(-2px) scale(1.04);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 -4px 0 var(--edge);
+    }
+    #view-studio.board-at-rest .toolbar .toolbar-sep {
+      display: none;
+    }
+    #view-studio.board-at-rest #board-rest-note {
+      display: none;
+    }
+
+    /* Pizarra activa: barra inferior fitted elástica estilo Row + FittedBox */
+    #view-studio.board-is-active .toolbar {
+      position: relative;
+      z-index: 25;
+      display: flex;
+      flex-wrap: nowrap;
+      width: 100%;
+      justify-content: space-between;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 6px;
+      padding-bottom: max(4px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line);
+      background: var(--surface);
+    }
+    #view-studio.board-is-active .toolbar .icon-btn {
+      flex: 1 1 0;
+      min-width: 0;
+      max-width: 52px;
+      height: 42px;
+      min-height: 42px;
+      padding: 0;
+      border-radius: 8px;
+    }
+    #view-studio.board-is-active .toolbar .toolbar-sep {
+      width: 1px;
+      height: 22px;
+      margin: 0 2px;
+      flex-shrink: 0;
+    }
+
+    /* ── Tools Sheet (pantalla completa) ── */
+    .tools-sheet-body {
       display: grid;
       gap: var(--gap);
       padding: var(--gap);
+      max-width: 820px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .tools-card {
+      padding: var(--gap);
       border: 1px solid var(--line);
       border-radius: var(--radius);
+      background: var(--surface);
+      display: grid;
+      gap: 0.5rem;
+    }
+    .tools-card h3 { font-size: 0.95rem; margin: 0 0 4px; color: var(--brand-strong); }
+    .tools-actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--gap);
+    }
+
+    /* ── Layers Panel (lateral derecho estilo Excalidraw) ── */
+    .layers-panel {
+      position: fixed;
+      right: 0;
+      top: 60px;
+      bottom: calc(var(--touch) + 2 * var(--gap) + env(safe-area-inset-bottom) + 12px);
+      width: 290px;
+      max-width: 85vw;
+      background: var(--surface);
+      border-left: 1px solid var(--line);
+      border-radius: 12px 0 0 12px;
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.25);
+      z-index: 18;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+    }
+    .layers-panel.open {
+      transform: translateX(0);
+    }
+    .layers-tab-btn {
+      position: absolute;
+      left: -52px;
+      top: 16px;
+      width: 52px;
+      height: 46px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-right: none;
+      border-radius: 10px 0 0 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: -4px 2px 10px rgba(0, 0, 0, 0.15);
+      font-size: 0.9rem;
+      padding: 0;
+      color: var(--text);
+    }
+    .layers-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      background: var(--brand-strong);
+      color: #fff;
+      padding: 1px 5px;
+      border-radius: 8px;
+      margin-top: 1px;
+    }
+    .layers-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .layers-head h3 { margin: 0; font-size: 1rem; }
+    .layers-help {
+      font-size: 0.8rem;
+      padding: 6px 14px;
+      margin: 0;
+      border-bottom: 1px solid var(--line);
+      background: rgba(0, 0, 0, 0.02);
+    }
+    .layers-actions-bar {
+      display: flex;
+      gap: 4px;
+      padding: 6px 14px;
+      border-bottom: 1px solid var(--line);
       background: var(--bg);
     }
-    .draw-panel h3 { font-size: 0.85rem; }
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      min-height: 28px;
+    }
+    .layers-list {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      margin: 0;
+      padding: 8px;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .layer-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--bg);
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .layer-item:hover {
+      border-color: var(--brand-strong);
+    }
+    .layer-item.selected {
+      border-color: var(--brand-strong);
+      background: rgba(0, 95, 169, 0.12);
+      font-weight: 600;
+    }
+    .layer-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      flex-shrink: 0;
+    }
+    .layer-name {
+      flex: 1 1 auto;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .draw-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
-    .draw-head { display: flex; align-items: center; gap: var(--gap); }
-    .draw-head h3 { margin-right: auto; }
     .draw-check { display: inline-flex; align-items: center; gap: 0.35rem; min-height: var(--touch); font-size: 0.85rem; }
     .draw-check input { width: 20px; height: 20px; }
     /* Swatch colours are drawing content, not interface colours. */
@@ -473,6 +674,7 @@
       border-top: 1px solid var(--line);
       background: var(--surface);
     }
+
 
     /* ── Settings: full sheet matching chat, commands, sms and obs ─────── */
     .settings-sheet .sheet-body {
@@ -631,7 +833,7 @@
   </div>
 
   <!-- ═════════════ State 2: studio shell (engine arrives in phase 3) ═════════════ -->
-  <div id="view-studio" class="studio" hidden>
+  <div id="view-studio" class="studio board-at-rest" hidden>
     <header class="app-bar">
       <div class="brand">
         <div class="brand-icon" aria-hidden="true">AD</div>
@@ -650,10 +852,27 @@
         <canvas id="drawing-canvas"></canvas>
         <canvas id="preview-canvas"></canvas>
       </div>
-      <p class="hint" id="board-rest-note">Pizarra en reposo. Actívala con el botón del lienzo.</p>
+      <!-- Panel de capas estilo Excalidraw en el lateral derecho -->
+      <aside class="layers-panel" id="layers-panel" aria-label="Capas de dibujo" hidden>
+        <button type="button" class="layers-tab-btn" id="btn-toggle-layers" aria-label="Alternar panel de capas" title="Capas de dibujo">
+          <span>📑</span>
+          <span class="layers-badge" id="layers-count-badge">0</span>
+        </button>
+        <div class="layers-head">
+          <h3>Capas</h3>
+          <button type="button" class="icon-btn" id="btn-close-layers" aria-label="Cerrar panel de capas" style="width:28px;height:28px;min-height:0;padding:0;">✕</button>
+        </div>
+        <p class="layers-help">Toca una capa para seleccionarla y arrástrala sobre el lienzo para moverla.</p>
+        <div class="layers-actions-bar" id="layers-actions-bar" hidden>
+          <button type="button" class="btn btn-sm" id="btn-layer-up" title="Traer hacia adelante">⬆ Subir</button>
+          <button type="button" class="btn btn-sm" id="btn-layer-down" title="Enviar hacia atrás">⬇ Bajar</button>
+          <button type="button" class="btn btn-sm btn-danger" id="btn-layer-delete" title="Eliminar capa">🗑</button>
+        </div>
+        <ul class="layers-list" id="layers-list"></ul>
+      </aside>
+      <p class="hint" id="board-rest-note">Pizarra en reposo. Toca el botón de dibujo para activar.</p>
     </main>
     <footer class="toolbar" id="studio-toolbar">
-      <button type="button" class="icon-btn" id="btn-toggle-board" aria-pressed="false" aria-label="Pizarra en reposo. Toca para activar" data-tip="Muestra u oculta el lienzo de dibujo."></button>
       <button type="button" class="icon-btn" id="btn-draw-menu" aria-expanded="false" aria-label="Dibujo: herramientas, colores y grosor" data-tip="Abre las herramientas, los colores y el grosor."></button>
       <button type="button" class="icon-btn" id="btn-obs-snapshot" aria-pressed="false" aria-label="Captura fija de OBS en la pizarra" data-tip="Captura la pantalla de OBS para pintar encima en la pizarra."></button>
       <span class="toolbar-sep" aria-hidden="true"></span>
@@ -674,27 +893,51 @@
       <span class="toolbar-status" id="board-status" role="status"></span>
     </footer>
 
-    <section class="draw-panel" id="draw-panel" aria-label="Dibujo" hidden>
-      <div class="draw-head">
-        <h3>Herramientas de dibujo</h3>
-        <button type="button" class="icon-btn" id="btn-draw-close" aria-label="Cerrar herramientas de dibujo"></button>
+    <!-- Herramientas de dibujo en hoja modal a pantalla completa -->
+    <aside class="sheet tools-sheet" id="tools-sheet" aria-label="Herramientas de dibujo" hidden>
+      <div class="sheet-head">
+        <h2>Herramientas de dibujo</h2>
+        <button type="button" class="btn" id="btn-deactivate-board" title="Poner pizarra en reposo">Poner en reposo</button>
+        <button type="button" class="icon-btn sheet-close" id="btn-tools-close" aria-label="Cerrar herramientas de dibujo"></button>
       </div>
-      <div class="draw-row" id="tools-group"></div>
-      <div class="draw-row">
-        <label class="draw-check"><input id="shape-fill" type="checkbox"> Relleno (rectángulo y elipse)</label>
-        <label class="draw-check"><input id="shape-dash" type="checkbox"> Línea discontinua</label>
+      <div class="sheet-body tools-sheet-body">
+        <section class="tools-card">
+          <h3>Acciones rápidas</h3>
+          <div class="tools-actions-row">
+            <button type="button" class="btn" id="btn-sheet-undo" title="Deshacer último trazo">↩ Deshacer (Atrás)</button>
+            <button type="button" class="btn" id="btn-sheet-redo" title="Rehacer último trazo">↪ Rehacer (Delante)</button>
+            <button type="button" class="btn" id="btn-sheet-obs-snapshot" title="Capturar OBS para dibujar encima">📷 Captura OBS</button>
+            <button type="button" class="btn btn-danger" id="btn-sheet-clear" title="Borrar todo">🗑 Limpiar lienzo</button>
+          </div>
+        </section>
+
+        <section class="tools-card">
+          <h3>Herramientas</h3>
+          <div class="draw-row" id="tools-group"></div>
+          <div class="draw-row" style="margin-top: 8px;">
+            <label class="draw-check"><input id="shape-fill" type="checkbox"> Relleno (rectángulo y elipse)</label>
+            <label class="draw-check"><input id="shape-dash" type="checkbox"> Línea discontinua</label>
+          </div>
+        </section>
+
+        <section class="tools-card">
+          <h3>Color</h3>
+          <div class="draw-row" id="palette-group">
+            <input id="custom-color" type="color" value="#005fa9" aria-label="Elegir cualquier color">
+          </div>
+        </section>
+
+        <section class="tools-card">
+          <h3>Grosor del trazo</h3>
+          <div class="draw-row">
+            <input id="size-range" type="range" min="1" max="40" step="1" value="6" aria-label="Grosor del trazo">
+            <output id="size-value" for="size-range">6</output>
+          </div>
+          <label class="draw-check" style="margin-top: 8px;"><input id="allow-touch" type="checkbox"> Dibujar también con el dedo</label>
+        </section>
       </div>
-      <h3>Color</h3>
-      <div class="draw-row" id="palette-group">
-        <input id="custom-color" type="color" value="#005fa9" aria-label="Elegir cualquier color">
-      </div>
-      <h3>Grosor</h3>
-      <div class="draw-row">
-        <input id="size-range" type="range" min="1" max="40" step="1" value="6" aria-label="Grosor del trazo">
-        <output id="size-value" for="size-range">6</output>
-      </div>
-      <label class="draw-check"><input id="allow-touch" type="checkbox"> Dibujar también con el dedo</label>
-    </section>
+    </aside>
+
 
     <aside class="sheet chat-sheet" id="chat-sheet" aria-label="Chat" hidden>
       <div class="sheet-head">
@@ -1568,7 +1811,6 @@
       const ctx = canvas.getContext('2d', { alpha: true });
       const previewCtx = preview.getContext('2d', { alpha: true });
       const statusText = $('board-status');
-      const drawPanel = $('draw-panel');
       const drawButton = $('btn-draw-menu');
       const sizeRange = $('size-range');
       const sizeValue = $('size-value');
@@ -1581,7 +1823,6 @@
       const pointerOwner = createPointerOwner();
       const setStatus = (text) => { statusText.textContent = text; };
 
-      $('btn-toggle-board').innerHTML = icon('boardToggle');
       drawButton.innerHTML = icon('boardDraw');
       const snapBtn = $('btn-obs-snapshot');
       if (snapBtn) {
@@ -1594,13 +1835,12 @@
       $('btn-undo').innerHTML = icon('boardUndo');
       $('btn-redo').innerHTML = icon('boardRedo');
       clearButton.innerHTML = icon('boardClear');
-      $('btn-draw-close').innerHTML = icon('close');
       $('text-entry-ok').innerHTML = icon('boardOk');
       $('text-entry-cancel').innerHTML = icon('close');
 
       if (typeof drawPizarraShape !== 'function') {
         setStatus('La pizarra no está disponible en este servidor');
-        ['btn-toggle-board', 'btn-draw-menu', 'btn-undo', 'btn-redo', 'btn-clear'].forEach((id) => { $(id).disabled = true; });
+        ['btn-draw-menu', 'btn-undo', 'btn-redo', 'btn-clear'].forEach((id) => { if ($(id)) $(id).disabled = true; });
         return;
       }
       board.ready = true;
@@ -1708,6 +1948,7 @@
         sendWs(item);
         board.redo = [];
         closeTextEntry();
+        updateLayersList();
       }
       $('text-entry-ok').addEventListener('click', commitText);
       $('text-entry-cancel').addEventListener('click', closeTextEntry);
@@ -1716,23 +1957,51 @@
         else if (event.key === 'Escape') closeTextEntry();
       });
 
-      function closeDrawPanel() {
-        if (drawPanel.hidden) return;
-        drawPanel.hidden = true;
-        drawButton.setAttribute('aria-expanded', 'false');
-      }
       drawButton.addEventListener('click', () => {
-        drawPanel.hidden = !drawPanel.hidden;
-        drawButton.setAttribute('aria-expanded', String(!drawPanel.hidden));
+        if (!board.active) {
+          setBoardActive(true);
+        }
+        openSheet('tools-sheet');
       });
-      $('btn-draw-close').addEventListener('click', closeDrawPanel);
+      $('btn-deactivate-board')?.addEventListener('click', () => {
+        setBoardActive(false);
+        closeSheets();
+      });
+      $('btn-sheet-obs-snapshot')?.addEventListener('click', () => {
+        if (!board.active && !obsPreview.active) setBoardActive(true);
+        setObsPreview(!obsPreview.active);
+      });
 
       canvas.addEventListener('pointerdown', (event) => {
         if (!socketOpen()) { setStatus('Sin conexión: espera antes de dibujar'); return; }
         if (!pointerOwner.begin(event, allowTouch.checked)) return;
-        closeDrawPanel();
+        closeSheets();
         event.preventDefault();
         canvas.setPointerCapture(event.pointerId);
+
+        const clickPos = getNormalizedPos(event);
+        const rect = canvas.getBoundingClientRect();
+        const padNormX = 16 / (rect.width || REF_WIDTH);
+        const padNormY = 16 / (rect.height || 1080);
+
+        // Si hay una capa seleccionada, comprobar si el toque cae dentro para moverla
+        if (board.selectedStrokeId) {
+          const layers = getLayers();
+          const selLayer = layers.find((l) => l.id === board.selectedStrokeId);
+          const bounds = selLayer ? getLayerBounds(selLayer) : null;
+          if (bounds &&
+              clickPos.x >= (bounds.minX - padNormX) && clickPos.x <= (bounds.maxX + padNormX) &&
+              clickPos.y >= (bounds.minY - padNormY) && clickPos.y <= (bounds.maxY + padNormY)) {
+            board.draggingLayer = true;
+            board.dragPrev = clickPos;
+            return;
+          }
+          // Toque fuera de la capa seleccionada -> deseleccionar
+          board.selectedStrokeId = null;
+          updateLayersList();
+          drawSelectionOverlay();
+        }
+
         board.drawing = true;
         if (board.tool === 'text') {
           board.drawing = false;
@@ -1740,7 +2009,7 @@
           openTextEntry(getNormalizedPos(event), event.clientX, event.clientY);
           return;
         }
-        board.start = getNormalizedPos(event);
+        board.start = clickPos;
         board.last = board.start;
         board.strokeId = newStrokeId();
         if (!SHAPE_TOOLS.includes(board.tool)) {
@@ -1757,7 +2026,23 @@
         }
       });
       canvas.addEventListener('pointermove', (event) => {
-        if (!pointerOwner.owns(event) || !board.drawing || !board.last) return;
+        if (!pointerOwner.owns(event)) return;
+        if (board.draggingLayer && board.selectedStrokeId) {
+          const currentPos = getNormalizedPos(event);
+          const dx = currentPos.x - board.dragPrev.x;
+          const dy = currentPos.y - board.dragPrev.y;
+          board.dragPrev = currentPos;
+          board.history.forEach((item) => {
+            if (item.strokeId === board.selectedStrokeId) {
+              if (item.from) { item.from.x = Math.max(0, Math.min(1, item.from.x + dx)); item.from.y = Math.max(0, Math.min(1, item.from.y + dy)); }
+              if (item.to) { item.to.x = Math.max(0, Math.min(1, item.to.x + dx)); item.to.y = Math.max(0, Math.min(1, item.to.y + dy)); }
+            }
+          });
+          redrawAll();
+          drawSelectionOverlay();
+          return;
+        }
+        if (!board.drawing || !board.last) return;
         const point = getNormalizedPos(event);
         if (SHAPE_TOOLS.includes(board.tool)) {
           wipe(previewCtx, preview);
@@ -1775,7 +2060,13 @@
         board.last = point;
       });
       function endDrawing(event) {
-        if (!pointerOwner.end(event) || !board.drawing) return;
+        if (!pointerOwner.end(event)) return;
+        if (board.draggingLayer) {
+          board.draggingLayer = false;
+          syncWholeHistoryWs();
+          return;
+        }
+        if (!board.drawing) return;
         board.drawing = false;
         wipe(previewCtx, preview);
         if (event.type !== 'pointercancel' && SHAPE_TOOLS.includes(board.tool) && board.start) {
@@ -1795,6 +2086,7 @@
         board.start = null;
         board.last = null;
         board.strokeId = null;
+        updateLayersList();
       }
       canvas.addEventListener('pointerup', endDrawing);
       canvas.addEventListener('pointercancel', endDrawing);
@@ -1874,13 +2166,16 @@
         }
         return group;
       }
-      $('btn-undo').addEventListener('click', () => {
+      function undoStroke() {
         if (board.history.length === 0) return;
         board.redo.push(popLastStroke());
+        board.selectedStrokeId = null;
         redrawAll();
+        drawSelectionOverlay();
+        updateLayersList();
         sendWs({ type: 'pizarra_undo' });
-      });
-      $('btn-redo').addEventListener('click', () => {
+      }
+      function redoStroke() {
         const group = board.redo.pop();
         if (!Array.isArray(group) || group.length === 0) return;
         group.forEach((item) => {
@@ -1888,7 +2183,12 @@
           drawItem(item, ctx);
           sendWs(item);
         });
-      });
+        updateLayersList();
+      }
+      $('btn-undo').addEventListener('click', undoStroke);
+      $('btn-sheet-undo')?.addEventListener('click', undoStroke);
+      $('btn-redo').addEventListener('click', redoStroke);
+      $('btn-sheet-redo')?.addEventListener('click', redoStroke);
 
       // Clear: a second tap within 3 s confirms, so a brush of the hand
       // never wipes the drawing during a live show.
@@ -1897,6 +2197,16 @@
         clearTimeout(board.clearTimer);
         clearButton.setAttribute('aria-pressed', 'false');
         clearButton.setAttribute('aria-label', 'Limpiar todo el dibujo');
+      }
+      function clearBoard() {
+        disarmClear();
+        wipe(ctx, canvas);
+        board.history = [];
+        board.redo = [];
+        board.selectedStrokeId = null;
+        drawSelectionOverlay();
+        updateLayersList();
+        sendWs({ type: 'pizarra_clear' });
       }
       clearButton.addEventListener('click', () => {
         const now = Date.now();
@@ -1908,11 +2218,217 @@
           board.clearTimer = setTimeout(disarmClear, 3000);
           return;
         }
-        disarmClear();
-        wipe(ctx, canvas);
-        board.history = [];
-        board.redo = [];
+        clearBoard();
+      });
+      $('btn-sheet-clear')?.addEventListener('click', clearBoard);
+
+      // ── Gestión de capas estilo Excalidraw ──
+      function getLayers() {
+        const layersMap = new Map();
+        const layersOrder = [];
+        board.history.forEach((item, index) => {
+          const id = item.strokeId || ('legacy_' + index);
+          if (!layersMap.has(id)) {
+            layersMap.set(id, {
+              id,
+              tool: item.tool || item.shape || 'pen',
+              shape: item.shape || 'stroke',
+              color: item.color || '#005fa9',
+              text: item.text || '',
+              items: []
+            });
+            layersOrder.push(id);
+          }
+          layersMap.get(id).items.push(item);
+        });
+        return layersOrder.map((id) => layersMap.get(id));
+      }
+
+      function getLayerBounds(layer) {
+        if (!layer || !layer.items.length) return null;
+        let minX = 1, minY = 1, maxX = 0, maxY = 0;
+        let hasPoints = false;
+        layer.items.forEach((item) => {
+          if (item.from) {
+            minX = Math.min(minX, item.from.x);
+            maxX = Math.max(maxX, item.from.x);
+            minY = Math.min(minY, item.from.y);
+            maxY = Math.max(maxY, item.from.y);
+            hasPoints = true;
+          }
+          if (item.to) {
+            minX = Math.min(minX, item.to.x);
+            maxX = Math.max(maxX, item.to.x);
+            minY = Math.min(minY, item.to.y);
+            maxY = Math.max(maxY, item.to.y);
+            hasPoints = true;
+          }
+        });
+        if (!hasPoints || maxX < minX || maxY < minY) return null;
+        return { minX, minY, maxX, maxY };
+      }
+
+      function drawSelectionOverlay() {
+        wipe(previewCtx, preview);
+        if (!board.selectedStrokeId) return;
+        const layers = getLayers();
+        const layer = layers.find((l) => l.id === board.selectedStrokeId);
+        if (!layer) {
+          board.selectedStrokeId = null;
+          updateLayersList();
+          return;
+        }
+        const bounds = getLayerBounds(layer);
+        if (!bounds) return;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        const pad = 8;
+        const x = bounds.minX * rect.width - pad;
+        const y = bounds.minY * rect.height - pad;
+        const w = Math.max(16, (bounds.maxX - bounds.minX) * rect.width + pad * 2);
+        const h = Math.max(16, (bounds.maxY - bounds.minY) * rect.height + pad * 2);
+
+        previewCtx.save();
+        previewCtx.strokeStyle = '#005fa9';
+        previewCtx.lineWidth = 2;
+        previewCtx.setLineDash([6, 4]);
+        previewCtx.strokeRect(x, y, w, h);
+
+        const handleSize = 6;
+        previewCtx.fillStyle = '#ffffff';
+        previewCtx.strokeStyle = '#005fa9';
+        previewCtx.setLineDash([]);
+        [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].forEach(([hx, hy]) => {
+          previewCtx.fillRect(hx - handleSize / 2, hy - handleSize / 2, handleSize, handleSize);
+          previewCtx.strokeRect(hx - handleSize / 2, hy - handleSize / 2, handleSize, handleSize);
+        });
+        previewCtx.restore();
+      }
+
+      function syncWholeHistoryWs() {
         sendWs({ type: 'pizarra_clear' });
+        board.history.forEach((item) => sendWs(item));
+      }
+
+      function updateLayersList() {
+        const list = $('layers-list');
+        const badge = $('layers-count-badge');
+        const actionsBar = $('layers-actions-bar');
+        if (!list) return;
+        const layers = getLayers();
+        if (badge) badge.textContent = String(layers.length);
+        if (actionsBar) actionsBar.hidden = !board.selectedStrokeId;
+
+        list.innerHTML = '';
+        layers.slice().reverse().forEach((layer) => {
+          const li = document.createElement('li');
+          li.className = 'layer-item' + (layer.id === board.selectedStrokeId ? ' selected' : '');
+          li.dataset.layerId = layer.id;
+
+          const dot = document.createElement('span');
+          dot.className = 'layer-dot';
+          dot.style.background = layer.color;
+
+          const name = document.createElement('span');
+          name.className = 'layer-name';
+          let label = 'Trazo';
+          if (layer.shape === 'text') label = `Texto: "${layer.text || '...'}"`;
+          else if (layer.shape === 'rect') label = 'Rectángulo';
+          else if (layer.shape === 'ellipse') label = 'Elipse';
+          else if (layer.shape === 'line') label = 'Línea';
+          else if (layer.shape === 'arrow' || layer.shape === 'arrow2') label = 'Flecha';
+          else if (layer.tool === 'highlighter') label = 'Subrayador';
+          name.textContent = label;
+
+          li.appendChild(dot);
+          li.appendChild(name);
+
+          li.addEventListener('click', () => {
+            if (board.selectedStrokeId === layer.id) {
+              board.selectedStrokeId = null;
+            } else {
+              board.selectedStrokeId = layer.id;
+            }
+            updateLayersList();
+            drawSelectionOverlay();
+          });
+
+          list.appendChild(li);
+        });
+      }
+
+      $('btn-toggle-layers')?.addEventListener('click', () => {
+        $('layers-panel')?.classList.toggle('open');
+      });
+      $('btn-close-layers')?.addEventListener('click', () => {
+        $('layers-panel')?.classList.remove('open');
+      });
+
+      $('btn-layer-up')?.addEventListener('click', () => {
+        if (!board.selectedStrokeId) return;
+        const layers = getLayers();
+        const idx = layers.findIndex((l) => l.id === board.selectedStrokeId);
+        if (idx === -1 || idx >= layers.length - 1) return;
+        const selId = board.selectedStrokeId;
+        const nextId = layers[idx + 1].id;
+        const selItems = board.history.filter((i) => i.strokeId === selId);
+        const nextItems = board.history.filter((i) => i.strokeId === nextId);
+        const newHistory = [];
+        let replaced = false;
+        board.history.forEach((i) => {
+          if (i.strokeId === selId || i.strokeId === nextId) {
+            if (!replaced) {
+              newHistory.push(...nextItems, ...selItems);
+              replaced = true;
+            }
+          } else {
+            newHistory.push(i);
+          }
+        });
+        board.history = newHistory;
+        redrawAll();
+        drawSelectionOverlay();
+        updateLayersList();
+        syncWholeHistoryWs();
+      });
+
+      $('btn-layer-down')?.addEventListener('click', () => {
+        if (!board.selectedStrokeId) return;
+        const layers = getLayers();
+        const idx = layers.findIndex((l) => l.id === board.selectedStrokeId);
+        if (idx <= 0) return;
+        const selId = board.selectedStrokeId;
+        const prevId = layers[idx - 1].id;
+        const selItems = board.history.filter((i) => i.strokeId === selId);
+        const prevItems = board.history.filter((i) => i.strokeId === prevId);
+        const newHistory = [];
+        let replaced = false;
+        board.history.forEach((i) => {
+          if (i.strokeId === selId || i.strokeId === prevId) {
+            if (!replaced) {
+              newHistory.push(...selItems, ...prevItems);
+              replaced = true;
+            }
+          } else {
+            newHistory.push(i);
+          }
+        });
+        board.history = newHistory;
+        redrawAll();
+        drawSelectionOverlay();
+        updateLayersList();
+        syncWholeHistoryWs();
+      });
+
+      $('btn-layer-delete')?.addEventListener('click', () => {
+        if (!board.selectedStrokeId) return;
+        const selId = board.selectedStrokeId;
+        board.history = board.history.filter((i) => i.strokeId !== selId);
+        board.selectedStrokeId = null;
+        redrawAll();
+        drawSelectionOverlay();
+        updateLayersList();
+        syncWholeHistoryWs();
       });
 
       // Board at rest by default, as in pizarra-plus.
@@ -1920,14 +2436,26 @@
         board.active = Boolean(active);
         container.hidden = !board.active;
         $('board-rest-note').hidden = board.active;
-        const toggle = $('btn-toggle-board');
-        toggle.classList.toggle('active', board.active);
-        toggle.setAttribute('aria-pressed', String(board.active));
-        toggle.setAttribute('aria-label', board.active ? 'Pizarra activa. Toca para replegar' : 'Pizarra en reposo. Toca para activar');
-        if (!board.active) { closeDrawPanel(); closeTextEntry(); }
+        const studioView = $('view-studio');
+        if (studioView) {
+          studioView.classList.toggle('board-is-active', board.active);
+          studioView.classList.toggle('board-at-rest', !board.active);
+        }
+        const layersPanel = $('layers-panel');
+        if (layersPanel) {
+          layersPanel.hidden = !board.active;
+        }
+        drawButton.classList.toggle('active', board.active);
+        drawButton.setAttribute('aria-pressed', String(board.active));
+        if (!board.active) {
+          closeSheets();
+          closeTextEntry();
+          board.selectedStrokeId = null;
+          drawSelectionOverlay();
+          updateLayersList();
+        }
         resizeBoard();
       }
-      $('btn-toggle-board').addEventListener('click', () => setBoardActive(!board.active));
 
       function scheduleReconnect() {
         if (board.reconnectTimer) return;
@@ -1962,17 +2490,25 @@
             setStatus('');
             board.history = data.history.slice();
             redrawAll();
+            drawSelectionOverlay();
+            updateLayersList();
           } else if (data.type === 'pizarra_draw') {
             board.history.push(data);
             if (board.active) drawItem(data, ctx);
+            updateLayersList();
           } else if (data.type === 'pizarra_clear') {
             wipe(ctx, canvas);
             board.history = [];
             board.redo = [];
+            board.selectedStrokeId = null;
+            drawSelectionOverlay();
+            updateLayersList();
           } else if (data.type === 'pizarra_undo') {
             if (board.history.length > 0) {
               popLastStroke();
               redrawAll();
+              drawSelectionOverlay();
+              updateLayersList();
             }
           }
         };
@@ -2850,6 +3386,7 @@
     // ── Sheets: chat and commands ────────────────────────────────────────
     // Ported from pizarra-plus. One sheet open at a time.
     const SHEETS = [
+      ['tools-sheet', 'btn-draw-menu'],
       ['chat-sheet', 'btn-chat-view'],
       ['commands-sheet', 'btn-commands-view'],
       ['sms-sheet', 'btn-sms-view'],

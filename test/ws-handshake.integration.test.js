@@ -441,8 +441,11 @@ test('bypass fix: micro_start legitimo de publico sigue funcionando (sin crashea
   );
   assert.equal(got, true, 'admin SI debe recibir micro_start legitimo de publico');
 
+  const c1 = waitClose(publico);
+  const c2 = waitClose(admin);
   publico.close();
   admin.close();
+  await Promise.all([c1, c2]);
 });
 
 test('voz_pcm: relay al receptor, rechazo de competidor y liberacion al desconectar', async () => {

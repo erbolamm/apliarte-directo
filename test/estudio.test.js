@@ -175,3 +175,41 @@ test('Estudio: sheets are full screen with toolbar prioritized and Alerats mappe
   assert.match(content, /id="btn-settings-view"/, 'El botón de ajustes debe tener id btn-settings-view en la botonera');
 });
 
+test('Estudio: tools sheet, toolbar dynamism (rest macro-deck vs active fitted) and layers panel', () => {
+  const content = fs.readFileSync(estudioPath, 'utf8');
+
+  // 1. Herramientas de dibujo en hoja a pantalla completa (tools-sheet)
+  assert.match(content, /<aside class="sheet tools-sheet" id="tools-sheet"/, 'tools-sheet debe existir como un sheet a pantalla completa');
+  assert.match(content, /\['tools-sheet',\s*'btn-draw-menu'\]/, 'tools-sheet debe estar registrado en el array SHEETS');
+  assert.match(content, /id="btn-deactivate-board"/, 'Debe incluir botón para poner pizarra en reposo');
+  assert.match(content, /id="btn-sheet-undo"/, 'Debe incluir botón deshacer en tools-sheet');
+  assert.match(content, /id="btn-sheet-redo"/, 'Debe incluir botón rehacer en tools-sheet');
+  assert.match(content, /id="btn-sheet-obs-snapshot"/, 'Debe incluir botón captura OBS en tools-sheet');
+  assert.match(content, /id="btn-sheet-clear"/, 'Debe incluir botón limpiar en tools-sheet');
+
+  // 2. Unificación y eliminación del botón independiente btn-toggle-board
+  assert.doesNotMatch(content, /id="btn-toggle-board"/, 'btn-toggle-board debe desaparecer de la barra de herramientas');
+
+  // 3. Dinamismo de toolbar según estado de pizarra (reposo vs activa)
+  assert.match(content, /#view-studio\.board-at-rest\s+\.toolbar/, 'Debe existir regla CSS para toolbar en reposo');
+  assert.match(content, /#view-studio\.board-at-rest\s+\.toolbar\s+\.icon-btn\s*\{[^}]*68px/, 'Los botones en reposo deben ser macro-deck grandes (68px)');
+  assert.match(content, /#view-studio\.board-is-active\s+\.toolbar/, 'Debe existir regla CSS para toolbar cuando la pizarra está activa');
+  assert.match(content, /#view-studio\.board-is-active\s+\.toolbar\s*\{[^}]*width:\s*100%/, 'La toolbar activa debe ocupar el 100% estilo fitted');
+  assert.match(content, /studioView\.classList\.toggle\('board-is-active',\s*board\.active\)/, 'setBoardActive debe conmutar board-is-active');
+  assert.match(content, /studioView\.classList\.toggle\('board-at-rest',\s*!board\.active\)/, 'setBoardActive debe conmutar board-at-rest');
+
+  // 4. Capas móviles estilo Excalidraw en lateral derecho
+  assert.match(content, /<aside class="layers-panel" id="layers-panel"/, 'El panel de capas #layers-panel debe existir');
+  assert.match(content, /id="btn-toggle-layers"/, 'Debe existir botón de pestaña #btn-toggle-layers');
+  assert.match(content, /id="layers-count-badge"/, 'Debe existir badge de conteo de capas');
+  assert.match(content, /id="layers-list"/, 'Debe existir lista de capas #layers-list');
+  assert.match(content, /id="layers-actions-bar"/, 'Debe existir barra de acciones de capas');
+  assert.match(content, /id="btn-layer-up"/, 'Debe existir botón subir capa');
+  assert.match(content, /id="btn-layer-down"/, 'Debe existir botón bajar capa');
+  assert.match(content, /id="btn-layer-delete"/, 'Debe existir botón eliminar capa');
+  assert.match(content, /function getLayers\(\)/, 'Debe existir función getLayers()');
+  assert.match(content, /function updateLayersList\(\)/, 'Debe existir función updateLayersList()');
+  assert.match(content, /board\.draggingLayer/, 'Debe soportar arrastre y movimiento de capa sobre el lienzo');
+});
+
+
