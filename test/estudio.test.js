@@ -155,3 +155,23 @@ test('Cámara (local y VPS): Speech bubble for chat greetings exists and never u
     assert.doesNotMatch(content, /elTexto\.innerHTML/, `[${name}] Nunca debe usar innerHTML para el texto del saludo`);
   }
 });
+
+test('Estudio: sheets are full screen with toolbar prioritized and Alerats mapped to Alertas', () => {
+  const content = fs.readFileSync(estudioPath, 'utf8');
+
+  // Sheets are full-screen over the stage
+  assert.match(content, /\.sheet\s*\{[^}]*width:\s*100vw;/, 'Las pestañas .sheet deben ocupar el ancho completo');
+  assert.match(content, /\.sheet\s*\{[^}]*left:\s*0;/, 'Las pestañas .sheet deben alinearse a la izquierda');
+
+  // Toolbar has higher z-index to allow switching between sheets
+  assert.match(content, /\.toolbar\s*\{[^}]*z-index:\s*25;/, 'La barra de herramientas debe tener z-index prioritario');
+
+  // Alerats is mapped to Alertas in scene button rendering
+  assert.match(content, /scene === 'Alerats' \? 'Alertas' : scene/, 'La escena Alerats debe mostrarse como Alertas');
+
+  // Settings is a full-screen sheet integrated in SHEETS with bottom toolbar button
+  assert.match(content, /id="settings-sheet"/, 'Ajustes debe ser un panel sheet con id settings-sheet');
+  assert.match(content, /\['settings-sheet',\s*'btn-settings-view'\]/, 'Ajustes debe estar registrado en SHEETS para alternar con la botonera');
+  assert.match(content, /id="btn-settings-view"/, 'El botón de ajustes debe tener id btn-settings-view en la botonera');
+});
+

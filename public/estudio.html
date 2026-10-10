@@ -234,20 +234,20 @@
     .settings-panel select { min-height: var(--touch); padding: 0 var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 1rem; max-width: 100%; }
     .settings-panel input[type="range"] { flex: 1; min-width: 140px; }
     .camera-box iframe { width: 100%; height: 100%; border: 0; display: block; }
-    /* ── Side sheets: chat and commands, one open at a time ────────────── */
+    /* ── Full sheets: chat, commands, SMS, OBS (one open at a time) ───── */
     .sheet {
       position: fixed;
       top: 0;
+      left: 0;
       right: 0;
       bottom: calc(var(--touch) + 2 * var(--gap) + env(safe-area-inset-bottom));
-      z-index: 16;
-      width: min(420px, 100vw);
+      z-index: 20;
+      width: 100vw;
       max-width: 100vw;
       box-sizing: border-box;
       display: grid;
       grid-template-columns: minmax(0, 1fr);
       grid-template-rows: auto 1fr;
-      border-left: 1px solid var(--line);
       background: var(--bg);
       min-width: 0;
       overflow-x: hidden;
@@ -386,7 +386,7 @@
     }
     .sheet-head .btn[aria-pressed="true"] { border-color: var(--brand-strong); color: var(--brand-strong); }
     .favorites-bar { display: flex; flex-wrap: wrap; gap: var(--gap); padding: 0 var(--gap); }
-    .sheet-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); padding: var(--gap); border-bottom: 1px solid var(--line); }
+    .sheet-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); padding: var(--gap); padding-top: max(var(--gap), env(safe-area-inset-top)); border-bottom: 1px solid var(--line); }
     .sheet-head h2 { font-size: 1rem; margin-right: auto; }
     .sheet-body { min-height: 0; overflow: auto; padding: var(--gap); display: grid; gap: var(--gap); align-content: start; }
     .sheet-body.flush { padding: 0; }
@@ -462,6 +462,8 @@
     .text-entry { position: fixed; z-index: 35; display: flex; align-items: center; gap: 6px; padding: 6px; border: 1px solid var(--brand-strong); border-radius: var(--radius); background: var(--bg); }
     .text-entry input { min-height: var(--touch); width: min(220px, 50vw); padding: 0 var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: 1rem; }
     .toolbar {
+      position: relative;
+      z-index: 25;
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
@@ -472,27 +474,43 @@
       background: var(--surface);
     }
 
-    /* ── Settings dialog (lateral tabs, filled in phase 4) ─────────────── */
-    dialog.settings {
-      width: min(880px, 100vw - 1rem);
-      height: min(620px, 100dvh - 1rem);
+    /* ── Settings: full sheet matching chat, commands, sms and obs ─────── */
+    .settings-sheet .sheet-body {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      min-height: 0;
       padding: 0;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--bg);
-      color: var(--text);
     }
-    dialog.settings::backdrop { background: rgba(9, 13, 22, 0.6); }
-    .settings-frame { display: grid; grid-template-rows: auto 1fr; height: 100%; }
-    .settings-head { display: flex; align-items: center; gap: var(--gap); padding: var(--gap); border-bottom: 1px solid var(--line); }
-    .settings-head h2 { font-size: 1rem; margin-right: auto; }
-    .settings-body { display: grid; grid-template-columns: 200px 1fr; min-height: 0; }
-    .settings-tabs { display: flex; flex-direction: column; gap: 0.25rem; padding: var(--gap); border-right: 1px solid var(--line); background: var(--surface); overflow: auto; }
-    .settings-tab { justify-content: flex-start; text-align: left; border-color: transparent; background: transparent; font-weight: 500; }
-    .settings-tab[aria-selected="true"] { border-color: var(--brand-strong); color: var(--brand-strong); font-weight: 600; }
-    .settings-panel { padding: var(--gap); overflow: auto; display: grid; gap: var(--gap); align-content: start; }
+    .settings-tabs {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      padding: var(--gap);
+      border-right: 1px solid var(--line);
+      background: var(--surface);
+      overflow: auto;
+    }
+    .settings-tab {
+      justify-content: flex-start;
+      text-align: left;
+      border-color: transparent;
+      background: transparent;
+      font-weight: 500;
+    }
+    .settings-tab[aria-selected="true"] {
+      border-color: var(--brand-strong);
+      color: var(--brand-strong);
+      font-weight: 600;
+    }
+    .settings-panel {
+      padding: var(--gap);
+      overflow: auto;
+      display: grid;
+      gap: var(--gap);
+      align-content: start;
+    }
     @media (max-width: 640px) {
-      .settings-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      .settings-sheet .sheet-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
       .settings-tabs { flex-direction: row; border-right: 0; border-bottom: 1px solid var(--line); }
       .settings-tab { white-space: nowrap; }
     }
@@ -652,7 +670,7 @@
       <button type="button" class="icon-btn" id="btn-sms-view" aria-expanded="false" aria-label="Mensajes SMS" data-tip="Abre los mensajes SMS recibidos en directo."></button>
       <button type="button" class="icon-btn" id="btn-obs-menu" aria-expanded="false" aria-label="Controles OBS" data-tip="Abre las escenas, el audio y las fuentes de OBS."></button>
       <button type="button" class="icon-btn" id="btn-pantalla-negra" data-action="black-screen" aria-label="Pantalla negra de ahorro" data-tip="Pone la pantalla en negro para ahorrar batería sin cortar el directo. Para volver, toca tres veces seguidas o con tres dedos."></button>
-      <button type="button" class="icon-btn" data-action="open-settings" aria-label="Abrir ajustes" data-tip="Abre los ajustes del estudio."></button>
+      <button type="button" class="icon-btn" id="btn-settings-view" data-action="open-settings" aria-expanded="false" aria-label="Abrir ajustes" data-tip="Abre los ajustes del estudio."></button>
       <span class="toolbar-status" id="board-status" role="status"></span>
     </footer>
 
@@ -774,19 +792,17 @@
     </div>
   </div>
 
-  <!-- ═════════════ Settings: lateral tabs (content arrives in phase 4) ═════════════ -->
-  <dialog class="settings" id="settings-dialog" aria-labelledby="settings-title">
-    <div class="settings-frame">
-      <div class="settings-head">
-        <h2 id="settings-title">Ajustes</h2>
-        <button type="button" class="icon-btn" data-action="close-settings" aria-label="Cerrar ajustes" data-tip="Cierra los ajustes."></button>
-      </div>
-      <div class="settings-body">
-        <div class="settings-tabs" role="tablist" aria-orientation="vertical" id="settings-tabs"></div>
-        <div class="settings-panel" role="tabpanel" id="settings-panel" tabindex="0"></div>
-      </div>
+  <!-- ═════════════ Settings: full screen sheet matching other sheets ═════════════ -->
+  <aside class="sheet settings-sheet" id="settings-sheet" aria-labelledby="settings-title" hidden>
+    <div class="sheet-head">
+      <h2 id="settings-title">Ajustes</h2>
+      <button type="button" class="icon-btn sheet-close" data-action="close-settings" aria-label="Cerrar ajustes" data-tip="Cierra los ajustes."></button>
     </div>
-  </dialog>
+    <div class="sheet-body flush settings-body" id="settings-body">
+      <div class="settings-tabs" role="tablist" aria-orientation="vertical" id="settings-tabs"></div>
+      <div class="settings-panel" role="tabpanel" id="settings-panel" tabindex="0"></div>
+    </div>
+  </aside>
 
   <dialog class="confirm" id="cmd-dialog" aria-labelledby="cmd-step-title">
     <div class="confirm-body">
@@ -855,7 +871,7 @@
   (() => {
     'use strict';
 
-    const $ = (id) => document.getElementById(id);
+    const $ = (id) => document.getElementById(id === 'settings-dialog' ? 'settings-sheet' : id);
 
     // ── Icons ────────────────────────────────────────────────────────────
     const ICONS = {
@@ -2837,7 +2853,8 @@
       ['chat-sheet', 'btn-chat-view'],
       ['commands-sheet', 'btn-commands-view'],
       ['sms-sheet', 'btn-sms-view'],
-      ['obs-sheet', 'btn-obs-menu']
+      ['obs-sheet', 'btn-obs-menu'],
+      ['settings-sheet', 'btn-settings-view']
     ];
     function closeSheets() {
       SHEETS.forEach(([sheetId, buttonId]) => {
@@ -3397,7 +3414,7 @@
         button.className = 'btn scene-btn' + (active ? ' active' : '');
         button.setAttribute('aria-pressed', String(active));
         const title = document.createElement('strong');
-        title.textContent = scene;
+        title.textContent = scene === 'Alerats' ? 'Alertas' : scene;
         const sub = document.createElement('small');
         sub.textContent = active ? 'Activa en emisión' : 'Tocar para activar';
         button.append(title, sub);
@@ -3408,8 +3425,9 @@
         });
         grid.appendChild(button);
       });
-      $('btn-open-sources').textContent = 'Ver fuentes de ' + (obs.scene || 'la escena activa');
-      $('sources-title').textContent = 'Fuentes: ' + (obs.scene || 'Escena');
+      const displayActive = obs.scene === 'Alerats' ? 'Alertas' : (obs.scene || 'la escena activa');
+      $('btn-open-sources').textContent = 'Ver fuentes de ' + displayActive;
+      $('sources-title').textContent = 'Fuentes: ' + (obs.scene === 'Alerats' ? 'Alertas' : (obs.scene || 'Escena'));
     }
     async function refreshObs() {
       if (obs.stateBusy) return;
@@ -3917,7 +3935,7 @@
       guide.style.textDecoration = 'none';
       settingsRow(panel).appendChild(guide);
       settingsHeading(panel, 'Fuentes de OBS');
-      settingsButton(settingsRow(panel), 'Ver las direcciones para OBS', () => { $('settings-dialog').close(); showView('welcome'); });
+      settingsButton(settingsRow(panel), 'Ver las direcciones para OBS', () => { closeSheets(); showView('welcome'); });
       settingsHeading(panel, 'Comunidad y apoyo');
       const supportRow = settingsRow(panel);
       const kofi = document.createElement('a');
@@ -3956,7 +3974,7 @@
     settingsRenderers.credentials = (panel) => {
       settingsHeading(panel, 'Credenciales y APIs');
       settingsNote(panel, 'Las claves se editan en la pantalla de inicio, que es la misma para arrancar el estudio.');
-      settingsButton(settingsRow(panel), 'Abrir la pantalla de credenciales', () => { $('settings-dialog').close(); showView('welcome'); });
+      settingsButton(settingsRow(panel), 'Abrir la pantalla de credenciales', () => { closeSheets(); showView('welcome'); });
     };
 
     // ── Commands and lists editor ────────────────────────────────────────
@@ -4779,8 +4797,11 @@
       'copy': handleCopy,
       'toggle-theme': toggleTheme,
       'toggle-secret': (button) => setSecretVisible(button, button.getAttribute('aria-pressed') !== 'true'),
-      'open-settings': () => { commandsTabLoaded = false; stage.loaded = false; sms.loaded = false; game.loaded = false; broadcast.loaded = false; $('settings-dialog').showModal(); selectSettingsTab(SETTINGS_TABS[0].id); },
-      'close-settings': () => $('settings-dialog').close(),
+      'open-settings': () => {
+        commandsTabLoaded = false; stage.loaded = false; sms.loaded = false; game.loaded = false; broadcast.loaded = false;
+        if (openSheet('settings-sheet')) selectSettingsTab(SETTINGS_TABS[0].id);
+      },
+      'close-settings': () => closeSheets(),
       'toggle-group': (button) => {
         setGroupEnabled(button.closest('.group'), button.getAttribute('aria-checked') !== 'true');
         saveSwitches();
@@ -4802,6 +4823,12 @@
       document.querySelectorAll('[data-action="close-settings"]').forEach((button) => { button.innerHTML = icon('close'); });
       document.querySelectorAll('[data-action="black-screen"]').forEach((button) => { button.innerHTML = icon('eye'); });
       buildSettingsTabs();
+      const settingsSheet = $('settings-sheet');
+      if (settingsSheet) {
+        settingsSheet.close = closeSheets;
+        settingsSheet.showModal = () => ACTIONS['open-settings']();
+        Object.defineProperty(settingsSheet, 'open', { get: () => !settingsSheet.hidden, configurable: true });
+      }
       bindTips();
       bindBlackScreen();
       initBoard();
