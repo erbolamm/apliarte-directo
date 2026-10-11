@@ -38,6 +38,7 @@ test('Estudio: Unificación de Mensajería (Chat en vivo y Buzón SMS) en botón
   // 2. Selector de pestañas interno en la vista modal de mensajería
   assert.match(content, /id="btn-msg-tab-chat"/, 'Debe existir la pestaña [💬 Chat en Vivo]');
   assert.match(content, /id="btn-msg-tab-sms"/, 'Debe existir la pestaña [📱 Buzón SMS]');
+  assert.match(content, /id="btn-msg-tab-contexto"/, 'Debe existir la pestaña [📌 Contexto]');
   assert.match(content, /function selectMensajeriaTab\(/, 'Debe existir selectMensajeriaTab()');
 
   // 3. Contenedores de chat y sms en la misma vista
@@ -551,6 +552,179 @@ test('Estudio: Pausar polling de captura OBS cuando la pizarra entra en reposo y
   await new Promise(r => setTimeout(r, 10));
   assert.equal(obsRequestCalls, 2, 'No debe llamar captureObs si obsPreview.active es false');
 });
+
+test('Estudio: Contexto del directo integrado como 3ª pestaña en la vista modal de Mensajería', async () => {
+  const content = fs.readFileSync(estudioPath, 'utf8');
+  const toolbar = sliceBetween(content, '<footer class="toolbar" id="studio-toolbar">', '</footer>');
+
+  // 1. NO debe existir un botón extra en la toolbar inferior
+  assert.doesNotMatch(toolbar, /id="btn-contexto-view"/, 'btn-contexto-view no debe existir en la barra inferior');
+  assert.match(toolbar, /id="btn-mensajeria-view"[^>]*><\/button>\s*<button[^>]*id="btn-commands-view"/,
+    'La toolbar debe mantener el orden contiguo btn-mensajeria-view seguido de btn-commands-view');
+
+  // 2. Pestaña de Contexto en .mensajeria-tabs dentro de #chat-sheet
+  const chatSheet = sliceBetween(content, '<aside class="sheet chat-sheet" id="chat-sheet"', '</aside>');
+  assert.match(chatSheet, /id="btn-msg-tab-contexto"/, 'Debe existir la pestaña [📌 Contexto]');
+  assert.match(chatSheet, /id="contexto-head-controls"/, 'Deben existir los controles de cabecera de contexto');
+  assert.match(chatSheet, /id="btn-contexto-sheet-refresh"/, 'Debe existir el botón de refresco en la cabecera');
+
+  // 3. Contenedor de sección de contexto #contexto-view-section en #chat-body-container
+  assert.match(chatSheet, /id="chat-body-container"[\s\S]*id="contexto-view-section"/,
+    'contexto-view-section debe ubicarse dentro de #chat-body-container');
+  assert.match(chatSheet, /id="contexto-actual-texto"/, 'Debe mostrar el texto del contexto actual');
+  assert.match(chatSheet, /id="btn-contexto-quitar"/, 'Debe incluir botón para quitar contexto');
+  assert.match(chatSheet, /id="contexto-input"/, 'Debe incluir input para redactar el tema');
+  assert.match(chatSheet, /id="btn-contexto-fijar"/, 'Debe incluir botón para fijar contexto');
+  assert.match(chatSheet, /id="contextos-rapidos-grid"/, 'Debe incluir contenedor de temas rápidos');
+  assert.match(chatSheet, /!contexto/, 'Debe incluir nota de ayuda con el comando de chat');
+
+  // 4. Conexión WebSocket reactive para contexto_estado
+  assert.match(content, /data\.type\s*===\s*'contexto_estado'/, 'El listener de WebSocket debe procesar contexto_estado');
+  assert.match(content, /updateContextoDisplay\(data\.texto/, 'WebSocket debe llamar a updateContextoDisplay');
+
+  // 5. Verificación funcional de selectMensajeriaTab('contexto') y funciones asociadas
+  const selectTabMatch = content.match(/function selectMensajeriaTab\(tab = 'chat'\) \{[\s\S]*?\n    \}/);
+  const updateMatch = content.match(/function updateContextoDisplay\(texto\) \{[\s\S]*?\n    \}/);
+  const refreshMatch = content.match(/async function refreshContexto\(\) \{[\s\S]*?\n    \}/);
+  const setMatch = content.match(/async function setContextoDirecto\(texto\) \{[\s\S]*?\n    \}/);
+  const openContextoMatch = content.match(/function openContexto\(\) \{[\s\S]*?\n    \}/);
+  const initMatch = content.match(/function initContexto\(\) \{[\s\S]*?\n    \}/);
+  const presetsMatch = content.match(/const CONTEXTOS_PREDETERMINADOS = \[[\s\S]*?\];/);
+
+  assert.ok(selectTabMatch, 'selectMensajeriaTab debe estar definida');
+  assert.ok(updateMatch, 'updateContextoDisplay debe estar definida');
+  assert.ok(refreshMatch, 'refreshContexto debe estar definida');
+  assert.ok(setMatch, 'setContextoDirecto debe estar definida');
+  assert.ok(openContextoMatch, 'openContexto debe estar definida');
+  assert.ok(initMatch, 'initContexto debe estar definida');
+  assert.ok(presetsMatch, 'CONTEXTOS_PREDETERMINADOS debe estar definida');
+
+  const btnChatEl = { classList: { toggle: (cls, on) => { btnChatEl.active = on; } }, setAttribute: () => {}, active: true };
+  const btnSmsEl = { classList: { toggle: (cls, on) => { btnSmsEl.active = on; } }, setAttribute: () => {}, active: false };
+  const btnContextoEl = { classList: { toggle: (cls, on) => { btnContextoEl.active = on; } }, setAttribute: () => {}, active: false };
+
+  const chatControlsEl = { hidden: false };
+  const smsControlsEl = { hidden: true };
+  const contextoControlsEl = { hidden: true };
+
+  const chatSectionEl = { style: { display: 'flex' } };
+  const smsSectionEl = { style: { display: 'none' } };
+  const contextoSectionEl = { style: { display: 'none' } };
+
+  const labelEl = { textContent: 'Sin tema activo', style: { color: '' } };
+  const btnQuitarEl = { style: { display: 'none' }, addEventListener: () => {} };
+  const inputEl = { value: '', addEventListener: () => {} };
+  const btnFijarEl = { addEventListener: () => {} };
+  const gridChildren = [];
+  const gridEl = {
+    replaceChildren: () => { gridChildren.length = 0; },
+    appendChild: (child) => { gridChildren.push(child); }
+  };
+
+  const domElements = {
+    'btn-msg-tab-chat': btnChatEl,
+    'btn-msg-tab-sms': btnSmsEl,
+    'btn-msg-tab-contexto': btnContextoEl,
+    'chat-head-controls': chatControlsEl,
+    'sms-head-controls': smsControlsEl,
+    'contexto-head-controls': contextoControlsEl,
+    'chat-view-section': chatSectionEl,
+    'sms-view-section': smsSectionEl,
+    'contexto-view-section': contextoSectionEl,
+    'contexto-actual-texto': labelEl,
+    'btn-contexto-quitar': btnQuitarEl,
+    'contexto-input': inputEl,
+    'btn-contexto-fijar': btnFijarEl,
+    'contextos-rapidos-grid': gridEl,
+  };
+
+  let lastFetchUrl = '';
+  let lastFetchOptions = null;
+  let fakeFetchResponse = { ok: true, json: async () => ({ ok: true, contexto: 'Tema mock' }) };
+  const openChatCalls = [];
+  let toastMessage = '';
+
+  const ctx = {
+    $: (id) => domElements[id] || null,
+    document: {
+      createElement: (tag) => ({
+        tagName: tag.toUpperCase(),
+        type: '',
+        className: '',
+        style: { cssText: '' },
+        textContent: '',
+        addEventListener: () => {}
+      })
+    },
+    fetch: async (url, options) => {
+      lastFetchUrl = url;
+      lastFetchOptions = options;
+      return fakeFetchResponse;
+    },
+    openChat: (tab) => {
+      openChatCalls.push(tab);
+    },
+    sms: { loaded: true },
+    refreshSmsSheet: () => {},
+    showToast: (msg) => { toastMessage = msg; }
+  };
+
+  vm.createContext(ctx);
+  vm.runInContext(presetsMatch[0], ctx);
+  vm.runInContext(updateMatch[0], ctx);
+  vm.runInContext(refreshMatch[0], ctx);
+  vm.runInContext(setMatch[0], ctx);
+  vm.runInContext(openContextoMatch[0], ctx);
+  vm.runInContext(initMatch[0], ctx);
+  vm.runInContext(selectTabMatch[0], ctx);
+
+  // A. selectMensajeriaTab('contexto') activa controles y sección de contexto
+  vm.runInContext("selectMensajeriaTab('contexto')", ctx);
+  assert.equal(btnContextoEl.active, true, 'Pestaña contexto debe estar activa');
+  assert.equal(btnChatEl.active, false, 'Pestaña chat debe estar inactiva');
+  assert.equal(btnSmsEl.active, false, 'Pestaña sms debe estar inactiva');
+  assert.equal(contextoControlsEl.hidden, false, 'Controles cabecera contexto visibles');
+  assert.equal(chatControlsEl.hidden, true, 'Controles cabecera chat ocultos');
+  assert.equal(smsControlsEl.hidden, true, 'Controles cabecera sms ocultos');
+  assert.equal(contextoSectionEl.style.display, 'flex', 'Sección contexto debe mostrarse con display flex');
+  assert.equal(chatSectionEl.style.display, 'none', 'Sección chat debe ocultarse');
+  assert.equal(smsSectionEl.style.display, 'none', 'Sección sms debe ocultarse');
+
+  // B. openContexto delega en openChat('contexto')
+  vm.runInContext('openContexto()', ctx);
+  assert.ok(openChatCalls.includes('contexto'), 'openContexto debe invocar openChat con tab contexto');
+
+  // C. Actualizar display con texto y vaciado
+  vm.runInContext("updateContextoDisplay('Programando en vivo')", ctx);
+  assert.equal(labelEl.textContent, 'Programando en vivo');
+  assert.equal(btnQuitarEl.style.display, 'inline-block');
+
+  vm.runInContext("updateContextoDisplay('')", ctx);
+  assert.equal(labelEl.textContent, 'Sin tema activo');
+  assert.equal(btnQuitarEl.style.display, 'none');
+
+  // D. setContextoDirecto fija tema y setContextoDirecto('') lo vacía
+  inputEl.value = 'Tema probado';
+  fakeFetchResponse = { ok: true, json: async () => ({ ok: true, contexto: 'Tema probado' }) };
+  await vm.runInContext("setContextoDirecto('Tema probado')", ctx);
+  assert.equal(lastFetchUrl, '/api/directo/contexto');
+  assert.equal(lastFetchOptions.method, 'POST');
+  assert.deepEqual(JSON.parse(lastFetchOptions.body), { contexto: 'Tema probado' });
+  assert.equal(labelEl.textContent, 'Tema probado');
+  assert.ok(toastMessage.includes('Tema fijado'));
+
+  fakeFetchResponse = { ok: true, json: async () => ({ ok: true, contexto: '' }) };
+  await vm.runInContext("setContextoDirecto('')", ctx);
+  assert.equal(labelEl.textContent, 'Sin tema activo');
+  assert.equal(btnQuitarEl.style.display, 'none');
+  assert.ok(toastMessage.includes('Tema quitado'));
+
+  // E. initContexto genera los 4 botones rápidos predeterminados
+  vm.runInContext('initContexto()', ctx);
+  assert.equal(gridChildren.length, 4, 'Debe haber 4 botones de presets');
+  assert.equal(gridChildren[0].textContent, 'Charlando con la comunidad');
+});
+
 
 
 
