@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>ApliArte Directo · Clips Twitch en Bucle</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body.bg-black {
+      background: #000;
+    }
+    body.bg-transparent {
+      background: transparent !important;
+    }
+
+    #clip-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+
+    #clip-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+      background: #000;
+    }
+
+    #clip-progress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 4px;
+      width: 0%;
+      background: #9146ff;
+      box-shadow: 0 0 10px rgba(145, 70, 255, 0.85);
+      z-index: 100;
+      transition: width linear;
+      pointer-events: none;
+      display: none;
+    }
+
+    #clip-badge {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 12px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: #f8fafc;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      z-index: 100;
+      max-width: calc(100% - 48px);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .clip-icon {
+      font-size: 1.4rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .clip-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    #clip-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #f8fafc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 480px;
+    }
+
+    .clip-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: #94a3b8;
+    }
+
+    #clip-creator {
+      font-weight: 600;
+      color: #c084fc;
+    }
+
+    .clip-meta-sep {
+      opacity: 0.5;
+    }
+
+    #clip-counter {
+      font-weight: 500;
+      color: #cbd5e1;
+    }
+  </style>
+</head>
+<body class="bg-black">
+  <div id="clip-container">
+    <video id="clip-video" autoplay playsinline style="display:none; width:100%; height:100%; object-fit:contain; background:#000;"></video>
+    <iframe id="clip-frame" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen="true" frameborder="0"></iframe>
+    <div id="clip-progress"></div>
+    <div id="clip-badge">
+      <span class="clip-icon">🎬</span>
+      <div class="clip-info">
+        <div id="clip-title">Cargando clip...</div>
+        <div class="clip-meta">
+          <span id="clip-creator">apliarte</span>
+          <span class="clip-meta-sep">•</span>
+          <span id="clip-counter">1 / 1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const channel = params.get('channel') || 'apliarte';
+      let isMuted = params.get('muted') === '1';
+      const hideBadge = params.get('badge') === '0' || params.get('nobadge') === '1';
+      const isRandom = params.get('random') === '1' || params.get('aleatorio') === '1';
+      const overrideDuration = params.get('duration') ? Math.max(5, parseInt(params.get('duration'), 10)) : null;
+      const isTransparent = params.get('bg') === 'transparent';
+
+      if (isTransparent) {
+        document.body.classList.remove('bg-black');
+        document.body.classList.add('bg-transparent');
+      }
+
+      const badgeEl = document.getElementById('clip-badge');
+      if (hideBadge && badgeEl) {
+        badgeEl.classList.add('hidden');
+      }
+
+      const videoEl = document.getElementById('clip-video');
+      const frameEl = document.getElementById('clip-frame');
+      const progressEl = document.getElementById('clip-progress');
+      const titleEl = document.getElementById('clip-title');
+      const creatorEl = document.getElementById('clip-creator');
+      const counterEl = document.getElementById('clip-counter');
+      const statusEl = document.getElementById('clip-status');
+
+      // Allowed embed parents for Twitch
+      const parents = ['localhost', '127.0.0.1', 'directo.apliarte.com'];
+      if (window.location.hostname && !parents.includes(window.location.hostname)) {
+        parents.push(window.location.hostname);
+      }
+      const customParents = params.getAll('parent');
+      customParents.forEach(p => {
+        if (p && !parents.includes(p)) parents.push(p);
+      });
+
+      let clips = [];
+      let currentIndex = 0;
+      let advanceTimer = null;
+
+      function extractSlug(str) {
+        if (!str) return '';
+        const s = String(str).trim();
+        const m1 = s.match(/clips\.twitch\.tv\/([A-Za-z0-9_-]+)/i);
+        if (m1) return m1[1];
+        const m2 = s.match(/twitch\.tv\/[^/]+\/clip\/([A-Za-z0-9_-]+)/i);
+        if (m2) return m2[1];
+        return s.split('?')[0].split('#')[0].replace(/^\/+|\/+$/g, '');
+      }
+
+      const urlClip = params.get('clip');
+      const urlClipsParam = params.get('clips');
+      const urlClipsList = [];
+      if (urlClip) {
+        const slug = extractSlug(urlClip);
+        if (slug) urlClipsList.push({ id: slug, slug, title: slug, creator_name: channel, duration: 30 });
+      }
+      if (urlClipsParam) {
+        urlClipsParam.split(',').forEach(s => {
+          const slug = extractSlug(s);
+          if (slug) urlClipsList.push({ id: slug, slug, title: slug, creator_name: channel, duration: 30 });
+        });
+      }
+
+      const DEFAULT_FALLBACK_CLIPS = [
+        {
+          id: 'CharmingCogentRatGingerPower-v9xtFXrRMZvuwqOn',
+          slug: 'CharmingCogentRatGingerPower-v9xtFXrRMZvuwqOn',
+          title: '¿Has probado mi nueba app ME LLAMAN?',
+          creator_name: channel || 'apliarte',
+          duration: 39
+        },
+        {
+          id: 'GoodLachrymoseConsoleResidentSleeper-LbkeBdVcYKsy-y-n',
+          slug: 'GoodLachrymoseConsoleResidentSleeper-LbkeBdVcYKsy-y-n',
+          title: 'ya no hace falta instalar desde telegram, esta disponible en Play Store',
+          creator_name: channel || 'apliarte',
+          duration: 60
+        },
+        {
+          id: 'SweetCreativeSharkGOWSkull-KXe_K1dRAl4S3b0M',
+          slug: 'SweetCreativeSharkGOWSkull-KXe_K1dRAl4S3b0M',
+          title: 'Soy tu profesor de Dart',
+          creator_name: channel || 'apliarte',
+          duration: 30
+        }
+      ];
+
+      async function fetchClips() {
+        if (urlClipsList.length > 0) {
+          clips = isRandom ? urlClipsList.slice().sort(() => Math.random() - 0.5) : urlClipsList.slice();
+          if (statusEl) statusEl.style.display = 'none';
+          return clips;
+        }
+        try {
+          const url = `/api/directo/clips${isRandom ? '?aleatorio=1' : ''}`;
+          const res = await fetch(url, { cache: 'no-store' });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && Array.isArray(data.clips) && data.clips.length > 0) {
+              clips = isRandom ? data.clips.slice().sort(() => Math.random() - 0.5) : data.clips;
+              if (statusEl) statusEl.style.display = 'none';
+              return clips;
+            }
+          }
+        } catch (err) {
+          console.warn('[clips] Error cargando api:', err);
+        }
+        // Respaldo directo al archivo estático clips.json
+        try {
+          const resStatic = await fetch('/clips.json', { cache: 'no-store' });
+          if (resStatic.ok) {
+            const data = await resStatic.json();
+            if (data && Array.isArray(data.clips) && data.clips.length > 0) {
+              clips = isRandom ? data.clips.slice().sort(() => Math.random() - 0.5) : data.clips;
+              if (statusEl) statusEl.style.display = 'none';
+              return clips;
+            }
+          }
+        } catch (err) {
+          console.warn('[clips] Error cargando clips.json estático:', err);
+        }
+        if (!clips || clips.length === 0) {
+          clips = DEFAULT_FALLBACK_CLIPS.slice();
+          if (statusEl) statusEl.style.display = 'none';
+        }
+        return clips;
+      }
+
+      function loadClip(index) {
+        if (!clips || clips.length === 0) {
+          if (statusEl) {
+            statusEl.textContent = 'Sin clips disponibles';
+            statusEl.style.display = 'block';
+          }
+          setTimeout(() => {
+            fetchClips().then(() => {
+              if (clips.length > 0) loadClip(0);
+            });
+          }, 5000);
+          return;
+        }
+
+        clearTimeout(advanceTimer);
+
+        const safeIndex = ((index % clips.length) + clips.length) % clips.length;
+        currentIndex = safeIndex;
+        const clip = clips[safeIndex];
+        const slug = clip.slug || clip.id || extractSlug(clip.url);
+        const durationSec = overrideDuration || Math.max(5, clip.duration || 30);
+
+        // Actualizar título y metadatos si el badge está activo
+        if (badgeEl && !hideBadge) {
+          if (titleEl) titleEl.textContent = clip.title || slug;
+          if (creatorEl) creatorEl.textContent = clip.creator_name ? `por @${clip.creator_name}` : `@${channel}`;
+          if (counterEl) counterEl.textContent = `${safeIndex + 1} / ${clips.length}`;
+        }
+
+        // 1. Intentar reproducción nativa MP4 (permite sonido 100% desmuteado y sin overlay de Twitch)
+        fetch(`/api/directo/clips/mp4?slug=${encodeURIComponent(slug)}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data && data.ok && data.mp4) {
+              playMp4(data.mp4, durationSec);
+            } else {
+              playEmbed(slug, durationSec);
+            }
+          })
+          .catch(() => {
+            playEmbed(slug, durationSec);
+          });
+      }
+
+      function playMp4(url, durationSec) {
+        clearTimeout(advanceTimer);
+        if (frameEl) {
+          frameEl.style.display = 'none';
+          frameEl.src = 'about:blank';
+        }
+        if (videoEl) {
+          videoEl.style.display = 'block';
+          videoEl.src = url;
+          videoEl.muted = isMuted;
+          videoEl.play().catch(() => {
+            // Si el motor del navegador bloquea audio inicial, reproducir muteado como fallback
+            videoEl.muted = true;
+            videoEl.play().catch(() => {});
+          });
+          videoEl.onended = () => advanceClip();
+        }
+        // Timeout de seguridad si el evento ended se retrasa
+        advanceTimer = setTimeout(() => {
+          advanceClip();
+        }, (durationSec + 2) * 1000);
+      }
+
+      function playEmbed(slug, durationSec) {
+        clearTimeout(advanceTimer);
+        if (videoEl) {
+          videoEl.style.display = 'none';
+          videoEl.pause();
+          videoEl.src = '';
+        }
+        if (frameEl) {
+          frameEl.style.display = 'block';
+          const parentQuery = parents.map(p => `parent=${encodeURIComponent(p)}`).join('&');
+          const embedUrl = `https://clips.twitch.tv/embed?clip=${encodeURIComponent(slug)}&${parentQuery}&autoplay=true&muted=${isMuted ? 'true' : 'false'}`;
+          if (frameEl.src !== embedUrl) {
+            frameEl.src = embedUrl;
+          }
+        }
+        advanceTimer = setTimeout(() => {
+          advanceClip();
+        }, durationSec * 1000);
+      }
+
+      function advanceClip() {
+        clearTimeout(advanceTimer);
+        const nextIndex = (currentIndex + 1) % (clips.length || 1);
+        // Al dar la vuelta al bucle, refrescar catálogo en segundo plano
+        if (nextIndex === 0) {
+          fetchClips().catch(() => {}).finally(() => {
+            loadClip(0);
+          });
+        } else {
+          loadClip(nextIndex);
+        }
+      }
+
+      // Hotkeys: Space (next), M (toggle mute), R (reload)
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          advanceClip();
+        } else if (e.key === 'm' || e.key === 'M') {
+          e.preventDefault();
+          isMuted = !isMuted;
+          if (videoEl && videoEl.style.display !== 'none') {
+            videoEl.muted = isMuted;
+          }
+          if (frameEl && frameEl.style.display !== 'none' && frameEl.src) {
+            try {
+              const currentUrl = new URL(frameEl.src);
+              currentUrl.searchParams.set('muted', isMuted ? 'true' : 'false');
+              frameEl.src = currentUrl.toString();
+            } catch (_) {}
+          }
+        } else if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault();
+          fetchClips().then(() => loadClip(currentIndex));
+        }
+      });
+
+      // WebSocket listener for real-time clip updates
+      let ws = null;
+      function connectWs() {
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host || '127.0.0.1:7979';
+        try {
+          ws = new WebSocket(`${proto}//${host}/ws`);
+          ws.onmessage = async (event) => {
+            let raw = event.data;
+            if (raw instanceof Blob) raw = await raw.text();
+            try {
+              const data = JSON.parse(raw);
+              if (data && data.type === 'clips_actualizados') {
+                fetchClips();
+              }
+            } catch (_) {}
+          };
+          ws.onclose = () => setTimeout(connectWs, 3000);
+          ws.onerror = () => { try { ws.close(); } catch (_) {} };
+        } catch (_) {
+          setTimeout(connectWs, 5000);
+        }
+      }
+
+      // Boot
+      fetchClips().then(() => {
+        loadClip(0);
+      });
+      connectWs();
+    })();
+  </script>
+</body>
+</html>

@@ -1103,6 +1103,71 @@ let seqComandosDirecto = 0;
 const ringComandosDirecto = [];
 const directOwners = {};
 let modoCamaraDirecto = "monigote";
+// ─── Clips de Twitch para OBS (puerto 8790) ───────────────────────────
+const CLIPS_FILE = join(RAIZ, "data", "clips.json");
+const DEFAULT_CLIPS_LIST = [
+  {
+    id: "TenderSmokyPangolinRitzMitz",
+    slug: "TenderSmokyPangolinRitzMitz",
+    title: "ApliArte en Directo",
+    duration: 30,
+    creator_name: "apliarte",
+    url: "https://clips.twitch.tv/TenderSmokyPangolinRitzMitz"
+  }
+];
+
+app.get("/api/directo/clips", (req, res) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Cache-Control", "no-store");
+  try {
+    if (existsSync(CLIPS_FILE)) {
+      const data = JSON.parse(readFileSync(CLIPS_FILE, "utf8"));
+      let clips = Array.isArray(data.clips) ? data.clips.slice() : DEFAULT_CLIPS_LIST.slice();
+      if (req.query.aleatorio === "1" || req.query.random === "1") {
+        clips = clips.sort(() => Math.random() - 0.5);
+      }
+      return res.json({ ok: true, canal: data.canal || "apliarte", total: clips.length, clips });
+    }
+  } catch (_) {}
+  res.json({ ok: true, canal: "apliarte", total: DEFAULT_CLIPS_LIST.length, clips: DEFAULT_CLIPS_LIST });
+});
+
+app.post("/api/directo/clips", (req, res) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  try {
+    const parsed = req.body ?? {};
+    let data = { canal: "apliarte", clips: DEFAULT_CLIPS_LIST.slice() };
+    if (existsSync(CLIPS_FILE)) {
+      try { data = JSON.parse(readFileSync(CLIPS_FILE, "utf8")); } catch (_) {}
+    }
+    if (Array.isArray(parsed.clips)) {
+      data.clips = parsed.clips;
+    } else if (parsed.clip) {
+      const slug = String(parsed.clip).split("/").pop().split("?")[0].trim();
+      data.clips.push({ id: slug, slug, title: slug, duration: 30, creator_name: "apliarte", url: `https://clips.twitch.tv/${slug}` });
+    }
+    data.actualizado = new Date().toISOString();
+    mkdirSync(dirname(CLIPS_FILE), { recursive: true });
+    writeFileSync(CLIPS_FILE, JSON.stringify(data, null, 2), "utf8");
+    return res.json({ ok: true, total: data.clips.length, clips: data.clips });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.get("/api/directo/clips/mp4", async (req, res) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Cache-Control", "no-store");
+  const slug = req.query.slug || req.query.clip;
+  if (!slug) return res.status(400).json({ ok: false, error: "Falta slug" });
+  try {
+    const upstream = await fetch(`http://127.0.0.1:7979/api/directo/clips/mp4?slug=${encodeURIComponent(slug)}`);
+    const data = await upstream.json();
+    return res.status(upstream.status).json(data);
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
 
 app.get("/api/directo/comando", (req, res) => {
   res.header("Access-Control-Allow-Origin", "*");

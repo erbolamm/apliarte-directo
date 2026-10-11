@@ -295,6 +295,206 @@ try {
   }
 } catch (_) {}
 
+// ─── Clips de Twitch para OBS (rotación en bucle y sincronización) ─────────
+const CLIPS_FILE = pathMod.join(DATA_DIR, 'clips.json');
+
+const DEFAULT_CLIPS = [
+  {
+    id: 'FaintResoluteLouseBudBlast-t_4r01Z9q7s6-a1c',
+    slug: 'FaintResoluteLouseBudBlast-t_4r01Z9q7s6-a1c',
+    url: 'https://clips.twitch.tv/FaintResoluteLouseBudBlast-t_4r01Z9q7s6-a1c',
+    title: 'Clip de presentación de ApliArte',
+    creator_name: 'apliarte',
+    duration: 30
+  },
+  {
+    id: 'TenderAntsyCaterpillarPupper-Zc0r29-sample',
+    slug: 'TenderAntsyCaterpillarPupper-Zc0r29-sample',
+    url: 'https://clips.twitch.tv/TenderAntsyCaterpillarPupper-Zc0r29-sample',
+    title: 'Momento épico programando en directo',
+    creator_name: 'Comunidad',
+    duration: 30
+  }
+];
+
+function extractClipSlug(str) {
+  if (!str) return '';
+  const s = String(str).trim();
+  const m1 = s.match(/clips\.twitch\.tv\/([A-Za-z0-9_-]+)/i);
+  if (m1) return m1[1];
+  const m2 = s.match(/twitch\.tv\/[^/]+\/clip\/([A-Za-z0-9_-]+)/i);
+  if (m2) return m2[1];
+  return s.split('?')[0].split('#')[0].replace(/^\/+|\/+$/g, '');
+}
+
+function normalizeClip(item) {
+  if (!item) return null;
+  if (typeof item === 'string') {
+    const slug = extractClipSlug(item);
+    if (!slug) return null;
+    return {
+      id: slug,
+      slug,
+      url: `https://clips.twitch.tv/${slug}`,
+      title: slug,
+      creator_name: (typeof twitchConfig !== 'undefined' && twitchConfig.canal) || 'apliarte',
+      duration: 30
+    };
+  }
+  if (typeof item === 'object') {
+    const raw = item.slug || item.id || item.url || '';
+    const slug = extractClipSlug(raw);
+    if (!slug && !item.url) return null;
+    const finalSlug = slug || item.id || '';
+    return {
+      id: item.id || finalSlug,
+      slug: finalSlug,
+      url: item.url || (finalSlug ? `https://clips.twitch.tv/${finalSlug}` : ''),
+      title: item.title || finalSlug || 'Clip sin título',
+      creator_name: item.creator_name || item.broadcaster_name || (typeof twitchConfig !== 'undefined' && twitchConfig.canal) || 'apliarte',
+      duration: typeof item.duration === 'number' ? Math.round(item.duration) : 30
+    };
+  }
+  return null;
+}
+
+function getClipsData() {
+  try {
+    if (fs.existsSync(CLIPS_FILE)) {
+      const raw = fs.readFileSync(CLIPS_FILE, 'utf8');
+      const data = JSON.parse(raw);
+      if (data && Array.isArray(data.clips)) {
+        return {
+          canal: data.canal || (typeof twitchConfig !== 'undefined' && twitchConfig.canal) || 'apliarte',
+          clips: data.clips.map(normalizeClip).filter(Boolean)
+        };
+      }
+    }
+  } catch (err) {
+    console.error('[clips] Error leyendo clips.json:', err.message);
+  }
+  return {
+    canal: (typeof twitchConfig !== 'undefined' && twitchConfig.canal) || 'apliarte',
+    clips: DEFAULT_CLIPS.slice()
+  };
+}
+
+function saveClipsData(data) {
+  try {
+    const toSave = {
+      canal: data.canal || (typeof twitchConfig !== 'undefined' && twitchConfig.canal) || 'apliarte',
+      clips: (Array.isArray(data.clips) ? data.clips : []).map(normalizeClip).filter(Boolean),
+      actualizado_en: new Date().toISOString()
+    };
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(CLIPS_FILE, JSON.stringify(toSave, null, 2), 'utf8');
+    return toSave;
+  } catch (err) {
+    console.error('[clips] Error guardando clips.json:', err.message);
+    return null;
+  }
+}
+
+async function syncTwitchClips() {
+  const cleanToken = String(typeof twitchConfig !== 'undefined' && twitchConfig.token ? twitchConfig.token : '').replace(/^oauth:/, '').trim();
+  const current = getClipsData();
+  const canal = (typeof twitchConfig !== 'undefined' && twitchConfig.canal) || current.canal || 'apliarte';
+
+  if (!cleanToken) {
+    return { ok: false, error: 'Token de Twitch no configurado', clips: current.clips };
+  }
+
+  const clientId = 'gp762nuuoqcoxypju8c569th9wz7q5';
+  try {
+    const userRes = await fetch('https://api.twitch.tv/helix/users?login=' + encodeURIComponent(canal), {
+      headers: {
+        'Client-Id': clientId,
+        'Authorization': 'Bearer ' + cleanToken
+      }
+    });
+    if (!userRes.ok) {
+      return { ok: false, error: `Error ${userRes.status} al consultar usuario en Twitch`, clips: current.clips };
+    }
+    const userData = await userRes.json();
+    if (!userData.data || !userData.data.length) {
+      return { ok: false, error: `Usuario ${canal} no encontrado en Twitch`, clips: current.clips };
+    }
+    const broadcasterId = userData.data[0].id;
+
+    let allClips = [];
+    let cursor = null;
+    do {
+      const clipsUrl = `https://api.twitch.tv/helix/clips?broadcaster_id=${encodeURIComponent(broadcasterId)}&first=100${cursor ? `&after=${encodeURIComponent(cursor)}` : ''}`;
+      const clipsRes = await fetch(clipsUrl, {
+        headers: {
+          'Client-Id': clientId,
+          'Authorization': 'Bearer ' + cleanToken
+        }
+      });
+      if (!clipsRes.ok) break;
+      const helixData = await clipsRes.json();
+      if (!helixData.data || !helixData.data.length) break;
+      for (const item of helixData.data) {
+        allClips.push({
+          id: item.id,
+          slug: item.id,
+          url: item.url,
+          title: item.title,
+          creator_name: item.creator_name || canal,
+          duration: Math.round(item.duration || 30),
+          view_count: item.view_count || 0,
+          created_at: item.created_at
+        });
+      }
+      cursor = helixData.pagination && helixData.pagination.cursor ? helixData.pagination.cursor : null;
+    } while (cursor && allClips.length < 1000);
+
+    if (allClips.length > 0) {
+      saveClipsData({ canal, total: allClips.length, clips: allClips });
+      broadcast({ type: 'clips_actualizados', total: allClips.length });
+      return { ok: true, canal, total: allClips.length, clips: allClips };
+    } else {
+      return { ok: true, canal, total: current.clips.length, clips: current.clips, aviso: 'No se encontraron clips en Twitch' };
+    }
+  } catch (err) {
+    return { ok: false, error: err.message, clips: current.clips };
+  }
+}
+
+const mp4ClipsCache = new Map();
+
+async function getClipMp4(slug) {
+  if (!slug) return null;
+  const cached = mp4ClipsCache.get(slug);
+  if (cached && Date.now() < cached.expiresAt) return cached.url;
+
+  const cleanToken = String(typeof twitchConfig !== 'undefined' && twitchConfig.token ? twitchConfig.token : '').replace(/^oauth:/, '').trim();
+  if (!cleanToken) return null;
+  const clientId = 'gp762nuuoqcoxypju8c569th9wz7q5';
+  const broadcasterId = '666785367'; // Canal ApliArte
+
+  try {
+    const res = await fetch(`https://api.twitch.tv/helix/clips/downloads?broadcaster_id=${encodeURIComponent(broadcasterId)}&editor_id=${encodeURIComponent(broadcasterId)}&clip_id=${encodeURIComponent(slug)}`, {
+      headers: {
+        'Client-Id': clientId,
+        'Authorization': 'Bearer ' + cleanToken
+      }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data && Array.isArray(data.data) && data.data[0]) {
+      const url = data.data[0].landscape_download_url || data.data[0].portrait_download_url;
+      if (url) {
+        mp4ClipsCache.set(slug, { url, expiresAt: Date.now() + 12 * 3600 * 1000 });
+        return url;
+      }
+    }
+  } catch (err) {
+    console.error('[clips] Error obteniendo MP4 directo:', err.message);
+  }
+  return null;
+}
+
 let twitchSenderWs = null;
 let twitchConnected = false;
 
@@ -1976,6 +2176,128 @@ const server = http.createServer((req, res) => {
     return res.end(JSON.stringify({ ok: true }));
   }
 
+  // ── Clips de Twitch para OBS (GET lista, POST actualizar) ──────────────────
+  if (path === '/api/directo/clips') {
+    cors(res);
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      return res.end();
+    }
+    if (req.method === 'GET') {
+      const data = getClipsData();
+      let clips = data.clips.slice();
+      const parsedUrl = new URL(req.url, 'http://localhost');
+      const esAleatorio = parsedUrl.searchParams.get('aleatorio') === '1' || parsedUrl.searchParams.get('random') === '1';
+      if (esAleatorio) {
+        clips = clips.sort(() => Math.random() - 0.5);
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(JSON.stringify({
+        ok: true,
+        canal: data.canal || 'apliarte',
+        total: clips.length,
+        clips
+      }));
+    }
+    if (req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => { body += chunk; });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body || '{}');
+          const current = getClipsData();
+
+          if (Array.isArray(parsed.clips)) {
+            current.clips = parsed.clips.map(normalizeClip).filter(Boolean);
+          } else if (parsed.clip) {
+            const c = normalizeClip(parsed.clip);
+            if (c) {
+              const existing = current.clips.filter(x => x.id !== c.id && x.slug !== c.slug);
+              current.clips = [...existing, c];
+            }
+          }
+          if (parsed.canal && typeof parsed.canal === 'string') {
+            current.canal = parsed.canal.trim().toLowerCase();
+          }
+
+          const saved = saveClipsData(current);
+          const total = (saved && saved.clips) ? saved.clips.length : current.clips.length;
+          broadcast({ type: 'clips_actualizados', total });
+
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+          return res.end(JSON.stringify({
+            ok: true,
+            total,
+            clips: (saved && saved.clips) ? saved.clips : current.clips
+          }));
+        } catch (_) {
+          res.writeHead(400, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+          return res.end(JSON.stringify({ ok: false, error: 'JSON inválido' }));
+        }
+      });
+      return;
+    }
+    res.writeHead(405, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify({ ok: false, error: 'Método no permitido' }));
+  }
+
+  // ── Sincronizar clips de Twitch Helix ──────────────────────────────────────
+  if (path === '/api/directo/clips/sync') {
+    cors(res);
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      return res.end();
+    }
+    if (req.method === 'POST') {
+      syncTwitchClips().then(result => {
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify(result));
+      }).catch(err => {
+        const current = getClipsData();
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({ ok: false, error: err.message, clips: current.clips }));
+      });
+      return;
+    }
+    res.writeHead(405, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify({ ok: false, error: 'Método no permitido' }));
+  }
+
+  // ── URL de vídeo MP4 directo para reproducción sin restricciones ni mute ────
+  if (path === '/api/directo/clips/mp4') {
+    cors(res);
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      return res.end();
+    }
+    if (req.method === 'GET') {
+      const parsedUrl = new URL(req.url, 'http://localhost');
+      const slug = parsedUrl.searchParams.get('slug') || parsedUrl.searchParams.get('clip');
+      if (!slug) {
+        res.writeHead(400, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        return res.end(JSON.stringify({ ok: false, error: 'Falta parámetro slug' }));
+      }
+      getClipMp4(slug).then(mp4 => {
+        if (mp4) {
+          if (parsedUrl.searchParams.get('redirect') === '1') {
+            res.writeHead(302, { Location: mp4 });
+            return res.end();
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+          return res.end(JSON.stringify({ ok: true, slug, mp4 }));
+        }
+        res.writeHead(404, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        return res.end(JSON.stringify({ ok: false, error: 'MP4 no disponible' }));
+      }).catch(err => {
+        res.writeHead(500, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        return res.end(JSON.stringify({ ok: false, error: err.message }));
+      });
+      return;
+    }
+    res.writeHead(405, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify({ ok: false, error: 'Método no permitido' }));
+  }
+
   if (path === '/api/layers' && req.method === 'GET') {
     cors(res);
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -2247,6 +2569,10 @@ html,body{width:100%;height:100%;overflow:hidden;
 
   if (path === '/sms' || path === '/sms.html') {
     if (serveStatic(req, res, '/sms.html')) return;
+  }
+
+  if (path === '/clips' || path === '/clips.html') {
+    if (serveStatic(req, res, '/clips.html')) return;
   }
 
   if (path === '/landing' || path === '/landing.html') {
