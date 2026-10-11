@@ -587,6 +587,15 @@ function getObsUrls(req, cfg) {
   };
 }
 
+// ── Historial de chat en memoria ───────────────────────────────────────────
+const MAX_CHAT_HISTORIAL = 100;
+const chatHistorial = [];
+
+function agregarAlHistorialChat(msg) {
+  chatHistorial.push(msg);
+  if (chatHistorial.length > MAX_CHAT_HISTORIAL) chatHistorial.shift();
+}
+
 let twitchSenderWs = null;
 let twitchConnected = false;
 
@@ -661,14 +670,19 @@ function conectarTwitchSender() {
             const m = parsedPrivmsg.texto.trim().match(/^!(fiesta|conga|bronca)$/i);
             colaAnimaciones.encolar({ tipo: m[1].toLowerCase(), usuario: 'ja' }, Date.now());
           }
-          broadcast({
+          const payload = {
+            id: 'tw_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
             type: 'chat_mensaje',
             plataforma: 'twitch',
             usuario: parsedPrivmsg.usuario,
             nombreVisible: parsedPrivmsg.nombreVisible,
             texto: parsedPrivmsg.texto,
+            avatar: null,
             color: parsedPrivmsg.color || null,
-          });
+            timestamp: Date.now()
+          };
+          agregarAlHistorialChat(payload);
+          broadcast(payload);
         }
       }
     });
@@ -729,15 +743,19 @@ function iniciarYoutubeLiveChat(canalOVideoId = youtubeCanalConfig) {
       const m = item.texto.trim().match(/^!(fiesta|conga|bronca)$/i);
       colaAnimaciones.encolar({ tipo: m[1].toLowerCase(), usuario: 'ja' }, Date.now());
     }
-    broadcast({
+    const payload = {
+      id: item.id || ('yt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)),
       type: 'chat_mensaje',
       plataforma: 'youtube',
       usuario: item.usuario,
       nombreVisible: item.usuario,
       texto: item.texto,
-      avatar: item.avatar,
-      color: '#ff0033'
-    });
+      avatar: item.avatar || null,
+      color: '#ff0033',
+      timestamp: item.timestamp || Date.now()
+    };
+    agregarAlHistorialChat(payload);
+    broadcast(payload);
   });
 
   youtubeChatInstancia.on('error', () => {});
@@ -2425,6 +2443,17 @@ const server = http.createServer((req, res) => {
     return res.end(JSON.stringify({ ok: false, error: 'Método no permitido' }));
   }
 
+  // ── Historial de chat del directo (GET público) ───────────────────────────
+  if (path === '/api/directo/chat/historial') {
+    cors(res);
+    if (req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(JSON.stringify({ ok: true, total: chatHistorial.length, mensajes: chatHistorial }));
+    }
+    res.writeHead(405, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify({ ok: false, error: 'Método no permitido' }));
+  }
+
   // ── YouTube Live Chat (GET público, POST autenticado) ──────────────────────
   if (path === '/api/directo/youtube/chat') {
     cors(res);
@@ -3169,6 +3198,9 @@ wss.on('connection', (ws, request) => {
     ws.send(JSON.stringify({ type: 'contexto_estado', texto: contextoDirecto }));
   }
   ws.send(JSON.stringify({ type: 'avatares_estado', avatares: serverOwners }));
+  if (canReceive(ws.rol, 'chat_historial')) {
+    ws.send(JSON.stringify({ type: 'chat_historial', mensajes: chatHistorial }));
+  }
   ws.on('message', message => {
     const text = typeof message === 'string' ? message : message.toString('utf-8');
 
@@ -3220,7 +3252,7 @@ wss.on('connection', (ws, request) => {
       'juego_estado', 'categoria',
       'pizarra_draw', 'pizarra_clear', 'pizarra_undo', 'pizarra_init', 'pizarra_solicitar_estado',
       'ping', 'pong',
-      'saludo_chat', 'contexto_estado', 'avatares_estado', 'chat_mensaje'
+      'saludo_chat', 'contexto_estado', 'avatares_estado', 'chat_mensaje', 'chat_historial'
     ]);
 
     if (!TIPOS_RETRANS_PERMITIDOS.has(msgType)) {
@@ -3396,4 +3428,7 @@ module.exports = {
   clients,
   gestorBienvenida,
   ejecutarBienvenida,
+  MAX_CHAT_HISTORIAL,
+  chatHistorial,
+  agregarAlHistorialChat,
 };

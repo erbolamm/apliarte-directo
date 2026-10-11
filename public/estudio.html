@@ -3607,6 +3607,11 @@
             agregarMensajeTwitchFeed(data);
             if (typeof tabOpen === 'function' && tabOpen('users')) selectSettingsTab('users');
           }
+          if (data && data.type === 'chat_historial' && Array.isArray(data.mensajes)) {
+            data.mensajes.forEach(msg => agregarMensajeTwitchFeed(msg));
+            if (typeof tabOpen === 'function' && tabOpen('users')) selectSettingsTab('users');
+            if (typeof actualizarEstadoPantalla === 'function') actualizarEstadoPantalla();
+          }
           if (data && data.type === 'avatares_estado' && data.avatares) {
             usersModeration.avatares = data.avatares;
             if (typeof tabOpen === 'function' && tabOpen('users')) selectSettingsTab('users');
@@ -4557,6 +4562,14 @@
 
     function agregarMensajeTwitchFeed(msg) {
       if (!msg || !msg.texto) return;
+      const yaExiste = chatMensajesTwitch.some(m => {
+        if (msg.id && m.id && m.id === msg.id) return true;
+        return m.usuario === msg.usuario &&
+               m.texto === msg.texto &&
+               Math.abs((m.timestamp || 0) - (msg.timestamp || 0)) < 2000;
+      });
+      if (yaExiste) return;
+
       chatMensajesTwitch.push(msg);
       if (chatMensajesTwitch.length > 100) chatMensajesTwitch.shift();
 

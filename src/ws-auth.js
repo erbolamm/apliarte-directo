@@ -112,6 +112,7 @@ const PUBLIC_EVENTS = new Set([
   'contexto_estado',
   'avatares_estado',
   'chat_mensaje',
+  'chat_historial',
 ]);
 
 const RESTRICTED_EVENTS = new Set([
