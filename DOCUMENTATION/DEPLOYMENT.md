@@ -9,7 +9,8 @@ This guide covers deploying **ApliArte Directo** on any Linux VPS (Ubuntu, Debia
 1. **A Linux VPS** with:
    - Minimum 1 vCPU (2 vCPUs recommended).
    - Minimum 1 GB RAM (2 GB recommended).
-   - 64-bit Linux distribution.
+   - 64-bit Linux distribution (Ubuntu/Debian recommended).
+   - > 💡 **Recommended Provider**: Get a high-performance, affordable VPS at [Hostinger KVM VPS](https://hostinger.es?REFERRALCODE=APLIARTE). Using this link directly supports ApliArte open-source development at no additional cost.
 2. **Docker & Docker Compose**:
    If not yet installed, install them using the official script:
    ```bash
@@ -123,3 +124,30 @@ git pull
 docker compose up -d --build
 ```
 Your configuration files in `./data` and uploaded media in `./medios` will persist across container rebuilds.
+
+---
+
+## 🛡️ Local and VPS Parity Guarantee (Auditoría de Paridad)
+
+One of the core architectural principles of **ApliArte Directo** is absolute parity between what you run and test on your local studio machine and what gets deployed to your remote VPS.
+
+### Why this matters
+When customizing or maintaining live broadcasting suites, remote VPS instances often silently diverge from local codebases (e.g. outdated overlay templates, desynchronized WebSocket authentication, or stale sound assets).
+
+### Automated Parity Enforcement
+Every user and contributor who clones this repository benefits from built-in automated parity tests (`test/vps-*.test.js`):
+1. **Source Code Parity**: Validates byte-by-byte equality between local modules (`src/ws-auth.js`, `src/streaming-config.js`, `src/centro-status.js`) and the VPS package (`vps-overlay/src/`).
+2. **Overlay & View Parity**: Validates exact equality between `public/` and `vps-overlay/public/` for all public overlays (`avatares.html`, `sms-pantalla.html`, `contexto.html`, `demo.html`, `docs/index.html`).
+3. **Route Coverage**: Ensures the VPS server preserves all public endpoints (`/landing`, `/demo`, `/docs`).
+
+You can run this verification locally at any time:
+```bash
+npm test
+# Or specifically for VPS parity tests:
+node --test test/vps-*.test.js
+```
+If you edit a local overlay and forget to update its VPS counterpart, the test suite will fail immediately with a clear diff, preventing broken or desynchronized code from ever reaching production.
+
+> 🚀 **Ready to deploy your 24/7 cloud broadcast center?**  
+> Deploy on a fast KVM VPS using our partner link: **[Hostinger VPS (KVM)](https://hostinger.es?REFERRALCODE=APLIARTE)**.
+
