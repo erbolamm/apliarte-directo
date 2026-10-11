@@ -37,6 +37,7 @@ Thumbs.db
 .coverage/
 .nyc_output/
 .atl/
+.playwright-mcp/
 
 # 3D office build output (bundle is copied to public/)
 oficina-3d/dist/

@@ -6,15 +6,27 @@ const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'
 const blog = read('voces-blogger.html');
 const catalog = read('DOCUMENTATION/VOICE-CATALOG.md');
 
-test('all 26 locale commands and both slots remain copyable', () => {
-  const locales = [...new Set([...blog.matchAll(/data-comando="!speak -config ([a-z]{2}-[A-Z]{2}) [12]"/g)].map(m => m[1]))];
+test('all 26 locale commands and both slots remain copyable with !voz', () => {
+  const locales = [...new Set([...blog.matchAll(/data-comando="!voz ([a-z]{2}-[A-Z]{2}) [12]"/g)].map(m => m[1]))];
   assert.equal(locales.length, 26);
   for (const locale of locales) {
-    for (const slot of [1, 2]) assert.ok(blog.includes(`data-comando="!speak -config ${locale} ${slot}"`));
+    for (const slot of [1, 2]) assert.ok(blog.includes(`data-comando="!voz ${locale} ${slot}"`));
     assert.match(catalog, new RegExp(`^\\| ${locale} \\|`, 'm'));
   }
   assert.match(blog, /navigator\.clipboard\.writeText/);
   assert.match(blog, /document\.execCommand\('copy'\)/);
+});
+
+test('all voice effects (animals, comedic, dsp) are copyable with !voz', () => {
+  const efectos = [
+    'gato', 'perro', 'pato', 'vaca', 'oveja', 'rana', 'pollo', 'lobo', 'mono', 'cerdo', 'grillo', 'abeja',
+    'borracho', 'bebe', 'abuelo', 'pirata', 'tartamudo', 'acelerado', 'perezoso', 'pijo', 'susurro', 'pregonero', 'dramatico',
+    'helio', 'ogro', 'robot', 'walkie', 'cueva', 'telefono', 'alien', 'megafono',
+    'reset'
+  ];
+  for (const ef of efectos) {
+    assert.ok(blog.includes(`data-comando="!voz ${ef}"`), `Falta botón para !voz ${ef}`);
+  }
 });
 
 test('Blogger page stays viewer-facing until the new voices are live in the stream', () => {

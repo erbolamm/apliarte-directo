@@ -3870,7 +3870,7 @@
     const ttsSpeed = () => Math.max(0.5, Math.min(2.0, parseFloat(micSetting(TTS_KEYS.speed, '1.0')) || 1.0));
     const ttsEngine = () => (!hasSpeech || micSetting(TTS_KEYS.engine, 'device') === 'server' ? 'server' : 'device');
     const tts = {
-      active: false, socket: null, queue: [], userVoices: new Map(), muted: new Set(), log: [],
+      active: localStorage.getItem('apliarte_estudio_tts_activo') !== 'false', socket: null, queue: [], userVoices: new Map(), muted: new Set(), log: [],
       background: 'Apoyo 2º plano detenido', onLog: null, onStatus: null,
       player: new Audio(), serverPlaying: false, alert: new Audio('/sonidos/aviso-mensaje.mp3')
     };
@@ -4206,6 +4206,7 @@
     function startTts() {
       if (tts.active) return;
       tts.active = true;
+      try { localStorage.setItem('apliarte_estudio_tts_activo', 'true'); } catch (_) {}
       const channel = ttsChannel();
       if (ttsEngine() === 'device') {
         backgroundSpeech.start();
@@ -4249,6 +4250,7 @@
     }
     function stopTts() {
       tts.active = false;
+      try { localStorage.setItem('apliarte_estudio_tts_activo', 'false'); } catch (_) {}
       if (tts.socket) {
         const socket = tts.socket;
         tts.socket = null;

@@ -274,6 +274,60 @@ const gameHub = createGameHub();
 
 let serverOwners     = {};
 
+// ─── Auto-liberación de avatares por inactividad (5 min) ───────────────────
+const AVATAR_INACTIVIDAD_MS = 5 * 60 * 1000; // 300.000 ms (5 minutos)
+const avatarLastActive = new Map();
+
+for (const aId of Object.keys(serverOwners)) {
+  if (aId !== 'ja') avatarLastActive.set(aId, Date.now());
+}
+
+function renovarActividadAvatar(usuario) {
+  if (!usuario) return;
+  const uNorm = String(usuario).trim().toLowerCase();
+  const ahora = Date.now();
+  for (const [aId, u] of Object.entries(serverOwners)) {
+    if (aId !== 'ja' && String(u).trim().toLowerCase() === uNorm) {
+      avatarLastActive.set(aId, ahora);
+    }
+  }
+}
+
+function verificarInactividadAvatares(ahora = Date.now()) {
+  let liberado = false;
+  const liberados = [];
+  for (const [aId, u] of Object.entries(serverOwners)) {
+    if (aId === 'ja') continue;
+    const lastActive = avatarLastActive.get(aId);
+    if (!lastActive) {
+      avatarLastActive.set(aId, ahora);
+      continue;
+    }
+    if (ahora - lastActive >= AVATAR_INACTIVIDAD_MS) {
+      console.log(`[Avatares] Auto-liberado avatar ${aId} (${u}) por inactividad (> 5 min)`);
+      delete serverOwners[aId];
+      avatarLastActive.delete(aId);
+      liberados.push({ agente: aId, usuario: u });
+      liberado = true;
+    }
+  }
+  if (liberado) {
+    broadcast({ type: 'avatares_estado', avatares: serverOwners });
+    broadcast({
+      type: 'directo_comando',
+      cmd: { comando: 'liberar', motivo: 'inactividad_5min', liberados },
+      duenos: serverOwners,
+      seq: ++seqComandosDirecto,
+      modoCamara: modoCamaraDirecto,
+      aspectoCamara: aspectoCamaraDirecto
+    });
+  }
+  return liberados;
+}
+
+const timerInactividadAvatares = setInterval(verificarInactividadAvatares, 10000);
+if (timerInactividadAvatares.unref) timerInactividadAvatares.unref();
+
 let seqComandosDirecto = 0;
 const ringComandosDirecto = [];
 let modoCamaraDirecto = 'monigote';
@@ -1004,6 +1058,9 @@ let layers = loadLayers();
 let scenes = {};
 function syncScenes() { scenes = {}; for (const l of layers) scenes[l.id] = l.visible; }
 syncScenes();
+
+// ─── Estado de Voz y TTS sincronizado en servidor y clientes ─────────────
+let ttsEstado = { activo: true, velocidad: 1.0, preservePitch: false };
 
 function loadLayers() {
   try {
@@ -1759,28 +1816,45 @@ const server = http.createServer((req, res) => {
           const aspectoPrevioCamara = aspectoCamaraDirecto;
           if (cmd.comando === 'adoptar' && cmd.agente && cmd.usuario) {
             for (const [aId, u] of Object.entries(serverOwners)) {
-              if (u.toLowerCase() === cmd.usuario.toLowerCase()) delete serverOwners[aId];
+              if (u.toLowerCase() === cmd.usuario.toLowerCase()) {
+                delete serverOwners[aId];
+                avatarLastActive.delete(aId);
+              }
             }
             serverOwners[cmd.agente] = cmd.usuario;
+            avatarLastActive.set(cmd.agente, Date.now());
           } else if (cmd.comando === 'liberar') {
             const esJavier = ['ja', 'apliarte', 'erbolamm'].includes(String(cmd.usuario ?? '').toLowerCase());
             if (esJavier && (cmd.agente === 'todos' || cmd.agente === 'all')) {
               for (const aId of Object.keys(serverOwners)) {
-                if (aId !== 'ja') delete serverOwners[aId];
+                if (aId !== 'ja') {
+                  delete serverOwners[aId];
+                  avatarLastActive.delete(aId);
+                }
               }
             } else if (esJavier && cmd.agente && serverOwners[cmd.agente]) {
               delete serverOwners[cmd.agente];
+              avatarLastActive.delete(cmd.agente);
             } else if (esJavier && cmd.usuarioObjetivo) {
               const uObj = String(cmd.usuarioObjetivo).toLowerCase();
               for (const [aId, u] of Object.entries(serverOwners)) {
-                if (u.toLowerCase() === uObj) delete serverOwners[aId];
+                if (u.toLowerCase() === uObj) {
+                  delete serverOwners[aId];
+                  avatarLastActive.delete(aId);
+                }
               }
             } else if (cmd.usuario) {
               for (const [aId, u] of Object.entries(serverOwners)) {
-                if (u.toLowerCase() === cmd.usuario.toLowerCase()) delete serverOwners[aId];
+                if (u.toLowerCase() === cmd.usuario.toLowerCase()) {
+                  delete serverOwners[aId];
+                  avatarLastActive.delete(aId);
+                }
               }
             }
-          } else if (cmd.comando && typeof cmd.comando === 'string' && cmd.comando.trim().toLowerCase().startsWith('!cam')) {
+          } else if (cmd.usuario) {
+            renovarActividadAvatar(cmd.usuario);
+          }
+ else if (cmd.comando && typeof cmd.comando === 'string' && cmd.comando.trim().toLowerCase().startsWith('!cam')) {
             const arg = cmd.comando.trim().toLowerCase().split(/\s+/)[1];
             if (arg === 'on' || arg === 'mostrar' || arg === 'camara') modoCamaraDirecto = 'camara';
             else if (arg === 'off' || arg === 'ocultar' || arg === 'monigote') modoCamaraDirecto = 'monigote';
@@ -2642,6 +2716,7 @@ wss.on('connection', (ws, request) => {
   for (const [scene, visible] of Object.entries(scenes)) {
     ws.send(JSON.stringify({ type: 'scene', scene, visible }));
   }
+  ws.send(JSON.stringify({ type: 'tts_estado', ...ttsEstado }));
   ws.on('message', message => {
     const text = typeof message === 'string' ? message : message.toString('utf-8');
 
@@ -2672,6 +2747,10 @@ wss.on('connection', (ws, request) => {
       return;
     }
 
+    if (parsed && parsed.usuario) {
+      renovarActividadAvatar(parsed.usuario);
+    }
+
     // UI events blocklist (sin cambios)
     if (msgType === 'tab' || msgType === 'tab_change' || msgType === 'cambiar_pestana' ||
         msgType === 'pestana' || msgType === 'view' || msgType === 'vista' ||
@@ -2691,7 +2770,8 @@ wss.on('connection', (ws, request) => {
       'stream_state', 'twitch_state',
       'sms_nuevo', 'nuevo_sms',
       'juego_estado', 'categoria',
-      'ping', 'pong'
+      'ping', 'pong',
+      'tts_estado'
     ]);
 
     if (!TIPOS_RETRANS_PERMITIDOS.has(msgType)) {
@@ -2700,6 +2780,18 @@ wss.on('connection', (ws, request) => {
 
     // Dispatch por parsed.type top-level, NO por substring del texto crudo.
     switch (msgType) {
+      case 'tts_estado': {
+        if (parsed) {
+          if (parsed.activo !== undefined) ttsEstado.activo = Boolean(parsed.activo);
+          if (parsed.velocidad !== undefined) {
+            const v = parseFloat(parsed.velocidad);
+            if (!isNaN(v) && v >= 0.5 && v <= 2.5) ttsEstado.velocidad = v;
+          }
+          if (parsed.preservePitch !== undefined) ttsEstado.preservePitch = Boolean(parsed.preservePitch);
+          broadcast({ type: 'tts_estado', ...ttsEstado });
+        }
+        return;
+      }
       case 'camara_aspecto': {
         if (parsed && parsed.aspecto) {
           const nuevoAspecto = (parsed.aspecto === 'cuadrado' || parsed.aspecto === '1:1') ? 'cuadrado' : 'horizontal';
@@ -2856,4 +2948,9 @@ module.exports = {
   isAuth,
   broadcast,
   clients,
+  AVATAR_INACTIVIDAD_MS,
+  avatarLastActive,
+  renovarActividadAvatar,
+  verificarInactividadAvatares,
+  timerInactividadAvatares,
 };

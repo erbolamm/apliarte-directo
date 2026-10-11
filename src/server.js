@@ -1102,6 +1102,43 @@ app.post("/api/directo/sms/limpiar", (_req, res) => {
 let seqComandosDirecto = 0;
 const ringComandosDirecto = [];
 const directOwners = {};
+const directAvatarLastActive = new Map();
+const AVATAR_INACTIVIDAD_MS = 5 * 60 * 1000;
+
+function renovarActividadDirectAvatar(usuario) {
+  if (!usuario) return;
+  const uNorm = String(usuario).trim().toLowerCase();
+  const ahora = Date.now();
+  for (const [aId, u] of Object.entries(directOwners)) {
+    if (aId !== 'ja' && String(u).trim().toLowerCase() === uNorm) {
+      directAvatarLastActive.set(aId, ahora);
+    }
+  }
+}
+
+function verificarInactividadDirectAvatares(ahora = Date.now()) {
+  let liberado = false;
+  for (const [aId, u] of Object.entries(directOwners)) {
+    if (aId === 'ja') continue;
+    const lastActive = directAvatarLastActive.get(aId);
+    if (!lastActive) {
+      directAvatarLastActive.set(aId, ahora);
+      continue;
+    }
+    if (ahora - lastActive >= AVATAR_INACTIVIDAD_MS) {
+      delete directOwners[aId];
+      directAvatarLastActive.delete(aId);
+      liberado = true;
+    }
+  }
+  if (liberado) {
+    io?.emit("directo_comando", { cmd: { comando: "liberar", motivo: "inactividad_5min" }, seq: ++seqComandosDirecto, duenos: directOwners });
+  }
+}
+
+const timerInactividadDirect = setInterval(verificarInactividadDirectAvatares, 10000);
+if (timerInactividadDirect.unref) timerInactividadDirect.unref();
+
 let modoCamaraDirecto = "monigote";
 // ─── Clips de Twitch para OBS (puerto 8790) ───────────────────────────
 const CLIPS_FILE = join(RAIZ, "data", "clips.json");
@@ -1187,27 +1224,45 @@ app.post("/api/directo/comando", (req, res) => {
   const cmd = req.body ?? {};
   if (cmd.comando === "adoptar" && cmd.agente && cmd.usuario) {
     for (const [aId, u] of Object.entries(directOwners)) {
-      if (String(u).toLowerCase() === String(cmd.usuario).toLowerCase()) delete directOwners[aId];
+      if (String(u).toLowerCase() === String(cmd.usuario).toLowerCase()) {
+        delete directOwners[aId];
+        directAvatarLastActive.delete(aId);
+      }
     }
+    directOwners[cmd.agente] = cmd.usuario;
+    directAvatarLastActive.set(cmd.agente, Date.now());
   } else if (cmd.comando === "liberar") {
     const esJavier = ["ja", "apliarte", "erbolamm"].includes(String(cmd.usuario ?? "").toLowerCase());
     if (esJavier && (cmd.agente === "todos" || cmd.agente === "all")) {
       for (const aId of Object.keys(directOwners)) {
-        if (aId !== "ja") delete directOwners[aId];
+        if (aId !== "ja") {
+          delete directOwners[aId];
+          directAvatarLastActive.delete(aId);
+        }
       }
     } else if (esJavier && cmd.agente && directOwners[cmd.agente]) {
       delete directOwners[cmd.agente];
+      directAvatarLastActive.delete(cmd.agente);
     } else if (esJavier && cmd.usuarioObjetivo) {
       const uObj = String(cmd.usuarioObjetivo).toLowerCase();
       for (const [aId, u] of Object.entries(directOwners)) {
-        if (String(u).toLowerCase() === uObj) delete directOwners[aId];
+        if (String(u).toLowerCase() === uObj) {
+          delete directOwners[aId];
+          directAvatarLastActive.delete(aId);
+        }
       }
     } else if (cmd.usuario) {
       for (const [aId, u] of Object.entries(directOwners)) {
-        if (String(u).toLowerCase() === String(cmd.usuario).toLowerCase()) delete directOwners[aId];
+        if (String(u).toLowerCase() === String(cmd.usuario).toLowerCase()) {
+          delete directOwners[aId];
+          directAvatarLastActive.delete(aId);
+        }
       }
     }
-  } else if (cmd.comando && typeof cmd.comando === "string" && cmd.comando.startsWith("cam ")) {
+  } else if (cmd.usuario) {
+    renovarActividadDirectAvatar(cmd.usuario);
+  }
+ else if (cmd.comando && typeof cmd.comando === "string" && cmd.comando.startsWith("cam ")) {
     const arg = cmd.comando.slice(4).trim().toLowerCase();
     if (arg === "on" || arg === "camara") modoCamaraDirecto = "camara";
     else if (arg === "off" || arg === "monigote") modoCamaraDirecto = "monigote";

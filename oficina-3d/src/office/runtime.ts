@@ -177,10 +177,11 @@ const COFFEE_STATION: Pt = { x: 96, y: 320 };
 /** Live chat command forwarded by `/api/directo/comando` (Twitch `!` commands). */
 export type OfficeCommand={comando:string;agente?:string|null;texto?:string|null;usuario?:string|null;seq?:number;zona?:string|null};
 export type Speech={text:string;until:number};
-export const SPEECH_MAX=120;
-/** Bubble lifetime grows with the text: 5 s minimum, 15 s maximum. */
-export function speechDuration(_text?: string): number {
-  return 5000;
+export const SPEECH_MAX=280;
+/** Bubble lifetime grows with the text: 6 s minimum, 18 s maximum (~80 ms per character). */
+export function speechDuration(text?: string): number {
+  const len = String(text || '').trim().length;
+  return Math.max(6000, Math.min(18000, 5000 + len * 80));
 }
 /** Splits spoken text into at most `maxLines` lines of about `width` characters. */
 export function wrapSpeech(text:string,width=30,maxLines=4):string[]{
@@ -198,6 +199,33 @@ export function wrapSpeech(text:string,width=30,maxLines=4):string[]{
  return lines;
 }
 const cleanSpeech=(text:unknown)=>Array.from(String(text??'').replace(/<[^>]*>/g,'').replace(/[\u0000-\u001f\u007f-\u009f]/g,' ').replace(/\s+/g,' ').trim()).slice(0,SPEECH_MAX).join('').trim();
+
+export type WanderSpot = { spot: Pt; pose: Pose; desc: string };
+export const WANDER_SPOTS: WanderSpot[] = [
+  { spot: { x: 96, y: 320 }, pose: 'coffee', desc: 'cafetería' },
+  { spot: { x: 290, y: 300 }, pose: 'game', desc: 'arcade lounge' },
+  { spot: { x: 320, y: 168 }, pose: 'watch', desc: 'pantalla lounge' },
+  { spot: { x: 400, y: 300 }, pose: 'idle', desc: 'descanso central' },
+  { spot: { x: 120, y: 176 }, pose: 'read', desc: 'zona de lectura' },
+  { spot: { x: 628, y: 456 }, pose: 'idle', desc: 'pasillo central' },
+  { spot: { x: 470, y: 456 }, pose: 'idle', desc: 'pasillo oeste' },
+  { spot: { x: 790, y: 456 }, pose: 'idle', desc: 'pasillo este' },
+  { spot: { x: 800, y: 280 }, pose: 'read', desc: 'pizarra de reuniones' },
+  { spot: { x: 900, y: 280 }, pose: 'idle', desc: 'sala de reuniones' },
+  { spot: { x: 200, y: 560 }, pose: 'read', desc: 'pizarra de trabajo' },
+  { spot: { x: 310, y: 620 }, pose: 'idle', desc: 'sala de trabajo' },
+  { spot: { x: 800, y: 560 }, pose: 'idle', desc: 'zona de entregas' },
+];
+
+export type AgentWander = {
+  phase: 'idle' | 'walking_to' | 'waiting' | 'walking_home';
+  spot: Pt;
+  waitEnd: number;
+  nextWander: number;
+  waitPose: Pose;
+  desc: string;
+};
+
 export class OfficeRuntime {
   coffeeRun: { agentId: AgentId; phase: 1 | 2 | 3 | 4 | 5; phaseEnd: number } | null = null;
   cinematicQueue: CinematicTask[] = [];
@@ -224,6 +252,60 @@ export class OfficeRuntime {
   private congaPositions: Map<CongaAgentId, Pt> = new Map();
   /** Last announced countdown second (0..10). */
   private lastCongaCountdownSec: number = -1;
+
+  /** Autonomous wander state per agent (free avatars walk around the 3D office). */
+  wanders: Map<AgentId, AgentWander> = new Map();
+  wandersEnabled = true;
+
+  setWandersEnabled(enabled: boolean) {
+    this.wandersEnabled = enabled;
+  }
+
+  isAgentIdle(p: Person, now: number): boolean {
+    if (p.id === 'ja') return false;
+    if (this.activeCinematic) return false;
+    if (this.coffeeRun && this.coffeeRun.agentId === p.id) return false;
+    if (this.congaState.phase === 'dancing' && this.congaPositions.has(p.id as CongaAgentId)) return false;
+    if (this.fiestaState.phase === 'party') return false;
+    if (this.broncaState.phase === 'brawl') return false;
+    if (this.activeGame) return false;
+    if (this.hub && this.hub.fase !== 'finalizado' && this.hub.fase !== 'idle') return false;
+    if (this.visiting.includes(p.id)) return false;
+    if (p.deliveringUntil > now) return false;
+    if (this.snapshot.states.haciendo.some(t => t.role === p.id)) return false;
+    if (this.snapshot.orchestrator && p.id === this.snapshot.orchestrator) return false;
+    if (p.manualUntil && p.manualUntil > now) return false;
+    return true;
+  }
+
+  triggerWander(agentId?: AgentId, spotIndex?: number): boolean {
+    const targetId = agentId || this.people.find(p => this.isAgentIdle(p, Date.now()))?.id;
+    if (!targetId || targetId === 'ja') return false;
+    const p = this.people.find(person => person.id === targetId);
+    if (!p || !this.isAgentIdle(p, Date.now())) return false;
+    const now = Date.now();
+    const pick = typeof spotIndex === 'number' && spotIndex >= 0 && spotIndex < WANDER_SPOTS.length
+      ? WANDER_SPOTS[spotIndex]
+      : WANDER_SPOTS[Math.floor(Math.random() * WANDER_SPOTS.length)];
+    const w: AgentWander = {
+      phase: 'walking_to',
+      spot: { ...pick.spot },
+      waitEnd: 0,
+      nextWander: now + 60000,
+      waitPose: pick.pose,
+      desc: pick.desc
+    };
+    this.wanders.set(targetId, w);
+    this.move(p, w.spot);
+    p.status = `Paseando · ${w.desc}`;
+    p.pose = 'walk';
+    this.triggerWake();
+    return true;
+  }
+
+  getWander(agentId: AgentId): AgentWander | undefined {
+    return this.wanders.get(agentId);
+  }
 
   /** Records who adopted which avatar. Keys are agent ids, values are twitch logins. */
   setAvatarOwners(owners: Record<string, string> | null | undefined) {
@@ -565,6 +647,10 @@ export class OfficeRuntime {
    return WAITING_SLOTS[Math.min(Math.max(0,idx),WAITING_SLOTS.length-1)];
   }
   if(p.deliveringUntil>now)return DELIV_SLOTS[p.id];
+  const w = this.wanders.get(p.id);
+  if (w && (w.phase === 'walking_to' || w.phase === 'waiting')) {
+   return w.spot;
+  }
   return this.homeTarget(p.id);
  }
  private move(p:Person,end:Pt,snap=false) {
@@ -686,6 +772,13 @@ export class OfficeRuntime {
   }
 
   for(const p of this.people){
+   if (!this.isAgentIdle(p, now)) {
+    const curW = this.wanders.get(p.id);
+    if (curW && curW.phase !== 'idle') {
+     curW.phase = 'idle';
+     curW.nextWander = now + 30000;
+    }
+   }
    // Conga dancers: teleport to conga position, set walk pose, apply dance bob
    if (this.congaPositions.has(p.id as CongaAgentId) && this.congaState.phase === 'dancing') {
     const congaPos = this.congaPositions.get(p.id as CongaAgentId)!;
@@ -783,14 +876,66 @@ export class OfficeRuntime {
     moving=moving||Boolean(p.path);
    }else{
     if(p.manualUntil){p.manualUntil=0;p.isRear=false;}
+    const isIdle = this.isAgentIdle(p, now);
+    let w = this.wanders.get(p.id);
+    if (!isIdle) {
+      if (w && w.phase !== 'idle') {
+        w.phase = 'idle';
+        w.nextWander = now + 30000;
+      }
+    } else if (this.wandersEnabled) {
+      if (!w) {
+        w = {
+          phase: 'idle',
+          spot: { x: 0, y: 0 },
+          waitEnd: 0,
+          nextWander: now + 12000 + Math.random() * 25000,
+          waitPose: 'idle',
+          desc: ''
+        };
+        this.wanders.set(p.id, w);
+      }
+      const activeWanderers = Array.from(this.wanders.values()).filter(v => v.phase !== 'idle').length;
+      if (w.phase === 'idle') {
+        if (now >= w.nextWander && activeWanderers < 2) {
+          const pick = WANDER_SPOTS[Math.floor(Math.random() * WANDER_SPOTS.length)];
+          w.spot = { ...pick.spot };
+          w.waitPose = pick.pose;
+          w.desc = pick.desc;
+          w.phase = 'walking_to';
+          this.move(p, w.spot);
+        }
+      } else if (w.phase === 'walking_to') {
+        if (!p.path && equal(p.pos, w.spot)) {
+          w.phase = 'waiting';
+          w.waitEnd = now + 6000 + Math.random() * 6000;
+        }
+      } else if (w.phase === 'waiting') {
+        if (now >= w.waitEnd) {
+          w.phase = 'walking_home';
+          this.move(p, this.homeTarget(p.id));
+        }
+      } else if (w.phase === 'walking_home') {
+        const home = this.homeTarget(p.id);
+        if (!p.path && equal(p.pos, home)) {
+          w.phase = 'idle';
+          w.nextWander = now + 25000 + Math.random() * 35000;
+        }
+      }
+    }
     this.move(p,this.destination(p,now));
     if(p.path){p.travelled+=(p.speed||240)*dt;const step=pointAt(p.path,p.travelled);p.pos=step.p;if(step.dir)p.facing=step.dir;if(step.done){p.path=null;}else moving=true;}
     if(p.deliveringUntil===Infinity&&equal(p.pos,DELIV_SLOTS[p.id])&&!p.path)p.deliveringUntil=now+3500;
     const working=this.snapshot.states.haciendo.some(t=>t.role===p.id);
-    p.status=!this.snapshot.valid?'Sin datos':working?'Trabajando':p.id===this.snapshot.orchestrator?'Coordinando':p.queued?`${p.queued} en cola`:'Descansando';
-    if(p.deliveringUntil>now&&this.snapshot.valid)p.status='Entregando · tarea aceptada';
-    if(p.id==='ja')p.status=working?'Trabajando':'Javier · dueño';
-    p.pose=p.path?'walk':p.id!=='ja'&&this.visiting.includes(p.id)?'sit':p.id==='ja'?(working?'work':'coffee'):working?'work':p.deliveringUntil>now?'deliver':p.id===this.snapshot.orchestrator?'present':this.idlePose.get(p.id)??lounge(p.id).pose;
+    if (w && w.phase !== 'idle') {
+      p.status = w.phase === 'walking_home' ? 'Volviendo al lounge' : `Paseando · ${w.desc}`;
+      p.pose = p.path ? 'walk' : (w.phase === 'waiting' ? w.waitPose : 'walk');
+    } else {
+      p.status=!this.snapshot.valid?'Sin datos':working?'Trabajando':p.id===this.snapshot.orchestrator?'Coordinando':p.queued?`${p.queued} en cola`:'Descansando';
+      if(p.deliveringUntil>now&&this.snapshot.valid)p.status='Entregando · tarea aceptada';
+      if(p.id==='ja')p.status=working?'Trabajando':'Javier · dueño';
+      p.pose=p.path?'walk':p.id!=='ja'&&this.visiting.includes(p.id)?'sit':p.id==='ja'?(working?'work':'coffee'):working?'work':p.deliveringUntil>now?'deliver':p.id===this.snapshot.orchestrator?'present':this.idlePose.get(p.id)??lounge(p.id).pose;
+    }
    }
     if(this.coffeeRun&&this.coffeeRun.agentId===p.id){
      if(this.coffeeRun.phase===1){
@@ -1115,6 +1260,12 @@ export class OfficeRuntime {
     const id=this.avatarForCommand(cmd);
     if(!zone||!id)return false;
     return this.goToZone(id,zone,now);
+   }
+   case 'paseo':
+   case 'pasear':
+   case 'wander':{
+    const id=cmd.agente&&cmd.agente!=='ja'&&roles.has(cmd.agente as AgentId)?cmd.agente as AgentId:undefined;
+    return this.triggerWander(id);
    }
    case 'git':return this.say(this.speaker(cmd.agente),cmd.texto||'Git: sin datos',now);
    case 'say':return this.say(this.speaker(cmd.agente),cmd.texto??'',now);

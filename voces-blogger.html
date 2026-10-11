@@ -1,12 +1,14 @@
 <!--
-  Widget "Personaliza tu voz en mi chat" para pegar en Blogger.
-  Copia TODO el contenido de este archivo (excepto este comentario inicial si lo deseas)
-  directamente en el editor HTML de tu entrada o página de Blogger.
+  Widget "Personaliza tu voz en el directo" para pegar en Blogger.
+  Copia TODO el contenido de este archivo directamente en el editor HTML
+  de tu entrada en Blogger (https://www.apliarte.com/2024/07/comandos-voz-chat.html).
 
   Novedades:
-  - Sin emojis dentro de los botones de copiar (evita errores de caracteres extraños / mojibake en Blogger).
-  - Tono real: Voz 1 (agudo / femenino) y Voz 2 (grave / masculino) para cada acento.
-  - Gran catálogo de acentos hispanos, lenguas cooficiales e idiomas internacionales verificados.
+  - Comandos directos y sencillos: !voz <efecto> (sin comandos obsoletos !speak -config).
+  - Efectos divertidos: Animales (gato, perro, pato...), Personajes (borracho, abuelo, pirata...) y Filtros (helio, ogro, robot...).
+  - Catálogo completo de 26 acentos hispanos, lenguas cooficiales e idiomas internacionales con Voz 1 (aguda) y Voz 2 (grave).
+  - Buscador integrado en tiempo real para encontrar cualquier voz o efecto al instante.
+  - Botones de 1 clic para copiar sin errores tipográficos.
 -->
 <div class="separator" style="clear: both; text-align: center;">
   <a href="https://www.twitch.tv/apliarte" target="_blank" rel="noopener noreferrer">
@@ -14,260 +16,716 @@
   </a>
 </div>
 
-<div style="text-align: center; margin: 20px 0; font-family: Arial, sans-serif;">
-  <h2 style="color: #005FA9; margin-bottom: 8px;">🎙️ Personaliza tu voz en mi chat</h2>
-  <p style="font-size: 15px; color: #444; max-width: 520px; margin: 0 auto 12px; line-height: 1.5;">
-    Elige tu país o idioma y pulsa en <b>Voz 1</b> (tono agudo / femenino) o <b>Voz 2</b> (tono grave / masculino).
-    Se copiará el comando automáticamente para pegarlo en
-    <a href="https://www.twitch.tv/apliarte" target="_blank" rel="noopener noreferrer" style="color: #005FA9; font-weight: bold; text-decoration: underline;">mi chat de Twitch (@ApliArte)</a>.
+<div style="text-align: center; margin: 20px 0 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <h2 style="color: #005FA9; margin-bottom: 8px; font-size: 24px;">🎙️ Personaliza tu voz en mi directo</h2>
+  <p style="font-size: 15px; color: #444; max-width: 540px; margin: 0 auto 12px; line-height: 1.5;">
+    ¡Haz que tu avatar adoptado hable con sonidos de animales, efectos cómicos o cualquier acento!
+    Pulsa en el botón para copiar el comando y pégalo en
+    <a href="https://www.twitch.tv/apliarte" target="_blank" rel="noopener noreferrer" style="color: #005FA9; font-weight: bold; text-decoration: underline;">mi chat de Twitch (@ApliArte)</a>
+    o de YouTube durante el directo.
   </p>
 </div>
 
-<div id="apliarte-voces" style="max-width: 500px; margin: 0 auto; font-family: Arial, sans-serif; background: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid #e5e7eb;">
+<div id="apliarte-voces" style="max-width: 540px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
   <style>
+    #apliarte-voces .buscador-caja{ margin-bottom: 16px; }
+    #apliarte-voces .buscador-input{
+      width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1.5px solid #cbd5e1;
+      border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; transition: border-color .2s;
+    }
+    #apliarte-voces .buscador-input:focus{ border-color: #005FA9; }
     #apliarte-voces .categoria{
       font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;
-      color: #005FA9; margin: 18px 0 8px 4px; padding-bottom: 4px; border-bottom: 2px solid #e0f0fe;
+      color: #005FA9; margin: 20px 0 8px 4px; padding-bottom: 4px; border-bottom: 2px solid #e0f0fe;
     }
-    #apliarte-voces .categoria:first-child{ margin-top: 0; }
+    #apliarte-voces .categoria:first-of-type{ margin-top: 4px; }
     #apliarte-voces .linea{
       display: flex; align-items: center; justify-content: space-between; margin: 8px 0;
-      padding: 9px 14px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;
+      padding: 9px 12px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;
       transition: background-color .15s, border-color .15s;
     }
     #apliarte-voces .linea:hover{ background-color: #f0f7ff; border-color: #bae6fd; }
-    #apliarte-voces .pais-col{ display: flex; align-items: center; gap: 8px; }
-    #apliarte-voces .bandera{ font-size: 20px; line-height: 1; }
-    #apliarte-voces .comando-texto{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1e293b; font-size: 14px; font-weight: 600; }
-    #apliarte-voces .botones{ display: flex; gap: 8px; }
+    #apliarte-voces .pais-col{ display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    #apliarte-voces .bandera{ font-size: 22px; line-height: 1; flex-shrink: 0; }
+    #apliarte-voces .info-col{ display: flex; flex-direction: column; min-width: 0; }
+    #apliarte-voces .comando-texto{ color: #1e293b; font-size: 14px; font-weight: 600; line-height: 1.2; }
+    #apliarte-voces .efecto-desc{ color: #64748b; font-size: 12px; margin-top: 2px; line-height: 1.25; }
+    #apliarte-voces .botones{ display: flex; gap: 6px; flex-shrink: 0; margin-left: 8px; }
     #apliarte-voces .btn-copy{
-      cursor: pointer; background: #005FA9; color: #ffffff; padding: 6px 14px; border: none; border-radius: 6px;
+      cursor: pointer; background: #005FA9; color: #ffffff; padding: 6px 12px; border: none; border-radius: 6px;
       font-size: 13px; font-weight: 700; font-family: inherit; transition: transform .1s, background-color .2s;
-      min-width: 68px; text-align: center; outline: none; user-select: none;
+      min-width: 64px; text-align: center; outline: none; user-select: none;
     }
     #apliarte-voces .btn-copy:hover{ background: #004580; transform: translateY(-1px); }
     #apliarte-voces .btn-copy:active{ transform: translateY(1px); }
     #apliarte-voces .btn-copy.copiado{ background: #059669 !important; color: #ffffff !important; }
     #apliarte-voces .btn-copy:focus-visible{ outline: 2px solid #005FA9; outline-offset: 2px; }
+    #apliarte-voces .btn-reset{ background: #475569; }
+    #apliarte-voces .btn-reset:hover{ background: #334155; }
     #apliarte-voces-aviso{
       text-align: center; font-size: 13px; color: #475569; min-height: 1.4em; margin: 16px 0 0;
       padding: 8px 12px; background: #f1f5f9; border-radius: 6px; font-family: ui-monospace, monospace;
     }
+    #apliarte-voces .sin-resultados{ display: none; text-align: center; padding: 20px; color: #64748b; font-size: 14px; }
   </style>
 
-  <div class="categoria">Acentos en Español</div>
+  <div class="buscador-caja">
+    <input type="text" id="apliarte-voces-filtro" class="buscador-input" placeholder="🔍 Buscar efecto, animal, personaje o país..." aria-label="Buscar voz o efecto" />
+  </div>
 
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇪🇸</span><span class="comando-texto">España</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-ES 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-ES 2">Voz 2</button>
+  <div class="seccion-grupo">
+    <div class="categoria">🐾 Reino Animal (Sonidos al Hablar)</div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🐱</span>
+        <div class="info-col">
+          <span class="comando-texto">Gato</span>
+          <span class="efecto-desc">Maúlla al ritmo del mensaje (miau, miaaau, mrrreow)</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz gato">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🐶</span>
+        <div class="info-col">
+          <span class="comando-texto">Perro</span>
+          <span class="efecto-desc">Ladridos simpáticos y rítmicos (guau, guaf, woof)</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz perro">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🦆</span>
+        <div class="info-col">
+          <span class="comando-texto">Pato</span>
+          <span class="efecto-desc">Graznidos cómicos y agudos (cuak, cuak cuak)</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz pato">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🐮</span>
+        <div class="info-col">
+          <span class="comando-texto">Vaca</span>
+          <span class="efecto-desc">Mugidos lentos y campestres (muuu, muu-muu)</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz vaca">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🐑</span>
+        <div class="info-col">
+          <span class="comando-texto">Oveja</span>
+          <span class="efecto-desc">Balidos temblorosos y agudos (beee, meee)</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz oveja">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🐸</span>
+        <div class="info-col">
+          <span class="comando-texto">Rana</span>
+          <span class="efecto-desc">Croares graves y saltarines (croac, croaac)</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz rana">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🐔</span>
+        <div class="info-col">
+          <span class="comando-texto">Pollo</span>
+          <span class="efecto-desc">Cacareo rápido y festivo (clo-clo, kikirikí)</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz pollo">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🐺</span>
+        <div class="info-col">
+          <span class="comando-texto">Lobo</span>
+          <span class="efecto-desc">Aullidos misteriosos a la luna llena (auuuu, awooo)</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz lobo">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🐵</span>
+        <div class="info-col">
+          <span class="comando-texto">Mono</span>
+          <span class="efecto-desc">Chillidos juguetones de la jungla (uh-uh-ah-ah)</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz mono">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🐷</span>
+        <div class="info-col">
+          <span class="comando-texto">Cerdo</span>
+          <span class="efecto-desc">Gruñidos simpáticos de granja (oink, oink oink)</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz cerdo">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🦗</span>
+        <div class="info-col">
+          <span class="comando-texto">Grillo</span>
+          <span class="efecto-desc">Cri-cri nocturno (ideal para silencios incómodos)</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz grillo">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🐝</span>
+        <div class="info-col">
+          <span class="comando-texto">Abeja</span>
+          <span class="efecto-desc">Zumbido frenético y veloz (bzzzz, zzz)</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz abeja">Copiar</button>
+      </div>
     </div>
   </div>
 
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇲🇽</span><span class="comando-texto">México</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-MX 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-MX 2">Voz 2</button>
+  <div class="seccion-grupo">
+    <div class="categoria">🎭 Personajes y Tropos Cómicos</div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🍺</span>
+        <div class="info-col">
+          <span class="comando-texto">Borracho</span>
+          <span class="efecto-desc">Arrastra vocales, ritmo tambaleante e hipos</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz borracho">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">👶</span>
+        <div class="info-col">
+          <span class="comando-texto">Bebé</span>
+          <span class="efecto-desc">Tono infantil superagudo y balbuceo (gu-gu ta-ta)</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz bebe">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">👴</span>
+        <div class="info-col">
+          <span class="comando-texto">Abuelo</span>
+          <span class="efecto-desc">Voz cansada, toses (cof cof) y quejas de reuma</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz abuelo">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🏴‍☠️</span>
+        <div class="info-col">
+          <span class="comando-texto">Pirata</span>
+          <span class="efecto-desc">Jerga marina ("¡Arrr! ¡Por las barbas de Neptuno!")</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz pirata">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🗣️</span>
+        <div class="info-col">
+          <span class="comando-texto">Tartamudo</span>
+          <span class="efecto-desc">Repite las primeras sílabas de cada palabra</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz tartamudo">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🏎️</span>
+        <div class="info-col">
+          <span class="comando-texto">Acelerado</span>
+          <span class="efecto-desc">Velocidad x1.85 estilo locutor de subastas</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz acelerado">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🐢</span>
+        <div class="info-col">
+          <span class="comando-texto">Perezoso</span>
+          <span class="efecto-desc">Habla a cámara lenta ultra arrastrada</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz perezoso">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">👑</span>
+        <div class="info-col">
+          <span class="comando-texto">Pijo</span>
+          <span class="efecto-desc">Tono nasal ("o sea te lo juro por Snoopy")</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz pijo">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🤫</span>
+        <div class="info-col">
+          <span class="comando-texto">Susurro</span>
+          <span class="efecto-desc">Voz misteriosa y baja revelando un secreto</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz susurro">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">📢</span>
+        <div class="info-col">
+          <span class="comando-texto">Pregonero</span>
+          <span class="efecto-desc">Bando municipal medieval ("¡Se hace sabeeer...!")</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz pregonero">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🎭</span>
+        <div class="info-col">
+          <span class="comando-texto">Dramático</span>
+          <span class="efecto-desc">Telenovela exagerada ("¡Oh cielos, qué tragedia!")</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz dramatico">Copiar</button>
+      </div>
     </div>
   </div>
 
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇦🇷</span><span class="comando-texto">Argentina</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-AR 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-AR 2">Voz 2</button>
+  <div class="seccion-grupo">
+    <div class="categoria">🎛️ Efectos de Audio y Filtros</div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🎈</span>
+        <div class="info-col">
+          <span class="comando-texto">Helio</span>
+          <span class="efecto-desc">Globo de helio, ardilla o pitufo súper agudo</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz helio">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">👹</span>
+        <div class="info-col">
+          <span class="comando-texto">Ogro</span>
+          <span class="efecto-desc">Tono cavernoso, monstruoso y gutural</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz ogro">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🤖</span>
+        <div class="info-col">
+          <span class="comando-texto">Robot</span>
+          <span class="efecto-desc">Sintetizador monótono, metálico y robótico</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz robot">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">📻</span>
+        <div class="info-col">
+          <span class="comando-texto">Walkie-Talkie</span>
+          <span class="efecto-desc">Radio patrulla policial con cambio y estática</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz walkie">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">🕳️</span>
+        <div class="info-col">
+          <span class="comando-texto">Cueva</span>
+          <span class="efecto-desc">Eco profundo y reverberación espacial</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz cueva">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">☎️</span>
+        <div class="info-col">
+          <span class="comando-texto">Teléfono Vintage</span>
+          <span class="efecto-desc">Audio comprimido de llamada telefónica clásica</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz telefono">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">👽</span>
+        <div class="info-col">
+          <span class="comando-texto">Alien</span>
+          <span class="efecto-desc">Modulación vibrato y transmisión galáctica</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz alien">Copiar</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col">
+        <span class="bandera">📣</span>
+        <div class="info-col">
+          <span class="comando-texto">Megáfono</span>
+          <span class="efecto-desc">Saturación potente de altavoz callejero</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz megafono">Copiar</button>
+      </div>
     </div>
   </div>
 
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇨🇴</span><span class="comando-texto">Colombia</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-CO 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-CO 2">Voz 2</button>
+  <div class="seccion-grupo">
+    <div class="categoria">Acentos en Español</div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇪🇸</span><span class="comando-texto">España</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-ES 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-ES 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇲🇽</span><span class="comando-texto">México</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-MX 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-MX 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇦🇷</span><span class="comando-texto">Argentina</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-AR 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-AR 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇨🇴</span><span class="comando-texto">Colombia</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-CO 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-CO 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇨🇱</span><span class="comando-texto">Chile</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-CL 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-CL 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇵🇪</span><span class="comando-texto">Perú</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-PE 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-PE 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇨🇺</span><span class="comando-texto">Cuba</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-CU 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-CU 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇻🇪</span><span class="comando-texto">Venezuela</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-VE 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-VE 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇺🇸</span><span class="comando-texto">EE.UU. (Latino)</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-US 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-US 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇺🇾</span><span class="comando-texto">Uruguay</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-UY 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-UY 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇪🇨</span><span class="comando-texto">Ecuador</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-EC 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-EC 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇧🇴</span><span class="comando-texto">Bolivia</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-BO 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-BO 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇩🇴</span><span class="comando-texto">Rep. Dominicana</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-DO 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-DO 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇨🇷</span><span class="comando-texto">Costa Rica</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-CR 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-CR 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇬🇹</span><span class="comando-texto">Guatemala</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz es-GT 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz es-GT 2">Voz 2</button>
+      </div>
     </div>
   </div>
 
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇨🇱</span><span class="comando-texto">Chile</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-CL 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-CL 2">Voz 2</button>
+  <div class="seccion-grupo">
+    <div class="categoria">Lenguas Cooficiales</div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🏴</span><span class="comando-texto">Catalán</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz ca-ES 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz ca-ES 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🏴</span><span class="comando-texto">Gallego</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz gl-ES 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz gl-ES 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🏴</span><span class="comando-texto">Euskera</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz eu-ES 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz eu-ES 2">Voz 2</button>
+      </div>
     </div>
   </div>
 
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇵🇪</span><span class="comando-texto">Perú</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-PE 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-PE 2">Voz 2</button>
+  <div class="seccion-grupo">
+    <div class="categoria">Idiomas Internacionales</div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇺🇸</span><span class="comando-texto">Inglés (EE.UU.)</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz en-US 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz en-US 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇬🇧</span><span class="comando-texto">Inglés (UK)</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz en-GB 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz en-GB 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇫🇷</span><span class="comando-texto">Francés</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz fr-FR 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz fr-FR 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇮🇹</span><span class="comando-texto">Italiano</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz it-IT 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz it-IT 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇩🇪</span><span class="comando-texto">Alemán</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz de-DE 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz de-DE 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇧🇷</span><span class="comando-texto">Portugués (Brasil)</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz pt-BR 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz pt-BR 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇵🇹</span><span class="comando-texto">Portugués (Portugal)</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz pt-PT 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz pt-PT 2">Voz 2</button>
+      </div>
+    </div>
+
+    <div class="linea">
+      <div class="pais-col"><span class="bandera">🇯🇵</span><span class="comando-texto">Japonés</span></div>
+      <div class="botones">
+        <button type="button" class="btn-copy" data-comando="!voz ja-JP 1">Voz 1</button>
+        <button type="button" class="btn-copy" data-comando="!voz ja-JP 2">Voz 2</button>
+      </div>
     </div>
   </div>
 
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇨🇺</span><span class="comando-texto">Cuba</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-CU 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-CU 2">Voz 2</button>
+  <div class="seccion-grupo">
+    <div class="categoria">Restablecer</div>
+
+    <div class="linea" style="background-color: #f1f5f9; border-color: #cbd5e1;">
+      <div class="pais-col">
+        <span class="bandera">🔄</span>
+        <div class="info-col">
+          <span class="comando-texto">Voz Normal</span>
+          <span class="efecto-desc">Restablece la voz a la velocidad y tono estándar</span>
+        </div>
+      </div>
+      <div class="botones">
+        <button type="button" class="btn-copy btn-reset" data-comando="!voz reset">Restablecer</button>
+      </div>
     </div>
   </div>
 
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇻🇪</span><span class="comando-texto">Venezuela</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-VE 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-VE 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇺🇸</span><span class="comando-texto">EE.UU. (Latino)</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-US 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-US 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇺🇾</span><span class="comando-texto">Uruguay</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-UY 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-UY 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇪🇨</span><span class="comando-texto">Ecuador</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-EC 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-EC 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇧🇴</span><span class="comando-texto">Bolivia</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-BO 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-BO 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇩🇴</span><span class="comando-texto">Rep. Dominicana</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-DO 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-DO 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇨🇷</span><span class="comando-texto">Costa Rica</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-CR 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-CR 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇬🇹</span><span class="comando-texto">Guatemala</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config es-GT 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config es-GT 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="categoria">Lenguas Cooficiales</div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🏴</span><span class="comando-texto">Catalán</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config ca-ES 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config ca-ES 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🏴</span><span class="comando-texto">Gallego</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config gl-ES 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config gl-ES 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🏴</span><span class="comando-texto">Euskera</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config eu-ES 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config eu-ES 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="categoria">Idiomas Internacionales</div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇺🇸</span><span class="comando-texto">Inglés (EE.UU.)</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config en-US 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config en-US 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇬🇧</span><span class="comando-texto">Inglés (UK)</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config en-GB 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config en-GB 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇫🇷</span><span class="comando-texto">Francés</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config fr-FR 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config fr-FR 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇮🇹</span><span class="comando-texto">Italiano</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config it-IT 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config it-IT 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇩🇪</span><span class="comando-texto">Alemán</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config de-DE 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config de-DE 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇧🇷</span><span class="comando-texto">Portugués (Brasil)</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config pt-BR 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config pt-BR 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇵🇹</span><span class="comando-texto">Portugués (Portugal)</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config pt-PT 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config pt-PT 2">Voz 2</button>
-    </div>
-  </div>
-
-  <div class="linea">
-    <div class="pais-col"><span class="bandera">🇯🇵</span><span class="comando-texto">Japonés</span></div>
-    <div class="botones">
-      <button type="button" class="btn-copy" data-comando="!speak -config ja-JP 1">Voz 1</button>
-      <button type="button" class="btn-copy" data-comando="!speak -config ja-JP 2">Voz 2</button>
-    </div>
-  </div>
+  <div id="apliarte-voces-vacio" class="sin-resultados">No se encontraron voces o efectos que coincidan con la búsqueda.</div>
 
   <p id="apliarte-voces-aviso">Pulsa en cualquier botón para copiar el comando</p>
 </div>
@@ -277,6 +735,10 @@
   var raiz = document.getElementById('apliarte-voces');
   if (!raiz) return;
   var aviso = document.getElementById('apliarte-voces-aviso');
+  var filtro = document.getElementById('apliarte-voces-filtro');
+  var lineas = raiz.querySelectorAll('.linea');
+  var grupos = raiz.querySelectorAll('.seccion-grupo');
+  var vacio = document.getElementById('apliarte-voces-vacio');
 
   function copiarConFallback(texto) {
     if (navigator.clipboard && window.isSecureContext) {
@@ -311,7 +773,7 @@
     copiarConFallback(comando).then(function () {
       boton.classList.add('copiado');
       boton.textContent = 'Copiado';
-      if (aviso) aviso.textContent = 'Pegalo en el chat de Twitch: ' + comando;
+      if (aviso) aviso.textContent = 'Pégalo en el chat: ' + comando;
       setTimeout(function () {
         boton.classList.remove('copiado');
         boton.textContent = textoOriginal;
@@ -320,5 +782,37 @@
       if (aviso) aviso.textContent = 'Copia este comando a mano: ' + comando;
     });
   });
+
+  if (filtro) {
+    filtro.addEventListener('input', function () {
+      var q = filtro.value.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      var visiblesTotales = 0;
+
+      for (var i = 0; i < lineas.length; i++) {
+        var linea = lineas[i];
+        var txt = (linea.textContent || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        var coincide = !q || txt.indexOf(q) !== -1;
+        linea.style.display = coincide ? 'flex' : 'none';
+        if (coincide) visiblesTotales++;
+      }
+
+      for (var g = 0; g < grupos.length; g++) {
+        var grupo = grupos[g];
+        var tieneVisibles = false;
+        var sublineas = grupo.querySelectorAll('.linea');
+        for (var s = 0; s < sublineas.length; s++) {
+          if (sublineas[s].style.display !== 'none') {
+            tieneVisibles = true;
+            break;
+          }
+        }
+        grupo.style.display = tieneVisibles ? 'block' : 'none';
+      }
+
+      if (vacio) {
+        vacio.style.display = (visiblesTotales === 0) ? 'block' : 'none';
+      }
+    });
+  }
 })();
 </script>

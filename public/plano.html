@@ -1690,7 +1690,7 @@
   </div>
 
   <!-- Script bundle de la oficina 3D -->
-  <script src="/office-3d.js?v=f4d4d414ed"></script>
+  <script src="/office-3d.js?v=54e7bd4dd4"></script>
   <script src="/js/conga-musica.js?v=20261003c"></script>
   <script src="/js/fiesta-bronca-audio.js?v=20261010"></script>
 
@@ -2182,8 +2182,369 @@
     syncServerOwners();
     setInterval(syncServerOwners, 1500);
 
-    // ─── Voces CVTalk (!speak -config <lang> <slot>) y TTS en Directo ─
+    function elegirAzar(lista) {
+      if (!Array.isArray(lista) || lista.length === 0) return '';
+      return lista[Math.floor(Math.random() * lista.length)];
+    }
+
+    function aplicarColetillaAzar(texto, { prefijos = [], sufijos = [], ctx = {} } = {}) {
+      const t = String(texto || '').trim();
+      if (!t) return '';
+
+      const esPrimero = ctx.esPrimero !== false;
+      const esUltimo = ctx.esUltimo !== false;
+      const permitirPrefijo = esPrimero && Array.isArray(prefijos) && prefijos.length > 0;
+      const permitirSufijo = esUltimo && Array.isArray(sufijos) && sufijos.length > 0;
+
+      if (!permitirPrefijo && !permitirSufijo) return t;
+
+      if (permitirPrefijo && !permitirSufijo) {
+        const pref = elegirAzar(prefijos);
+        return pref ? `${pref} ${t}` : t;
+      }
+      if (!permitirPrefijo && permitirSufijo) {
+        const suf = elegirAzar(sufijos);
+        return suf ? `${t}, ${suf}` : t;
+      }
+
+      // Ambos permitidos (mensaje completo o de 1 solo trozo):
+      // Mayoritariamente solo una coletilla corta para no saturar ni cansar
+      const dado = Math.random();
+      if (dado < 0.45) {
+        const suf = elegirAzar(sufijos);
+        return suf ? `${t}, ${suf}` : t;
+      } else if (dado < 0.85) {
+        const pref = elegirAzar(prefijos);
+        return pref ? `${pref} ${t}` : t;
+      } else {
+        // Ocasionalmente una combinación súper corta
+        const pref = elegirAzar(prefijos);
+        const suf = elegirAzar(sufijos);
+        return `${pref} ${t}, ${suf}`;
+      }
+    }
+
+    // ─── Catálogo de Voces y Efectos de Audio (!voz <efecto>) ───────
+    const CATALOGO_VOCES = {
+      // 🐾 Animales
+      gato: { tipo: 'animal', nombre: 'Gato', emoji: '🐱', sonidos: ['miau', 'miaaau', 'miau miau', 'mrrreow', 'miau', 'miaau'], lang: 'es-ES', slot: 1, factorTono: 1.38, velocidad: 1.15 },
+      perro: { tipo: 'animal', nombre: 'Perro', emoji: '🐶', sonidos: ['guau', 'guaf', 'woof', 'guaaau', 'guau guau'], lang: 'es-ES', slot: 2, factorTono: 0.92, velocidad: 1.2 },
+      pato: { tipo: 'animal', nombre: 'Pato', emoji: '🦆', sonidos: ['cuak', 'cuak cuak', 'cuaaak', 'cuak'], lang: 'es-ES', slot: 1, factorTono: 1.28, velocidad: 1.25 },
+      vaca: { tipo: 'animal', nombre: 'Vaca', emoji: '🐮', sonidos: ['muuu', 'muuuu', 'mu-mu', 'muuu'], lang: 'es-ES', slot: 2, factorTono: 0.76, velocidad: 0.85 },
+      oveja: { tipo: 'animal', nombre: 'Oveja', emoji: '🐑', sonidos: ['beee', 'beeee', 'meee', 'beee'], lang: 'es-ES', slot: 1, factorTono: 1.22, velocidad: 1.05 },
+      rana: { tipo: 'animal', nombre: 'Rana', emoji: '🐸', sonidos: ['croac', 'croaac', 'cro-croac', 'croac'], lang: 'es-ES', slot: 2, factorTono: 0.72, velocidad: 0.9 },
+      pollo: { tipo: 'animal', nombre: 'Pollo', emoji: '🐔', sonidos: ['clo clo', 'kikirikí', 'cocorocó', 'clo clo clo'], lang: 'es-ES', slot: 1, factorTono: 1.35, velocidad: 1.35 },
+      lobo: { tipo: 'animal', nombre: 'Lobo', emoji: '🐺', sonidos: ['auuuu', 'awooo', 'auuuuu', 'grrr auuu'], lang: 'es-ES', slot: 2, factorTono: 0.78, velocidad: 0.88 },
+      mono: { tipo: 'animal', nombre: 'Mono', emoji: '🐵', sonidos: ['uh uh ah ah', 'uh uh', 'ah ah ah', 'uh ah uh ah'], lang: 'es-ES', slot: 1, factorTono: 1.32, velocidad: 1.3 },
+      cerdo: { tipo: 'animal', nombre: 'Cerdo', emoji: '🐷', sonidos: ['oink', 'oink oink', 'oink', 'groink'], lang: 'es-ES', slot: 2, factorTono: 0.82, velocidad: 1.05 },
+      grillo: { tipo: 'animal', nombre: 'Grillo', emoji: '🦗', sonidos: ['cri cri', 'cri-cri', 'cri cri cri'], lang: 'es-ES', slot: 1, factorTono: 1.45, velocidad: 1.4 },
+      abeja: { tipo: 'animal', nombre: 'Abeja', emoji: '🐝', sonidos: ['bzzzz', 'bzzz bzz', 'bzzzz', 'zzz bzzz'], lang: 'es-ES', slot: 1, factorTono: 1.4, velocidad: 1.3 },
+
+      // 🎭 Cómicos
+      borracho: {
+        tipo: 'personaje',
+        nombre: 'Borracho',
+        emoji: '🍺',
+        transformar: (t, ctx) => {
+          const alargado = String(t || '').replace(/([aeiouáéíóú])/gi, '$1$1');
+          return aplicarColetillaAzar(alargado, {
+            prefijos: ['hip...', '¡Hic!', 'hip hip...'],
+            sufijos: ['¡uf qué taja!', 'hip', '¡salud!', 'hip...', '¡viva la fiesta!'],
+            ctx
+          });
+        },
+        lang: 'es-ES',
+        slot: 2,
+        factorTono: 0.82,
+        velocidad: 0.75
+      },
+      bebe: {
+        tipo: 'personaje',
+        nombre: 'Bebé',
+        emoji: '👶',
+        transformar: (t, ctx) => aplicarColetillaAzar(t, {
+          prefijos: ['Gu-gu...', 'A-gú...', 'Tata...'],
+          sufijos: ['gu-gu', 'ta-ta', 'buaaa', 'agu'],
+          ctx
+        }),
+        lang: 'es-ES',
+        slot: 1,
+        factorTono: 1.5,
+        velocidad: 1.2
+      },
+      abuelo: {
+        tipo: 'personaje',
+        nombre: 'Abuelo',
+        emoji: '👴',
+        transformar: (t, ctx) => aplicarColetillaAzar(t, {
+          prefijos: ['Cof cof...', '¡Eh!', 'En mis tiempos...'],
+          sufijos: ['cof cof', '¡ay mis huesos!', 'en mis tiempos', 'como antaño'],
+          ctx
+        }),
+        lang: 'es-ES',
+        slot: 2,
+        factorTono: 0.82,
+        velocidad: 0.78
+      },
+      pirata: {
+        tipo: 'personaje',
+        nombre: 'Pirata',
+        emoji: '🏴‍☠️',
+        transformar: (t, ctx) => aplicarColetillaAzar(t, {
+          prefijos: ['¡Arrr!', '¡A babor!', '¡Ah del barco!'],
+          sufijos: ['¡marinero!', '¡por Neptuno!', '¡arrr!', '¡a la orden!'],
+          ctx
+        }),
+        lang: 'es-ES',
+        slot: 2,
+        factorTono: 0.88,
+        velocidad: 1.05
+      },
+      tartamudo: {
+        tipo: 'personaje',
+        nombre: 'Tartamudo',
+        emoji: '🗣️',
+        transformar: (t) => String(t || '').split(/\s+/).map(p => (p.length > 2 ? `${p.charAt(0)}-${p.charAt(0)}-${p}` : p)).join(' '),
+        lang: 'es-ES',
+        slot: 1,
+        factorTono: 1.08,
+        velocidad: 1.1
+      },
+      acelerado: { tipo: 'personaje', nombre: 'Acelerado', emoji: '🏎️', lang: 'es-ES', slot: 1, factorTono: 1.25, velocidad: 1.85 },
+      perezoso: { tipo: 'personaje', nombre: 'Perezoso', emoji: '🐢', transformar: (t) => String(t || '').split('').join(' '), lang: 'es-ES', slot: 2, factorTono: 0.65, velocidad: 0.55 },
+      pijo: {
+        tipo: 'personaje',
+        nombre: 'Pijo',
+        emoji: '👑',
+        transformar: (t, ctx) => aplicarColetillaAzar(t, {
+          prefijos: ['O sea,', 'En plan,', 'Oye,'],
+          sufijos: ['o sea', '¿sabes?', 'total', 'te lo juro', '¿me entiendes?'],
+          ctx
+        }),
+        lang: 'es-ES',
+        slot: 1,
+        factorTono: 1.2,
+        velocidad: 1.1
+      },
+      susurro: {
+        tipo: 'personaje',
+        nombre: 'Susurro',
+        emoji: '🤫',
+        transformar: (t, ctx) => aplicarColetillaAzar(t, {
+          prefijos: ['Ssshh...', 'Psst...', 'Oye...'],
+          sufijos: ['ssshh', '(en secreto)', '(que no se enteren)', 'no digas nada'],
+          ctx
+        }),
+        lang: 'es-ES',
+        slot: 1,
+        factorTono: 1.05,
+        velocidad: 0.95
+      },
+      pregonero: {
+        tipo: 'personaje',
+        nombre: 'Pregonero',
+        emoji: '📢',
+        transformar: (t, ctx) => aplicarColetillaAzar(t, {
+          prefijos: ['¡Se hace saber!', '¡Atención!', '¡Oído al parche!'],
+          sufijos: ['¡avisados quedáis!', '¡he dicho!', '¡atención!'],
+          ctx
+        }),
+        lang: 'es-ES',
+        slot: 2,
+        factorTono: 0.92,
+        velocidad: 1.05
+      },
+      dramatico: {
+        tipo: 'personaje',
+        nombre: 'Dramático',
+        emoji: '🎭',
+        transformar: (t, ctx) => aplicarColetillaAzar(t, {
+          prefijos: ['¡Oh cielos!', '¡Dios mío!', '¡No puede ser!'],
+          sufijos: ['¡qué tragedia!', '¡no puedo más!', '¡tragedia!'],
+          ctx
+        }),
+        lang: 'es-ES',
+        slot: 1,
+        factorTono: 1.18,
+        velocidad: 0.95
+      },
+
+      // 🎛️ Filtros DSP
+      helio: { tipo: 'dsp', nombre: 'Helio', emoji: '🎈', lang: 'es-ES', slot: 1, factorTono: 1.62, velocidad: 1.3 },
+      ogro: {
+        tipo: 'dsp',
+        nombre: 'Ogro',
+        emoji: '👹',
+        transformar: (t, ctx) => aplicarColetillaAzar(t, {
+          prefijos: ['¡Grrr!', '¡Aaarrggh!', '¡Urrgh!'],
+          sufijos: ['¡grrr!', '¡arrr!', '¡aplastar!'],
+          ctx
+        }),
+        lang: 'es-ES',
+        slot: 2,
+        factorTono: 0.62,
+        velocidad: 0.82
+      },
+      robot: {
+        tipo: 'dsp',
+        nombre: 'Robot',
+        emoji: '🤖',
+        transformar: (t, ctx) => aplicarColetillaAzar(t, {
+          prefijos: ['Bip bop...', 'Procesando...', 'Bip...'],
+          sufijos: ['bip', 'bop bip', 'fin de datos', 'bip bop'],
+          ctx
+        }),
+        lang: 'es-ES',
+        slot: 2,
+        factorTono: 1.0,
+        velocidad: 1.0
+      },
+      walkie: {
+        tipo: 'dsp',
+        nombre: 'Walkie-Talkie',
+        emoji: '📻',
+        transformar: (t, ctx) => aplicarColetillaAzar(t, {
+          prefijos: ['Cambio...', '¡Atención patrulla!', 'Aquí base...'],
+          sufijos: ['cambio y corto', 'corto', '*krrr*', 'cambio'],
+          ctx
+        }),
+        lang: 'es-ES',
+        slot: 2,
+        factorTono: 1.08,
+        velocidad: 1.15
+      },
+      cueva: {
+        tipo: 'dsp',
+        nombre: 'Cueva',
+        emoji: '🕳️',
+        transformar: (t) => {
+          const palabras = String(t || '').trim().split(/\s+/).filter(Boolean);
+          const eco = palabras.slice(-2).join(' ') || t;
+          const variaciones = [
+            `${t}... ${eco}`,
+            `${t}... ${eco}... eco`,
+            `${t}... ${palabras.slice(-1)[0] || eco}`
+          ];
+          return elegirAzar(variaciones);
+        },
+        lang: 'es-ES',
+        slot: 2,
+        factorTono: 0.82,
+        velocidad: 0.88
+      },
+      telefono: {
+        tipo: 'dsp',
+        nombre: 'Teléfono Vintage',
+        emoji: '☎️',
+        transformar: (t, ctx) => aplicarColetillaAzar(t, {
+          prefijos: ['Ring ring...', '¿Dígame?', 'Ring...'],
+          sufijos: ['cuelgo', 'pi pi pi', 'hasta luego', 'clic'],
+          ctx
+        }),
+        lang: 'es-ES',
+        slot: 1,
+        factorTono: 1.12,
+        velocidad: 1.1
+      },
+      alien: {
+        tipo: 'dsp',
+        nombre: 'Alien',
+        emoji: '👽',
+        transformar: (t, ctx) => aplicarColetillaAzar(t, {
+          prefijos: ['¡Zorp!', '¡Saludos humanos!', 'Blorp...'],
+          sufijos: ['zorp blorp', 'fin transmisión', 'humano', 'blorp'],
+          ctx
+        }),
+        lang: 'es-ES',
+        slot: 1,
+        factorTono: 1.35,
+        velocidad: 1.2
+      },
+      megafono: {
+        tipo: 'dsp',
+        nombre: 'Megáfono',
+        emoji: '📣',
+        transformar: (t, ctx) => aplicarColetillaAzar(t, {
+          prefijos: ['¡Atención!', '¡Aviso público!', '¡Prueba!'],
+          sufijos: ['¡repito!', '¡atención!', '¡cambio!'],
+          ctx
+        }),
+        lang: 'es-ES',
+        slot: 1,
+        factorTono: 1.15,
+        velocidad: 1.12
+      },
+
+      // 🌍 Países y Acentos
+      espana: { tipo: 'idioma', nombre: 'España', emoji: '🇪🇸', lang: 'es-ES', slot: 1 },
+      mexico: { tipo: 'idioma', nombre: 'México', emoji: '🇲🇽', lang: 'es-MX', slot: 1 },
+      argentina: { tipo: 'idioma', nombre: 'Argentina', emoji: '🇦🇷', lang: 'es-AR', slot: 1 },
+      colombia: { tipo: 'idioma', nombre: 'Colombia', emoji: '🇨🇴', lang: 'es-CO', slot: 1 },
+      chile: { tipo: 'idioma', nombre: 'Chile', emoji: '🇨🇱', lang: 'es-CL', slot: 1 },
+      peru: { tipo: 'idioma', nombre: 'Perú', emoji: '🇵🇪', lang: 'es-PE', slot: 1 },
+      cuba: { tipo: 'idioma', nombre: 'Cuba', emoji: '🇨🇺', lang: 'es-CU', slot: 1 },
+      venezuela: { tipo: 'idioma', nombre: 'Venezuela', emoji: '🇻🇪', lang: 'es-VE', slot: 1 },
+      uruguay: { tipo: 'idioma', nombre: 'Uruguay', emoji: '🇺🇾', lang: 'es-UY', slot: 1 },
+      ecuador: { tipo: 'idioma', nombre: 'Ecuador', emoji: '🇪🇨', lang: 'es-EC', slot: 1 },
+      bolivia: { tipo: 'idioma', nombre: 'Bolivia', emoji: '🇧🇴', lang: 'es-BO', slot: 1 },
+      dominicana: { tipo: 'idioma', nombre: 'Rep. Dominicana', emoji: '🇩🇴', lang: 'es-DO', slot: 1 },
+      costarica: { tipo: 'idioma', nombre: 'Costa Rica', emoji: '🇨🇷', lang: 'es-CR', slot: 1 },
+      guatemala: { tipo: 'idioma', nombre: 'Guatemala', emoji: '🇬🇹', lang: 'es-GT', slot: 1 },
+      catalan: { tipo: 'idioma', nombre: 'Catalán', emoji: '🏴', lang: 'ca-ES', slot: 1 },
+      gallego: { tipo: 'idioma', nombre: 'Gallego', emoji: '🏴', lang: 'gl-ES', slot: 1 },
+      euskera: { tipo: 'idioma', nombre: 'Euskera', emoji: '🏴', lang: 'eu-ES', slot: 1 },
+      ingles: { tipo: 'idioma', nombre: 'Inglés (EE.UU.)', emoji: '🇺🇸', lang: 'en-US', slot: 1 },
+      britanico: { tipo: 'idioma', nombre: 'Inglés (UK)', emoji: '🇬🇧', lang: 'en-GB', slot: 1 },
+      frances: { tipo: 'idioma', nombre: 'Francés', emoji: '🇫🇷', lang: 'fr-FR', slot: 1 },
+      italiano: { tipo: 'idioma', nombre: 'Italiano', emoji: '🇮🇹', lang: 'it-IT', slot: 1 },
+      aleman: { tipo: 'idioma', nombre: 'Alemán', emoji: '🇩🇪', lang: 'de-DE', slot: 1 },
+      portugues: { tipo: 'idioma', nombre: 'Portugués (Brasil)', emoji: '🇧🇷', lang: 'pt-BR', slot: 1 },
+      japon: { tipo: 'idioma', nombre: 'Japonés', emoji: '🇯🇵', lang: 'ja-JP', slot: 1 },
+      normal: { tipo: 'idioma', nombre: 'Voz Normal', emoji: '🔄', lang: 'es-ES', slot: 1, reset: true },
+      reset: { tipo: 'idioma', nombre: 'Restablecer', emoji: '🔄', lang: 'es-ES', slot: 1, reset: true }
+    };
+
+    const ALIAS_VOCES = {
+      'es-es': CATALOGO_VOCES.espana,
+      'es-mx': CATALOGO_VOCES.mexico,
+      'es-ar': CATALOGO_VOCES.argentina,
+      'es-co': CATALOGO_VOCES.colombia,
+      'es-cl': CATALOGO_VOCES.chile,
+      'es-pe': CATALOGO_VOCES.peru,
+      'es-cu': CATALOGO_VOCES.cuba,
+      'es-ve': CATALOGO_VOCES.venezuela,
+      'es-us': { tipo: 'idioma', nombre: 'EE.UU. (Latino)', emoji: '🇺🇸', lang: 'es-US', slot: 1 },
+      'es-uy': CATALOGO_VOCES.uruguay,
+      'es-ec': CATALOGO_VOCES.ecuador,
+      'es-bo': CATALOGO_VOCES.bolivia,
+      'es-do': CATALOGO_VOCES.dominicana,
+      'es-cr': CATALOGO_VOCES.costarica,
+      'es-gt': CATALOGO_VOCES.guatemala,
+      'ca-es': CATALOGO_VOCES.catalan,
+      'gl-es': CATALOGO_VOCES.gallego,
+      'eu-es': CATALOGO_VOCES.euskera,
+      'en-us': CATALOGO_VOCES.ingles,
+      'en-gb': CATALOGO_VOCES.britanico,
+      'fr-fr': CATALOGO_VOCES.frances,
+      'it-it': CATALOGO_VOCES.italiano,
+      'de-de': CATALOGO_VOCES.aleman,
+      'pt-br': CATALOGO_VOCES.portugues,
+      'pt-pt': { tipo: 'idioma', nombre: 'Portugués (Portugal)', emoji: '🇵🇹', lang: 'pt-PT', slot: 1 },
+      'ja-jp': CATALOGO_VOCES.japon,
+      'perrito': CATALOGO_VOCES.perro,
+      'gatito': CATALOGO_VOCES.gato,
+      'patito': CATALOGO_VOCES.pato,
+      'ardilla': CATALOGO_VOCES.helio,
+      'pitufo': CATALOGO_VOCES.helio,
+      'monstruo': CATALOGO_VOCES.ogro,
+      'demonio': CATALOGO_VOCES.ogro,
+      'policia': CATALOGO_VOCES.walkie,
+      'eco': CATALOGO_VOCES.cueva
+    };
+
+    // ─── Voces y Configuración TTS en Directo (!voz y !speak) ────────
     const userVoiceConfigs = new Map();
+
     async function syncVoces() {
       try {
         const res = await fetch('/api/panel/voces', { cache: 'no-store' });
@@ -2200,10 +2561,23 @@
     syncVoces();
     setInterval(syncVoces, 5000);
 
+    // Desbloquear audio en navegadores web con el primer clic/toque
+    function desbloquearAudioSiHaceFalta() {
+      const unlock = () => {
+        try {
+          const a = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==');
+          a.play().catch(() => {});
+        } catch (_) {}
+      };
+      window.addEventListener('pointerdown', unlock, { once: true });
+      window.addEventListener('keydown', unlock, { once: true });
+    }
+    desbloquearAudioSiHaceFalta();
+
     // ─── TTS de Audio para Avatares Adoptados en el Directo ─────────
     const ttsColaAudio = [];
     let ttsAudioEnReproduccion = false;
-    let ttsActivoEnOverlay = false;
+    let ttsActivoEnOverlay = true;
     let ttsPreservePitchEnOverlay = false; // Camino 2 de serie (cada avatar conserva su tono propio)
     const MAX_TTS_COLA = 8;
     const MAX_TTS_COLA_TROZOS = 16; // Tope duro de trozos en total (~130s de voz acumulada)
@@ -2295,14 +2669,49 @@
         return;
       }
 
-      // Determinar dueño del avatar y su voz personalizada CVTalk
+      // Determinar dueño del avatar y su voz personalizada CVTalk / Efectos
       const rawDuenio = (item.agente === 'ja' || item.usuario === 'ja' || item.usuario === 'apliarte') ? 'apliarte' : (item.usuario || avatarOwners[item.agente] || null);
       const pref = rawDuenio ? userVoiceConfigs.get(rawDuenio.toLowerCase()) : null;
-      const lang = pref?.lang || 'es';
-      const slot = pref?.slot || 1;
+      let lang = pref?.lang || 'es';
+      let slot = pref?.slot || 1;
+
+      // Transformación de texto para efectos de voz (animales, personajes, etc.)
+      let textoParaTts = textoLimpio;
+      let factorEfectoTono = null;
+      let factorEfectoVel = 1.0;
+
+      if (pref) {
+        const efectoClave = pref.efecto || (pref.lang && pref.lang.toLowerCase());
+        const efectoActivo = (efectoClave && CATALOGO_VOCES[efectoClave]) || (efectoClave && ALIAS_VOCES[efectoClave]) || null;
+        if (efectoActivo) {
+          if (efectoActivo.factorTono) factorEfectoTono = efectoActivo.factorTono;
+          if (efectoActivo.velocidad) factorEfectoVel = efectoActivo.velocidad;
+
+          if (efectoActivo.tipo === 'animal' && Array.isArray(efectoActivo.sonidos)) {
+            const palabras = textoLimpio.split(/\s+/).filter(Boolean);
+            const cant = Math.max(4, Math.min(16, Math.ceil(palabras.length * 1.4)));
+            const rep = [];
+            for (let i = 0; i < cant; i++) {
+              rep.push(efectoActivo.sonidos[i % efectoActivo.sonidos.length]);
+            }
+            textoParaTts = rep.join(', ') + '.';
+          } else if (typeof efectoActivo.transformar === 'function') {
+            try {
+              const ctx = {
+                esPrimero: item.trozoIndex === undefined || item.trozoIndex === 0,
+                esUltimo: item.trozoIndex === undefined || item.trozoIndex === ((item.totalTrozos || 1) - 1),
+                totalTrozos: item.totalTrozos || 1
+              };
+              textoParaTts = efectoActivo.transformar(textoLimpio, ctx) || textoLimpio;
+            } catch (_) {
+              textoParaTts = textoLimpio;
+            }
+          }
+        }
+      }
 
       // El texto ya viene dividido en trozos por palabras completas <= 140 caracteres
-      const url = `/api/tts?tl=${encodeURIComponent(lang)}&q=${encodeURIComponent(textoLimpio)}`;
+      const url = `/api/tts?tl=${encodeURIComponent(lang)}&q=${encodeURIComponent(textoParaTts)}`;
 
       let audio = null;
       let watchdogTimer = null;
@@ -2335,8 +2744,10 @@
 
         // Slot 1: Tono femenino/agudo (+12% cadencia / tono si preservesPitch es false)
         // Slot 2: Tono masculino/grave (-12% cadencia / tono si preservesPitch es false)
-        const factorTono = (slot === 2) ? 0.88 : 1.12;
-        audio.playbackRate = calcularPlaybackRate(avatarRate, velocidadEstudio, factorTono);
+        const factorTonoBase = (slot === 2) ? 0.88 : 1.12;
+        const factorTonoFinal = factorEfectoTono ? (factorEfectoTono * (slot === 2 ? 0.92 : 1.05)) : factorTonoBase;
+        audio.playbackRate = calcularPlaybackRate(avatarRate * factorEfectoVel, velocidadEstudio, factorTonoFinal);
+
 
         audio.onended = finalizar;
         audio.onerror = () => {
@@ -2344,9 +2755,26 @@
           finalizar();
         };
 
-        // Timeout preventivo adaptativo: 2.5s base + 60ms por carácter, máx 8s (sin atascos)
-        const watchdogMs = Math.min(8000, Math.max(2500, 1000 + textoLimpio.length * 60));
-        watchdogTimer = setTimeout(finalizar, watchdogMs);
+        // Watchdog preventivo generoso: nunca debe cortar la voz en reproducción normal
+        // Se calcula con margen amplio (12s base + 140ms por carácter según velocidad efectiva)
+        const velocidadEfectiva = Math.max(0.5, audio.playbackRate || (avatarRate * factorEfectoVel));
+        const duracionEstimadaMs = Math.ceil(((textoParaTts.length * 140) / velocidadEfectiva) + 12000);
+        const watchdogMs = Math.max(16000, Math.min(60000, duracionEstimadaMs));
+
+        watchdogTimer = setTimeout(() => {
+          console.warn('[TTS] Watchdog preventivo finalizó audio estancado para:', item.agente);
+          finalizar();
+        }, watchdogMs);
+
+        // Cuando el audio comienza a sonar, si conocemos su duración real, ajustamos el watchdog
+        // para darle la duración completa restante + 4 segundos de cortesía
+        audio.onplaying = () => {
+          if (audio && !isNaN(audio.duration) && audio.duration > 0) {
+            if (watchdogTimer) clearTimeout(watchdogTimer);
+            const tiempoRealRestanteMs = Math.ceil((audio.duration / Math.max(0.5, audio.playbackRate || 1.0)) * 1000) + 4000;
+            watchdogTimer = setTimeout(finalizar, Math.max(8000, tiempoRealRestanteMs));
+          }
+        };
 
         audio.play().catch((err) => {
           console.warn('[TTS] Error en audio.play():', err);
@@ -2453,14 +2881,16 @@
       ultimoAudioHablado = { texto: textoNorm, agente, ts: ahora };
       const mensajeId = 'msg_' + ahora + '_' + Math.random().toString(36).slice(2, 8);
 
-      for (const trozo of trozosAceptados) {
+      for (let i = 0; i < trozosAceptados.length; i++) {
         ttsColaAudio.push({
           agente,
-          texto: trozo,
+          texto: trozosAceptados[i],
           usuario,
           tier,
           mensajeId,
-          mensajeOriginal: textoNorm
+          mensajeOriginal: textoNorm,
+          trozoIndex: i,
+          totalTrozos: trozosAceptados.length
         });
       }
 
@@ -2468,7 +2898,7 @@
     }
 
     let ultimoFocoCamara = 0;
-    function safeFocusAgent(agente, duracionMs = 5000, forzar = false) {
+    function safeFocusAgent(agente, duracionMs = 7000, forzar = false) {
       if (!agente) return;
       const ahora = Date.now();
       if (!forzar && (ahora - ultimoFocoCamara) < 3000) {
@@ -2547,6 +2977,96 @@
           const isSub = badgesStr.includes('subscriber') || badgesStr.includes('founder');
           const isVip = badgesStr.includes('vip');
           const userTier = isBroadcaster ? 3 : (isSub || isVip ? 2 : 1);
+
+          // ─── Comandos de Voz: !voz <efecto_o_idioma> [1|2] o !voz reset ─
+          const mVoz = text.match(/^!voz(?:\s+([a-záéíóúñ0-9_-]+))?(?:\s+([12]))?\b/i);
+          if (mVoz) {
+            const rawClave = (mVoz[1] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const slotOpt = mVoz[2] ? parseInt(mVoz[2], 10) : null;
+            const userKey = user.toLowerCase();
+
+            if (!rawClave || rawClave === 'ayuda' || rawClave === 'help') {
+              let spk = 'ja';
+              for (const [aId, u] of Object.entries(avatarOwners)) {
+                if (u.toLowerCase() === userKey) { spk = aId; break; }
+              }
+              const confActual = userVoiceConfigs.get(userKey);
+              const nomActual = confActual?.nombre || confActual?.efecto || confActual?.lang || 'normal';
+              const aviso = `🎙️ @${user}, tu voz actual es "${nomActual}". Elige efecto en https://www.apliarte.com/2024/07/comandos-voz-chat.html o usa: !voz gato, !voz perro, !voz borracho, !voz helio, !voz espana, !voz reset`;
+              if (office?.runtime) {
+                office.runtime.say(spk, aviso, performance.now());
+                safeFocusAgent(spk, 5000, true);
+              }
+              return;
+            }
+
+            const efectoDef = CATALOGO_VOCES[rawClave] || ALIAS_VOCES[rawClave];
+            if (efectoDef) {
+              const lang = efectoDef.lang || 'es-ES';
+              const slot = slotOpt || efectoDef.slot || 1;
+              const esReset = Boolean(efectoDef.reset);
+              const configVoz = esReset ? null : {
+                efecto: efectoDef.clave || rawClave,
+                lang,
+                slot,
+                tipo: efectoDef.tipo,
+                nombre: efectoDef.nombre,
+                factorTono: efectoDef.factorTono || (slot === 2 ? 0.88 : 1.12),
+                velocidad: efectoDef.velocidad || 1.0
+              };
+
+              if (esReset) {
+                userVoiceConfigs.delete(userKey);
+              } else {
+                userVoiceConfigs.set(userKey, configVoz);
+              }
+              if (userKey === 'ja' || userKey === 'apliarte') {
+                if (esReset) {
+                  userVoiceConfigs.delete('ja');
+                  userVoiceConfigs.delete('apliarte');
+                } else {
+                  userVoiceConfigs.set('ja', configVoz);
+                  userVoiceConfigs.set('apliarte', configVoz);
+                }
+              }
+
+              try {
+                fetch('/api/panel/voces', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ accion: 'guardar', usuario: user, voz: configVoz })
+                }).catch(() => {});
+              } catch (_) {}
+
+              let spk = 'ja';
+              for (const [aId, u] of Object.entries(avatarOwners)) {
+                if (u.toLowerCase() === userKey) { spk = aId; break; }
+              }
+              const avisoTexto = esReset
+                ? `🔄 @${user} restableció su voz al tono estándar.`
+                : `${efectoDef.emoji || '🎙️'} ¡@${user} activó la voz ${efectoDef.nombre}!`;
+
+              if (office?.runtime) {
+                office.runtime.say(spk, avisoTexto, performance.now());
+                safeFocusAgent(spk, 5000, true);
+              }
+
+              const frasesReset = [
+                'Voz restablecida',
+                'Tono restablecido',
+                'Voz estándar activada'
+              ];
+              const frasesActivacion = [
+                `Voz ${efectoDef.nombre} activada`,
+                `Probando voz ${efectoDef.nombre}`,
+                `Cambiando a ${efectoDef.nombre}`,
+                `¡Voz ${efectoDef.nombre} lista!`
+              ];
+              const fraseHablar = esReset ? elegirAzar(frasesReset) : elegirAzar(frasesActivacion);
+              hablarAvatar(spk, fraseHablar, user, userTier);
+              return;
+            }
+          }
 
           const mSpeak = text.match(/^!speak\s+-config\s+([a-z]{2}(?:-[a-z]{2,4})?)\s+([12])\b/i);
           if (mSpeak) {
@@ -2861,16 +3381,18 @@
                     office.focusAgent?.('ja', 4000);
                   }
                 } else if (office?.runtime) {
+                  const duracionBocadillo = Math.max(6000, Math.min(18000, 5000 + (cmd.texto || '').length * 80));
                   office.runtime.say('ja', cmd.texto, performance.now());
-                  safeFocusAgent('ja', 5000, true);
+                  safeFocusAgent('ja', duracionBocadillo, true);
                   hablarAvatar('ja', cmd.texto, 'ja', 3);
                 }
               } else {
                 const currentOwner = avatarOwners[targetAgent];
                 if (isJavier || (currentOwner && currentOwner.toLowerCase() === user.toLowerCase())) {
                   if (office?.runtime) {
+                    const duracionBocadillo = Math.max(6000, Math.min(18000, 5000 + (cmd.texto || '').length * 80));
                     office.runtime.say(targetAgent, cmd.texto, performance.now());
-                    safeFocusAgent(targetAgent, 5000, isJavier);
+                    safeFocusAgent(targetAgent, duracionBocadillo, isJavier);
                     hablarAvatar(targetAgent, cmd.texto, user, userTier);
                   }
                 } else if (office?.runtime) {
@@ -3025,9 +3547,10 @@
               }
             }
             if (userAgent && office?.runtime) {
+              const duracionBocadillo = Math.max(6000, Math.min(18000, 5000 + text.length * 80));
               office.runtime.say(userAgent, text, performance.now());
               if (!office?.isCinematicActive?.()) {
-                safeFocusAgent(userAgent, 5000, false);
+                safeFocusAgent(userAgent, duracionBocadillo, false);
               }
               hablarAvatar(userAgent, text, user, userTier);
             }
@@ -3036,7 +3559,11 @@
 
     function ejecutarComandoLocal(comando, usuario = 'ja') {
       if (!comando) return;
-      procesarTextoChat(comando, usuario, { 'display-name': usuario, badges: 'broadcaster/1' });
+      const esJavierUser = ['ja', 'apliarte', 'erbolamm'].includes(String(usuario).toLowerCase());
+      procesarTextoChat(comando, usuario, {
+        'display-name': usuario,
+        badges: esJavierUser ? 'broadcaster/1' : ''
+      });
     }
     window.ejecutarComandoLocal = ejecutarComandoLocal;
 
@@ -3759,6 +4286,13 @@
             }
             if (data.type === 'comando_chat' && data.comando) {
               ejecutarComandoLocal(data.comando, data.usuario || 'ja');
+            }
+            if (data.type === 'chat_mensaje' && data.texto) {
+              const u = data.usuario || data.nombreVisible || 'alguien';
+              procesarTextoChat(data.texto, u, {
+                'display-name': data.nombreVisible || data.usuario,
+                badges: (u === 'apliarte' || u === 'erbolamm' || u === 'ja') ? 'broadcaster/1' : ''
+              });
             }
             if (data.type === 'animacion_cortar') {
               if (data.tipo === 'fiesta') window.Oficina3D?.runtime?.stopFiesta?.();
