@@ -226,6 +226,58 @@ export type AgentWander = {
   desc: string;
 };
 
+/** Agentes que cuentan con mesa de trabajo propia en la oficina 3D. */
+export const DESK_AGENTS = new Set<AgentId>(['co', 'cl', 'ge', 'gr', 'op', 'ex', 'ja']);
+
+export type RoomCandidateSpot = {
+  room: ZoneId;
+  spot: Pt;
+  pose: Pose;
+  desc: string;
+};
+
+/** Puestos disponibles en los distintos cuartos para avatares sin mesa fija (!trabajar). */
+export const DESKLESS_ROOM_SPOTS: RoomCandidateSpot[] = [
+  // 🏛️ Sala de reuniones (orch)
+  { room: 'orch', spot: { x: 806, y: 240 }, pose: 'sit', desc: 'Mesa de reuniones' },
+  { room: 'orch', spot: { x: 806, y: 130 }, pose: 'present', desc: 'Puesto de mando' },
+  { room: 'orch', spot: { x: 806, y: 320 }, pose: 'read', desc: 'Pizarra de reuniones' },
+  { room: 'orch', spot: { x: 740, y: 240 }, pose: 'sit', desc: 'Mesa de conferencias' },
+
+  // 🛋️ Sala de descanso (lounge)
+  { room: 'lounge', spot: { x: 120, y: 176 }, pose: 'read', desc: 'Zona de lectura' },
+  { room: 'lounge', spot: { x: 290, y: 300 }, pose: 'game', desc: 'Arcade lounge' },
+  { room: 'lounge', spot: { x: 320, y: 168 }, pose: 'watch', desc: 'Pantalla lounge' },
+  { room: 'lounge', spot: { x: 96, y: 320 }, pose: 'coffee', desc: 'Cafetería' },
+  { room: 'lounge', spot: { x: 420, y: 320 }, pose: 'sit', desc: 'Mesa de descanso' },
+
+  // 📦 Zona de entregas (deliv)
+  { room: 'deliv', spot: { x: 736, y: 580 }, pose: 'work', desc: 'Mesa de entregas' },
+  { room: 'deliv', spot: { x: 862, y: 580 }, pose: 'work', desc: 'Mesa de soporte tra-2' },
+  { room: 'deliv', spot: { x: 988, y: 580 }, pose: 'work', desc: 'Mesa de entregas tra-3' },
+  { room: 'deliv', spot: { x: 736, y: 612 }, pose: 'deliver', desc: 'Bandeja de entregas' },
+
+  // 📋 Pizarras y planificación (work - zona abierta, no mesas fijas)
+  { room: 'work', spot: { x: 200, y: 560 }, pose: 'read', desc: 'Pizarra de arquitectura' },
+  { room: 'work', spot: { x: 310, y: 620 }, pose: 'read', desc: 'Debate de código' },
+];
+
+export type TrabajoAssignment = {
+  spot: Pt;
+  pose: Pose;
+  desc: string;
+  hasDesk: boolean;
+  room: ZoneId;
+};
+
+export type TrabajoState = {
+  phase: 'idle' | 'working';
+  startedAt: number;
+  endsAt: number;
+};
+
+export const TRABAJO_DURATION_MS = 60_000;
+
 export class OfficeRuntime {
   coffeeRun: { agentId: AgentId; phase: 1 | 2 | 3 | 4 | 5; phaseEnd: number } | null = null;
   cinematicQueue: CinematicTask[] = [];
@@ -248,6 +300,9 @@ export class OfficeRuntime {
   fiestaState: FiestaState = emptyFiestaState();
   /** !bronca comedic brawl state. Pure state machine in `./bronca`. */
   broncaState: BroncaState = emptyBroncaState();
+  /** !trabajar active work mode state. */
+  trabajoState: TrabajoState = { phase: 'idle', startedAt: 0, endsAt: 0 };
+  trabajoAssignments: Map<AgentId, TrabajoAssignment> = new Map();
   /** Cached dancer positions, recomputed each tick. */
   private congaPositions: Map<CongaAgentId, Pt> = new Map();
   /** Last announced countdown second (0..10). */
@@ -264,6 +319,7 @@ export class OfficeRuntime {
   isAgentIdle(p: Person, now: number): boolean {
     if (p.id === 'ja') return false;
     if (this.activeCinematic) return false;
+    if (this.isTrabajoActive()) return false;
     if (this.coffeeRun && this.coffeeRun.agentId === p.id) return false;
     if (this.congaState.phase === 'dancing' && this.congaPositions.has(p.id as CongaAgentId)) return false;
     if (this.fiestaState.phase === 'party') return false;
@@ -606,6 +662,10 @@ export class OfficeRuntime {
   return lounge(id);
  }
  homeTarget(id:AgentId):Pt {
+  if (this.isTrabajoActive()) {
+   const asign = this.trabajoAssignments.get(id);
+   if (asign) return asign.spot;
+  }
   if(this.liveSnapshot.valid) return this.liveTarget(id);
   return this.baseTarget(id);
  }
@@ -629,6 +689,10 @@ export class OfficeRuntime {
      return this.homeTarget(p.id);
     }
    }
+  }
+  if (this.isTrabajoActive()) {
+   const asign = this.trabajoAssignments.get(p.id);
+   if (asign) return asign.spot;
   }
   if (this.coffeeRun && this.coffeeRun.agentId === p.id) {
    if (this.coffeeRun.phase === 1 || this.coffeeRun.phase === 2) return COFFEE_STATION;
@@ -742,6 +806,11 @@ export class OfficeRuntime {
   this.congaPositions = this.congaState.phase === 'dancing'
     ? getCongaAgentPositions(this.congaState, now) as Map<CongaAgentId, Pt>
     : new Map();
+
+  // Trabajo tick: finalizar modo trabajo cuando expire el tiempo
+  if (this.trabajoState.phase === 'working' && now >= this.trabajoState.endsAt) {
+    this.stopTrabajo(now);
+  }
 
   // Fiesta tick: advance party state, handle ending transitions
   const prevFiestaPhase = this.fiestaState.phase;
@@ -927,10 +996,31 @@ export class OfficeRuntime {
     if(p.path){p.travelled+=(p.speed||240)*dt;const step=pointAt(p.path,p.travelled);p.pos=step.p;if(step.dir)p.facing=step.dir;if(step.done){p.path=null;}else moving=true;}
     if(p.deliveringUntil===Infinity&&equal(p.pos,DELIV_SLOTS[p.id])&&!p.path)p.deliveringUntil=now+3500;
     const working=this.snapshot.states.haciendo.some(t=>t.role===p.id);
-    if (w && w.phase !== 'idle') {
+    if (this.isTrabajoActive()) {
+      const asign = this.trabajoAssignments.get(p.id);
+      if (asign) {
+        if (p.path) {
+          p.pose = 'walk';
+          p.isRear = false;
+          p.status = asign.hasDesk ? 'Yendo a su mesa...' : `Yendo a ${asign.desc}...`;
+        } else {
+          if (asign.hasDesk) {
+            p.pose = 'work';
+            p.isRear = true;
+            p.facing = 1;
+            p.status = 'Trabajando en su puesto · 💻';
+          } else {
+            p.pose = asign.pose;
+            p.isRear = false;
+            p.status = `${asign.desc} · 💼`;
+          }
+        }
+      }
+    } else if (w && w.phase !== 'idle') {
       p.status = w.phase === 'walking_home' ? 'Volviendo al lounge' : `Paseando · ${w.desc}`;
       p.pose = p.path ? 'walk' : (w.phase === 'waiting' ? w.waitPose : 'walk');
     } else {
+      p.isRear = false;
       p.status=!this.snapshot.valid?'Sin datos':working?'Trabajando':p.id===this.snapshot.orchestrator?'Coordinando':p.queued?`${p.queued} en cola`:'Descansando';
       if(p.deliveringUntil>now&&this.snapshot.valid)p.status='Entregando · tarea aceptada';
       if(p.id==='ja')p.status=working?'Trabajando':'Javier · dueño';
@@ -1159,7 +1249,7 @@ export class OfficeRuntime {
      }
     }
    }
-   return moving||this.fiestaState.phase==='party'||this.broncaState.phase==='brawl'||this.broncaState.phase==='ended'||this.people.some(p=>p.deliveringUntil>now)||Boolean(this.coffeeRun)||Boolean(this.activeCinematic)||this.cinematicQueue.length>0||this.speech.size>0||Boolean(this.activeGame)||Boolean(this.hub);
+   return moving||this.isTrabajoActive()||this.fiestaState.phase==='party'||this.broncaState.phase==='brawl'||this.broncaState.phase==='ended'||this.people.some(p=>p.deliveringUntil>now)||Boolean(this.coffeeRun)||Boolean(this.activeCinematic)||this.cinematicQueue.length>0||this.speech.size>0||Boolean(this.activeGame)||Boolean(this.hub);
   }
  traerCafe(agentId?: AgentId) {
    const target = (agentId && agentId !== 'ja') ? agentId : undefined;
@@ -1400,6 +1490,7 @@ export class OfficeRuntime {
  }
  fiesta(now:number){
   if(this.hub)return;
+  if(this.isTrabajoActive()) this.stopTrabajo(now);
   if(this.isBroncaActive()) this.stopBronca(now);
   if(this.congaState.phase === 'dancing' || this.congaState.phase === 'countdown') this.stopConga(now);
   this.fiestaState=startFiesta(this.fiestaState,now,this.people.map(p=>p.id));
@@ -1420,7 +1511,98 @@ export class OfficeRuntime {
  isFiestaActive():boolean{
   return isFiestaActive(this.fiestaState);
  }
+ isTrabajoActive():boolean{
+  return this.trabajoState.phase === 'working';
+ }
+ getTrabajoAssignment(id: AgentId): TrabajoAssignment | undefined {
+  return this.trabajoAssignments.get(id);
+ }
+ startTrabajo(now: number = performance.now(), agentId?: AgentId) {
+  if (this.isFiestaActive()) this.stopFiesta(now);
+  if (this.isBroncaActive()) this.stopBronca(now);
+  if (this.congaState.phase === 'dancing' || this.congaState.phase === 'countdown') this.stopConga(now);
+  this.wanders.clear();
+
+  this.trabajoState = {
+   phase: 'working',
+   startedAt: now,
+   endsAt: now + TRABAJO_DURATION_MS,
+  };
+  this.trabajoAssignments.clear();
+
+  // 1. Agentes con mesa propia asignada (co, cl, ge, gr, op, ex, ja)
+  for (const id of DESK_AGENTS) {
+   const deskPt = id === 'ja' ? OWNER_DESK : WORK_SLOTS[id];
+   const room: ZoneId = id === 'ja' ? 'orch' : 'work';
+   this.trabajoAssignments.set(id, {
+    spot: { ...deskPt },
+    pose: 'work',
+    desc: id === 'ja' ? 'Despacho de dirección' : 'Puesto de trabajo',
+    hasDesk: true,
+    room,
+   });
+  }
+
+  // 2. Agentes sin mesa fija (pi, om, be, etc.) se meten aleatoriamente en uno y otro cuarto
+  const desklessAgents = this.people.filter(p => !DESK_AGENTS.has(p.id));
+  const availableSpots = [...DESKLESS_ROOM_SPOTS];
+  for (let i = availableSpots.length - 1; i > 0; i--) {
+   const j = Math.floor(Math.random() * (i + 1));
+   [availableSpots[i], availableSpots[j]] = [availableSpots[j], availableSpots[i]];
+  }
+
+  const usedRooms = new Set<ZoneId>();
+  for (const p of desklessAgents) {
+   let idx = availableSpots.findIndex(s => !usedRooms.has(s.room));
+   if (idx === -1 && availableSpots.length > 0) idx = 0;
+   if (idx >= 0 && idx < availableSpots.length) {
+    const chosen = availableSpots.splice(idx, 1)[0];
+    usedRooms.add(chosen.room);
+    this.trabajoAssignments.set(p.id, {
+     spot: { ...chosen.spot },
+     pose: chosen.pose,
+     desc: chosen.desc,
+     hasDesk: false,
+     room: chosen.room,
+    });
+   } else {
+    const l = lounge(p.id);
+    this.trabajoAssignments.set(p.id, {
+     spot: { x: l.x, y: l.y },
+     pose: l.pose,
+     desc: 'Sala de descanso',
+     hasDesk: false,
+     room: 'lounge',
+    });
+   }
+  }
+
+  // Mover a todos los avatares hacia sus asignaciones de trabajo
+  for (const p of this.people) {
+   p.manualUntil = 0;
+   p.jumping = false;
+   p.speed = 220;
+   const targetPt = this.trabajoAssignments.get(p.id)?.spot;
+   if (targetPt) {
+    this.move(p, targetPt);
+   }
+  }
+  this.triggerWake();
+ }
+ stopTrabajo(now: number = performance.now()) {
+  if (this.trabajoState.phase === 'idle') return;
+  this.trabajoState = { phase: 'idle', startedAt: 0, endsAt: 0 };
+  this.trabajoAssignments.clear();
+  for (const p of this.people) {
+   p.isRear = false;
+   p.speed = 240;
+   this.move(p, this.destination(p, now));
+  }
+  this.triggerWake();
+ }
  trabajar(now:number,agentId?:AgentId){
+  if(this.hub)return;
+  this.startTrabajo(now, agentId);
   if(agentId&&roles.has(agentId)){
    this.enqueueCinematic({
     type:'trabajar',
@@ -1441,6 +1623,7 @@ export class OfficeRuntime {
  }
  bronca(now:number){
   if(this.hub)return;
+  if(this.isTrabajoActive()) this.stopTrabajo(now);
   if(this.isFiestaActive()) this.stopFiesta(now);
   if(this.congaState.phase === 'dancing' || this.congaState.phase === 'countdown') this.stopConga(now);
   this.broncaState=startBronca(this.broncaState,now,this.people.map(p=>p.id));
