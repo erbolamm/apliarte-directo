@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -459,6 +460,98 @@ test('Estudio: Creación y arrastre ergonómico de texto sin bloqueos de dibujo 
   assert.match(content, /function reflectSelectedLayerProps\(\)[\s\S]*board\.color\s*=\s*item\.color[\s\S]*board\.size\s*=/,
     'reflectSelectedLayerProps debe reflejar color y tamaño de la capa en los controles');
 });
+
+test('Estudio: Pausar polling de captura OBS cuando la pizarra entra en reposo y reanudar al activar', async () => {
+  const content = fs.readFileSync(estudioPath, 'utf8');
+
+  // 1. Verificación estática del código fuente
+  assert.match(content, /if\s*\(!board\.active\)\s*\{[\s\S]*clearTimeout\(obsPreview\.timer\);[\s\S]*obsPreview\.timer\s*=\s*0;/,
+    'setBoardActive(!board.active) debe limpiar y resetear obsPreview.timer');
+  assert.match(content, /if\s*\(typeof obsPreview !== 'undefined'\s*&&\s*obsPreview\.active\)\s*\{\s*captureObs\(\);\s*\}/,
+    'setBoardActive(true) debe reanudar la captura llamando a captureObs() si obsPreview.active es true');
+  assert.match(content, /function scheduleObsCapture\(\)[\s\S]*typeof board !== 'undefined' \? board\.active : true[\s\S]*setTimeout\(captureObs,\s*interval\)/,
+    'scheduleObsCapture debe comprobar que la pizarra esté activa antes de programar setTimeout');
+  assert.match(content, /async function captureObs\(\)[\s\S]*typeof board !== 'undefined' && !board\.active[\s\S]*return;/,
+    'captureObs debe retornar inmediatamente si la pizarra está en reposo');
+
+  // 2. Verificación de ejecución funcional de las funciones extraídas
+  const schedMatch = content.match(/function scheduleObsCapture\(\) \{[\s\S]*?\n    \}/);
+  const capMatch = content.match(/async function captureObs\(\) \{[\s\S]*?\n    \}/);
+  const setBoardMatch = content.match(/function setBoardActive\(active\) \{[\s\S]*?\n      \}/);
+  assert.ok(schedMatch, 'scheduleObsCapture debe estar definida');
+  assert.ok(capMatch, 'captureObs debe estar definida');
+  assert.ok(setBoardMatch, 'setBoardActive debe estar definida');
+
+  let obsRequestCalls = 0;
+  let timerIdCounter = 0;
+  const activeTimers = new Set();
+  const ctx = {
+    clearTimeout: (id) => { activeTimers.delete(id); },
+    setTimeout: (fn, delay) => {
+      const id = ++timerIdCounter;
+      activeTimers.add(id);
+      return id;
+    },
+    board: { active: true, ws: true, connected: true, connect: () => {} },
+    obsPreview: { active: true, busy: false, timer: 0 },
+    document: { hidden: false },
+    $: (id) => {
+      if (id === 'obs-interval') return { value: '2000' };
+      if (id === 'obs-preview-bg') return { src: '', hidden: false, removeAttribute: () => {} };
+      return { hidden: false, classList: { toggle: () => {} }, setAttribute: () => {} };
+    },
+    container: { hidden: false },
+    drawButton: { classList: { toggle: () => {} }, setAttribute: () => {} },
+    closeSheets: () => {},
+    closeTextEntry: () => {},
+    drawSelectionOverlay: () => {},
+    updateLayersList: () => {},
+    resizeBoard: () => {},
+    reportObs: () => {},
+    obsRequest: async () => {
+      obsRequestCalls++;
+      return { image: 'data:image/jpeg;base64,mock' };
+    }
+  };
+  vm.createContext(ctx);
+  vm.runInContext(schedMatch[0], ctx);
+  vm.runInContext(capMatch[0], ctx);
+  vm.runInContext(setBoardMatch[0], ctx);
+
+  // A. Con pizarra activa y captura activa: realiza captura y arma timer
+  await vm.runInContext('captureObs()', ctx);
+  assert.equal(obsRequestCalls, 1, 'Debe llamar obsRequest una vez al estar activa');
+  assert.ok(ctx.obsPreview.timer > 0, 'Debe armar obsPreview.timer tras captura activa');
+
+  // B. Poner pizarra en reposo: debe cancelar el timer
+  vm.runInContext('setBoardActive(false)', ctx);
+  assert.equal(ctx.board.active, false, 'board.active debe ser false');
+  assert.equal(ctx.obsPreview.timer, 0, 'obsPreview.timer debe resetearse a 0 en reposo');
+
+  // C. scheduleObsCapture y captureObs invocadas en reposo NO deben hacer nada
+  vm.runInContext('scheduleObsCapture()', ctx);
+  assert.equal(ctx.obsPreview.timer, 0, 'scheduleObsCapture no debe armar timer en reposo');
+  await vm.runInContext('captureObs()', ctx);
+  assert.equal(obsRequestCalls, 1, 'captureObs en reposo no debe realizar peticiones');
+
+  // D. Reactivar pizarra: debe reanudar la captura llamando captureObs()
+  vm.runInContext('setBoardActive(true)', ctx);
+  assert.equal(ctx.board.active, true, 'board.active debe ser true');
+  await new Promise(r => setTimeout(r, 10)); // dar un tick a la promesa de captureObs()
+  assert.equal(obsRequestCalls, 2, 'Al reactivar debe reanudar petición de captura');
+  assert.ok(ctx.obsPreview.timer > 0, 'Al reactivar debe rearmar temporizador de refresco');
+
+  // E. Poner en reposo de nuevo
+  vm.runInContext('setBoardActive(false)', ctx);
+  assert.equal(ctx.obsPreview.timer, 0, 'Debe limpiar timer al volver a entrar en reposo');
+
+  // F. Si obsPreview.active es false, reactivar pizarra no debe lanzar capturas
+  ctx.obsPreview.active = false;
+  vm.runInContext('setBoardActive(true)', ctx);
+  await new Promise(r => setTimeout(r, 10));
+  assert.equal(obsRequestCalls, 2, 'No debe llamar captureObs si obsPreview.active es false');
+});
+
 
 
 

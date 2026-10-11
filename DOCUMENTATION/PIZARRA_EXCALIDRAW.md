@@ -511,7 +511,7 @@ Refresco (`#obs-interval`):
 | Solo al pulsar captura | Una imagen cada vez que se activa |
 | Cada 1, 2, 5 o 10 s | La siguiente captura se programa al **terminar** la anterior |
 
-El intervalo cuenta desde que acaba la captura anterior, así un OBS lento no acumula peticiones. Además, el servidor responde `429` si ya hay una captura en curso. Las capturas se pausan con la pestaña oculta y se reanudan al volver.
+El intervalo cuenta desde que acaba la captura anterior, así un OBS lento no acumula peticiones. Además, el servidor responde `429` si ya hay una captura en curso. Las capturas se pausan con la pestaña oculta o cuando la pizarra entra en reposo, y se reanudan al volver a activar la pizarra o la pestaña.
 
 ## 8. Guía de uso en directo
 
@@ -587,7 +587,7 @@ Comportamientos reales del código actual que conviene conocer antes de ampliarl
 4. **Mover una capa contra un borde la deforma.** Cada punto se limita al escenario por separado, así que la capa se aplasta en vez de recortarse.
 5. **La caja de una capa no incluye el grosor del trazo ni el tamaño del texto.** Un texto es un único punto: se agarra gracias al margen de 16 px, cerca de su punto de anclaje.
 6. **Deshacer es global**, no por autor.
-7. **La captura de OBS sigue pidiendo imágenes con la pizarra en reposo** si tiene refresco automático. No se ve, pero consume. Desactívala al terminar.
+7. **La captura de OBS se pausa automáticamente cuando la pizarra entra en reposo.** El temporizador de refresco periódico se cancela al desactivar la pizarra y se reanuda de forma transparente al reactivarla, evitando peticiones de fondo innecesarias mientras el lienzo está en reposo.
 8. **Pendiente de prueba en un directo real**, como el resto del panel nuevo.
 
 ## 10. Mantenimiento y tests

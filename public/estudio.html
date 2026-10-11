@@ -3428,9 +3428,10 @@
        * into large macro-deck buttons. Open sheets and the text box are
        * closed and the layer selection is dropped.
        *
-       * What rest does NOT do: it does not clear the drawing, close the
-       * socket or stop the OBS still capture. The drawing stays on the stream
-       * and comes back intact on the next activation.
+       * What rest does NOT do: it does not clear the drawing or close the
+       * socket. The drawing stays on the stream and comes back intact on the
+       * next activation. Background OBS capture polling is paused while at
+       * rest and resumes upon reactivation.
        *
        * resizeBoard() runs last because the canvas can only be measured once
        * it is visible; that call also repaints the full history.
@@ -3457,8 +3458,17 @@
           board.selectedStrokeId = null;
           drawSelectionOverlay();
           updateLayersList();
-        } else if (!board.ws || !board.connected) {
-          board.connect();
+          if (typeof obsPreview !== 'undefined') {
+            clearTimeout(obsPreview.timer);
+            obsPreview.timer = 0;
+          }
+        } else {
+          if (!board.ws || !board.connected) {
+            board.connect();
+          }
+          if (typeof obsPreview !== 'undefined' && obsPreview.active) {
+            captureObs();
+          }
         }
         resizeBoard();
       }
@@ -5228,7 +5238,8 @@
     // is selected. So the period is "interval after the previous capture
     // finished", and a slow OBS can never pile up requests (`busy` guards
     // re-entry and the server also answers 429 while one is in flight).
-    // Captures pause while the tab is hidden and resume when it is visible.
+    // Captures pause while the tab is hidden or the whiteboard is at rest,
+    // and resume when visible and active.
     /** @type {{active: boolean, busy: boolean, timer: number}} */
     const obsPreview = { active: false, busy: false, timer: 0 };
     function scheduleObsCapture() {
@@ -5236,14 +5247,14 @@
       obsPreview.timer = 0;
       const intervalEl = $('obs-interval');
       const interval = intervalEl ? Number(intervalEl.value) : 0;
-      if (obsPreview.active && !document.hidden && interval > 0) obsPreview.timer = setTimeout(captureObs, interval);
+      if (obsPreview.active && !document.hidden && (typeof board !== 'undefined' ? board.active : true) && interval > 0) obsPreview.timer = setTimeout(captureObs, interval);
     }
     async function captureObs() {
-      if (!obsPreview.active || document.hidden || obsPreview.busy) return;
+      if (!obsPreview.active || document.hidden || (typeof board !== 'undefined' && !board.active) || obsPreview.busy) return;
       obsPreview.busy = true;
       try {
         const data = await obsRequest('screenshot');
-        if (obsPreview.active && !document.hidden) $('obs-preview-bg').src = data.image;
+        if (obsPreview.active && !document.hidden && (typeof board !== 'undefined' ? board.active : true)) $('obs-preview-bg').src = data.image;
         reportObs('Imagen OBS actualizada.');
       } catch (error) {
         reportObs(error.name === 'AbortError' ? 'OBS no responde.' : error.message, true);
