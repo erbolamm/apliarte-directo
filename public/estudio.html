@@ -1209,6 +1209,8 @@
         <div class="brand-name">APLIARTE <span>DIRECTO</span></div>
       </div>
       <div class="app-bar-actions">
+        <a href="https://github.com/erbolamm/apliarte-directo" target="_blank" rel="noopener noreferrer" class="btn" style="text-decoration:none;" title="Ver repositorio y dar estrella en GitHub">⭐ Repo</a>
+        <a href="https://github.com/sponsors/erbolamm" target="_blank" rel="noopener noreferrer" class="btn" style="text-decoration:none; color:var(--brand-strong);" title="Patrocinar en GitHub Sponsors">❤️ Sponsors</a>
         <button type="button" class="btn" data-action="probar-raid" style="background:#7c3aed;color:#ffffff;font-weight:700;" title="Lanzar bienvenida coral de Raid de prueba (>5)">⚔️ Probar Raid (>5)</button>
         <button type="button" class="icon-btn" data-action="toggle-theme" aria-label="Cambiar entre modo claro y modo oscuro" data-tip="Cambia entre modo claro y modo oscuro."></button>
       </div>
@@ -1241,6 +1243,17 @@
           <summary id="tailscale-summary">Tailscale</summary>
           <div id="tailscale-body" class="groups"></div>
         </details>
+      </section>
+
+      <section class="card" aria-labelledby="community-title">
+        <h2 id="community-title">Proyecto libre y comunidad</h2>
+        <p class="hint">ApliArte Directo es 100% de código abierto e independiente. Si te ayuda en tus directos, apoya el proyecto:</p>
+        <div class="settings-row" style="margin-top:8px;">
+          <a class="btn" href="https://github.com/erbolamm/apliarte-directo" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">⭐ GitHub (Repo)</a>
+          <a class="btn" href="https://github.com/sponsors/erbolamm" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">💖 Patrocinar</a>
+          <a class="btn" href="https://ko-fi.com/C0C11TWR1K" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">☕ Ko-fi</a>
+          <a class="btn" href="https://paypal.me/erbolamm" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">💳 PayPal</a>
+        </div>
       </section>
 
       <button type="button" class="btn btn-primary btn-start" id="btn-arrancar-estudio" disabled aria-describedby="start-hint">▶ Arrancar Estudio</button>
@@ -5845,6 +5858,14 @@
       settingsButton(settingsRow(panel), 'Ver las direcciones para OBS', () => { closeSheets(); showView('welcome'); });
       settingsHeading(panel, 'Comunidad y apoyo');
       const supportRow = settingsRow(panel);
+      const repo = document.createElement('a');
+      repo.className = 'btn';
+      repo.href = 'https://github.com/erbolamm/apliarte-directo';
+      repo.target = '_blank';
+      repo.rel = 'noopener noreferrer';
+      repo.textContent = '⭐ Repositorio & Estrella';
+      repo.style.textDecoration = 'none';
+      supportRow.appendChild(repo);
       const kofi = document.createElement('a');
       kofi.className = 'btn';
       kofi.href = 'https://ko-fi.com/C0C11TWR1K';
@@ -5853,6 +5874,14 @@
       kofi.textContent = '☕ Invitar a un café';
       kofi.style.textDecoration = 'none';
       supportRow.appendChild(kofi);
+      const paypal = document.createElement('a');
+      paypal.className = 'btn';
+      paypal.href = 'https://paypal.me/erbolamm';
+      paypal.target = '_blank';
+      paypal.rel = 'noopener noreferrer';
+      paypal.textContent = '💳 PayPal';
+      paypal.style.textDecoration = 'none';
+      supportRow.appendChild(paypal);
       const sponsors = document.createElement('a');
       sponsors.className = 'btn';
       sponsors.href = 'https://github.com/sponsors/erbolamm';
