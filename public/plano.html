@@ -1998,7 +1998,7 @@
   </div>
 
   <!-- Script bundle de la oficina 3D -->
-  <script src="/office-3d.js?v=b9a6bf492d"></script>
+  <script src="/office-3d.js?v=d9a34b60d7"></script>
   <script src="/js/conga-musica.js?v=20261003c"></script>
   <script src="/js/fiesta-bronca-audio.js?v=20261010"></script>
 
@@ -2976,9 +2976,10 @@
         return;
       }
 
-      // En modo transparente (?transparente=1 para OBS), el audio de chat solo se escucha si TTS está activo
+      // En modo transparente (?transparente=1 para OBS), los avatares adoptados y avisos con voz suenan SIEMPRE.
+      // Solo se descarta si no hay agente asociado y TTS no está activo.
       if (!ttsActivoEnOverlay && initialTransparent) {
-        if (!item.forzarVozLimpia) {
+        if (!item.forzarVozLimpia && !item.agente) {
           ttsAudioEnReproduccion = false;
           if (typeof item.onTerminado === 'function') {
             try { item.onTerminado(); } catch (_) {}
@@ -4049,8 +4050,23 @@
     let raidSecuenciaTimers = [];
     let raidBienvenidaActiva = false;
     let raidCtaActivo = false;
+    let raidWatchdogTotal = null;
+
+    function armarWatchdogSeguridadRaid(maxMs = 120000) {
+      if (raidWatchdogTotal) clearTimeout(raidWatchdogTotal);
+      raidWatchdogTotal = setTimeout(() => {
+        if (raidBienvenidaActiva || raidCtaActivo || raidFiestaActiva) {
+          console.warn('[Raid] Watchdog maestro de seguridad activado (' + (maxMs / 1000) + 's). Forzando desbloqueo completo de chat.');
+          cerrarRaidCta();
+        }
+      }, maxMs);
+    }
 
     function limpiarTimersRaid() {
+      if (raidWatchdogTotal) {
+        clearTimeout(raidWatchdogTotal);
+        raidWatchdogTotal = null;
+      }
       if (raidTimerInterval) {
         clearInterval(raidTimerInterval);
         raidTimerInterval = null;
@@ -4068,6 +4084,7 @@
       limpiarTimersRaid();
       limpiarColaTtsParaRaid();
       raidBienvenidaActiva = true; // Bloqueo total e inmediato de chat desde el milisegundo 0
+      armarWatchdogSeguridadRaid(120000);
       if (!raidBanner) return;
       raidBanner.classList.add('visible');
       if (raidBannerTitle) raidBannerTitle.textContent = `⚔️ ¡RAID DE @${String(raider).toUpperCase()}! (${viewers} espectadores)`;
@@ -4133,6 +4150,7 @@
       limpiarTimersRaid();
       limpiarColaTtsParaRaid();
       raidBienvenidaActiva = true;
+      armarWatchdogSeguridadRaid(duracionMs + 45000);
       raidSecuenciaFinalizada = false;
 
       const officeEl = document.getElementById('office-3d');

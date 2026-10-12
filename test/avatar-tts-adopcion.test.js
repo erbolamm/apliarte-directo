@@ -144,3 +144,47 @@ test('3. WebSocket emite tts_estado en conexión inicial y sincroniza cambios en
     await srv.parar();
   }
 });
+
+test('4. plano.html y vps-overlay nunca descartan audio de avatares adoptados en modo transparente', () => {
+  for (const [name, path] of [['Local', PLANO_PATH], ['VPS', VPS_PLANO_PATH]]) {
+    const code = readFileSync(path, 'utf8');
+    assert.match(
+      code,
+      /if\s*\(!ttsActivoEnOverlay\s*&&\s*initialTransparent\)\s*\{\s*if\s*\(!item\.forzarVozLimpia\s*&&\s*!item\.agente\)/,
+      `${name} debe exigir !item.agente para descartar audio (los avatares siempre suenan)`
+    );
+  }
+});
+
+test('5. FloorPlan.tsx muestra solo @owner al adoptar un avatar, sin el nombre del agente', () => {
+  const floorPlanPath = fileURLToPath(new URL('../oficina-3d/src/components/FloorPlan.tsx', import.meta.url));
+  const code = readFileSync(floorPlanPath, 'utf8');
+  // En 2D (AgentPillTag)
+  assert.match(
+    code,
+    /name=\{\(r\.id !== 'ja' && effectiveOwners\[r\.id\]\) \? `@\$\{effectiveOwners\[r\.id\]\}` : a\.name\}/,
+    'AgentPillTag debe mostrar exclusivamente @owner al adoptar'
+  );
+  // En 3D (person-name)
+  assert.match(
+    code,
+    /\{\(r\.id !== 'ja' && effectiveOwners\[r\.id\]\) \? `@\$\{effectiveOwners\[r\.id\]\}` : a\.name\}/,
+    'person-name en 3D debe mostrar exclusivamente @owner al adoptar'
+  );
+  // Verificar que el formato antiguo no esté presente
+  assert.doesNotMatch(
+    code,
+    /effectiveOwners\[r\.id\] \? `\$\{a\.name\} · @\$\{effectiveOwners\[r\.id\]\}` : a\.name/,
+    'No debe existir el formato antiguo a.name · @owner en AgentPillTag'
+  );
+});
+
+test('6. plano.html incluye watchdog maestro para evitar bloqueo permanente del chat tras una raid', () => {
+  for (const [name, path] of [['Local', PLANO_PATH], ['VPS', VPS_PLANO_PATH]]) {
+    const code = readFileSync(path, 'utf8');
+    assert.match(code, /armarWatchdogSeguridadRaid/, `${name} debe definir armarWatchdogSeguridadRaid`);
+    assert.match(code, /mostrarAvisoRaid[\s\S]*?armarWatchdogSeguridadRaid/, `${name} debe armar el watchdog en mostrarAvisoRaid`);
+    assert.match(code, /iniciarSecuenciaRaidBienvenida[\s\S]*?armarWatchdogSeguridadRaid/, `${name} debe armar el watchdog en iniciarSecuenciaRaidBienvenida`);
+  }
+});
+

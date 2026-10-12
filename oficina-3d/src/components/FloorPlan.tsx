@@ -1289,7 +1289,7 @@ export default function FloorPlan(props: Props) {
               />
             )}
             <AgentPillTag
-              name={effectiveOwners[r.id] ? `${a.name} · @${effectiveOwners[r.id]}` : a.name}
+              name={(r.id !== 'ja' && effectiveOwners[r.id]) ? `@${effectiveOwners[r.id]}` : a.name}
               color={a.color}
               focus={focus}
             />
@@ -1614,7 +1614,7 @@ export default function FloorPlan(props: Props) {
                         </svg>
                       </div>
                       <span className="person-name">
-                        {a.name}{effectiveOwners[r.id] ? ` · @${effectiveOwners[r.id]}` : ''}
+                        {(r.id !== 'ja' && effectiveOwners[r.id]) ? `@${effectiveOwners[r.id]}` : a.name}
                       </span>
                       {(isBubbleActive || spoken) && (
                         <svg
