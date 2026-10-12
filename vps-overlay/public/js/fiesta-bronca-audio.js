@@ -1,11 +1,13 @@
-// Controlador de audio para las animaciones colectivas !fiesta y !bronca
-// en la Oficina 3D. Observa window.Oficina3D.runtime.fiestaState y broncaState.
+// Controlador de audio para las animaciones colectivas !fiesta, !bronca y !trabajar
+// en la Oficina 3D. Observa window.Oficina3D.runtime.fiestaState, broncaState y trabajoState.
 (() => {
   const FIESTA_SRC = '/sonidos/fiesta.mp3?v=20261010';
   const BRONCA_SRC = '/sonidos/bronca.mp3?v=20261010';
+  const TRABAJO_SRC = '/sonidos/trabajo.mp3?v=20261012';
 
   const audioFiesta = typeof Audio !== 'undefined' ? new Audio(FIESTA_SRC) : null;
   const audioBronca = typeof Audio !== 'undefined' ? new Audio(BRONCA_SRC) : null;
+  const audioTrabajo = typeof Audio !== 'undefined' ? new Audio(TRABAJO_SRC) : null;
 
   if (audioFiesta) {
     audioFiesta.preload = 'auto';
@@ -15,13 +17,19 @@
     audioBronca.preload = 'auto';
     audioBronca.volume = 0.8;
   }
+  if (audioTrabajo) {
+    audioTrabajo.preload = 'auto';
+    audioTrabajo.volume = 0.8;
+  }
 
   let baseVolume = 0.8;
   let muted = false;
   let fiestaPlaying = false;
   let broncaPlaying = false;
+  let trabajoPlaying = false;
   let fadeFiestaTimer = null;
   let fadeBroncaTimer = null;
+  let fadeTrabajoTimer = null;
 
   function cancelFade(which) {
     if (which === 'fiesta' && fadeFiestaTimer) {
@@ -31,6 +39,10 @@
     if (which === 'bronca' && fadeBroncaTimer) {
       clearInterval(fadeBroncaTimer);
       fadeBroncaTimer = null;
+    }
+    if (which === 'trabajo' && fadeTrabajoTimer) {
+      clearInterval(fadeTrabajoTimer);
+      fadeTrabajoTimer = null;
     }
   }
 
@@ -55,6 +67,7 @@
   function playFiesta() {
     if (!audioFiesta) return;
     if (broncaPlaying) stopBronca(true);
+    if (trabajoPlaying) stopTrabajo(true);
     cancelFade('fiesta');
     fiestaPlaying = true;
     audioFiesta.currentTime = 0;
@@ -86,6 +99,7 @@
   function playBronca() {
     if (!audioBronca) return;
     if (fiestaPlaying) stopFiesta(true);
+    if (trabajoPlaying) stopTrabajo(true);
     cancelFade('bronca');
     broncaPlaying = true;
     audioBronca.currentTime = 0;
@@ -114,11 +128,44 @@
     }
   }
 
+  function playTrabajo() {
+    if (!audioTrabajo) return;
+    if (fiestaPlaying) stopFiesta(true);
+    if (broncaPlaying) stopBronca(true);
+    cancelFade('trabajo');
+    trabajoPlaying = true;
+    audioTrabajo.currentTime = 0;
+    const targetVol = muted ? 0 : baseVolume;
+    fadeTrabajoTimer = fadeAudio(audioTrabajo, 0, targetVol, 500);
+    audioTrabajo.play().catch(err => {
+      console.warn('[trabajo-audio] Reproducción bloqueada por navegador:', err?.message || err);
+    });
+  }
+
+  function stopTrabajo(immediate = false) {
+    if (!audioTrabajo || !trabajoPlaying) return;
+    trabajoPlaying = false;
+    cancelFade('trabajo');
+    if (immediate) {
+      audioTrabajo.pause();
+      audioTrabajo.currentTime = 0;
+      audioTrabajo.volume = muted ? 0 : baseVolume;
+    } else {
+      fadeTrabajoTimer = fadeAudio(audioTrabajo, audioTrabajo.volume, 0, 800, () => {
+        audioTrabajo.pause();
+        audioTrabajo.currentTime = 0;
+        audioTrabajo.volume = muted ? 0 : baseVolume;
+        fadeTrabajoTimer = null;
+      });
+    }
+  }
+
   function setVolume(v) {
     baseVolume = Math.max(0, Math.min(1, v));
     if (!muted) {
       if (fiestaPlaying && audioFiesta) audioFiesta.volume = baseVolume;
       if (broncaPlaying && audioBronca) audioBronca.volume = baseVolume;
+      if (trabajoPlaying && audioTrabajo) audioTrabajo.volume = baseVolume;
     }
   }
 
@@ -126,6 +173,7 @@
     muted = Boolean(m);
     if (audioFiesta) audioFiesta.volume = muted ? 0 : baseVolume;
     if (audioBronca) audioBronca.volume = muted ? 0 : baseVolume;
+    if (audioTrabajo) audioTrabajo.volume = muted ? 0 : baseVolume;
   }
 
   const pollInterval = setInterval(() => {
@@ -136,6 +184,7 @@
     if (congaActive) {
       if (fiestaPlaying) stopFiesta(true);
       if (broncaPlaying) stopBronca(true);
+      if (trabajoPlaying) stopTrabajo(true);
       return;
     }
 
@@ -152,6 +201,13 @@
     } else if (broncaFase !== 'brawl' && broncaPlaying) {
       stopBronca(false);
     }
+
+    const trabajoFase = rt.trabajoState?.phase;
+    if (trabajoFase === 'working' && !trabajoPlaying && !fiestaPlaying && !broncaPlaying) {
+      playTrabajo();
+    } else if (trabajoFase !== 'working' && trabajoPlaying) {
+      stopTrabajo(false);
+    }
   }, 150);
 
   // Escuchar eventos directos personalizados
@@ -159,6 +215,8 @@
   window.addEventListener('erbolamm:fiesta-stop', () => stopFiesta(false));
   window.addEventListener('erbolamm:bronca-start', () => playBronca());
   window.addEventListener('erbolamm:bronca-stop', () => stopBronca(false));
+  window.addEventListener('erbolamm:trabajo-start', () => playTrabajo());
+  window.addEventListener('erbolamm:trabajo-stop', () => stopTrabajo(false));
   window.addEventListener('erbolamm:audio-mute', (e) => setMuted(e.detail?.muted));
   window.addEventListener('erbolamm:audio-volume', (e) => {
     if (typeof e.detail?.volume === 'number') setVolume(e.detail.volume);
@@ -170,15 +228,19 @@
     stopFiesta,
     playBronca,
     stopBronca,
+    playTrabajo,
+    stopTrabajo,
     setVolume,
     setMuted,
     getStatus: () => ({
       fiestaPlaying,
       broncaPlaying,
+      trabajoPlaying,
       baseVolume,
       muted,
       audioFiesta,
       audioBronca,
+      audioTrabajo,
     }),
     _pollInterval: pollInterval,
   };

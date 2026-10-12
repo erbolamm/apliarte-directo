@@ -12,20 +12,25 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const root = join(__dirname, '..');
 
-test('los archivos de audio fiesta.mp3 y bronca.mp3 existen en public y vps-overlay', () => {
+test('los archivos de audio fiesta.mp3, bronca.mp3 y trabajo.mp3 existen en public y vps-overlay', () => {
   const pFiesta = join(root, 'public', 'sonidos', 'fiesta.mp3');
   const pBronca = join(root, 'public', 'sonidos', 'bronca.mp3');
+  const pTrabajo = join(root, 'public', 'sonidos', 'trabajo.mp3');
   const vFiesta = join(root, 'vps-overlay', 'public', 'sonidos', 'fiesta.mp3');
   const vBronca = join(root, 'vps-overlay', 'public', 'sonidos', 'bronca.mp3');
+  const vTrabajo = join(root, 'vps-overlay', 'public', 'sonidos', 'trabajo.mp3');
 
   assert.ok(existsSync(pFiesta), 'public/sonidos/fiesta.mp3 debe existir');
   assert.ok(existsSync(pBronca), 'public/sonidos/bronca.mp3 debe existir');
+  assert.ok(existsSync(pTrabajo), 'public/sonidos/trabajo.mp3 debe existir');
   assert.ok(existsSync(vFiesta), 'vps-overlay/public/sonidos/fiesta.mp3 debe existir');
   assert.ok(existsSync(vBronca), 'vps-overlay/public/sonidos/bronca.mp3 debe existir');
+  assert.ok(existsSync(vTrabajo), 'vps-overlay/public/sonidos/trabajo.mp3 debe existir');
 
-  // Comprobar que no son archivos vacíos (deben tener un tamaño razonable para 15s de audio mp3)
+  // Comprobar que no son archivos vacíos (deben tener un tamaño razonable para audio mp3)
   assert.ok(statSync(pFiesta).size > 100_000, 'fiesta.mp3 debe contener datos de audio');
   assert.ok(statSync(pBronca).size > 100_000, 'bronca.mp3 debe contener datos de audio');
+  assert.ok(statSync(pTrabajo).size > 100_000, 'trabajo.mp3 debe contener datos de audio');
 });
 
 test('fiesta-bronca-audio.js está sincronizado en public y vps-overlay', () => {
@@ -95,6 +100,7 @@ test('controlador de audio: arranque, parada, conmutación limpia y exclusión m
         fiestaState: { phase: 'idle' },
         broncaState: { phase: 'idle' },
         congaState: { phase: 'idle' },
+        trabajoState: { phase: 'idle' },
       },
     },
     console: {
@@ -121,6 +127,7 @@ test('controlador de audio: arranque, parada, conmutación limpia y exclusión m
   let status = ctrl.getStatus();
   assert.equal(status.fiestaPlaying, false);
   assert.equal(status.broncaPlaying, false);
+  assert.equal(status.trabajoPlaying, false);
   assert.equal(status.muted, false);
 
   // 2. Iniciar fiesta
@@ -128,6 +135,7 @@ test('controlador de audio: arranque, parada, conmutación limpia y exclusión m
   status = ctrl.getStatus();
   assert.equal(status.fiestaPlaying, true);
   assert.equal(status.broncaPlaying, false);
+  assert.equal(status.trabajoPlaying, false);
   assert.ok(status.audioFiesta.playCalls >= 1);
 
   // 3. Conmutación mutua: Si empieza la bronca, apaga la fiesta de inmediato
@@ -135,16 +143,25 @@ test('controlador de audio: arranque, parada, conmutación limpia y exclusión m
   status = ctrl.getStatus();
   assert.equal(status.fiestaPlaying, false);
   assert.equal(status.broncaPlaying, true);
+  assert.equal(status.trabajoPlaying, false);
   assert.ok(status.audioFiesta.pauseCalls >= 1);
   assert.ok(status.audioBronca.playCalls >= 1);
 
-  // 4. Parada de bronca
-  ctrl.stopBronca(true);
+  // 4. Conmutación mutua: Iniciar trabajo apaga la bronca
+  ctrl.playTrabajo();
   status = ctrl.getStatus();
   assert.equal(status.broncaPlaying, false);
+  assert.equal(status.trabajoPlaying, true);
   assert.ok(status.audioBronca.pauseCalls >= 1);
+  assert.ok(status.audioTrabajo.playCalls >= 1);
 
-  // 5. Control de volumen y mute
+  // 5. Parada de trabajo
+  ctrl.stopTrabajo(true);
+  status = ctrl.getStatus();
+  assert.equal(status.trabajoPlaying, false);
+  assert.ok(status.audioTrabajo.pauseCalls >= 1);
+
+  // 6. Control de volumen y mute
   ctrl.setVolume(0.5);
   status = ctrl.getStatus();
   assert.equal(status.baseVolume, 0.5);
@@ -154,20 +171,28 @@ test('controlador de audio: arranque, parada, conmutación limpia y exclusión m
   assert.equal(status.muted, true);
   assert.equal(status.audioFiesta.volume, 0);
   assert.equal(status.audioBronca.volume, 0);
+  assert.equal(status.audioTrabajo.volume, 0);
 
   ctrl.setMuted(false);
   assert.equal(status.audioFiesta.volume, 0.5);
+  assert.equal(status.audioTrabajo.volume, 0.5);
 
-  // 6. Detección automática por ciclo de polling con conga activa
-  ctrl.playFiesta();
-  assert.equal(ctrl.getStatus().fiestaPlaying, true);
+  // 7. Detección automática por ciclo de polling con conga activa
+  ctrl.playTrabajo();
+  assert.equal(ctrl.getStatus().trabajoPlaying, true);
 
-  // Conga empieza a bailar -> debe detener fiesta
+  // Conga empieza a bailar -> debe detener trabajo
   sandbox.window.Oficina3D.runtime.congaState.phase = 'dancing';
-  // Disparamos manualmente un tick del timer de polling
   await new Promise(r => setTimeout(r, 200));
 
-  assert.equal(ctrl.getStatus().fiestaPlaying, false, 'conga en fase dancing debe cortar la fiesta');
+  assert.equal(ctrl.getStatus().trabajoPlaying, false, 'conga en fase dancing debe cortar trabajo');
+
+  // 8. Detección automática por ciclo de polling con trabajoState = 'working'
+  sandbox.window.Oficina3D.runtime.congaState.phase = 'idle';
+  sandbox.window.Oficina3D.runtime.trabajoState.phase = 'working';
+  await new Promise(r => setTimeout(r, 200));
+
+  assert.equal(ctrl.getStatus().trabajoPlaying, true, 'trabajoState en fase working debe activar audio');
 
   // Limpiar timers para terminar tests limpiamente
   clearInterval(ctrl._pollInterval);

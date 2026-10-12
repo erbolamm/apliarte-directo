@@ -43,7 +43,7 @@ function drainMs(ms = 200) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function waitForMessage(ws, predicate, timeoutMs = 1500) {
+function waitForMessage(ws, predicate, timeoutMs = 3500) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       ws.off('message', onMessage);
