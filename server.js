@@ -768,7 +768,7 @@ function gestionarEventoRaid({ raider, raiderNombre, viewers, inmediato = false 
   console.log(`[Raid] Chat bloqueado inmediatamente al detectarse raid de ${nombre} (${v} viewers).`);
 
   const delayMs = inmediato ? 0 : 20000;
-  const duracionMs = 75000;
+  const duracionMs = 105000;
 
   broadcast({
     type: 'raid_aviso',
@@ -1009,6 +1009,16 @@ function conectarTwitchSender() {
           if (esJavierUser && /^!(fiesta|conga|bronca)$/i.test(parsedPrivmsg.texto.trim())) {
             const m = parsedPrivmsg.texto.trim().match(/^!(fiesta|conga|bronca)$/i);
             colaAnimaciones.encolar({ tipo: m[1].toLowerCase(), usuario: 'ja' }, Date.now());
+          }
+          if (esJavierUser && /^!(?:probarraid|raidprueba)(?:\s+(\d+))?$/i.test(parsedPrivmsg.texto.trim())) {
+            const m = parsedPrivmsg.texto.trim().match(/^!(?:probarraid|raidprueba)(?:\s+(\d+))?$/i);
+            const count = m && m[1] ? parseInt(m[1], 10) : 12;
+            gestionarEventoRaid({
+              raider: 'StreamerAmigo',
+              raiderNombre: 'StreamerAmigo',
+              viewers: count,
+              inmediato: true
+            });
           }
           const payload = {
             id: 'tw_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),

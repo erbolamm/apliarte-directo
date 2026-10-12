@@ -2975,14 +2975,16 @@
         return;
       }
 
-      // En modo transparente (?transparente=1 para OBS), el audio solo se escucha si TTS está activo
+      // En modo transparente (?transparente=1 para OBS), el audio de chat solo se escucha si TTS está activo
       if (!ttsActivoEnOverlay && initialTransparent) {
-        ttsAudioEnReproduccion = false;
-        if (typeof item.onTerminado === 'function') {
-          try { item.onTerminado(); } catch (_) {}
+        if (!item.forzarVozLimpia) {
+          ttsAudioEnReproduccion = false;
+          if (typeof item.onTerminado === 'function') {
+            try { item.onTerminado(); } catch (_) {}
+          }
+          setTimeout(procesarSiguienteTts, 150);
+          return;
         }
-        setTimeout(procesarSiguienteTts, 150);
-        return;
       }
 
       // Determinar dueño del avatar y su voz personalizada CVTalk / Efectos
@@ -3137,13 +3139,15 @@
       const textoNorm = String(texto).trim().toLowerCase();
 
       // Deduplicación en cola y recién reproducido (<4s) para el mismo avatar sobre el mensaje completo
-      if (ultimoAudioHablado.agente === agente && ultimoAudioHablado.texto === textoNorm && (ahora - ultimoAudioHablado.ts) < 4000) {
+      if (!forzarVozLimpia && ultimoAudioHablado.agente === agente && ultimoAudioHablado.texto === textoNorm && (ahora - ultimoAudioHablado.ts) < 4000) {
         console.log('[TTS] Audio idéntico reproducido recientemente (<4s), descartando duplicado:', texto);
+        if (typeof onTerminado === 'function') onTerminado();
         return;
       }
 
-      if (ttsColaAudio.some(item => item.agente === agente && (item.mensajeOriginal || item.texto).trim().toLowerCase() === textoNorm)) {
+      if (!forzarVozLimpia && ttsColaAudio.some(item => item.agente === agente && (item.mensajeOriginal || item.texto).trim().toLowerCase() === textoNorm)) {
         console.log('[TTS] Audio idéntico ya en cola para', agente, ', descartando duplicado');
+        if (typeof onTerminado === 'function') onTerminado();
         return;
       }
 
@@ -4227,9 +4231,12 @@
       raidSecuenciaTimers.push(timerFin);
     }
 
+    let raidFiestaActiva = false;
+
     function finalizarSecuenciaRaidBienvenida() {
       if (raidSecuenciaFinalizada) return;
       raidSecuenciaFinalizada = true;
+      raidFiestaActiva = true;
       limpiarTimersRaid();
       const officeEl = document.getElementById('office-3d');
       if (officeEl) {
@@ -4246,10 +4253,11 @@
       if (raidBanner) raidBanner.classList.remove('visible');
       window.Oficina3D?.ejecutarFiesta?.();
       window.dispatchEvent(new CustomEvent('erbolamm:fiesta-start'));
-      console.log('[Raid] Secuencia coral finalizada. Fiesta en marcha.');
+      console.log('[Raid] Secuencia coral finalizada. Fiesta en marcha (15s).');
 
       // Tras la fiesta (15s de duración de fiesta.mp3), arranca el detalle final de cierre (CTA)
       const timerCta = setTimeout(() => {
+        raidFiestaActiva = false;
         iniciarCierreRaidCta();
       }, 15000);
       raidSecuenciaTimers.push(timerCta);
@@ -4257,33 +4265,36 @@
 
     function iniciarCierreRaidCta() {
       if (raidCtaActivo) return;
+      raidFiestaActiva = false;
       raidCtaActivo = true;
 
       const ctaOverlay = document.getElementById('raid-cta-overlay');
       if (ctaOverlay) ctaOverlay.classList.add('visible');
 
-      enfocarAvatarRaid('ja', 18000, 2.3);
+      enfocarAvatarRaid('ja', 28000, 2.3);
       window.Oficina3D?.saltarAvatar?.('ja', true);
       const textoBocadillo = '💖 ¡Si os ha gustado, dadle a Seguir, Suscribíos con Prime y una ⭐ en GitHub! 👉 directo.apliarte.com';
       const textoVoz = 'Si os ha gustado la presentación, tenéis que darle al botón de seguir, al de suscribirse con el Prime y darme una estrellita en el repositorio de GitHub! ¡Y visitad directo punto apliarte punto com!';
 
       window.Oficina3D?.runtime?.say?.('ja', textoBocadillo, performance.now());
       hablarAvatar('ja', textoVoz, null, 2, true, () => {
-        console.log('[Raid] Locución de cierre CTA concluida.');
+        console.log('[Raid] Locución de cierre CTA concluida. Dejando 12s de lectura antes de cerrar.');
         setTimeout(() => {
           cerrarRaidCta();
-        }, 3500);
+        }, 12000);
       });
 
-      // Timer de seguridad para cerrar el CTA si no hay audio o falla
+      // Timer de seguridad generoso (45s) para cerrar el CTA solo si no hay audio o falla la locución
       const timerSeguridad = setTimeout(() => {
+        console.log('[Raid] Watchdog de seguridad del CTA activado.');
         cerrarRaidCta();
-      }, 20000);
+      }, 45000);
       raidSecuenciaTimers.push(timerSeguridad);
     }
 
     function cerrarRaidCta() {
-      if (!raidCtaActivo && !raidBienvenidaActiva) return;
+      if (!raidCtaActivo && !raidBienvenidaActiva && !raidFiestaActiva) return;
+      raidFiestaActiva = false;
       raidCtaActivo = false;
       raidBienvenidaActiva = false;
       const ctaOverlay = document.getElementById('raid-cta-overlay');
@@ -4910,7 +4921,11 @@
               iniciarSecuenciaRaidBienvenida(data.raider, data.viewers, data.duracionMs);
             }
             if (data.type === 'raid_bienvenida_fin') {
-              cerrarRaidCta();
+              if (!raidCtaActivo && !raidFiestaActiva) {
+                cerrarRaidCta();
+              } else {
+                console.log('[Raid] raid_bienvenida_fin recibido del servidor; fiesta o CTA siguen en marcha en plano.html. Cierre ordenado respetado.');
+              }
             }
             if (data.type === 'comando_chat' && data.comando) {
               if (typeof raidBienvenidaActiva !== 'undefined' && raidBienvenidaActiva) {

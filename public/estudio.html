@@ -1209,6 +1209,7 @@
         <div class="brand-name">APLIARTE <span>DIRECTO</span></div>
       </div>
       <div class="app-bar-actions">
+        <button type="button" class="btn" data-action="probar-raid" style="background:#7c3aed;color:#ffffff;font-weight:700;" title="Lanzar bienvenida coral de Raid de prueba (>5)">⚔️ Probar Raid (>5)</button>
         <button type="button" class="icon-btn" data-action="toggle-theme" aria-label="Cambiar entre modo claro y modo oscuro" data-tip="Cambia entre modo claro y modo oscuro."></button>
       </div>
     </header>
@@ -1256,6 +1257,7 @@
         <div class="brand-name">APLIARTE <span>DIRECTO</span></div>
       </div>
       <div class="app-bar-actions" id="studio-actions">
+        <button type="button" class="btn" id="btn-top-probar-raid" data-action="probar-raid" style="background:#7c3aed;color:#ffffff;font-weight:700;" title="Lanzar bienvenida coral de Raid de prueba (>5)">⚔️ Probar Raid (>5)</button>
         <button type="button" class="btn" data-action="back-to-welcome">Volver</button>
         <button type="button" class="btn btn-danger" id="btn-apagar-estudio" data-action="open-shutdown">Apagar</button>
       </div>
@@ -1483,6 +1485,9 @@
         <button type="button" class="icon-btn sheet-close" aria-label="Cerrar comandos"></button>
       </div>
       <div class="sheet-body">
+        <div style="margin-bottom: 12px;">
+          <button type="button" class="btn" data-action="probar-raid" style="background:#7c3aed;color:#ffffff;font-weight:700;width:100%;min-height:44px;border:none;border-radius:var(--radius);cursor:pointer;font-size:0.95rem;box-shadow:0 2px 8px rgba(124,58,237,0.3);" title="Lanzar bienvenida coral de Raid de prueba (>5 viewers)">⚔️ Probar Raid (>5)</button>
+        </div>
         <input id="commands-filter" type="search" placeholder="Buscar comando" aria-label="Buscar comando" autocomplete="off">
         <p class="hint" id="commands-message" role="status"></p>
         <div class="commands-grid" id="commands-grid"></div>
@@ -7037,7 +7042,20 @@
       'cancel-shutdown': () => $('shutdown-dialog').close(),
       'confirm-shutdown': confirmShutdown,
       'preview-studio': () => showView('studio'),
-      'back-to-welcome': () => showView('welcome')
+      'back-to-welcome': () => showView('welcome'),
+      'probar-raid': async () => {
+        try {
+          const res = await fetch('/api/panel/probar-raid', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ raider: 'StreamerAmigo', viewers: 12, inmediato: true })
+          });
+          const data = await res.json().catch(() => ({}));
+          showToast(res.ok ? '⚔️ Evento Raid coral lanzado (12 viewers)' : (data.error || 'Error'));
+        } catch (_) {
+          showToast('Error de conexión al lanzar raid');
+        }
+      }
     };
 
     function init() {

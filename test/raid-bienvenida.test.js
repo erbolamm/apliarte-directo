@@ -100,7 +100,7 @@ test('POST /api/panel/probar-raid: lanza el evento y emite por WebSocket', async
   assert.ok(inicio, 'Debe haber recibido evento raid_bienvenida_iniciar por WebSocket');
   assert.equal(inicio.raider, 'CompañeroGamer');
   assert.equal(inicio.viewers, 14);
-  assert.equal(inicio.duracionMs, 75000, 'La duración debe ser 75s (presentación coral + fiesta + cierre CTA)');
+  assert.equal(inicio.duracionMs, 105000, 'La duración debe ser 105s (presentación coral + fiesta + cierre CTA con lectura amplia + margen de seguridad)');
 });
 
 test('bloqueo inmediato: al detectarse una raid (>5) con delay de 20s, el chat se bloquea de inmediato', async () => {
