@@ -113,6 +113,9 @@ const PUBLIC_EVENTS = new Set([
   'avatares_estado',
   'chat_mensaje',
   'chat_historial',
+  'raid_aviso',
+  'raid_bienvenida_iniciar',
+  'raid_bienvenida_fin',
 ]);
 
 const RESTRICTED_EVENTS = new Set([

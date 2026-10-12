@@ -553,9 +553,15 @@ html[data-theme="dark"] .real-office {--paper:#fdfdfd;--app-bg:#303030;--panel:#
   100% { transform: translateY(0); }
 }
 .real-office .person-anchor.jumping .person-sprite,
-.real-office .person-anchor.jumping .person-upright,
 .real-office .person-upright.jumping .person-sprite {
   animation: charJump 0.85s cubic-bezier(0.25, 1, 0.5, 1) !important;
+}
+@keyframes shadowJump {
+  0%, 100% { transform: scale(1); opacity: 0.35; }
+  50% { transform: scale(0.55); opacity: 0.15; }
+}
+.real-office .person-anchor.jumping .foot-shadow {
+  animation: shadowJump 0.85s cubic-bezier(0.25, 1, 0.5, 1) !important;
 }
 .real-office .monitor {border:0;background:transparent;box-shadow:none;transform-style:preserve-3d;}
 /* Monitor 3D rules: only for CSS 3D legacy (div.monitor), NEVER for SVG diorama rects */
@@ -578,18 +584,21 @@ html[data-theme="dark"] .real-office .world {--scene-dim:.38;}
 .real-office .room-floor::after {content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 0%,rgba(0,0,0,var(--scene-dim)) 80%);}
 .real-office .room-floor strong,.real-office .room-floor>span {z-index:1;}
 .real-office .fan-anchor,
-.real-office circle.fan-light {display:none;}
-.real-office .fan-rod {display:none;}
-html[data-theme="dark"] .real-office .fan-anchor {display:block;}
-html[data-theme="dark"] .real-office circle.fan-light {display:block;}
-.real-office .fan-light {position:absolute;left:-16px;top:-16px;width:32px;height:32px;border-radius:50%;transform:translateZ(-4px);background:#fdfdfd;border:3px solid var(--screen-dark);}
-/* 3 box-shadows encadenadas (12px/36px/60px) fundidas en una sola con el
-   mayor blur todavía notable (28px). Mismo glow visual, ~3× menos coste
-   en el repintado por frame del ventilador girando. */
-html[data-theme="dark"] .real-office .fan-light {background:#fdfdfd;box-shadow:0 0 12px #fdfdfd,0 0 28px #8fd5faaa,0 0 48px #e8955e44;}
-html[data-theme="dark"] .real-office .fan-shadow {width:210px;height:210px;left:-105px;top:-105px;background:radial-gradient(ellipse,rgba(253,253,253,.32),rgba(232,149,94,.12) 45%,transparent 70%);}
-
-html[data-theme="dark"] .real-office .fan-rotor b {background:#fdfdfd;border-color:#e8955e;}
+.real-office circle.fan-light,
+.real-office .fan-light,
+.real-office .fan-shadow,
+.real-office .fan-rod,
+.real-office .fan-rotor,
+.real-office .ceiling-fan,
+html[data-theme="dark"] .real-office .fan-anchor,
+html[data-theme="dark"] .real-office circle.fan-light,
+html[data-theme="dark"] .real-office .fan-light,
+html[data-theme="dark"] .real-office .fan-shadow,
+html[data-theme="dark"] .real-office .fan-rod,
+html[data-theme="dark"] .real-office .fan-rotor,
+html[data-theme="dark"] .real-office .ceiling-fan {
+  display: none !important;
+}
 .real-office .task-ficha-head-actions {display:flex;gap:6px;align-items:center;flex-shrink:0;}
 .real-office .task-ficha-head-actions button {min-width:34px;min-height:34px;padding:0 8px;border:1px solid var(--border);border-radius:6px;background:var(--panel-2);cursor:pointer;font-size:14px;color:var(--text, var(--ink));}
 .real-office .task-ficha-head-actions button:hover:not(:disabled) {border-color:rgba(94,206,245,0.55);background:var(--subtle);color:var(--accent);}

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parsearLineaPrivmsg,
+  parsearLineaRaid,
   crearGestorBienvenida,
   BOTS_EXCLUIDOS,
   USUARIOS_SISTEMA,
@@ -216,5 +217,23 @@ test('procesarUsuario: procesa mensajes directos (YouTube o Twitch) con las mism
   gestor.reiniciar();
   assert.equal(gestor.totalVistos(), 0);
   assert.equal(gestor.esNuevo('viewer_yt', t0 + 1800000), true);
+});
+
+test('parsearLineaRaid: detecta y parsea correctamente un evento USERNOTICE de raid de Twitch', () => {
+  const lineaRaid = '@badge-info=;badges=subscriber/12;color=#1E90FF;display-name=AmigoGamer;emotes=;login=amigogamer;msg-id=raid;msg-param-displayName=AmigoGamer;msg-param-login=amigogamer;msg-param-viewerCount=15;room-id=12345;tmi-sent-ts=1700000000000 :tmi.twitch.tv USERNOTICE #apliarte :15 raiders from AmigoGamer have joined!';
+
+  const res = parsearLineaRaid(lineaRaid);
+  assert.ok(res !== null, 'Debe parsear una línea USERNOTICE con msg-id=raid');
+  assert.equal(res.raider, 'amigogamer');
+  assert.equal(res.raiderNombre, 'AmigoGamer');
+  assert.equal(res.viewers, 15);
+});
+
+test('parsearLineaRaid: ignora líneas que no sean raid o que no tengan msg-id=raid', () => {
+  assert.equal(parsearLineaRaid('PING :tmi.twitch.tv'), null);
+  assert.equal(parsearLineaRaid(':tmi.twitch.tv USERNOTICE #apliarte :Mensaje sin tags'), null);
+  assert.equal(parsearLineaRaid('@msg-id=sub;display-name=Pepe :tmi.twitch.tv USERNOTICE #apliarte'), null);
+  assert.equal(parsearLineaRaid(''), null);
+  assert.equal(parsearLineaRaid(null), null);
 });
 

@@ -3,7 +3,7 @@ export type TouchPoint={x:number;y:number};
 export const DEFAULT_CAMERA:Camera={tilt:52,turn:-20,zoom:1,panX:0,panY:0};
 const clamp=(n:number,min:number,max:number)=>Math.min(max,Math.max(min,n));
 const wrap=(n:number)=>((n+180)%360+360)%360-180;
-export function boundCamera(c:Camera):Camera{return {tilt:clamp(c.tilt,20,72),turn:wrap(c.turn),zoom:clamp(c.zoom,.45,3),panX:clamp(c.panX,-1200,1200),panY:clamp(c.panY,-900,900)};}
+export function boundCamera(c:Camera):Camera{return {tilt:clamp(c.tilt,20,72),turn:wrap(c.turn),zoom:clamp(c.zoom,.45,3.5),panX:clamp(c.panX,-1600,1600),panY:clamp(c.panY,-1200,1200)};}
 const middle=(p:TouchPoint[])=>({x:p.reduce((n,q)=>n+q.x,0)/p.length,y:p.reduce((n,q)=>n+q.y,0)/p.length});
 export function gestureCamera(base:Camera,start:TouchPoint[],end:TouchPoint[],pan=false):Camera {
  if(!start.length||start.length!==end.length)return base;

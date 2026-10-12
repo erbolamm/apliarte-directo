@@ -805,7 +805,7 @@ export default function FloorPlan(props: Props) {
   );
 
   const focusOnAgent = useCallback(
-    (id: AgentId, durationMs = 5000) => {
+    (id: AgentId, durationMs = 5000, customZoom?: number) => {
       if (window.Oficina3D?.isCinematicActive?.()) {
         return;
       }
@@ -836,7 +836,7 @@ export default function FloorPlan(props: Props) {
         // El personaje está en el plano del suelo con altura de ~84px y bocadillo a ~110px.
         // Compensamos con targetZ = 50 para centrar el cuerpo y bocadillo exactamente en pantalla.
         const targetZ = 50;
-        const targetZoom = 2.1;
+        const targetZoom = typeof customZoom === 'number' ? customZoom : 2.1;
         const screenX = rx * (currentScale * targetZoom);
         const screenY = (ry * Math.cos(tiltRad) - targetZ * Math.sin(tiltRad)) * (currentScale * targetZoom);
         apply({
@@ -846,7 +846,7 @@ export default function FloorPlan(props: Props) {
           panY: Math.round(-screenY),
         });
       } else {
-        const targetZoom = 1.75;
+        const targetZoom = typeof customZoom === 'number' ? customZoom : 1.75;
         const screenX = dx * currentScale * targetZoom;
         const screenY = (dy - 45) * currentScale * targetZoom;
         apply({
@@ -1036,7 +1036,7 @@ export default function FloorPlan(props: Props) {
 
   useEffect(() => {
     if (window.Oficina3D) {
-      window.Oficina3D.focusAgent = (id, ms) => focusOnAgentRef.current(id, ms);
+      window.Oficina3D.focusAgent = (id, ms, zoom) => focusOnAgentRef.current(id, ms, zoom);
       window.Oficina3D.trackAgent = (id) => trackAgentRef.current(id);
       window.Oficina3D.focusCenter = (ms) => focusCenterRef.current(ms);
       window.Oficina3D.resetCamera = () => resetCameraRef.current();

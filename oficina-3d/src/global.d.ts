@@ -15,7 +15,7 @@ declare global {
    traerCafe?: (id?: AgentId) => void;
    setViewMode?: (mode: '3d' | 'diorama') => void;
    getViewMode?: () => '3d' | 'diorama';
-   focusAgent?: (id: AgentId, durationMs?: number) => void;
+   focusAgent?: (id: AgentId, durationMs?: number, customZoom?: number) => void;
    focusCenter?: (durationMs?: number) => void;
    resetCamera?: () => void;
    isCinematicActive?: () => boolean;
@@ -24,7 +24,7 @@ declare global {
    ejecutarTrabajar?: (agentId?: AgentId) => void;
    ejecutarFiesta?: () => void;
    moverAvatar?: (id: AgentId, dx: number, dy: number, facing: number, isRear: boolean) => void;
-   saltarAvatar?: (id: AgentId) => void;
+   saltarAvatar?: (id: AgentId, silent?: boolean) => void;
    resetAvatar?: (id: AgentId) => void;
    iniciarJuego?: (caller?: AgentId) => { ok: boolean; reason?: string; segundosRestantes?: number };
    isGameActive?: () => boolean;

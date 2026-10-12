@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark light">
   <title>Oficina ErBolamm · Directo Interactivo</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23005fa9%22/%3E%3Ctext%20x%3D%2232%22%20y%3D%2248%22%20font-size%3D%2242%22%20font-family%3D%22system-ui%2C%20-apple-system%2C%20sans-serif%22%20font-weight%3D%22bold%22%20text-anchor%3D%22middle%22%20fill%3D%22%235ecef5%22%3E%E2%8C%82%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/office-3d.css?v=59f792568c">
+  <link rel="stylesheet" href="/office-3d.css?v=9083aaa576">
   <style>
     :root {
       --color-primary: #005fa9;
@@ -1069,6 +1069,264 @@
       border: 1px solid rgba(94, 206, 245, 0.4);
     }
 
+    /* ─── Banner Notificador de Raid y Bienvenida Coral ─────────────── */
+    .raid-banner {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-120%);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 28px;
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 2px solid #a855f7;
+      border-radius: 999px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), 0 0 24px rgba(168, 85, 247, 0.45);
+      z-index: 2100;
+      pointer-events: none;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+      opacity: 0;
+    }
+
+    .raid-banner.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .raid-banner-icon {
+      font-size: 28px;
+      line-height: 1;
+      animation: gameTrophyBob 1.2s infinite alternate ease-in-out;
+    }
+
+    .raid-banner-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #f8fafc;
+      letter-spacing: 0.02em;
+    }
+
+    .raid-banner-sub {
+      font-size: 0.85rem;
+      color: #d8b4fe;
+    }
+
+    .raid-banner-timer {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #c084fc;
+      padding: 2px 10px;
+      background: rgba(168, 85, 247, 0.18);
+      border-radius: 999px;
+      border: 1px solid rgba(168, 85, 247, 0.4);
+    }
+
+    /* ─── Modal / Overlay de Cierre de Raid (Llamado a la Acción) ────── */
+    .raid-cta-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 2200;
+      pointer-events: none;
+      opacity: 0;
+      transform: scale(0.95);
+      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .raid-cta-overlay.visible {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+
+    .raid-cta-card {
+      width: min(760px, 94vw);
+      padding: 28px 32px;
+      background: rgba(15, 23, 42, 0.96);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 3px solid #a855f7;
+      border-radius: 24px;
+      color: #f8fafc;
+      text-align: center;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(168, 85, 247, 0.45);
+    }
+
+    .raid-cta-badge {
+      display: inline-block;
+      padding: 4px 16px;
+      margin-bottom: 12px;
+      background: rgba(168, 85, 247, 0.25);
+      border: 1px solid rgba(168, 85, 247, 0.6);
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: #e9d5ff;
+      letter-spacing: 0.04em;
+    }
+
+    .raid-cta-title {
+      margin: 0 0 8px;
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      font-weight: 900;
+      color: #ffffff;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+    }
+
+    .raid-cta-sub {
+      margin: 0 0 20px;
+      font-size: 1.05rem;
+      color: #cbd5e1;
+    }
+
+    .raid-cta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+
+    .raid-cta-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(30, 41, 59, 0.85);
+      border: 2px solid transparent;
+      text-align: left;
+    }
+
+    .raid-cta-item.follow {
+      border-color: #9146ff;
+      background: rgba(145, 70, 255, 0.16);
+    }
+
+    .raid-cta-item.prime {
+      border-color: #00a8e8;
+      background: rgba(0, 168, 232, 0.16);
+    }
+
+    .raid-cta-item.github {
+      border-color: #eab308;
+      background: rgba(234, 179, 8, 0.16);
+    }
+
+    .raid-cta-item-icon {
+      font-size: 2.2rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .raid-cta-item-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .raid-cta-item-action {
+      font-size: 0.95rem;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: 0.02em;
+    }
+
+    .raid-cta-item-desc {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+
+    .raid-cta-url-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 14px 20px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 2px dashed #5ecef5;
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(94, 206, 245, 0.25);
+    }
+
+    .raid-cta-url-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .raid-cta-url-link {
+      font-size: clamp(1.6rem, 3.5vw, 2.3rem);
+      font-weight: 900;
+      color: #5ecef5;
+      letter-spacing: 0.03em;
+      text-shadow: 0 0 16px rgba(94, 206, 245, 0.6);
+    }
+
+    /* Eliminadas lámparas y ventiladores del modo oscuro para no tapar bocadillos */
+    .fan-anchor,
+    circle.fan-light,
+    .fan-light,
+    .fan-shadow,
+    .fan-rod,
+    .fan-rotor,
+    .ceiling-fan,
+    html[data-theme="dark"] .fan-anchor,
+    html[data-theme="dark"] circle.fan-light,
+    html[data-theme="dark"] .fan-light,
+    html[data-theme="dark"] .fan-shadow,
+    html[data-theme="dark"] .fan-rod,
+    html[data-theme="dark"] .fan-rotor,
+    html[data-theme="dark"] .ceiling-fan {
+      display: none !important;
+    }
+
+    /* Bocadillos con máxima prioridad visual */
+    .real-office .person-bubble-svg-3d {
+      z-index: 9999 !important;
+    }
+
+    /* ─── Enfoque cinematográfico dinámico durante Modo Raid (Centrado y Zoom 2.5x) ─── */
+    #office-3d.modo-raid .diorama-stage {
+      transform-origin: 640px 430px !important;
+      transition: transform 1.1s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    #office-3d.modo-raid.focus-ge .diorama-stage {
+      transform: translate(455px, -338px) scale(2.5) !important;
+    }
+    #office-3d.modo-raid.focus-cl .diorama-stage {
+      transform: translate(880px, -338px) scale(2.5) !important;
+    }
+    #office-3d.modo-raid.focus-co .diorama-stage {
+      transform: translate(1305px, -338px) scale(2.5) !important;
+    }
+    #office-3d.modo-raid.focus-pi .diorama-stage {
+      transform: translate(925px, 513px) scale(2.5) !important;
+    }
+    #office-3d.modo-raid.focus-gr .diorama-stage {
+      transform: translate(1305px, -650px) scale(2.5) !important;
+    }
+    #office-3d.modo-raid.focus-ja .diorama-stage {
+      transform: translate(-1200px, 413px) scale(2.5) !important;
+    }
+
+    #office-3d.modo-raid .activity-bubble-speech {
+      animation: bubble-ephemeral 10s ease-out forwards !important;
+    }
+    #office-3d.modo-raid.focus-ja .activity-bubble-speech {
+      animation: bubble-ephemeral 18s ease-out forwards !important;
+    }
+    #office-3d.modo-raid .activity-bubble-speech rect {
+      filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.85)) !important;
+    }
+
     /* ─── Enfoque cinematográfico y aumento de bocadillos en !traidor ─── */
     #office-3d.modo-traidor .diorama-stage {
       transform: scale(2.05) !important;
@@ -1471,6 +1729,56 @@
     <div class="game-banner-timer" id="game-banner-timer">5s</div>
   </div>
 
+  <!-- Banner Notificador de Raid y Bienvenida Coral -->
+  <div id="raid-banner" class="raid-banner" aria-hidden="true">
+    <div class="raid-banner-icon">⚔️</div>
+    <div class="raid-banner-content">
+      <div class="raid-banner-title" id="raid-banner-title">¡RAID ENTRANTE!</div>
+      <div class="raid-banner-sub" id="raid-banner-sub">Bienvenidos a la Oficina 3D</div>
+    </div>
+    <div class="raid-banner-timer" id="raid-banner-timer">68s</div>
+  </div>
+
+  <!-- Modal / Overlay de Cierre de Raid: Llamado a la Acción (CTA) -->
+  <div id="raid-cta-overlay" class="raid-cta-overlay" aria-hidden="true">
+    <div class="raid-cta-card">
+      <div class="raid-cta-badge">🎉 ¡GRACIAS POR LA RAID! 🎉</div>
+      <h2 class="raid-cta-title">¿OS HA GUSTADO LA PRESENTACIÓN?</h2>
+      <p class="raid-cta-sub">¡Apoya el directo con solo un clic y forma parte de la comunidad!</p>
+      
+      <div class="raid-cta-grid">
+        <div class="raid-cta-item follow">
+          <div class="raid-cta-item-icon">💜</div>
+          <div class="raid-cta-item-text">
+            <span class="raid-cta-item-action">DARLE A SEGUIR</span>
+            <span class="raid-cta-item-desc">¡Únete a la comunidad de Twitch!</span>
+          </div>
+        </div>
+
+        <div class="raid-cta-item prime">
+          <div class="raid-cta-item-icon">👑</div>
+          <div class="raid-cta-item-text">
+            <span class="raid-cta-item-action">SUSCRIBIRSE CON PRIME</span>
+            <span class="raid-cta-item-desc">¡Suscripción gratuita con Amazon Prime!</span>
+          </div>
+        </div>
+
+        <div class="raid-cta-item github">
+          <div class="raid-cta-item-icon">⭐</div>
+          <div class="raid-cta-item-text">
+            <span class="raid-cta-item-action">ESTRELLITA EN GITHUB</span>
+            <span class="raid-cta-item-desc">Repositorio libre y código abierto</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="raid-cta-url-box">
+        <span class="raid-cta-url-label">🌐 Web y repositorio en vivo:</span>
+        <span class="raid-cta-url-link">directo.apliarte.com</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Game hub poster (!juego) and !traidor phase screens -->
   <div id="hub-overlay" class="hub-overlay" aria-hidden="true">
     <div class="hub-card" id="hub-card">
@@ -1690,7 +1998,7 @@
   </div>
 
   <!-- Script bundle de la oficina 3D -->
-  <script src="/office-3d.js?v=e631142819"></script>
+  <script src="/office-3d.js?v=b9a6bf492d"></script>
   <script src="/js/conga-musica.js?v=20261003c"></script>
   <script src="/js/fiesta-bronca-audio.js?v=20261010"></script>
 
@@ -2577,6 +2885,8 @@
     // ─── TTS de Audio para Avatares Adoptados en el Directo ─────────
     const ttsColaAudio = [];
     let ttsAudioEnReproduccion = false;
+    let ttsAudioElementoActual = null;
+    let ttsWatchdogActual = null;
     let ttsActivoEnOverlay = true;
     let ttsPreservePitchEnOverlay = false; // Camino 2 de serie (cada avatar conserva su tono propio)
     const MAX_TTS_COLA = 8;
@@ -2619,18 +2929,18 @@
       return trozos;
     }
 
-    // Velocidades y cadencia diferenciadas por avatar (más ágiles de serie para el directo)
+    // Velocidades y cadencia diferenciadas por avatar (naturales, pausadas y comprensibles)
     const VELOCIDADES_AVATAR = {
-      ja: 1.18,  // Javier (ágil)
-      ge: 1.22,  // Gemini (ligero)
-      cl: 1.28,  // Claude (rápido y claro)
-      pi: 1.35,  // Pi (veloz y agudo)
-      co: 1.08,  // Codex (técnico y pausado)
-      om: 0.96,  // Ollama (pesado y grave)
-      gr: 1.12,  // Groq (moderado)
-      op: 1.24,  // OpenAI (vivo)
-      ex: 1.28,  // Externo (rápido)
-      be: 1.12   // Vigía (neutral)
+      ja: 1.0,   // Javier (natural y claro)
+      ge: 1.02,  // Gemini (ligero)
+      cl: 1.03,  // Claude (claro y pausado)
+      pi: 1.04,  // Pi (vivo pero sin acelerar en exceso)
+      co: 0.96,  // Codex (técnico y pausado)
+      om: 0.92,  // Ollama (pesado y grave)
+      gr: 0.98,  // Groq (moderado)
+      op: 1.02,  // OpenAI (vivo)
+      ex: 1.04,  // Externo (natural)
+      be: 0.98   // Vigía (neutral)
     };
 
     let velocidadEstudio = 1.0;
@@ -2658,6 +2968,9 @@
 
       if (!textoLimpio) {
         ttsAudioEnReproduccion = false;
+        if (typeof item.onTerminado === 'function') {
+          try { item.onTerminado(); } catch (_) {}
+        }
         procesarSiguienteTts();
         return;
       }
@@ -2665,15 +2978,21 @@
       // En modo transparente (?transparente=1 para OBS), el audio solo se escucha si TTS está activo
       if (!ttsActivoEnOverlay && initialTransparent) {
         ttsAudioEnReproduccion = false;
+        if (typeof item.onTerminado === 'function') {
+          try { item.onTerminado(); } catch (_) {}
+        }
         setTimeout(procesarSiguienteTts, 150);
         return;
       }
 
       // Determinar dueño del avatar y su voz personalizada CVTalk / Efectos
-      const rawDuenio = (item.agente === 'ja' || item.usuario === 'ja' || item.usuario === 'apliarte') ? 'apliarte' : (item.usuario || avatarOwners[item.agente] || null);
-      const pref = rawDuenio ? userVoiceConfigs.get(rawDuenio.toLowerCase()) : null;
+      const forzarLimpia = Boolean(item.forzarVozLimpia);
+      const rawDuenio = forzarLimpia
+        ? null
+        : ((item.agente === 'ja' || item.usuario === 'ja' || item.usuario === 'apliarte') ? 'apliarte' : (item.usuario || avatarOwners[item.agente] || null));
+      const pref = (!forzarLimpia && rawDuenio) ? userVoiceConfigs.get(rawDuenio.toLowerCase()) : null;
       let lang = pref?.lang || 'es';
-      let slot = pref?.slot || 1;
+      let slot = pref?.slot || ((item.agente === 'cl' || item.agente === 'pi' || item.agente === 'ge') ? 1 : 2);
 
       // Transformación de texto para efectos de voz (animales, personajes, etc.)
       let textoParaTts = textoLimpio;
@@ -2720,6 +3039,7 @@
         if (terminado) return;
         terminado = true;
         if (watchdogTimer) { clearTimeout(watchdogTimer); watchdogTimer = null; }
+        ttsWatchdogActual = null;
         if (audio) {
           audio.onended = null;
           audio.onerror = null;
@@ -2727,12 +3047,18 @@
           audio.src = '';
           audio = null;
         }
+        const cb = item.onTerminado;
+        ttsAudioElementoActual = null;
         ttsAudioEnReproduccion = false;
+        if (typeof cb === 'function') {
+          try { cb(); } catch (err) { console.warn('[TTS] Error en onTerminado:', err); }
+        }
         setTimeout(procesarSiguienteTts, 150);
       };
 
       try {
         audio = new Audio(url);
+        ttsAudioElementoActual = audio;
         audio.volume = 0.95;
         const avatarRate = VELOCIDADES_AVATAR[item.agente] || 1.15;
         // Camino 1: preservesPitch = true (velocidad libre sin deformar tono, pero todos suenan con el mismo tono)
@@ -2742,10 +3068,10 @@
         audio.mozPreservesPitch = preservarTono;
         audio.webkitPreservesPitch = preservarTono;
 
-        // Slot 1: Tono femenino/agudo (+12% cadencia / tono si preservesPitch es false)
-        // Slot 2: Tono masculino/grave (-12% cadencia / tono si preservesPitch es false)
-        const factorTonoBase = (slot === 2) ? 0.88 : 1.12;
-        const factorTonoFinal = factorEfectoTono ? (factorEfectoTono * (slot === 2 ? 0.92 : 1.05)) : factorTonoBase;
+        // Slot 1: Tono femenino/agudo
+        // Slot 2: Tono masculino/grave
+        const factorTonoBase = (slot === 2) ? 0.95 : 1.03;
+        const factorTonoFinal = factorEfectoTono ? (factorEfectoTono * (slot === 2 ? 0.94 : 1.04)) : (forzarLimpia ? 1.0 : factorTonoBase);
         audio.playbackRate = calcularPlaybackRate(avatarRate * factorEfectoVel, velocidadEstudio, factorTonoFinal);
 
 
@@ -2765,6 +3091,7 @@
           console.warn('[TTS] Watchdog preventivo finalizó audio estancado para:', item.agente);
           finalizar();
         }, watchdogMs);
+        ttsWatchdogActual = watchdogTimer;
 
         // Cuando el audio comienza a sonar, si conocemos su duración real, ajustamos el watchdog
         // para darle la duración completa restante + 4 segundos de cortesía
@@ -2773,6 +3100,7 @@
             if (watchdogTimer) clearTimeout(watchdogTimer);
             const tiempoRealRestanteMs = Math.ceil((audio.duration / Math.max(0.5, audio.playbackRate || 1.0)) * 1000) + 4000;
             watchdogTimer = setTimeout(finalizar, Math.max(8000, tiempoRealRestanteMs));
+            ttsWatchdogActual = watchdogTimer;
           }
         };
 
@@ -2785,9 +3113,25 @@
       }
     }
 
+    function limpiarColaTtsParaRaid() {
+      ttsColaAudio.length = 0;
+      if (ttsWatchdogActual) {
+        clearTimeout(ttsWatchdogActual);
+        ttsWatchdogActual = null;
+      }
+      if (ttsAudioElementoActual) {
+        ttsAudioElementoActual.onended = null;
+        ttsAudioElementoActual.onerror = null;
+        try { ttsAudioElementoActual.pause(); } catch (_) {}
+        ttsAudioElementoActual.src = '';
+        ttsAudioElementoActual = null;
+      }
+      ttsAudioEnReproduccion = false;
+    }
+
     let ultimoAudioHablado = { texto: '', agente: '', ts: 0 };
 
-    function hablarAvatar(agente, texto, usuario = null, tier = 1) {
+    function hablarAvatar(agente, texto, usuario = null, tier = 1, forzarVozLimpia = false, onTerminado = null) {
       if (!texto || !agente) return;
       const ahora = Date.now();
       const textoNorm = String(texto).trim().toLowerCase();
@@ -2805,7 +3149,7 @@
 
       // Anti-monopolio por avatar: máximo 2 mensajes en cola por avatar si es espectador regular
       // (Los trozos de un mismo mensaje cuentan como uno solo gracias a mensajeId)
-      const esPrioritario = tier >= 2 || agente === 'ja' || usuario === 'apliarte' || usuario === 'erbolamm';
+      const esPrioritario = forzarVozLimpia || tier >= 2 || agente === 'ja' || usuario === 'apliarte' || usuario === 'erbolamm';
       const mensajesAvatarEnCola = new Set(
         ttsColaAudio
           .filter(it => it.agente === agente)
@@ -2887,10 +3231,12 @@
           texto: trozosAceptados[i],
           usuario,
           tier,
+          forzarVozLimpia: Boolean(forzarVozLimpia),
           mensajeId,
           mensajeOriginal: textoNorm,
           trozoIndex: i,
-          totalTrozos: trozosAceptados.length
+          totalTrozos: trozosAceptados.length,
+          onTerminado: (i === trozosAceptados.length - 1) ? onTerminado : null
         });
       }
 
@@ -2919,6 +3265,10 @@
 
     function procesarTextoChat(text, user = 'ja', tags = {}) {
       if (!text) return;
+      if (typeof raidBienvenidaActiva !== 'undefined' && raidBienvenidaActiva) {
+        console.log('[procesarTextoChat] Bloqueado por evento de Raid en curso:', user, text);
+        return;
+      }
       const trimmed = text.trim();
       if (trimmed.startsWith('/') && !trimmed.startsWith('/me')) return;
 
@@ -3685,6 +4035,275 @@
       gameBanner.classList.remove('visible', 'winner');
     });
 
+    // ─── Control de Bienvenida Coral para Raids (>5 personas) ──────
+    const raidBanner = document.getElementById('raid-banner');
+    const raidBannerTitle = document.getElementById('raid-banner-title');
+    const raidBannerSub = document.getElementById('raid-banner-sub');
+    const raidBannerTimer = document.getElementById('raid-banner-timer');
+    let raidTimerInterval = null;
+    let raidSecuenciaTimers = [];
+    let raidBienvenidaActiva = false;
+    let raidCtaActivo = false;
+
+    function limpiarTimersRaid() {
+      if (raidTimerInterval) {
+        clearInterval(raidTimerInterval);
+        raidTimerInterval = null;
+      }
+      for (const t of raidSecuenciaTimers) {
+        clearTimeout(t);
+      }
+      raidSecuenciaTimers = [];
+      const ctaOverlay = document.getElementById('raid-cta-overlay');
+      if (ctaOverlay) ctaOverlay.classList.remove('visible');
+      raidCtaActivo = false;
+    }
+
+    function mostrarAvisoRaid(raider, viewers, delayMs) {
+      limpiarTimersRaid();
+      limpiarColaTtsParaRaid();
+      raidBienvenidaActiva = true; // Bloqueo total e inmediato de chat desde el milisegundo 0
+      if (!raidBanner) return;
+      raidBanner.classList.add('visible');
+      if (raidBannerTitle) raidBannerTitle.textContent = `⚔️ ¡RAID DE @${String(raider).toUpperCase()}! (${viewers} espectadores)`;
+      let rem = Math.max(1, Math.round((delayMs || 20000) / 1000));
+      if (raidBannerSub) raidBannerSub.textContent = `⚔️ StreamElements en locución... Los avatares darán la bienvenida en ${rem}s`;
+      if (raidBannerTimer) raidBannerTimer.textContent = `${rem}s`;
+
+      raidTimerInterval = setInterval(() => {
+        rem--;
+        if (rem > 0) {
+          if (raidBannerTimer) raidBannerTimer.textContent = `${rem}s`;
+          if (raidBannerSub) raidBannerSub.textContent = `⚔️ StreamElements en locución... Los avatares darán la bienvenida en ${rem}s`;
+        } else {
+          if (raidBannerTimer) raidBannerTimer.textContent = '¡YA!';
+          clearInterval(raidTimerInterval);
+          raidTimerInterval = null;
+        }
+      }, 1000);
+    }
+
+    const COORDENADAS_AVATARES_RAID = {
+      ge: { x: 458, y: 610 },
+      cl: { x: 288, y: 610 },
+      co: { x: 118, y: 610 },
+      pi: { x: 270, y: 270 },
+      gr: { x: 118, y: 735 },
+      ja: { x: 1120, y: 310 }
+    };
+
+    function enfocarAvatarRaid(agente, duracionMs = 10000, zoom = 2.85) {
+      const officeEl = document.getElementById('office-3d');
+      if (officeEl) {
+        officeEl.classList.remove('focus-ge', 'focus-cl', 'focus-co', 'focus-pi', 'focus-gr', 'focus-ja');
+        officeEl.classList.add(`focus-${agente}`);
+      }
+
+      // 1. Enfoque nativo con cámara 3D isométrica y zoom cercano
+      if (window.Oficina3D?.focusAgent) {
+        window.Oficina3D.focusAgent(agente, duracionMs, zoom);
+      }
+
+      // 2. Fallback de traslación para plano 2D diorama si estuviese activo
+      const stage = document.querySelector('#office-3d .diorama-stage');
+      if (stage) {
+        const base = COORDENADAS_AVATARES_RAID[agente] || { x: 640, y: 430 };
+        const p = window.Oficina3D?.runtime?.people?.find(it => it.id === agente);
+        const targetX = (p && p.pos && typeof p.pos.x === 'number') ? p.pos.x : base.x;
+        const targetY = (p && p.pos && typeof p.pos.y === 'number') ? p.pos.y : base.y;
+
+        const S = zoom || 2.85;
+        const focusY = targetY - 45; // Centra verticalmente el avatar y su bocadillo en pantalla
+        const tx = Math.round(S * (640 - targetX));
+        const ty = Math.round(S * (430 - focusY));
+
+        stage.style.setProperty('transform-origin', '640px 430px', 'important');
+        stage.style.setProperty('transform', `translate(${tx}px, ${ty}px) scale(${S})`, 'important');
+      }
+    }
+
+    let raidSecuenciaFinalizada = false;
+
+    function iniciarSecuenciaRaidBienvenida(raider, viewers, duracionMs = 46000) {
+      limpiarTimersRaid();
+      limpiarColaTtsParaRaid();
+      raidBienvenidaActiva = true;
+      raidSecuenciaFinalizada = false;
+
+      const officeEl = document.getElementById('office-3d');
+      if (officeEl) officeEl.classList.add('modo-raid');
+      if (raidBanner) raidBanner.classList.add('visible');
+      if (raidBannerTitle) raidBannerTitle.textContent = `⚔️ ¡BIENVENIDOS RAIDEROS DE @${String(raider).toUpperCase()}! (${viewers})`;
+
+      let rem = Math.round(duracionMs / 1000);
+      if (raidBannerTimer) raidBannerTimer.textContent = `${rem}s`;
+      raidTimerInterval = setInterval(() => {
+        rem--;
+        if (rem > 0) {
+          if (raidBannerTimer) raidBannerTimer.textContent = `${rem}s`;
+        } else {
+          clearInterval(raidTimerInterval);
+          raidTimerInterval = null;
+        }
+      }, 1000);
+
+      const pasos = [
+        {
+          t: 0,
+          agente: 'ge',
+          duracion: 7000,
+          sub: `Agy: ¡Bienvenidos raiders de @${raider} a la Oficina 3D de ErBolamm!`,
+          bocadillo: `⚔️ ¡BIENVENIDOS RAIDEROS de ${raider}! Soy Agy. Os recibo en la Oficina 3D interactiva de ErBolamm.`
+        },
+        {
+          t: 7000,
+          agente: 'cl',
+          duracion: 7000,
+          sub: `Claude: Diorama vivo en Three.js sincronizado con Twitch en tiempo real`,
+          bocadillo: `✨ ¡Hola raiders! Esto es un diorama vivo en Three.js sincronizado con Twitch. ¡Todo reacciona al chat!`
+        },
+        {
+          t: 14000,
+          agente: 'co',
+          duracion: 7000,
+          sub: `Codex: ¡Adopta tu avatar en el chat con !adoptar <id>!`,
+          bocadillo: `🤖 ¡Podéis ADOPTARNOS! Escribid en el chat !adoptar cl, !adoptar co, etc., y vuestro nombre saldrá sobre nosotros.`
+        },
+        {
+          t: 21000,
+          agente: 'pi',
+          duracion: 7000,
+          sub: `Gentle Pi: ¡Comandos !fiesta, !conga, !trabajar y minijuegos como !traidor!`,
+          bocadillo: `🎉 ¡Tenemos comandos interactivos! Probad !fiesta, !conga, !trabajar, o el minijuego de deducción !traidor.`
+        },
+        {
+          t: 28000,
+          agente: 'gr',
+          duracion: 7000,
+          sub: `Grok: Pizarra táctil, OBS sincronizado y software libre`,
+          bocadillo: `📊 La pizarra táctil se sincroniza con el OBS, la música y el código del proyecto. ¡Todo es software libre!`
+        },
+        {
+          t: 35000,
+          agente: 'ja',
+          duracion: 6000,
+          sub: `Javier Mateo (JA): ¡Soy Javier, un loco que pica código, compone música y dibuja!`,
+          bocadillo: `🚀 ¡Y yo soy Javier (JA)! Un loco que pica código, compone música y dibuja.`
+        },
+        {
+          t: 41000,
+          agente: 'ja',
+          duracion: 5000,
+          sub: `Javier Mateo (JA): ¡Y ahora... a montar una fiesta para ustedes!`,
+          bocadillo: `🎉 ¡Y ahora... vamos a montar una fiesta para ustedes! 🎉`,
+          esCierreFiesta: true
+        }
+      ];
+
+      for (const p of pasos) {
+        const timer = setTimeout(() => {
+          enfocarAvatarRaid(p.agente, p.duracion, 2.85);
+          window.Oficina3D?.saltarAvatar?.(p.agente, true);
+          window.Oficina3D?.runtime?.say?.(p.agente, p.bocadillo, performance.now());
+          if (p.esCierreFiesta) {
+            hablarAvatar(p.agente, p.bocadillo, null, 2, true, () => {
+              console.log('[Raid] Frase de fiesta de JA concluida. Disparando fiesta inmediatamente sin esperas.');
+              finalizarSecuenciaRaidBienvenida();
+            });
+          } else {
+            hablarAvatar(p.agente, p.bocadillo, null, 2, true);
+          }
+          if (raidBannerSub) raidBannerSub.textContent = p.sub;
+        }, p.t);
+        raidSecuenciaTimers.push(timer);
+      }
+
+      const timerFin = setTimeout(() => {
+        if (!raidSecuenciaFinalizada) {
+          console.log('[Raid] Timer de seguridad de fin de raid alcanzado.');
+          finalizarSecuenciaRaidBienvenida();
+        }
+      }, duracionMs);
+      raidSecuenciaTimers.push(timerFin);
+    }
+
+    function finalizarSecuenciaRaidBienvenida() {
+      if (raidSecuenciaFinalizada) return;
+      raidSecuenciaFinalizada = true;
+      limpiarTimersRaid();
+      const officeEl = document.getElementById('office-3d');
+      if (officeEl) {
+        officeEl.classList.remove('modo-raid', 'focus-ge', 'focus-cl', 'focus-co', 'focus-pi', 'focus-gr', 'focus-ja');
+      }
+      if (window.Oficina3D?.resetCamera) {
+        window.Oficina3D.resetCamera();
+      }
+      const stage = document.querySelector('#office-3d .diorama-stage');
+      if (stage) {
+        stage.style.removeProperty('transform-origin');
+        stage.style.removeProperty('transform');
+      }
+      if (raidBanner) raidBanner.classList.remove('visible');
+      window.Oficina3D?.ejecutarFiesta?.();
+      window.dispatchEvent(new CustomEvent('erbolamm:fiesta-start'));
+      console.log('[Raid] Secuencia coral finalizada. Fiesta en marcha.');
+
+      // Tras la fiesta (15s de duración de fiesta.mp3), arranca el detalle final de cierre (CTA)
+      const timerCta = setTimeout(() => {
+        iniciarCierreRaidCta();
+      }, 15000);
+      raidSecuenciaTimers.push(timerCta);
+    }
+
+    function iniciarCierreRaidCta() {
+      if (raidCtaActivo) return;
+      raidCtaActivo = true;
+
+      const ctaOverlay = document.getElementById('raid-cta-overlay');
+      if (ctaOverlay) ctaOverlay.classList.add('visible');
+
+      enfocarAvatarRaid('ja', 18000, 2.3);
+      window.Oficina3D?.saltarAvatar?.('ja', true);
+      const textoBocadillo = '💖 ¡Si os ha gustado, dadle a Seguir, Suscribíos con Prime y una ⭐ en GitHub! 👉 directo.apliarte.com';
+      const textoVoz = 'Si os ha gustado la presentación, tenéis que darle al botón de seguir, al de suscribirse con el Prime y darme una estrellita en el repositorio de GitHub! ¡Y visitad directo punto apliarte punto com!';
+
+      window.Oficina3D?.runtime?.say?.('ja', textoBocadillo, performance.now());
+      hablarAvatar('ja', textoVoz, null, 2, true, () => {
+        console.log('[Raid] Locución de cierre CTA concluida.');
+        setTimeout(() => {
+          cerrarRaidCta();
+        }, 3500);
+      });
+
+      // Timer de seguridad para cerrar el CTA si no hay audio o falla
+      const timerSeguridad = setTimeout(() => {
+        cerrarRaidCta();
+      }, 20000);
+      raidSecuenciaTimers.push(timerSeguridad);
+    }
+
+    function cerrarRaidCta() {
+      if (!raidCtaActivo && !raidBienvenidaActiva) return;
+      raidCtaActivo = false;
+      raidBienvenidaActiva = false;
+      const ctaOverlay = document.getElementById('raid-cta-overlay');
+      if (ctaOverlay) ctaOverlay.classList.remove('visible');
+      const officeEl = document.getElementById('office-3d');
+      if (officeEl) {
+        officeEl.classList.remove('modo-raid', 'focus-ge', 'focus-cl', 'focus-co', 'focus-pi', 'focus-gr', 'focus-ja');
+      }
+      if (window.Oficina3D?.resetCamera) {
+        window.Oficina3D.resetCamera();
+      }
+      const stage = document.querySelector('#office-3d .diorama-stage');
+      if (stage) {
+        stage.style.removeProperty('transform-origin');
+        stage.style.removeProperty('transform');
+      }
+      limpiarTimersRaid();
+      console.log('[Raid] Evento completo de Raid y CTA finalizado. Chat y diorama 100% desbloqueados.');
+    }
+
     // ─── Game hub: !juego poster, !trofeo quorum and !traidor screens ──
     // Public state only (CONTRATO_JUEGOS.md §3): the traitor identity never reaches this page.
     const GAME_STATE_API = '/api/directo/juego/estado';
@@ -4284,10 +4903,27 @@
                 if (mouthOpen) mouthOpen.style.display = 'none';
               }
             }
+            if (data.type === 'raid_aviso') {
+              mostrarAvisoRaid(data.raider, data.viewers, data.delayMs);
+            }
+            if (data.type === 'raid_bienvenida_iniciar') {
+              iniciarSecuenciaRaidBienvenida(data.raider, data.viewers, data.duracionMs);
+            }
+            if (data.type === 'raid_bienvenida_fin') {
+              cerrarRaidCta();
+            }
             if (data.type === 'comando_chat' && data.comando) {
+              if (typeof raidBienvenidaActiva !== 'undefined' && raidBienvenidaActiva) {
+                console.log('[WS] Comando ignorado por evento de Raid en curso');
+                return;
+              }
               ejecutarComandoLocal(data.comando, data.usuario || 'ja');
             }
             if (data.type === 'chat_mensaje' && data.texto) {
+              if (typeof raidBienvenidaActiva !== 'undefined' && raidBienvenidaActiva) {
+                console.log('[WS] Mensaje ignorado por evento de Raid en curso');
+                return;
+              }
               const u = data.usuario || data.nombreVisible || 'alguien';
               procesarTextoChat(data.texto, u, {
                 'display-name': data.nombreVisible || data.usuario,

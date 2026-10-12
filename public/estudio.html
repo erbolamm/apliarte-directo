@@ -6635,6 +6635,19 @@
       settingsButton(controls, 'Abrir lobby (60 s)', () => gamePost('lobby', 'Lobby abierto'));
       settingsButton(controls, 'Iniciar !traidor', () => gamePost('iniciar-traidor', 'Partida iniciada'));
       settingsButton(controls, 'Modo prueba (4 bots)', () => gamePost('probar-traidor', 'Partida de prueba iniciada con 4 bots'));
+      settingsButton(controls, '⚔️ Probar Raid (>5)', async () => {
+        try {
+          const res = await fetch('/api/panel/probar-raid', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ raider: 'StreamerAmigo', viewers: 12, inmediato: true })
+          });
+          const data = await res.json().catch(() => ({}));
+          showToast(res.ok ? '⚔️ Evento Raid coral lanzado (12 viewers)' : (data.error || 'Error'));
+        } catch (_) {
+          showToast('Error de conexión al lanzar raid');
+        }
+      });
       settingsButton(controls, 'Forzar votación', () => gamePost('avanzar', 'Votación abierta'));
       settingsButton(controls, 'Simular votos', () => gamePost('voto-simulado', 'Votos simulados emitidos'));
       settingsButton(controls, 'Expulsar / resolver', () => gamePost('avanzar', 'Fase avanzada'));

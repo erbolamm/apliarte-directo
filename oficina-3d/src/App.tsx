@@ -90,8 +90,8 @@ export default function App({fill}:{fill?:boolean}={}){
      publish();
      wake.current();
    },
-   saltarAvatar:(id:AgentId)=>{
-     rt.jumpAgent(id,performance.now());
+   saltarAvatar:(id:AgentId,silent=false)=>{
+     rt.jumpAgent(id,performance.now(),silent);
      publish();
      wake.current();
    },

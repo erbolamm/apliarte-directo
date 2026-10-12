@@ -1470,12 +1470,12 @@ export class OfficeRuntime {
   this.tick(now,0);
   this.triggerWake();
  }
- jumpAgent(id:AgentId,now:number){
+ jumpAgent(id:AgentId,now:number,silent=false){
   if(this.isCinematicActive())return;
   const p=this.people.find(person=>person.id===id);
   if(!p)return;
   p.jumping=true;
-  this.say(id,'¡Boing!',now);
+  if(!silent)this.say(id,'¡Boing!',now);
   setTimeout(()=>{p.jumping=false;},900);
  }
  resetAgent(id:AgentId,now:number){

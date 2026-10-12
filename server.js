@@ -8,7 +8,7 @@ const { handleStreamingConfig } = require('./src/streaming-config');
 const { handleCentreStatus, handleFinalizarEmision } = require('./src/centro-status');
 const { handleRedLocal } = require('./src/red-local');
 const { createSmsPantalla } = require('./src/sms-pantalla');
-const { crearGestorBienvenida, parsearLineaPrivmsg } = require('./src/bienvenida-chat');
+const { crearGestorBienvenida, parsearLineaPrivmsg, parsearLineaRaid } = require('./src/bienvenida-chat');
 const { ColaAnimaciones, MAX_COLA_ANIMACIONES, DURACIONES_MS } = require('./src/cola-animaciones');
 const { YoutubeLiveChat } = require('./src/youtube-livechat');
 
@@ -737,6 +737,75 @@ function ejecutarBienvenida(accion) {
   }
 }
 
+let raidBienvenidaActiva = false;
+let raidBienvenidaTimer = null;
+let raidFinTimer = null;
+
+function gestionarEventoRaid({ raider, raiderNombre, viewers, inmediato = false }) {
+  const v = parseInt(viewers, 10) || 0;
+  const nombre = raiderNombre || raider || 'Raider';
+  console.log(`[Raid] Evento raid de ${nombre} con ${v} espectadores (inmediato=${inmediato})`);
+
+  // Solo se activa la bienvenida coral especial si la raid es de MÁS de 5 personas (> 5)
+  if (v <= 5) {
+    console.log(`[Raid] Raid de ${v} espectadores <= 5. No se activa evento de bloqueo coral.`);
+    broadcast({
+      type: 'chat_mensaje',
+      plataforma: 'twitch',
+      usuario: 'Twitch',
+      nombreVisible: 'Twitch',
+      texto: `⚔️ ¡Raid de ${nombre} con ${v} espectadores! ¡Bienvenidos a todos!`,
+      timestamp: Date.now()
+    });
+    return;
+  }
+
+  if (raidBienvenidaTimer) clearTimeout(raidBienvenidaTimer);
+  if (raidFinTimer) clearTimeout(raidFinTimer);
+
+  // Bloqueo total e inmediato del chat al detectarse la raid
+  raidBienvenidaActiva = true;
+  console.log(`[Raid] Chat bloqueado inmediatamente al detectarse raid de ${nombre} (${v} viewers).`);
+
+  const delayMs = inmediato ? 0 : 20000;
+  const duracionMs = 75000;
+
+  broadcast({
+    type: 'raid_aviso',
+    raider: nombre,
+    viewers: v,
+    delayMs,
+    duracionMs
+  });
+
+  const iniciarSecuencia = () => {
+    raidBienvenidaActiva = true;
+    console.log(`[Raid] Iniciando secuencia coral de bienvenida para ${nombre} (${v} viewers). Duración: ${duracionMs}ms`);
+    broadcast({
+      type: 'raid_bienvenida_iniciar',
+      raider: nombre,
+      viewers: v,
+      duracionMs
+    });
+
+    raidFinTimer = setTimeout(() => {
+      raidBienvenidaActiva = false;
+      console.log(`[Raid] Secuencia coral de bienvenida finalizada. Diorama desbloqueado.`);
+      broadcast({
+        type: 'raid_bienvenida_fin',
+        raider: nombre
+      });
+    }, duracionMs).unref();
+  };
+
+  if (delayMs <= 0) {
+    iniciarSecuencia();
+  } else {
+    console.log(`[Raid] Esperando ${delayMs}ms (locución StreamElements) antes de arrancar secuencia coral...`);
+    raidBienvenidaTimer = setTimeout(iniciarSecuencia, delayMs).unref();
+  }
+}
+
 setInterval(() => {
   try {
     if (gestorBienvenida) {
@@ -912,12 +981,25 @@ function conectarTwitchSender() {
       const lineas = msg.split(/\r?\n/);
       for (const linea of lineas) {
         if (!linea.trim()) continue;
+        const raidData = parsearLineaRaid(linea);
+        if (raidData) {
+          gestionarEventoRaid({
+            raider: raidData.raider,
+            raiderNombre: raidData.raiderNombre,
+            viewers: raidData.viewers,
+            inmediato: false
+          });
+        }
         const accion = gestorBienvenida.procesarLinea(linea, Date.now());
         if (accion) {
           ejecutarBienvenida(accion);
         }
         const parsedPrivmsg = parsearLineaPrivmsg(linea);
         if (parsedPrivmsg) {
+          if (raidBienvenidaActiva) {
+            console.log(`[Raid] Mensaje ignorado durante evento raid: ${parsedPrivmsg.usuario}: ${parsedPrivmsg.texto}`);
+            continue;
+          }
           const uLower = parsedPrivmsg.usuario.toLowerCase();
           const esJavierUser = (uLower === 'apliarte' || uLower === 'erbolamm' || uLower === 'ja');
           if (esJavierUser && /^!contexto(?:\s+(.*))?$/i.test(parsedPrivmsg.texto)) {
@@ -981,6 +1063,7 @@ function iniciarYoutubeLiveChat(canalOVideoId = youtubeCanalConfig) {
   });
 
   youtubeChatInstancia.on('chat', (item) => {
+    if (raidBienvenidaActiva) return;
     // The channel owner is never welcomed to their own stream.
     if (gestorBienvenida && !item.isOwner) {
       const accion = gestorBienvenida.procesarUsuario({
@@ -3043,6 +3126,24 @@ const server = http.createServer((req, res) => {
     }
   }
 
+  if (path === '/api/panel/probar-raid' && req.method === 'POST') {
+    cors(res);
+    if (!isAuth(req)) return responderPanel(res, 401, { error: 'No autorizado' });
+    return leerCuerpoPanel(req, res, (body) => {
+      const b = (body && typeof body === 'object') ? body : {};
+      const raider = b.raider ? String(b.raider).trim() : 'StreamerAmigo';
+      const viewers = typeof b.viewers === 'number' ? b.viewers : 12;
+      const inmediato = b.inmediato === false ? false : true;
+      gestionarEventoRaid({
+        raider: raider.toLowerCase(),
+        raiderNombre: raider,
+        viewers,
+        inmediato,
+      });
+      return responderPanel(res, 200, { ok: true, raider, viewers, inmediato });
+    });
+  }
+
   if (path === '/api/panel/voces') {
     cors(res);
     const archivoVoces = pathMod.join(PANEL_DIR, 'voces.json');
@@ -3663,10 +3764,16 @@ wss.on('connection', (ws, request) => {
       'pizarra_draw', 'pizarra_clear', 'pizarra_undo', 'pizarra_init', 'pizarra_solicitar_estado',
       'ping', 'pong',
       'saludo_chat', 'contexto_estado', 'avatares_estado', 'chat_mensaje', 'chat_historial',
-      'tts_estado'
+      'tts_estado',
+      'raid_aviso', 'raid_bienvenida_iniciar', 'raid_bienvenida_fin'
     ]);
 
     if (!TIPOS_RETRANS_PERMITIDOS.has(msgType)) {
+      return;
+    }
+
+    if (raidBienvenidaActiva && (msgType === 'chat_mensaje' || msgType === 'comando_chat' || msgType === 'saludo_chat')) {
+      console.log(`[Raid] Mensaje WS ${msgType} bloqueado durante raid activa`);
       return;
     }
 

@@ -122,9 +122,15 @@ html[data-theme="dark"] .real-office {--paper:#fdfdfd;--app-bg:#303030;--panel:#
   100% { transform: translateY(0); }
 }
 .real-office .person-anchor.jumping .person-sprite,
-.real-office .person-anchor.jumping .person-upright,
 .real-office .person-upright.jumping .person-sprite {
   animation: charJump 0.85s cubic-bezier(0.25, 1, 0.5, 1) !important;
+}
+@keyframes shadowJump {
+  0%, 100% { transform: scale(1); opacity: 0.35; }
+  50% { transform: scale(0.55); opacity: 0.15; }
+}
+.real-office .person-anchor.jumping .foot-shadow {
+  animation: shadowJump 0.85s cubic-bezier(0.25, 1, 0.5, 1) !important;
 }
 .real-office .monitor {border:0;background:transparent;box-shadow:none;transform-style:preserve-3d;}
 /* Monitor 3D rules: only for CSS 3D legacy (div.monitor), NEVER for SVG diorama rects */
