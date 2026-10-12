@@ -2964,6 +2964,7 @@
         .replace(/https?:\/\/\S+/gi, '')
         .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
         .replace(/[<>{}\\]/g, ' ')
+        .replace(/\b[A-ZÁÉÍÓÚÑ]{2,}\b/g, m => m.toLowerCase())
         .trim();
 
       if (!textoLimpio) {
@@ -4153,74 +4154,104 @@
 
       const pasos = [
         {
-          t: 0,
           agente: 'ge',
-          duracion: 7000,
           sub: `Agy: ¡Bienvenidos raiders de @${raider} a la Oficina 3D de ErBolamm!`,
-          bocadillo: `⚔️ ¡BIENVENIDOS RAIDEROS de ${raider}! Soy Agy. Os recibo en la Oficina 3D interactiva de ErBolamm.`
+          bocadillo: `⚔️ ¡Bienvenidos raiders de ${raider}! Soy Agy. Os recibo en la Oficina 3D interactiva de ErBolamm.`,
+          voz: `¡Bienvenidos raiders de ${raider}! Soy Agy. Os recibo en la Oficina Tres D interactiva de Erbolamm.`
         },
         {
-          t: 7000,
           agente: 'cl',
-          duracion: 7000,
           sub: `Claude: Diorama vivo en Three.js sincronizado con Twitch en tiempo real`,
-          bocadillo: `✨ ¡Hola raiders! Esto es un diorama vivo en Three.js sincronizado con Twitch. ¡Todo reacciona al chat!`
+          bocadillo: `✨ ¡Hola raiders! Esto es un diorama vivo en Three.js sincronizado con Twitch. ¡Todo reacciona al chat!`,
+          voz: `¡Hola raiders! Esto es un diorama vivo en Three yes sincronizado con Twitch. ¡Todo reacciona al chat!`
         },
         {
-          t: 14000,
           agente: 'co',
-          duracion: 7000,
-          sub: `Codex: ¡Adopta tu avatar en el chat con !adoptar <id>!`,
-          bocadillo: `🤖 ¡Podéis ADOPTARNOS! Escribid en el chat !adoptar cl, !adoptar co, etc., y vuestro nombre saldrá sobre nosotros.`
+          sub: `Codex: ¡Adopta tu avatar en el chat con !cl, !co, !pi, !ge o !gr!`,
+          bocadillo: `🤖 ¡Podéis adoptarnos! Escribid en el chat !cl, !co, etc., y vuestro nombre saldrá sobre nosotros.`,
+          voz: `¡Podéis adoptarnos! Solo tenéis que escribir en el chat admiración ce ele, ce o, o cualquiera de nosotros, y vuestro nombre saldrá encima.`
         },
         {
-          t: 21000,
           agente: 'pi',
-          duracion: 7000,
           sub: `Gentle Pi: ¡Comandos !fiesta, !conga, !trabajar y minijuegos como !traidor!`,
-          bocadillo: `🎉 ¡Tenemos comandos interactivos! Probad !fiesta, !conga, !trabajar, o el minijuego de deducción !traidor.`
+          bocadillo: `🎉 ¡Tenemos comandos interactivos! Probad !fiesta, !conga, !trabajar, o el minijuego de deducción !traidor.`,
+          voz: `¡Tenemos comandos interactivos! Probad fiesta, conga, trabajar, o el minijuego de deducción traidor.`
         },
         {
-          t: 28000,
           agente: 'gr',
-          duracion: 7000,
-          sub: `Grok: Pizarra táctil, OBS sincronizado y software libre`,
-          bocadillo: `📊 La pizarra táctil se sincroniza con el OBS, la música y el código del proyecto. ¡Todo es software libre!`
+          sub: `Grok: Pizarra táctil, directo sincronizado y software libre`,
+          bocadillo: `📊 La pizarra táctil se sincroniza con el directo, la música y el código del proyecto. ¡Todo es software libre!`,
+          voz: `La pizarra táctil se sincroniza con el directo, la música y el código del proyecto. ¡Todo es software libre!`
         },
         {
-          t: 35000,
           agente: 'ja',
-          duracion: 6000,
-          sub: `Javier Mateo (JA): ¡Soy Javier, un loco que pica código, compone música y dibuja!`,
-          bocadillo: `🚀 ¡Y yo soy Javier (JA)! Un loco que pica código, compone música y dibuja.`
+          sub: `Javier Mateo: ¡Soy Javier, un loco que pica código, compone música y dibuja!`,
+          bocadillo: `🚀 ¡Y yo soy Javier! Un loco que pica código, compone música y dibuja.`,
+          voz: `¡Y yo soy Javier! Un loco que pica código, compone música y dibuja.`
         },
         {
-          t: 41000,
           agente: 'ja',
-          duracion: 5000,
-          sub: `Javier Mateo (JA): ¡Y ahora... a montar una fiesta para ustedes!`,
+          sub: `Javier Mateo: ¡Y ahora... a montar una fiesta para ustedes!`,
           bocadillo: `🎉 ¡Y ahora... vamos a montar una fiesta para ustedes! 🎉`,
+          voz: `¡Y ahora... vamos a montar una fiesta para ustedes!`,
           esCierreFiesta: true
         }
       ];
 
-      for (const p of pasos) {
-        const timer = setTimeout(() => {
-          enfocarAvatarRaid(p.agente, p.duracion, 2.85);
-          window.Oficina3D?.saltarAvatar?.(p.agente, true);
-          window.Oficina3D?.runtime?.say?.(p.agente, p.bocadillo, performance.now());
-          if (p.esCierreFiesta) {
-            hablarAvatar(p.agente, p.bocadillo, null, 2, true, () => {
-              console.log('[Raid] Frase de fiesta de JA concluida. Disparando fiesta inmediatamente sin esperas.');
-              finalizarSecuenciaRaidBienvenida();
-            });
-          } else {
-            hablarAvatar(p.agente, p.bocadillo, null, 2, true);
+      function ejecutarPasoRaid(index) {
+        if (raidSecuenciaFinalizada || !raidBienvenidaActiva) return;
+        if (index >= pasos.length) {
+          finalizarSecuenciaRaidBienvenida();
+          return;
+        }
+
+        const p = pasos[index];
+
+        // Enfocar avatar con zoom cercano y mantener encuadre
+        enfocarAvatarRaid(p.agente, 15000, 2.85);
+        window.Oficina3D?.saltarAvatar?.(p.agente, true);
+        window.Oficina3D?.runtime?.say?.(p.agente, p.bocadillo, performance.now());
+        if (raidBannerSub) raidBannerSub.textContent = p.sub;
+
+        let pasoAvanzado = false;
+        let pasoWatchdog = null;
+
+        const avanzar = () => {
+          if (pasoAvanzado) return;
+          pasoAvanzado = true;
+          if (pasoWatchdog) {
+            clearTimeout(pasoWatchdog);
+            pasoWatchdog = null;
           }
-          if (raidBannerSub) raidBannerSub.textContent = p.sub;
-        }, p.t);
-        raidSecuenciaTimers.push(timer);
+
+          if (p.esCierreFiesta) {
+            console.log('[Raid] Frase de fiesta de JA concluida. Disparando fiesta inmediatamente sin esperas.');
+            finalizarSecuenciaRaidBienvenida();
+          } else {
+            // Pausa natural de 400ms antes de enfocar y activar al siguiente avatar
+            const pauseTimer = setTimeout(() => {
+              ejecutarPasoRaid(index + 1);
+            }, 400);
+            raidSecuenciaTimers.push(pauseTimer);
+          }
+        };
+
+        // Watchdog por paso: si el audio de este avatar no termina o falla en 11s, forzar avance al siguiente
+        pasoWatchdog = setTimeout(() => {
+          console.warn(`[Raid] Watchdog de paso ${index} (${p.agente}) alcanzado. Avanzando al siguiente avatar.`);
+          avanzar();
+        }, 11000);
+        raidSecuenciaTimers.push(pasoWatchdog);
+
+        // Locución del avatar sincronizada 1:1 con el avance
+        hablarAvatar(p.agente, p.voz || p.bocadillo, null, 2, true, () => {
+          console.log(`[Raid] Audio paso ${index} (${p.agente}) finalizado con éxito.`);
+          avanzar();
+        });
       }
+
+      // Iniciar el primer paso de la secuencia
+      ejecutarPasoRaid(0);
 
       const timerFin = setTimeout(() => {
         if (!raidSecuenciaFinalizada) {
