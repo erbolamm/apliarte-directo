@@ -657,7 +657,7 @@
     /* Pizarra activa: Cuadrícula integral de 3 columnas (Colores izquierda, Lienzo 16:9 centro, Herramientas/Capas derecha) */
     #view-studio.board-is-active {
       display: grid;
-      grid-template-columns: minmax(210px, 240px) minmax(0, 1fr) minmax(210px, 250px);
+      grid-template-columns: minmax(170px, 205px) minmax(0, 1fr) minmax(130px, 165px);
       grid-template-rows: auto minmax(0, 1fr) auto;
       grid-template-areas:
         "header header header"
@@ -665,6 +665,66 @@
         "bar    bar    bar";
       height: 100dvh;
       overflow: hidden;
+    }
+    /* Modo Inmersivo / Zen de la pizarra (maximiza el lienzo en tablet ocultando barras) */
+    #view-studio.board-is-active.board-zen {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr;
+      grid-template-areas: "stage";
+    }
+    #view-studio.board-is-active.board-zen .board-props,
+    #view-studio.board-is-active.board-zen .board-topbar,
+    #view-studio.board-is-active.board-zen .toolbar,
+    #view-studio.board-is-active.board-zen .app-bar,
+    #view-studio.board-is-active.board-zen .studio-header {
+      display: none !important;
+    }
+    #view-studio.board-is-active.board-zen .stage {
+      padding: 0;
+      background: #000;
+    }
+    #view-studio.board-is-active.board-zen .stage-canvas {
+      width: min(100%, calc(100dvh * 16 / 9));
+      max-height: 100dvh;
+      border-radius: 0;
+      border: none;
+    }
+    .btn-board-zen {
+      position: absolute;
+      top: max(10px, env(safe-area-inset-top));
+      right: max(10px, env(safe-area-inset-right));
+      z-index: 30;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      min-height: 36px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      background: color-mix(in srgb, var(--surface) 85%, transparent);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      transition: background 0.15s, border-color 0.15s, transform 0.15s;
+    }
+    .btn-board-zen:active {
+      transform: scale(0.96);
+    }
+    #view-studio.board-is-active .btn-board-zen {
+      display: inline-flex;
+    }
+    #view-studio.board-is-active.board-zen .btn-board-zen {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand-strong);
+      box-shadow: 0 4px 20px rgba(0, 95, 169, 0.45);
     }
     #view-studio.board-is-active .app-bar,
     #view-studio.board-is-active .studio-header {
@@ -880,7 +940,20 @@
     }
     #view-studio.board-is-active .board-props { display: grid; }
     .board-props .tools-card { padding: 0; border: 0; background: transparent; }
-    .board-props .tools-actions-row .btn { flex: 1 1 auto; }
+    .board-props .tools-actions-row { display: flex; flex-wrap: nowrap; gap: 4px; }
+    .board-props .tools-actions-row .btn {
+      flex: 1 1 0;
+      min-width: 0;
+      height: 38px;
+      min-height: 38px;
+      padding: 0 4px;
+      font-size: 1.15rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      text-align: center;
+    }
     .board-props .color-swatch,
     .board-props #custom-color { width: 36px; height: 36px; }
     .board-props #obs-interval { max-width: 100%; }
@@ -1054,13 +1127,18 @@
     }
     .stroke-presets {
       display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
+      gap: 4px;
+      flex-wrap: nowrap;
     }
     .stroke-btn {
+      flex: 1 1 0;
+      min-width: 0;
       min-height: 38px;
-      padding: 0 12px;
-      font-size: 0.9rem;
+      padding: 0 4px;
+      font-size: 1.15rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       border-radius: var(--radius);
       border: 1px solid var(--line);
       background: var(--bg);
@@ -1285,6 +1363,10 @@
     </header>
     <p class="notice mock-banner" id="studio-mock-note">Panel nuevo en pruebas: todo lo del panel antiguo está traído, pero aún no se ha probado en un directo real.</p>
     <main class="stage">
+      <button type="button" class="btn-board-zen" id="btn-toggle-board-tools" aria-pressed="false" aria-label="Ocultar herramientas de la pizarra (modo inmersivo)" title="Ocultar herramientas para maximizar el área de dibujo">
+        <span class="zen-icon" id="zen-icon">👁️</span>
+        <span class="zen-text" id="zen-text">Ocultar</span>
+      </button>
       <div class="stage-canvas" id="canvas-container" hidden>
         <img id="obs-preview-bg" alt="Captura fija de OBS" hidden>
         <canvas id="drawing-canvas"></canvas>
@@ -1383,10 +1465,10 @@
       <section class="tools-card">
         <h3>Grosor del trazo</h3>
         <div class="stroke-presets" id="stroke-presets">
-          <button type="button" class="btn stroke-btn" data-size="3" title="Trazo fino (3px)">✏️ Fino (3px)</button>
-          <button type="button" class="btn stroke-btn active" data-size="6" title="Trazo normal (6px)">🖊️ Normal (6px)</button>
-          <button type="button" class="btn stroke-btn" data-size="12" title="Trazo grueso (12px)">🖌️ Grueso (12px)</button>
-          <button type="button" class="btn stroke-btn" data-size="24" title="Marcador (24px)">🖍️ Marcador (24px)</button>
+          <button type="button" class="btn stroke-btn" data-size="3" title="Trazo fino (3px)" aria-label="Trazo fino (3px)">✏️</button>
+          <button type="button" class="btn stroke-btn active" data-size="6" title="Trazo normal (6px)" aria-label="Trazo normal (6px)">🖊️</button>
+          <button type="button" class="btn stroke-btn" data-size="12" title="Trazo grueso (12px)" aria-label="Trazo grueso (12px)">🖌️</button>
+          <button type="button" class="btn stroke-btn" data-size="24" title="Marcador (24px)" aria-label="Marcador (24px)">🖍️</button>
         </div>
         <div class="draw-row" style="margin-top: 8px;">
           <input id="size-range" type="range" min="1" max="40" step="1" value="6" aria-label="Grosor del trazo continuo">
@@ -1406,10 +1488,10 @@
       <section class="tools-card">
         <h3>Acciones rápidas</h3>
         <div class="tools-actions-row">
-          <button type="button" class="btn" id="btn-sheet-undo" title="Deshacer último trazo">↩ Deshacer</button>
-          <button type="button" class="btn" id="btn-sheet-redo" title="Rehacer último trazo">↪ Rehacer</button>
-          <button type="button" class="btn" id="btn-sheet-obs-snapshot" aria-pressed="false" title="Capturar OBS para dibujar encima">📷 Captura OBS</button>
-          <button type="button" class="btn btn-danger" id="btn-sheet-clear" aria-pressed="false" title="Borra todo el dibujo. Hay que tocarlo dos veces seguidas.">🗑 Limpiar lienzo</button>
+          <button type="button" class="btn" id="btn-sheet-undo" title="Deshacer último trazo" aria-label="Deshacer último trazo">↩</button>
+          <button type="button" class="btn" id="btn-sheet-redo" title="Rehacer último trazo" aria-label="Rehacer último trazo">↪</button>
+          <button type="button" class="btn" id="btn-sheet-obs-snapshot" aria-pressed="false" title="Capturar OBS para dibujar encima" aria-label="Capturar OBS para dibujar encima">📷</button>
+          <button type="button" class="btn btn-danger" id="btn-sheet-clear" aria-pressed="false" title="Borra todo el dibujo. Hay que tocarlo dos veces seguidas." aria-label="Borrar lienzo">🗑</button>
         </div>
         <div class="obs-capture-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
           <label for="obs-interval" style="font-size: 0.88rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px;">
@@ -3161,6 +3243,7 @@
         clearTimeout(board.clearTimer);
         clearButton.setAttribute('aria-pressed', 'false');
         clearButton.textContent = clearLabel;
+        clearButton.title = 'Borra todo el dibujo. Hay que tocarlo dos veces seguidas.';
       }
       /** Empties the board here and, through pizarra_clear, on every other screen and in OBS. */
       function clearBoard() {
@@ -3178,7 +3261,8 @@
         if (!(board.clearArmedAt > 0 && now - board.clearArmedAt <= 3000)) {
           board.clearArmedAt = now;
           clearButton.setAttribute('aria-pressed', 'true');
-          clearButton.textContent = 'Toca otra vez para borrar';
+          clearButton.textContent = '⚠️';
+          clearButton.title = '¡Toca otra vez para borrar todo el dibujo!';
           clearTimeout(board.clearTimer);
           board.clearTimer = setTimeout(disarmClear, 3000);
           return;
@@ -3510,6 +3594,10 @@
           board.selectedStrokeId = null;
           drawSelectionOverlay();
           updateLayersList();
+          if (studioView) {
+            studioView.classList.toggle('board-zen', false);
+            if (typeof updateBoardZenButton === 'function') updateBoardZenButton(false);
+          }
           if (typeof obsPreview !== 'undefined') {
             clearTimeout(obsPreview.timer);
             obsPreview.timer = 0;
@@ -3523,6 +3611,43 @@
           }
         }
         resizeBoard();
+      }
+
+      function updateBoardZenButton(zenActive) {
+        const btn = $('btn-toggle-board-tools');
+        if (!btn) return;
+        btn.setAttribute('aria-pressed', String(zenActive));
+        const icon = $('zen-icon');
+        const text = $('zen-text');
+        if (zenActive) {
+          if (icon) icon.textContent = '🎨';
+          if (text) text.textContent = 'Herramientas';
+          btn.title = 'Mostrar herramientas de dibujo';
+          btn.setAttribute('aria-label', 'Mostrar herramientas de dibujo');
+        } else {
+          if (icon) icon.textContent = '👁️';
+          if (text) text.textContent = 'Ocultar';
+          btn.title = 'Ocultar herramientas (Modo inmersivo)';
+          btn.setAttribute('aria-label', 'Ocultar herramientas (Modo inmersivo)');
+        }
+      }
+
+      function toggleBoardZen(force) {
+        const studioView = $('view-studio');
+        if (!studioView || !board.active) return;
+        const willBeZen = typeof force === 'boolean' ? force : !studioView.classList.contains('board-zen');
+        studioView.classList.toggle('board-zen', willBeZen);
+        updateBoardZenButton(willBeZen);
+        setTimeout(resizeBoard, 50);
+      }
+
+      const zenBtn = $('btn-toggle-board-tools');
+      if (zenBtn) {
+        zenBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleBoardZen();
+        });
+        zenBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
       }
 
       // ── WebSocket: /pizarra-plus/ws ──

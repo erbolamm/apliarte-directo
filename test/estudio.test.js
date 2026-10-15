@@ -725,6 +725,29 @@ test('Estudio: Contexto del directo integrado como 3ª pestaña en la vista moda
   assert.equal(gridChildren[0].textContent, 'Charlando con la comunidad');
 });
 
+test('Estudio: Rediseño compacto de pizarra para tablet, botones en icono y modo inmersivo zen', () => {
+  const content = fs.readFileSync(estudioPath, 'utf8');
+
+  // 1. Botones de acción rápida compactos (solo iconos)
+  assert.match(content, /id="btn-sheet-undo"[^>]*>↩<\/button>/, 'Deshacer debe mostrar solo el icono ↩');
+  assert.match(content, /id="btn-sheet-redo"[^>]*>↪<\/button>/, 'Rehacer debe mostrar solo el icono ↪');
+  assert.match(content, /id="btn-sheet-obs-snapshot"[^>]*>📷<\/button>/, 'Captura OBS debe mostrar solo la cámara 📷');
+  assert.match(content, /id="btn-sheet-clear"[^>]*>🗑<\/button>/, 'Limpiar lienzo debe mostrar solo la papelera 🗑');
+
+  // 2. Presets de grosor de trazo compactos (solo emojis en una fila)
+  assert.match(content, /data-size="3"[^>]*>✏️<\/button>/, 'Preset fino debe ser solo ✏️');
+  assert.match(content, /data-size="6"[^>]*>🖊️<\/button>/, 'Preset normal debe ser solo 🖊️');
+  assert.match(content, /data-size="12"[^>]*>🖌️<\/button>/, 'Preset grueso debe ser solo 🖌️');
+  assert.match(content, /data-size="24"[^>]*>🖍️<\/button>/, 'Preset marcador debe ser solo 🖍️');
+
+  // 3. Botón y modo inmersivo de dibujo (Zen)
+  assert.match(content, /id="btn-toggle-board-tools"/, 'Debe existir el botón btn-toggle-board-tools en el stage');
+  assert.match(content, /function toggleBoardZen/, 'Debe existir la función toggleBoardZen');
+  assert.match(content, /#view-studio\.board-is-active\.board-zen/, 'Debe existir la regla CSS para el modo board-zen');
+  assert.match(content, /\.btn-board-zen/, 'Debe existir el estilo para el botón btn-board-zen');
+});
+
+
 
 
 
