@@ -59,7 +59,9 @@
     }
     .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .content { min-width: 0; }
+    .user-row { display: flex; align-items: baseline; gap: 1.2vh; flex-wrap: wrap; }
     .user { font-size: calc(3.2vh * var(--zoom-sms, 1)); font-weight: 700; color: var(--brand-strong); }
+    .time { font-size: calc(2.4vh * var(--zoom-sms, 1)); font-weight: 600; color: var(--text); opacity: 0.65; }
     .text { font-size: calc(4.4vh * var(--zoom-sms, 1)); line-height: 1.25; overflow-wrap: anywhere; }
     .controles-zoom {
       display: inline-flex;
@@ -110,7 +112,10 @@
   <div class="message" id="message" aria-live="polite">
     <div class="avatar" id="avatar"></div>
     <div class="content">
-      <div class="user" id="user"></div>
+      <div class="user-row">
+        <span class="user" id="user"></span>
+        <span class="time" id="time"></span>
+      </div>
       <div class="text" id="text"></div>
     </div>
     <div class="controles-zoom" id="controles-zoom" aria-label="Ajustar tamaño de texto">
@@ -127,6 +132,7 @@
     const message = document.getElementById('message');
     const avatar = document.getElementById('avatar');
     const user = document.getElementById('user');
+    const time = document.getElementById('time');
     const text = document.getElementById('text');
     let shownId = null;
 
@@ -147,6 +153,15 @@
     const btnMas = document.getElementById('btn-zoom-mas');
     if (btnMenos) btnMenos.addEventListener('click', (e) => { e.stopPropagation(); aplicarZoom(zoomNivel - 0.1); });
     if (btnMas) btnMas.addEventListener('click', (e) => { e.stopPropagation(); aplicarZoom(zoomNivel + 0.1); });
+
+    function formatearHora(val) {
+      if (!val) return '';
+      try {
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch (_) { return ''; }
+    }
 
     function paintAvatar(name, url) {
       avatar.replaceChildren();
@@ -169,6 +184,9 @@
       if (data.id !== shownId) {
         shownId = data.id;
         user.textContent = '@' + data.usuario;
+        const horaStr = formatearHora(data.fecha || data.timestamp);
+        time.textContent = horaStr;
+        time.style.display = horaStr ? 'inline' : 'none';
         text.textContent = data.texto;
         paintAvatar(data.usuario, data.avatar);
       }

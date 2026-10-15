@@ -454,6 +454,14 @@
       max-width: 100%;
       box-sizing: border-box;
     }
+    .chat-msg-time {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-right: 6px;
+      opacity: 0.8;
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
     .chat-msg-content {
       min-width: 0;
       flex: 1 1 auto;
@@ -4599,7 +4607,7 @@
       } catch (_) {}
     }
 
-    async function toggleMostrarEnPantalla(usuario, texto, avatar = null) {
+    async function toggleMostrarEnPantalla(usuario, texto, avatar = null, timestamp = null) {
       if (mensajeEnPantallaActual && mensajeEnPantallaActual.texto === texto && mensajeEnPantallaActual.usuario === usuario) {
         await fetch('/api/directo/sms/ocultar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
         actualizarEstadoPantalla();
@@ -4608,7 +4616,7 @@
       await fetch('/api/directo/sms/mostrar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario, texto, avatar: avatar || null })
+        body: JSON.stringify({ usuario, texto, avatar: avatar || null, timestamp: timestamp || Date.now() })
       }).catch(() => {});
       actualizarEstadoPantalla();
     }
@@ -4638,6 +4646,11 @@
       const content = document.createElement('div');
       content.className = 'chat-msg-content';
 
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'chat-msg-time';
+      const msgDate = msg.timestamp ? new Date(msg.timestamp) : new Date();
+      timeSpan.textContent = msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
       const platIcon = document.createElement('span');
       platIcon.style.marginRight = '4px';
       platIcon.textContent = msg.plataforma === 'youtube' ? '🔴' : '🟣';
@@ -4652,7 +4665,7 @@
       textSpan.className = 'chat-msg-text';
       textSpan.textContent = msg.texto;
 
-      content.append(platIcon, userStrong, textSpan);
+      content.append(timeSpan, platIcon, userStrong, textSpan);
 
       const btnOjo = document.createElement('button');
       btnOjo.type = 'button';
@@ -4668,7 +4681,7 @@
 
       btnOjo.addEventListener('click', (e) => {
         e.stopPropagation();
-        toggleMostrarEnPantalla(msg.usuario, msg.texto, msg.avatar || null);
+        toggleMostrarEnPantalla(msg.usuario, msg.texto, msg.avatar || null, msg.timestamp || Date.now());
       });
 
       row.append(content, btnOjo);

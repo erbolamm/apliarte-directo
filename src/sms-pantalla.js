@@ -73,6 +73,7 @@ function createSmsPantalla({ getSmsList, lookupAvatar = async () => null, now = 
         usuario: usuario || 'anónimo',
         texto: texto,
         avatar: idOrPayload.avatar ? safeAvatar(idOrPayload.avatar) : await avatarFor(usuario),
+        fecha: idOrPayload.fecha || (idOrPayload.timestamp ? new Date(idOrPayload.timestamp).toISOString() : new Date().toISOString()),
       };
       return current;
     }
@@ -84,6 +85,7 @@ function createSmsPantalla({ getSmsList, lookupAvatar = async () => null, now = 
       usuario: String(message.usuario || 'anónimo'),
       texto: String(message.texto || ''),
       avatar: await avatarFor(message.usuario),
+      fecha: message.fecha || new Date().toISOString(),
     };
     return current;
   }
@@ -114,6 +116,8 @@ function createSmsPantalla({ getSmsList, lookupAvatar = async () => null, now = 
         usuario: body.usuario,
         texto: body.texto,
         avatar: body.avatar,
+        fecha: body.fecha,
+        timestamp: body.timestamp,
       });
       sendJson(res, 200, { ok: true, mensaje: shown });
       return;

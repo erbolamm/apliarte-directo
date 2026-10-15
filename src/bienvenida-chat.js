@@ -144,6 +144,71 @@ function parsearLineaRaid(linea) {
   return null;
 }
 
+/**
+ * Parsea una línea de IRC de Twitch buscando eventos USERNOTICE de racha (viewermilestone o resub).
+ * Formatos Twitch:
+ * - @msg-id=viewermilestone;msg-param-category=watch-streak;msg-param-value=5;display-name=Pepe;login=pepe;... :tmi.twitch.tv USERNOTICE #canal :¡5 directos seguidos!
+ * - @msg-id=resub;msg-param-streak-months=6;display-name=Maria;login=maria;... :tmi.twitch.tv USERNOTICE #canal
+ * Devuelve { usuario, nombreVisible, racha, tipo, texto } o null si no es un evento de racha.
+ */
+function parsearLineaRacha(linea) {
+  if (!linea || typeof linea !== 'string') return null;
+  let raw = linea.trim();
+  if (!raw) return null;
+
+  const tags = {};
+  if (raw.startsWith('@')) {
+    const spaceIdx = raw.indexOf(' ');
+    if (spaceIdx === -1) return null;
+    const tagPart = raw.slice(1, spaceIdx);
+    raw = raw.slice(spaceIdx + 1);
+
+    for (const item of tagPart.split(';')) {
+      const eqIdx = item.indexOf('=');
+      const k = (eqIdx === -1 ? item : item.slice(0, eqIdx)).trim();
+      const v = eqIdx === -1 ? '' : item.slice(eqIdx + 1);
+      if (k) tags[k] = v;
+    }
+  }
+
+  const msgId = tags['msg-id'] || '';
+
+  if (msgId === 'viewermilestone') {
+    const categoria = (tags['msg-param-category'] || '').toLowerCase();
+    if (categoria === 'watch-streak' || categoria.includes('streak')) {
+      const valor = parseInt(tags['msg-param-value'], 10) || 1;
+      const login = tags['msg-param-login'] || tags['login'] || 'alguien';
+      const rawDisplayName = tags['msg-param-displayName'] || tags['display-name'] || login;
+      const nombreVisible = limpiarNombre(rawDisplayName) || login;
+      return {
+        usuario: login.toLowerCase(),
+        nombreVisible,
+        racha: valor,
+        tipo: 'watch-streak',
+        texto: `🔥 ¡Racha de ${valor} directos seguidos!`
+      };
+    }
+  }
+
+  if (msgId === 'resub') {
+    const streakMonths = parseInt(tags['msg-param-streak-months'], 10) || 0;
+    if (streakMonths > 0) {
+      const login = tags['msg-param-login'] || tags['login'] || 'alguien';
+      const rawDisplayName = tags['msg-param-displayName'] || tags['display-name'] || login;
+      const nombreVisible = limpiarNombre(rawDisplayName) || login;
+      return {
+        usuario: login.toLowerCase(),
+        nombreVisible,
+        racha: streakMonths,
+        tipo: 'resub-streak',
+        texto: `⭐ ¡Racha de ${streakMonths} meses suscrito/a!`
+      };
+    }
+  }
+
+  return null;
+}
+
 function formatearTextoChat(usuarios) {
   if (!usuarios || usuarios.length === 0) return '';
   const nombres = usuarios.map((u) => `@${u.nombreVisible}`);
@@ -328,6 +393,7 @@ module.exports = {
   limpiarNombre,
   parsearLineaPrivmsg,
   parsearLineaRaid,
+  parsearLineaRacha,
   formatearTextoChat,
   formatearTextoBocadillo,
   crearGestorBienvenida,

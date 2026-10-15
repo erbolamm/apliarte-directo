@@ -8,7 +8,7 @@ const { handleStreamingConfig } = require('./src/streaming-config');
 const { handleCentreStatus, handleFinalizarEmision } = require('./src/centro-status');
 const { handleRedLocal } = require('./src/red-local');
 const { createSmsPantalla } = require('./src/sms-pantalla');
-const { crearGestorBienvenida, parsearLineaPrivmsg, parsearLineaRaid } = require('./src/bienvenida-chat');
+const { crearGestorBienvenida, parsearLineaPrivmsg, parsearLineaRaid, parsearLineaRacha } = require('./src/bienvenida-chat');
 const { ColaAnimaciones, MAX_COLA_ANIMACIONES, DURACIONES_MS } = require('./src/cola-animaciones');
 const { YoutubeLiveChat } = require('./src/youtube-livechat');
 
@@ -990,6 +990,13 @@ function conectarTwitchSender() {
             inmediato: false
           });
         }
+        const rachaData = parsearLineaRacha(linea);
+        if (rachaData) {
+          activarRachaEnPantalla({
+            usuario: rachaData.nombreVisible || rachaData.usuario,
+            texto: rachaData.texto
+          }).catch(err => console.error('[Racha] Error proyectando racha:', err.message));
+        }
         const accion = gestorBienvenida.procesarLinea(linea, Date.now());
         if (accion) {
           ejecutarBienvenida(accion);
@@ -1009,6 +1016,15 @@ function conectarTwitchSender() {
           if (esJavierUser && /^!(fiesta|conga|bronca)$/i.test(parsedPrivmsg.texto.trim())) {
             const m = parsedPrivmsg.texto.trim().match(/^!(fiesta|conga|bronca)$/i);
             colaAnimaciones.encolar({ tipo: m[1].toLowerCase(), usuario: 'ja' }, Date.now());
+          }
+          if (esJavierUser && /^!(?:probarracha|racha)(?:\s+([a-zA-Z0-9_]+))?(?:\s+(\d+))?$/i.test(parsedPrivmsg.texto.trim())) {
+            const m = parsedPrivmsg.texto.trim().match(/^!(?:probarracha|racha)(?:\s+([a-zA-Z0-9_]+))?(?:\s+(\d+))?$/i);
+            const targetUser = (m && m[1]) || parsedPrivmsg.usuario;
+            const count = (m && m[2]) ? parseInt(m[2], 10) : 5;
+            activarRachaEnPantalla({
+              usuario: targetUser,
+              texto: `🔥 ¡Racha de ${count} directos seguidos!`
+            }).catch(err => console.error('[Racha] Error en comando racha:', err.message));
           }
           if (esJavierUser && /^!(?:probarraid|raidprueba)(?:\s+(\d+))?$/i.test(parsedPrivmsg.texto.trim())) {
             const m = parsedPrivmsg.texto.trim().match(/^!(?:probarraid|raidprueba)(?:\s+(\d+))?$/i);
@@ -1537,6 +1553,47 @@ async function buscarAvatarTwitch(login) {
   return (data.data && data.data[0] && data.data[0].profile_image_url) || null;
 }
 const smsPantalla = createSmsPantalla({ getSmsList, lookupAvatar: buscarAvatarTwitch });
+
+let rachaOverlayTimer = null;
+const DURACION_RACHA_OVERLAY_MS = 10000;
+
+async function activarRachaEnPantalla({ usuario, texto, avatar = null, duracionMs = DURACION_RACHA_OVERLAY_MS }) {
+  if (rachaOverlayTimer) {
+    clearTimeout(rachaOverlayTimer);
+    rachaOverlayTimer = null;
+  }
+  const cleanUser = String(usuario || 'anónimo').trim();
+  const cleanText = String(texto || '🔥 ¡Racha conseguida!').trim();
+  const shown = await smsPantalla.show({
+    id: 'racha_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    usuario: cleanUser,
+    texto: cleanText,
+    avatar: avatar || null,
+    timestamp: Date.now()
+  });
+  console.log(`[Racha] Proyectando racha de @${cleanUser} en overlay SMS durante ${duracionMs / 1000}s: ${cleanText}`);
+
+  broadcast({
+    type: 'chat_mensaje',
+    plataforma: 'twitch',
+    usuario: cleanUser,
+    nombreVisible: cleanUser,
+    texto: cleanText,
+    avatar: (shown && shown.avatar) || null,
+    color: '#FF4500',
+    timestamp: Date.now()
+  });
+
+  rachaOverlayTimer = setTimeout(() => {
+    if (smsPantalla.current && shown && smsPantalla.current.id === shown.id) {
+      smsPantalla.hide();
+      console.log(`[Racha] Ocultando racha de @${cleanUser} tras ${duracionMs / 1000}s`);
+    }
+    rachaOverlayTimer = null;
+  }, duracionMs);
+
+  return shown;
+}
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -3241,6 +3298,29 @@ const server = http.createServer((req, res) => {
   }
 
 
+  // Activación automática o manual de racha en overlay SMS
+  if (path === '/api/directo/racha' && req.method === 'POST') {
+    cors(res);
+    if (!isAuth(req)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ ok: false, error: 'No autorizado' }));
+    }
+    let body = '';
+    req.on('data', c => { body += c; });
+    req.on('end', async () => {
+      let data = {};
+      try { data = JSON.parse(body); } catch (_) {}
+      const usuario = data.usuario || 'espectador';
+      const racha = parseInt(data.racha, 10) || 5;
+      const texto = data.texto || `🔥 ¡Racha de ${racha} directos seguidos!`;
+      const duracionMs = parseInt(data.duracionMs, 10) || DURACION_RACHA_OVERLAY_MS;
+      const shown = await activarRachaEnPantalla({ usuario, texto, avatar: data.avatar || null, duracionMs });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, mensaje: shown }));
+    });
+    return;
+  }
+
   // One SMS shown on the stream by hand (src/sms-pantalla.js).
   if (smsPantalla.matches(path)) {
     return smsPantalla.handle(req, res, path, isAuth);
@@ -3976,4 +4056,7 @@ module.exports = {
   renovarActividadAvatar,
   verificarInactividadAvatares,
   timerInactividadAvatares,
+  smsPantalla,
+  activarRachaEnPantalla,
+  DURACION_RACHA_OVERLAY_MS,
 };

@@ -63,12 +63,13 @@ test('nothing is on screen until a message is chosen, and only that one is expos
   const shown = response();
   await screen.handle(request('POST', { id: 'sms-1' }), shown, '/api/directo/sms/mostrar', allow);
   assert.equal(shown.status, 200);
-  assert.deepEqual(shown.json().mensaje, { id: 'sms-1', usuario: 'Pepe', texto: 'hola desde el chat', avatar: 'https://cdn.example/pepe.png' });
+  assert.deepEqual(shown.json().mensaje, { id: 'sms-1', usuario: 'Pepe', texto: 'hola desde el chat', avatar: 'https://cdn.example/pepe.png', fecha: '2026-10-07T10:00:00Z' });
   assert.deepEqual(asked, ['pepe']);
 
   const polled = response();
   await screen.handle(request('GET'), polled, '/api/directo/sms/pantalla', allow);
   assert.equal(polled.json().mensaje.id, 'sms-1');
+  assert.equal(polled.json().mensaje.fecha, '2026-10-07T10:00:00Z');
   assert.doesNotMatch(polled.body, /otro|sms-2/);
 
   const hidden = response();
@@ -97,7 +98,7 @@ test('an unknown id, a bad body or a failing picture lookup never break the scre
 
   const shown = response();
   await screen.handle(request('POST', { id: 'sms-2' }), shown, '/api/directo/sms/mostrar', allow);
-  assert.deepEqual(shown.json().mensaje, { id: 'sms-2', usuario: 'anónimo', texto: 'otro', avatar: null });
+  assert.deepEqual(shown.json().mensaje, { id: 'sms-2', usuario: 'anónimo', texto: 'otro', avatar: null, fecha: '2026-10-07T10:01:00Z' });
 });
 
 test('a message deleted from the mailbox leaves the screen, and pictures are cached', async () => {
@@ -127,12 +128,13 @@ test('chat messages can be shown directly on screen without mailbox entry and pe
   });
 
   const shown = response();
-  await screen.handle(request('POST', { usuario: 'twitchuser', texto: '¡Hola desde Twitch!' }), shown, '/api/directo/sms/mostrar', allow);
+  await screen.handle(request('POST', { usuario: 'twitchuser', texto: '¡Hola desde Twitch!', timestamp: 1760000000000 }), shown, '/api/directo/sms/mostrar', allow);
   assert.equal(shown.status, 200);
   const data = shown.json().mensaje;
   assert.equal(data.usuario, 'twitchuser');
   assert.equal(data.texto, '¡Hola desde Twitch!');
   assert.equal(data.avatar, 'https://static-cdn.jtvnw.net/twitchuser.png');
+  assert.equal(data.fecha, new Date(1760000000000).toISOString());
 
   // Mailbox changes do NOT remove chat messages
   box.list.length = 0;
