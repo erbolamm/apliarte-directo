@@ -2929,18 +2929,18 @@
       return trozos;
     }
 
-    // Velocidades y cadencia diferenciadas por avatar (naturales, pausadas y comprensibles)
+    // Velocidades neutrales (los agentes no tienen velocidades independientes; la voz pertenece al usuario)
     const VELOCIDADES_AVATAR = {
-      ja: 1.0,   // Javier (natural y claro)
-      ge: 1.02,  // Gemini (ligero)
-      cl: 1.03,  // Claude (claro y pausado)
-      pi: 1.04,  // Pi (vivo pero sin acelerar en exceso)
-      co: 0.96,  // Codex (técnico y pausado)
-      om: 0.92,  // Ollama (pesado y grave)
-      gr: 0.98,  // Groq (moderado)
-      op: 1.02,  // OpenAI (vivo)
-      ex: 1.04,  // Externo (natural)
-      be: 0.98   // Vigía (neutral)
+      ja: 1.0,
+      ge: 1.0,
+      cl: 1.0,
+      pi: 1.0,
+      co: 1.0,
+      om: 1.0,
+      gr: 1.0,
+      op: 1.0,
+      ex: 1.0,
+      be: 1.0
     };
 
     let velocidadEstudio = 1.0;
@@ -2996,7 +2996,7 @@
         : ((item.agente === 'ja' || item.usuario === 'ja' || item.usuario === 'apliarte') ? 'apliarte' : (item.usuario || avatarOwners[item.agente] || null));
       const pref = (!forzarLimpia && rawDuenio) ? userVoiceConfigs.get(rawDuenio.toLowerCase()) : null;
       let lang = pref?.lang || 'es';
-      let slot = pref?.slot || ((item.agente === 'cl' || item.agente === 'pi' || item.agente === 'ge') ? 1 : 2);
+      let slot = pref?.slot || 1;
 
       // Transformación de texto para efectos de voz (animales, personajes, etc.)
       let textoParaTts = textoLimpio;
@@ -3064,7 +3064,7 @@
         audio = new Audio(url);
         ttsAudioElementoActual = audio;
         audio.volume = 0.95;
-        const avatarRate = VELOCIDADES_AVATAR[item.agente] || 1.15;
+        const avatarRate = 1.0;
         // Camino 1: preservesPitch = true (velocidad libre sin deformar tono, pero todos suenan con el mismo tono)
         // Camino 2 (por defecto): preservesPitch = false (cada avatar conserva su tono agudo/grave; subir velocidad agudiza la voz)
         const preservarTono = Boolean(ttsPreservePitchEnOverlay);
@@ -3398,15 +3398,6 @@
               for (const [aId, u] of Object.entries(avatarOwners)) {
                 if (u.toLowerCase() === userKey) { spk = aId; break; }
               }
-              const avisoTexto = esReset
-                ? `🔄 @${user} restableció su voz al tono estándar.`
-                : `${efectoDef.emoji || '🎙️'} ¡@${user} activó la voz ${efectoDef.nombre}!`;
-
-              if (office?.runtime) {
-                office.runtime.say(spk, avisoTexto, performance.now());
-                safeFocusAgent(spk, 5000, true);
-              }
-
               const frasesReset = [
                 'Voz restablecida',
                 'Tono restablecido',
@@ -3418,8 +3409,15 @@
                 `Cambiando a ${efectoDef.nombre}`,
                 `¡Voz ${efectoDef.nombre} lista!`
               ];
-              const fraseHablar = esReset ? elegirAzar(frasesReset) : elegirAzar(frasesActivacion);
-              hablarAvatar(spk, fraseHablar, user, userTier);
+              const fraseDetalle = esReset ? elegirAzar(frasesReset) : elegirAzar(frasesActivacion);
+              const avisoTexto = esReset
+                ? `🔄 @${user} restableció su voz (${fraseDetalle}).`
+                : `${efectoDef.emoji || '🎙️'} ¡@${user} activó la voz ${efectoDef.nombre}! (${fraseDetalle})`;
+
+              if (office?.runtime) {
+                office.runtime.say(spk, avisoTexto, performance.now());
+                safeFocusAgent(spk, 5000, true);
+              }
               return;
             }
           }
@@ -3449,7 +3447,6 @@
               office.runtime.say(spk, `🎙️ ¡@${user} configuró su voz a ${lang} (Voz ${slot})!`, performance.now());
               safeFocusAgent(spk, 5000, true);
             }
-            hablarAvatar(spk, `Voz configurada`, user, userTier);
             return;
           }
 
@@ -3891,24 +3888,41 @@
             // Si el usuario es Javier, habla SIEMPRE por el avatar 'ja'.
             // Si es otro usuario que tiene avatar adoptado, habla por ese avatar.
             let userAgent = null;
+            let esAdoptado = false;
             const lowerUser = user.toLowerCase();
             if (isJavier) {
               userAgent = 'ja';
+              esAdoptado = true;
             } else {
               for (const [aId, u] of Object.entries(avatarOwners)) {
                 if (u.toLowerCase() === lowerUser) {
                   userAgent = aId;
+                  esAdoptado = true;
                   break;
                 }
               }
             }
+
+            // Si el usuario no tiene avatar adoptado, mostrar el bocadillo en un agente disponible de la oficina
+            if (!userAgent) {
+              const AGENTES_DISPONIBLES = ['cl', 'ge', 'co', 'om', 'pi', 'be', 'ex'];
+              const libre = AGENTES_DISPONIBLES.find(a => !avatarOwners[a]);
+              if (libre) {
+                userAgent = libre;
+              } else {
+                let hash = 0;
+                for (let i = 0; i < lowerUser.length; i++) hash = ((hash << 5) - hash) + lowerUser.charCodeAt(i);
+                userAgent = AGENTES_DISPONIBLES[Math.abs(hash) % AGENTES_DISPONIBLES.length];
+              }
+            }
+
             if (userAgent && office?.runtime) {
               const duracionBocadillo = Math.max(6000, Math.min(18000, 5000 + text.length * 80));
-              office.runtime.say(userAgent, text, performance.now());
+              const textoBocadillo = esAdoptado ? text : `@${user}: ${text}`;
+              office.runtime.say(userAgent, textoBocadillo, performance.now());
               if (!office?.isCinematicActive?.()) {
                 safeFocusAgent(userAgent, duracionBocadillo, false);
               }
-              hablarAvatar(userAgent, text, user, userTier);
             }
           }
     }
@@ -4941,6 +4955,19 @@
               }
               if (data.traducir !== undefined) {
                 ttsTraducirEnOverlay = Boolean(data.traducir);
+              }
+            }
+            if (data.type === 'voz_actualizada') {
+              if (data.usuario) {
+                if (data.voz) {
+                  userVoiceConfigs.set(data.usuario.toLowerCase(), data.voz);
+                } else {
+                  userVoiceConfigs.delete(data.usuario.toLowerCase());
+                }
+              } else if (data.voces) {
+                for (const [u, v] of Object.entries(data.voces)) {
+                  if (u && v) userVoiceConfigs.set(u.toLowerCase(), v);
+                }
               }
             }
             if (data.type === 'voz_pcm' && data.pcm) {

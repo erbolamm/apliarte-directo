@@ -11,9 +11,12 @@
       },
       owns(event) { return active !== null && active === event.pointerId; },
       end(event) {
-        if (active !== event.pointerId) return false;
+        if (event && active !== event.pointerId) return false;
         active = null;
         return true;
+      },
+      reset() {
+        active = null;
       },
     };
   }

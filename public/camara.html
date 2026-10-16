@@ -142,6 +142,20 @@
       margin-bottom: -5px;
     }
 
+    .camera-container video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 3;
+      border: none;
+      background: transparent !important;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
     .camera-container iframe {
       position: absolute;
       inset: 0;
@@ -296,6 +310,7 @@
       <div class="ja-bocadillo-texto" id="ja-bocadillo-texto"></div>
       <div class="ja-bocadillo-cola"></div>
     </div>
+    <video id="camera-webrtc-video" autoplay playsinline muted></video>
     <iframe id="camera-iframe"
       src=""
       allow="autoplay; camera"
@@ -307,10 +322,22 @@
   <script>
     const cameraEl = document.getElementById('camera-container');
     const cameraIframe = document.getElementById('camera-iframe');
+    const cameraVideo = document.getElementById('camera-webrtc-video');
     const jaAvatarCamBox = document.getElementById('ja-avatar-cam-box');
     let modoCamaraActual = 'monigote';
     let aspectoCamaraActual = 'horizontal';
     let videoCamaraRecibido = false;
+    let rtcPeerConnection = null;
+    let pendingOverlayIceCandidates = [];
+
+    const RTC_CONFIG = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun.cloudflare.com:3478' }
+      ]
+    };
 
     // Enviar orden de silenciado continuo al iframe de VDO.Ninja al cargar
     if (cameraIframe) {
@@ -331,28 +358,131 @@
     window.setAspectoCamara = setAspectoCamara;
 
     function actualizarVisibilidadCamaraYMonigote() {
+      const tieneVideoRtc = Boolean(videoCamaraRecibido && cameraVideo && cameraVideo.srcObject);
       const esCamara = modoCamaraActual === 'camara' || videoCamaraRecibido;
       if (cameraEl) {
         cameraEl.classList.toggle('modo-camara', esCamara);
       }
+      if (cameraVideo) {
+        cameraVideo.style.opacity = tieneVideoRtc ? '1' : '0';
+        cameraVideo.style.pointerEvents = tieneVideoRtc ? 'auto' : 'none';
+      }
       if (cameraIframe) {
-        cameraIframe.style.opacity = esCamara ? '1' : '0';
-        cameraIframe.style.pointerEvents = esCamara ? 'auto' : 'none';
+        const usarIframe = esCamara && !tieneVideoRtc && Boolean(cameraIframe.src && cameraIframe.src !== 'about:blank' && !cameraIframe.src.endsWith('/'));
+        cameraIframe.style.opacity = usarIframe ? '1' : '0';
+        cameraIframe.style.pointerEvents = usarIframe ? 'auto' : 'none';
       }
       if (jaAvatarCamBox) {
         jaAvatarCamBox.classList.toggle('mini-pip', esCamara);
       }
     }
 
+    async function handleWebRtcOffer(sdp) {
+      try {
+        if (rtcPeerConnection) {
+          try { rtcPeerConnection.close(); } catch (_) {}
+          rtcPeerConnection = null;
+        }
+        pendingOverlayIceCandidates = [];
+        rtcPeerConnection = new RTCPeerConnection(RTC_CONFIG);
+        rtcPeerConnection.ontrack = (event) => {
+          if (cameraVideo) {
+            const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+            cameraVideo.muted = true;
+            cameraVideo.playsInline = true;
+            cameraVideo.srcObject = stream;
+            cameraVideo.play().catch((e) => console.warn('[WebRTC Cam Overlay] Error al reproducir vídeo:', e));
+            videoCamaraRecibido = true;
+            modoCamaraActual = 'camara';
+            actualizarVisibilidadCamaraYMonigote();
+          }
+        };
+        rtcPeerConnection.onicecandidate = (event) => {
+          if (event.candidate && wsOverlay && wsOverlay.readyState === WebSocket.OPEN) {
+            wsOverlay.send(JSON.stringify({
+              type: 'webrtc_cam_candidate',
+              candidate: event.candidate
+            }));
+          }
+        };
+        rtcPeerConnection.onconnectionstatechange = () => {
+          if (rtcPeerConnection && (rtcPeerConnection.connectionState === 'disconnected' || rtcPeerConnection.connectionState === 'failed' || rtcPeerConnection.connectionState === 'closed')) {
+            if (cameraVideo && cameraVideo.srcObject) {
+              cameraVideo.srcObject = null;
+            }
+            videoCamaraRecibido = false;
+            actualizarVisibilidadCamaraYMonigote();
+          }
+        };
+        await rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+        // Vaciar la cola de candidatos que llegaron durante la fijación de la descripción remota
+        while (pendingOverlayIceCandidates.length > 0) {
+          const cand = pendingOverlayIceCandidates.shift();
+          try {
+            await rtcPeerConnection.addIceCandidate(new RTCIceCandidate(cand));
+          } catch (_) {}
+        }
+        const answer = await rtcPeerConnection.createAnswer();
+        await rtcPeerConnection.setLocalDescription(answer);
+        if (wsOverlay && wsOverlay.readyState === WebSocket.OPEN) {
+          wsOverlay.send(JSON.stringify({
+            type: 'webrtc_cam_answer',
+            sdp: rtcPeerConnection.localDescription
+          }));
+        }
+      } catch (err) {
+        console.warn('[WebRTC Cam Overlay] Error al procesar oferta:', err);
+      }
+    }
+
+    async function handleWebRtcCandidate(candidate) {
+      if (!candidate || !candidate.candidate) return;
+      if (!rtcPeerConnection || rtcPeerConnection.signalingState === 'closed') return;
+      if (!rtcPeerConnection.remoteDescription) {
+        pendingOverlayIceCandidates.push(candidate);
+        return;
+      }
+      try {
+        await rtcPeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (err) {
+        console.warn('[WebRTC Cam Overlay] Error al añadir candidato ICE:', err);
+      }
+    }
+
+    function cerrarWebRtc() {
+      pendingOverlayIceCandidates = [];
+      if (rtcPeerConnection) {
+        try { rtcPeerConnection.close(); } catch (_) {}
+        rtcPeerConnection = null;
+      }
+      if (cameraVideo) {
+        cameraVideo.srcObject = null;
+      }
+      videoCamaraRecibido = false;
+      actualizarVisibilidadCamaraYMonigote();
+    }
+
     function setModoCamara(modo) {
       const normalizado = (modo === 'camara' || modo === 'on' || modo === true) ? 'camara' : 'monigote';
-      if (normalizado === modoCamaraActual && cameraIframe && cameraIframe.src && cameraIframe.src !== 'about:blank') {
+      if (normalizado === modoCamaraActual && !videoCamaraRecibido && (!cameraIframe || !cameraIframe.src || cameraIframe.src === 'about:blank')) {
+        // continúa para asegurar inicialización
+      } else if (normalizado === modoCamaraActual && videoCamaraRecibido) {
         return;
       }
       modoCamaraActual = normalizado;
 
-      if (modoCamaraActual === 'camara' && cameraIframe && (!cameraIframe.src || cameraIframe.src === 'about:blank')) {
-        initCameraOverlay();
+      if (modoCamaraActual === 'camara') {
+        if (wsOverlay && wsOverlay.readyState === WebSocket.OPEN && !videoCamaraRecibido) {
+          wsOverlay.send(JSON.stringify({ type: 'webrtc_cam_request' }));
+        }
+        // Solo inicializar VDO.Ninja si la URL trae parámetros explícitos
+        const urlParams = new URLSearchParams(window.location.search);
+        const forceNinja = urlParams.get('ninja') === '1' || urlParams.get('stream') || urlParams.get('view');
+        if (forceNinja && !videoCamaraRecibido && cameraIframe && (!cameraIframe.src || cameraIframe.src === 'about:blank')) {
+          initCameraOverlay();
+        }
+      } else {
+        cerrarWebRtc();
       }
 
       actualizarVisibilidadCamaraYMonigote();
@@ -391,7 +521,7 @@
 
         if (paramStream && paramRoom) {
           const passPart = paramPass ? `&password=${encodeURIComponent(paramPass)}` : '';
-          const targetUrl = `https://vdo.ninja/?view=${encodeURIComponent(paramStream)}&room=${encodeURIComponent(paramRoom)}${passPart}&solo&cleanoutput&transparent&autoplay=1&cover=1&buffer=350&sync=0&videobitrate=1500&codec=h264&api&mute=1&noaudio=1`;
+          const targetUrl = `https://vdo.ninja/?view=${encodeURIComponent(paramStream)}&room=${encodeURIComponent(paramRoom)}${passPart}&solo&cleanoutput&transparent&autoplay=1&cover=1&buffer=350&sync=0&videobitrate=2500&codec=h264&api&mute=1&noaudio=1`;
           if (cameraIframe && cameraIframe.src !== targetUrl) {
             cameraIframe.src = targetUrl;
           }
@@ -402,13 +532,16 @@
         const res = await fetch('/api/directo/camara/config', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
-          let vUrl = data.viewUrl;
-          if (vUrl) {
-            if (!vUrl.includes('&mute=1')) vUrl += '&mute=1';
-            if (!vUrl.includes('&noaudio=1')) vUrl += '&noaudio=1';
-          }
-          if (vUrl && cameraIframe && cameraIframe.src !== vUrl) {
-            cameraIframe.src = vUrl;
+          const forceNinja = urlParams.get('ninja') === '1' || data.engine === 'vdoninja';
+          if (forceNinja) {
+            let vUrl = data.viewUrl;
+            if (vUrl) {
+              if (!vUrl.includes('&mute=1')) vUrl += '&mute=1';
+              if (!vUrl.includes('&noaudio=1')) vUrl += '&noaudio=1';
+            }
+            if (vUrl && cameraIframe && cameraIframe.src !== vUrl) {
+              cameraIframe.src = vUrl;
+            }
           }
           if (data.modo && !paramModo) {
             setModoCamara(data.modo);
@@ -545,11 +678,26 @@
 
       try {
         wsOverlay = new WebSocket(wsUrl);
+        wsOverlay.onopen = () => {
+          if (modoCamaraActual === 'camara' && !videoCamaraRecibido) {
+            try { wsOverlay.send(JSON.stringify({ type: 'webrtc_cam_request' })); } catch (_) {}
+          }
+        };
         wsOverlay.onmessage = async (event) => {
           let raw = event.data;
           if (raw instanceof Blob) raw = await raw.text();
           try {
             const data = JSON.parse(raw);
+            if (data.type === 'webrtc_cam_offer' && data.sdp) {
+              await handleWebRtcOffer(data.sdp);
+            }
+            if (data.type === 'webrtc_cam_candidate' && data.candidate) {
+              await handleWebRtcCandidate(data.candidate);
+            }
+            if (data.type === 'camara_stop') {
+              cerrarWebRtc();
+              setModoCamara('monigote');
+            }
             if (data.type === 'saludo_chat') {
               const texto = data.texto || (data.usuarios && data.usuarios.length ? `¡Bienvenido/a, ${data.usuarios[0].nombreVisible}!` : '');
               if (texto) {

@@ -2254,6 +2254,29 @@ const server = http.createServer((req, res) => {
   if (path === '/api/panel/emision/finalizar' && req.method === 'POST') {
     return handleFinalizarEmision(req, res, isAuth, { port: Number(process.env.CENTRO_PANEL_PORT || 8790) });
   }
+  if (path === '/api/panel/apagar' && req.method === 'POST') {
+    if (!isAuth(req)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ ok: false, error: 'No autorizado' }));
+    }
+    try {
+      handleFinalizarEmision(req, {
+        setHeader: () => {},
+        removeHeader: () => {},
+        writeHead: () => {},
+        end: () => {}
+      }, () => true, { port: Number(process.env.CENTRO_PANEL_PORT || 8790) });
+    } catch (_) {}
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, mensaje: 'Apagando servidor de ApliArte Directo…' }));
+
+    setTimeout(() => {
+      console.log('👋 Apagando ApliArte Directo desde el panel...');
+      process.exit(0);
+    }, 400);
+    return;
+  }
   const params = new URL(url, 'http://localhost').searchParams;
   // GET /api/tts — proxy de audio TTS para el directo (evita bloqueo Referer de Google y CORS)
   if (path === '/api/tts' && req.method === 'GET') {
@@ -3232,13 +3255,23 @@ const server = http.createServer((req, res) => {
           if (fs.existsSync(archivoVoces)) {
             try { mapa = JSON.parse(fs.readFileSync(archivoVoces, 'utf8')); } catch (_) {}
           }
-          if (accion === 'guardar' || (usuario && voz)) {
+          if (accion === 'eliminar' || (accion === 'guardar' && voz === null && usuario)) {
+            if (usuario) delete mapa[usuario.toLowerCase()];
+          } else if (accion === 'guardar' || (usuario && voz)) {
             if (usuario && voz) mapa[usuario.toLowerCase()] = voz;
           } else if (accion === 'fusionar' && objVoces && typeof objVoces === 'object') {
             mapa = { ...mapa, ...objVoces };
           }
           if (!fs.existsSync(PANEL_DIR)) fs.mkdirSync(PANEL_DIR, { recursive: true });
           fs.writeFileSync(archivoVoces, JSON.stringify(mapa, null, 2));
+          try {
+            broadcast({
+              type: 'voz_actualizada',
+              usuario: usuario ? String(usuario).toLowerCase() : null,
+              voz: voz || null,
+              voces: mapa
+            });
+          } catch (_) {}
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true, voces: mapa }));
         } catch (e) {
@@ -3846,6 +3879,7 @@ wss.on('connection', (ws, request) => {
       'voz_pcm',
       'micro_start', 'micro_stop', 'micro_desactivado',
       'camara_start', 'camara_stop', 'camara_desactivada', 'camara_modo', 'camara_aspecto',
+      'webrtc_cam_offer', 'webrtc_cam_answer', 'webrtc_cam_candidate', 'webrtc_cam_request',
       'comando_chat', 'directo_comando',
       'scene', 'layer_add', 'layer_remove', 'layer_update', 'layer_reorder',
       'stream_state', 'twitch_state',
@@ -3855,6 +3889,7 @@ wss.on('connection', (ws, request) => {
       'ping', 'pong',
       'saludo_chat', 'contexto_estado', 'avatares_estado', 'chat_mensaje', 'chat_historial',
       'tts_estado',
+      'voz_actualizada',
       'raid_aviso', 'raid_bienvenida_iniciar', 'raid_bienvenida_fin'
     ]);
 

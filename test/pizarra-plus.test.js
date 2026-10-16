@@ -21,6 +21,19 @@ test('Pencil owns the stroke; palm and other pointer cannot change or finish it'
   assert.equal(owner.begin(palm, true), true);
 });
 
+test('Pointer owner: reset() releases orphaned pointer so subsequent strokes can begin', () => {
+  const owner = createPointerOwner();
+  const pen = { pointerId: 1, pointerType: 'pen' };
+  const pen2 = { pointerId: 3, pointerType: 'pen' };
+  assert.equal(owner.begin(pen), true);
+  assert.equal(owner.owns(pen), true);
+  // Simula un gesto interrumpido que nunca llamó a end()
+  assert.equal(owner.begin(pen2), false);
+  owner.reset();
+  assert.equal(owner.owns(pen), false);
+  assert.equal(owner.begin(pen2), true);
+});
+
 function fixture({ enabled = true, allowed = true, connected = true, drawingPort,
   items = [{ sceneItemId: 1, sourceName: 'Webcam', sceneItemEnabled: true, sourceType: 'input' }],
   inputs = [{ inputName: 'Real mic' }], muted = {} } = {}) {

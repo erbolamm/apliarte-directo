@@ -220,6 +220,7 @@
       border-radius: var(--radius);
       overflow: hidden;
       background: var(--black);
+      pointer-events: none;
     }
     /* Hidden preview keeps the iframe alive so the camera keeps sending. */
     .camera-box.minimized { width: 1px; height: 1px; opacity: 0; pointer-events: none; }
@@ -242,7 +243,7 @@
     .settings-row .btn[aria-pressed="true"] { border-color: var(--brand-strong); color: var(--brand-strong); }
     .settings-panel select { min-height: var(--touch); padding: 0 var(--gap); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 1rem; max-width: 100%; }
     .settings-panel input[type="range"] { flex: 1; min-width: 140px; }
-    .camera-box iframe { width: 100%; height: 100%; border: 0; display: block; }
+    .camera-box iframe, .camera-box video { width: 100%; height: 100%; border: 0; display: block; object-fit: cover; }
     /* ── Full sheets: chat, commands, SMS, OBS (one open at a time) ───── */
     .sheet {
       position: fixed;
@@ -580,8 +581,16 @@
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 -4px 0 var(--edge);
     }
     #view-studio.board-at-rest .toolbar .toolbar-sep {
-      display: none;
+      display: inline-block;
+      width: 2px;
+      height: 48px;
+      background: var(--line);
+      opacity: 0.6;
+      margin: 0 4px;
     }
+    .produccion-tabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .produccion-tabs .btn { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 6px 12px; }
+    .produccion-tabs .btn svg { width: 18px; height: 18px; flex: none; stroke-width: 2; }
     #view-studio.board-at-rest #board-rest-note {
       display: none;
     }
@@ -1323,6 +1332,11 @@
 
       <section class="card" aria-labelledby="network-title">
         <h2 id="network-title">Abrir en otro dispositivo</h2>
+        <div id="insecure-context-banner" class="groups" hidden style="margin-bottom:12px;padding:12px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.12);border-radius:var(--radius);font-size:0.88rem;line-height:1.45;">
+          <strong style="color:#ef4444;">⚠️ Conexión no segura (HTTP en dispositivo remoto)</strong>
+          <p style="margin:6px 0 10px;">Tu navegador móvil no permite acceder al micrófono ni a la cámara bajo HTTP. Conéctate con la app de <strong>Tailscale</strong> y entra por la dirección segura HTTPS:</p>
+          <a id="btn-insecure-switch-https" href="#" class="btn" style="display:none;align-items:center;gap:6px;background:var(--brand-strong);color:#fff;text-decoration:none;font-weight:600;padding:8px 14px;border-radius:8px;">Abrir en HTTPS (Tailscale)</a>
+        </div>
         <p class="hint" id="network-status" role="status">Buscando las direcciones de este equipo…</p>
         <div id="network-lan" class="groups"></div>
         <details class="tailscale" id="tailscale-details" data-active="false">
@@ -1395,8 +1409,8 @@
       <button type="button" class="icon-btn" id="btn-tts" aria-pressed="false" aria-label="Voz del chat (TTS) apagada: pulsa para activarla" data-tip="Lee en voz alta los mensajes del chat. Otro toque la detiene."></button>
       <span class="toolbar-sep" aria-hidden="true"></span>
       <button type="button" class="icon-btn" id="btn-mensajeria-view" aria-expanded="false" aria-label="Mensajería (Chat y SMS)" data-tip="Abre la mensajería del directo (Chat en vivo de Twitch/YouTube y Buzón SMS)."></button>
-      <button type="button" class="icon-btn" id="btn-commands-view" aria-expanded="false" aria-label="Comandos" data-tip="Abre tus comandos favoritos."></button>
-      <button type="button" class="icon-btn" id="btn-obs-menu" aria-expanded="false" aria-label="Abre OBS (escenas y fuentes)" data-tip="Abre el control de OBS (escenas, audio y fuentes)."></button>
+      <button type="button" class="icon-btn" id="btn-produccion-view" aria-expanded="false" aria-label="Producción y Emisión (Escenas, Fuentes, Comandos y Categorías)" data-tip="Abre el centro de producción (Escenas, Fuentes, Comandos y Categorías)."></button>
+      <span class="toolbar-sep" aria-hidden="true"></span>
       <button type="button" class="icon-btn" id="btn-pantalla-negra" data-action="black-screen" aria-label="Pantalla negra de ahorro" data-tip="Pone la pantalla en negro para ahorrar batería sin cortar el directo. Para volver, toca tres veces seguidas o con tres dedos."></button>
       <button type="button" class="icon-btn" id="btn-settings-view" data-action="open-settings" aria-expanded="false" aria-label="Abrir ajustes" data-tip="Abre los ajustes del estudio."></button>
       <span class="toolbar-status" id="board-status" role="status"></span>
@@ -1581,51 +1595,70 @@
       </div>
     </aside>
 
-    <aside class="sheet" id="commands-sheet" aria-label="Comandos" hidden>
+    <aside class="sheet produccion-sheet" id="produccion-sheet" aria-label="Producción y Emisión" hidden>
       <div class="sheet-head">
-        <h2 id="commands-title">Comandos Favoritos</h2>
-        <button type="button" class="btn" id="btn-toggle-all-commands" aria-pressed="false">Ver todos</button>
-        <button type="button" class="icon-btn sheet-close" aria-label="Cerrar comandos"></button>
-      </div>
-      <div class="sheet-body">
-        <div style="margin-bottom: 12px;">
-          <button type="button" class="btn" data-action="probar-raid" style="background:#7c3aed;color:#ffffff;font-weight:700;width:100%;min-height:44px;border:none;border-radius:var(--radius);cursor:pointer;font-size:0.95rem;box-shadow:0 2px 8px rgba(124,58,237,0.3);" title="Lanzar bienvenida coral de Raid de prueba (>5 viewers)">⚔️ Probar Raid (>5)</button>
+        <div class="produccion-tabs" role="tablist" style="display:flex;gap:6px;align-items:center;">
+          <button type="button" class="btn active" id="btn-prod-tab-scenes" role="tab" aria-selected="true" title="Escenas de OBS">Escenas</button>
+          <button type="button" class="btn" id="btn-prod-tab-sources" role="tab" aria-selected="false" title="Fuentes de OBS">Fuentes</button>
+          <button type="button" class="btn" id="btn-prod-tab-commands" role="tab" aria-selected="false" title="Comandos rápidos">Comandos</button>
+          <button type="button" class="btn" id="btn-prod-tab-categories" role="tab" aria-selected="false" title="Categorías de emisión">Categorías</button>
         </div>
-        <input id="commands-filter" type="search" placeholder="Buscar comando" aria-label="Buscar comando" autocomplete="off">
-        <p class="hint" id="commands-message" role="status"></p>
-        <div class="commands-grid" id="commands-grid"></div>
-      </div>
-    </aside>
-
-
-    <aside class="sheet" id="obs-sheet" aria-label="Controles OBS" hidden>
-      <div class="sheet-head">
-        <div class="obs-tabs" role="tablist" style="display:flex;gap:6px;align-items:center;">
-          <button type="button" class="btn active" id="btn-obs-tab-scenes" role="tab" aria-selected="true">🎬 Escenas</button>
-          <button type="button" class="btn" id="btn-obs-tab-sources" role="tab" aria-selected="false">📑 Fuentes</button>
-        </div>
-        <div id="obs-scenes-head-controls" style="display:inline-flex;gap:var(--gap);align-items:center;">
+        <div id="prod-scenes-head-controls" style="display:inline-flex;gap:var(--gap);align-items:center;">
           <button type="button" class="btn" id="btn-obs-refresh">Actualizar</button>
         </div>
-        <div id="obs-sources-head-controls" style="display:inline-flex;gap:var(--gap);align-items:center;" hidden>
+        <div id="prod-sources-head-controls" style="display:none;gap:var(--gap);align-items:center;">
           <button type="button" class="icon-btn" id="btn-sources-refresh" title="Recargar fuentes de OBS" aria-label="Recargar fuentes de OBS"></button>
         </div>
-        <button type="button" class="icon-btn sheet-close" aria-label="Cerrar controles OBS"></button>
+        <div id="prod-commands-head-controls" style="display:none;gap:var(--gap);align-items:center;">
+          <button type="button" class="btn" id="btn-toggle-all-commands" aria-pressed="false">Ver todos</button>
+        </div>
+        <div id="prod-categories-head-controls" style="display:none;gap:var(--gap);align-items:center;">
+          <button type="button" class="btn" id="btn-refresh-categories">Actualizar</button>
+        </div>
+        <button type="button" class="icon-btn sheet-close" aria-label="Cerrar panel de producción"></button>
       </div>
       <div class="sheet-body">
-        <div id="obs-scenes-view" style="display:flex;flex-direction:column;gap:var(--gap);width:100%;">
+        <span id="commands-title" hidden>Comandos Favoritos</span>
+        <!-- Pestaña 1: Escenas -->
+        <div id="prod-view-scenes" style="display:flex;flex-direction:column;gap:var(--gap);width:100%;">
           <p class="hint" id="obs-message" role="status"></p>
           <div class="scenes-grid" id="obs-scenes-grid"></div>
         </div>
-        <div id="obs-sources-view" style="display:none;flex-direction:column;gap:var(--gap);width:100%;">
+        <!-- Pestaña 2: Fuentes -->
+        <div id="prod-view-sources" style="display:none;flex-direction:column;gap:var(--gap);width:100%;">
           <input id="sources-filter" type="search" placeholder="Buscar fuente" aria-label="Buscar fuente" autocomplete="off">
           <p class="hint" id="sources-message" role="status"></p>
           <div class="sources-grid" id="sources-grid"></div>
+        </div>
+        <!-- Pestaña 3: Comandos -->
+        <div id="prod-view-commands" style="display:none;flex-direction:column;gap:var(--gap);width:100%;">
+          <div style="margin-bottom: 8px;">
+            <button type="button" class="btn" data-action="probar-raid" style="background:#7c3aed;color:#ffffff;font-weight:700;width:100%;min-height:44px;border:none;border-radius:var(--radius);cursor:pointer;font-size:0.95rem;box-shadow:0 2px 8px rgba(124,58,237,0.3);" title="Lanzar bienvenida coral de Raid de prueba (>5 viewers)">Probar Raid (&gt;5)</button>
+          </div>
+          <input id="commands-filter" type="search" placeholder="Buscar comando" aria-label="Buscar comando" autocomplete="off">
+          <p class="hint" id="commands-message" role="status"></p>
+          <div class="commands-grid" id="commands-grid"></div>
+        </div>
+        <!-- Pestaña 4: Categorías -->
+        <div id="prod-view-categories" style="display:none;flex-direction:column;gap:var(--gap);width:100%;">
+          <div class="tools-card" style="padding:var(--gap);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);display:grid;gap:8px;">
+            <h3 style="margin:0 0 4px;color:var(--brand-strong);font-size:0.95rem;">Tema / Categoría de emisión</h3>
+            <p class="hint" style="margin:0 0 6px;font-size:0.85rem;">Selecciona una categoría para sincronizar el directo y el diorama en tiempo real:</p>
+            <div class="chips" id="prod-categories-chips"></div>
+          </div>
+          <div class="tools-card" style="padding:var(--gap);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);display:grid;gap:8px;">
+            <h3 style="margin:0 0 4px;color:var(--brand-strong);font-size:0.95rem;">Modo de visualización</h3>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button type="button" class="btn" id="btn-prod-toggle-mode">Conmutar claro / oscuro</button>
+              <span id="prod-mode-label" style="font-size:0.9rem;color:var(--text-muted);"></span>
+            </div>
+          </div>
         </div>
       </div>
     </aside>
 
     <div class="camera-box minimized" id="camera-push-container" hidden>
+      <video id="camera-local-video" autoplay playsinline muted hidden></video>
       <iframe id="camera-push-iframe" src="about:blank" title="Cámara de este dispositivo" allow="camera; microphone; autoplay; fullscreen"></iframe>
     </div>
 
@@ -1692,12 +1725,13 @@
 
   <dialog class="confirm" id="shutdown-dialog" aria-labelledby="shutdown-title">
     <div class="confirm-body">
-      <h2 id="shutdown-title">Finalizar la emisión</h2>
-      <p>¿Seguro que deseas finalizar la emisión en directo? Esto detendrá Twitch y YouTube limpiamente sin activar el bucle de dificultades técnicas.</p>
+      <h2 id="shutdown-title">Cierre y Apagado</h2>
+      <p id="shutdown-desc">Elige qué deseas hacer con ApliArte Directo:</p>
       <p class="hint" id="shutdown-status" role="status"></p>
-      <div class="confirm-actions">
+      <div class="confirm-actions" style="display:flex; flex-direction:column; gap:8px;">
+        <button type="button" class="btn btn-danger" id="btn-shutdown-server" data-action="shutdown-server" style="font-weight:700;">🔴 Apagar servidor por completo (Cerrar Directo)</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-shutdown" data-action="confirm-shutdown">⏹️ Solo finalizar emisión (mantener panel abierto)</button>
         <button type="button" class="btn" id="btn-cancel-shutdown" data-action="cancel-shutdown">Cancelar</button>
-        <button type="button" class="btn btn-primary" id="btn-confirm-shutdown" data-action="confirm-shutdown">Sí, finalizar</button>
       </div>
     </div>
   </dialog>
@@ -1715,7 +1749,12 @@
   (() => {
     'use strict';
 
-    const $ = (id) => document.getElementById(id === 'settings-dialog' ? 'settings-sheet' : (id === 'btn-chat-view' || id === 'btn-sms-view' ? 'btn-mensajeria-view' : id));
+    const $ = (id) => document.getElementById(
+      id === 'settings-dialog' ? 'settings-sheet' :
+      (id === 'btn-chat-view' || id === 'btn-sms-view' ? 'btn-mensajeria-view' :
+      (id === 'btn-commands-view' || id === 'btn-obs-menu' ? 'btn-produccion-view' :
+      (id === 'obs-sheet' || id === 'commands-sheet' ? 'produccion-sheet' : id)))
+    );
 
     // ── Icons ────────────────────────────────────────────────────────────
     const ICONS = {
@@ -1726,6 +1765,11 @@
       gear: '<circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
       close: '<path d="M6 6l12 12M18 6L6 18"/>',
       screenOff: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M5 6l14 9"/>',
+      sheetProduction: '<path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M4 9h16M8 4l-2 5M14 4l-2 5M20 4l-2 5"/>',
+      tabScenes: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
+      tabSources: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+      tabCommands: '<path d="M4 6l6 6-6 6M13 18h7"/>',
+      tabCategories: '<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5"/>',
       sheetObs: "<rect x=\"3\" y=\"4\" width=\"18\" height=\"13\" rx=\"2\"/><path d=\"M8 21h8M12 17v4\"/>",
       sheetSources: "<polygon points=\"12 2 2 7 12 12 22 7 12 2\"/><polyline points=\"2 17 12 22 22 17\"/><polyline points=\"2 12 12 17 22 12\"/>",
       volume: "<polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"/><path d=\"M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07\"/>",
@@ -2217,6 +2261,7 @@
       $('tailscale-summary').textContent = summary;
     }
     const HTTP_ONLY_NOTE = 'Dirección http: sirve para ver y manejar el panel, pero el navegador del otro dispositivo no deja usar ahí su cámara ni su micrófono.';
+    let activeTailscaleHttpsUrl = '';
     async function loadNetwork() {
       const status = $('network-status');
       const lanList = $('network-lan');
@@ -2233,6 +2278,7 @@
           ? 'El servidor que está en marcha es anterior a esta función: reinícialo para ver aquí las direcciones.'
           : 'No se pudieron consultar las direcciones de este equipo.';
         setTailscale(false, 'Tailscale · no se pudo comprobar');
+        activeTailscaleHttpsUrl = '';
         return;
       }
       const port = data.port;
@@ -2250,13 +2296,37 @@
       const tailscale = data.tailscale || {};
       if (!tailscale.active || !tailscale.url) {
         setTailscale(false, 'Tailscale · no detectado en este equipo');
+        activeTailscaleHttpsUrl = '';
         return;
       }
       setTailscale(true, 'Tailscale · activo');
       const secure = tailscale.url.startsWith('https://');
+      if (secure) {
+        activeTailscaleHttpsUrl = `${tailscale.url}/estudio`;
+      }
       tailscaleBody.appendChild(linkCard('network-tailscale', 'Desde cualquier sitio con Tailscale', `${tailscale.url}/estudio`,
         secure ? 'Dirección segura (https): ahí sí funcionan la cámara y el micrófono del otro dispositivo. Ese dispositivo también necesita Tailscale.'
           : HTTP_ONLY_NOTE + ' Ese dispositivo también necesita Tailscale.'));
+
+      // Si el usuario accede desde una tablet o dispositivo remoto por HTTP no seguro, mostrar aviso con salto directo
+      const isInsecureRemote = !window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1';
+      const insecureBanner = $('insecure-context-banner');
+      if (insecureBanner) {
+        if (isInsecureRemote) {
+          insecureBanner.hidden = false;
+          const switchBtn = $('btn-insecure-switch-https');
+          if (switchBtn) {
+            if (activeTailscaleHttpsUrl) {
+              switchBtn.href = activeTailscaleHttpsUrl;
+              switchBtn.style.display = 'inline-flex';
+            } else {
+              switchBtn.style.display = 'none';
+            }
+          }
+        } else {
+          insecureBanner.hidden = true;
+        }
+      }
     }
 
     // ── OBS sources ──────────────────────────────────────────────────────
@@ -2558,15 +2628,28 @@
       return {
         begin(event, allowTouch = true) {
           if (event.pointerType === 'touch' && !allowTouch) return false;
-          if (active !== null) return false;
+          // Auto-recuperación de puntero huérfano: si no se está dibujando ni arrastrando activamente,
+          // el puntero previo se interrumpió sin evento de cierre y debe ser liberado de inmediato.
+          if (active !== null) {
+            if (!board.drawing && !board.draggingLayer) {
+              active = null;
+            } else if (active !== event.pointerId) {
+              return false;
+            }
+          }
           active = event.pointerId;
           return true;
         },
         owns(event) { return active !== null && active === event.pointerId; },
         end(event) {
-          if (active !== event.pointerId) return false;
+          if (!event || active === null || active === event.pointerId) {
+            active = null;
+            return true;
+          }
+          return false;
+        },
+        reset() {
           active = null;
-          return true;
         }
       };
     }
@@ -2711,6 +2794,33 @@
         board.history.forEach((item) => drawItem(item, ctx));
       }
       /**
+       * Limpieza exhaustiva del estado de dibujo para evitar bloqueos por punteros
+       * huérfanos tras redimensionados, cambios de modo zen, cámara o toques en menús.
+       */
+      function resetDrawingState() {
+        pointerOwner.reset();
+        if (board.dragRaf) {
+          cancelAnimationFrame(board.dragRaf);
+          board.dragRaf = null;
+        }
+        if (board.draggingLayer) {
+          board.draggingLayer = false;
+          if (typeof redrawAll === 'function') redrawAll();
+          if (typeof drawSelectionOverlay === 'function') drawSelectionOverlay();
+          if (typeof syncWholeHistoryWs === 'function') syncWholeHistoryWs();
+        }
+        if (board.drawing) {
+          board.drawing = false;
+          if (typeof wipe === 'function') wipe(previewCtx, preview);
+        }
+        board.start = null;
+        board.last = null;
+        board.strokeId = null;
+        if (typeof updateLayersList === 'function') updateLayersList();
+      }
+      board.resetDrawingState = resetDrawingState;
+
+      /**
        * Matches both canvases to the container at the device pixel ratio and
        * repaints. Does nothing while the board is at rest, because a hidden
        * container measures 0; setBoardActive() calls it right after showing
@@ -2721,15 +2831,20 @@
         const rect = container.getBoundingClientRect();
         if (rect.width === 0) return;
         const dpr = window.devicePixelRatio || 1;
-        [canvas, preview].forEach((element) => {
-          element.width = Math.floor(rect.width * dpr);
-          element.height = Math.floor(rect.height * dpr);
-        });
-        [ctx, previewCtx].forEach((target) => {
-          target.setTransform(1, 0, 0, 1, 0, 0);
-          target.scale(dpr, dpr);
-        });
-        redrawAll();
+        const newW = Math.floor(rect.width * dpr);
+        const newH = Math.floor(rect.height * dpr);
+        if (canvas.width !== newW || canvas.height !== newH) {
+          resetDrawingState();
+          [canvas, preview].forEach((element) => {
+            element.width = newW;
+            element.height = newH;
+          });
+          [ctx, previewCtx].forEach((target) => {
+            target.setTransform(1, 0, 0, 1, 0, 0);
+            target.scale(dpr, dpr);
+          });
+          redrawAll();
+        }
       }
       window.addEventListener('resize', resizeBoard);
       window.addEventListener('orientationchange', () => setTimeout(resizeBoard, 120));
@@ -2987,9 +3102,9 @@
         if (!board.drawing) return;
         board.drawing = false;
         wipe(previewCtx, preview);
-        if (event.type !== 'pointercancel' && SHAPE_TOOLS.includes(board.tool) && board.start) {
+        if (event && event.type !== 'pointercancel' && event.type !== 'lostpointercapture' && SHAPE_TOOLS.includes(board.tool) && board.start) {
           const end = getNormalizedPos(event) || board.last;
-          if (Math.hypot(end.x - board.start.x, end.y - board.start.y) > 0.004) {
+          if (end && Math.hypot(end.x - board.start.x, end.y - board.start.y) > 0.004) {
             const item = {
               type: 'pizarra_draw', shape: board.tool, strokeId: board.strokeId,
               from: board.start, to: end, color: board.color, size: board.size, tool: 'pen',
@@ -3008,8 +3123,31 @@
       }
       canvas.addEventListener('pointerup', endDrawing);
       canvas.addEventListener('pointercancel', endDrawing);
-      window.addEventListener('pointerup', (e) => { if (board.drawing || board.draggingLayer) endDrawing(e); });
-      window.addEventListener('pointercancel', (e) => { if (board.drawing || board.draggingLayer) endDrawing(e); });
+      canvas.addEventListener('lostpointercapture', endDrawing);
+      window.addEventListener('pointerup', (e) => {
+        if (board.drawing || board.draggingLayer) {
+          if (!pointerOwner.owns(e)) {
+            resetDrawingState();
+          } else {
+            endDrawing(e);
+          }
+        }
+      });
+      window.addEventListener('pointercancel', (e) => {
+        if (board.drawing || board.draggingLayer) {
+          if (!pointerOwner.owns(e)) {
+            resetDrawingState();
+          } else {
+            endDrawing(e);
+          }
+        }
+      });
+      window.addEventListener('blur', () => {
+        if (board.drawing || board.draggingLayer) resetDrawingState();
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && (board.drawing || board.draggingLayer)) resetDrawingState();
+      });
 
       // Per-device drawing preferences, shared with pizarra-plus on purpose.
       /**
@@ -3588,6 +3726,7 @@
         }
         drawButton.classList.toggle('active', board.active);
         drawButton.setAttribute('aria-pressed', String(board.active));
+        if (typeof resetDrawingState === 'function') resetDrawingState();
         if (!board.active) {
           closeSheets();
           closeTextEntry();
@@ -3633,12 +3772,16 @@
       }
 
       function toggleBoardZen(force) {
+        if (typeof resetDrawingState === 'function') resetDrawingState();
         const studioView = $('view-studio');
         if (!studioView || !board.active) return;
         const willBeZen = typeof force === 'boolean' ? force : !studioView.classList.contains('board-zen');
         studioView.classList.toggle('board-zen', willBeZen);
         updateBoardZenButton(willBeZen);
-        setTimeout(resizeBoard, 50);
+        requestAnimationFrame(() => {
+          resizeBoard();
+          setTimeout(resizeBoard, 50);
+        });
       }
 
       const zenBtn = $('btn-toggle-board-tools');
@@ -3647,7 +3790,10 @@
           e.stopPropagation();
           toggleBoardZen();
         });
-        zenBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+        zenBtn.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          if (typeof resetDrawingState === 'function') resetDrawingState();
+        });
       }
 
       // ── WebSocket: /pizarra-plus/ws ──
@@ -3780,6 +3926,17 @@
           let data;
           try { data = JSON.parse(event.data); } catch (_) { return; }
           if (data && data.type === 'camara_modo' && data.modo && panel.onCameraMode) panel.onCameraMode(data.modo);
+          if (data && data.type === 'webrtc_cam_answer' && data.sdp && typeof handleCamRemoteAnswer === 'function') {
+            handleCamRemoteAnswer(data.sdp);
+          }
+          if (data && data.type === 'webrtc_cam_candidate' && data.candidate && typeof handleCamRemoteCandidate === 'function') {
+            handleCamRemoteCandidate(data.candidate);
+          }
+          if (data && data.type === 'webrtc_cam_request') {
+            if (camera && camera.active && localCamStream && typeof createAndSendCamOffer === 'function') {
+              createAndSendCamOffer().catch(() => {});
+            }
+          }
           if (data && data.type === 'contexto_estado') {
             updateContextoDisplay(data.texto || '');
           }
@@ -3798,6 +3955,19 @@
           }
           if (data && (data.type === 'sms_nuevo' || data.type === 'nuevo_sms')) {
             loadSms().then(() => { if (typeof tabOpen === 'function' && tabOpen('users')) selectSettingsTab('users'); });
+          }
+          if (data && data.type === 'voz_actualizada') {
+            if (data.usuario) {
+              if (data.voz) {
+                tts.userVoices.set(data.usuario.toLowerCase(), data.voz);
+              } else {
+                tts.userVoices.delete(data.usuario.toLowerCase());
+              }
+            } else if (data.voces) {
+              for (const [u, v] of Object.entries(data.voces)) {
+                if (u && v) tts.userVoices.set(u.toLowerCase(), v);
+              }
+            }
           }
         };
         socket.onclose = () => { setTimeout(connectPanelSocket, 2000); };
@@ -3835,6 +4005,10 @@
       const button = $('btn-tablet-mic');
       if (!mic.active) {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          if (activeTailscaleHttpsUrl && window.confirm('El micrófono requiere conexión HTTPS en tabletas para que el navegador permita acceder al audio.\n\n¿Quieres abrir el Estudio en la dirección segura de Tailscale?\n\n' + activeTailscaleHttpsUrl)) {
+            window.location.href = activeTailscaleHttpsUrl;
+            return;
+          }
           showToast('Este navegador no permite usar el micrófono aquí (hace falta HTTPS o localhost)');
           return;
         }
@@ -3919,10 +4093,18 @@
     // camera is pushed through a VDO.Ninja page in an iframe and OBS is
     // told to switch between the camera and the avatar.
     const CAMERA_PRESETS = {
-      low: { width: 320, height: 240, fps: 15, bitrate: 250, desc: '320×240 @ 15fps' },
-      med: { width: 640, height: 360, fps: 24, bitrate: 600, desc: '640×360 @ 24fps' },
-      high: { width: 1280, height: 720, fps: 30, bitrate: 1500, desc: '1280×720 @ 30fps' }
+      low: { width: 640, height: 360, fps: 24, bitrate: 1200, desc: '640×360 @ 24fps (1.2 Mbps)' },
+      med: { width: 1280, height: 720, fps: 30, bitrate: 2500, desc: '1280×720 @ 30fps (2.5 Mbps)' },
+      high: { width: 1920, height: 1080, fps: 30, bitrate: 4000, desc: '1920×1080 @ 30fps (4 Mbps)' }
     };
+    // Migración transparente a preset de alta resolución (1080p Full HD) por defecto
+    try {
+      if (localStorage.getItem('apliarte_cam_preset_v2') !== '1') {
+        localStorage.setItem('erbolamm_cam_preset', 'high');
+        localStorage.setItem('apliarte_cam_preset_v2', '1');
+      }
+    } catch (_) {}
+
     const camera = {
       active: false,
       mode: 'monigote',
@@ -3930,13 +4112,25 @@
       previewHidden: micSetting('apliarte_estudio_cam_preview_hidden', 'true') !== 'false',
       config: { room: 'erbolammapliarte', streamId: 'ja_cam_directo', password: '' }
     };
+    let localCamStream = null;
+    let camPeerConnection = null;
+    let pendingPublisherIceCandidates = [];
+    const RTC_CONFIG = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun.cloudflare.com:3478' }
+      ]
+    };
+
     function normalizeVdoDeviceParam(label) {
       if (!label) return '';
       // Normalización idéntica a normalizeDeviceLabel de VDO.Ninja (lib.js) para match exacto
       return String(label).replace(/[\W]+/g, '_').toLowerCase();
     }
     function cameraPushUrl() {
-      const preset = CAMERA_PRESETS[micSetting('erbolamm_cam_preset', 'low')] || CAMERA_PRESETS.low;
+      const preset = CAMERA_PRESETS[micSetting('erbolamm_cam_preset', 'high')] || CAMERA_PRESETS.high;
       const facing = micSetting('erbolamm_cam_facing', 'user');
       // A chosen camera is passed by its normalized label: VDO.Ninja matches labels,
       // while device ids differ between this page and its iframe.
@@ -3956,27 +4150,341 @@
         ? 'Cámara de este dispositivo: emitiendo. Toca para volver al monigote'
         : 'Cámara de este dispositivo: apagada');
     }
-    function startCamera() {
-      const { preset, url } = cameraPushUrl();
-      $('camera-push-iframe').src = url;
-      $('camera-push-container').classList.toggle('minimized', camera.previewHidden);
-      $('camera-push-container').hidden = false;
+
+    function cleanDeviceLabel(label) {
+      if (!label) return '';
+      return String(label)
+        .replace(/[“”"']/g, '')
+        .replace(/[\W_]+/g, ' ')
+        .toLowerCase()
+        .trim();
+    }
+
+    function isVirtualCamera(label) {
+      const c = cleanDeviceLabel(label);
+      return c.includes('iriun') || c.includes('obs virtual') || c.includes('virtual camera') || c.includes('capture screen') || c.includes('screen capture');
+    }
+
+    function isIphoneCamera(label) {
+      const c = cleanDeviceLabel(label);
+      return c.includes('iphone') && !c.includes('cenital') && !c.includes('desk');
+    }
+
+    async function resolveCameraDevice(selectedLabel, selectedId) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        return { deviceId: selectedId || '', label: selectedLabel || '' };
+      }
+      let devs = [];
+      try {
+        devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+      } catch (_) {}
+
+      // Si los labels vienen vacíos (permiso aún no concedido en este origen),
+      // solicitamos un stream efímero rápido para que el navegador desvele los labels reales.
+      if (devs.length > 0 && !devs.some(d => d.label)) {
+        try {
+          const probe = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          probe.getTracks().forEach(t => t.stop());
+          devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+        } catch (_) {}
+      }
+
+      // 1. Coincidencia por deviceId guardado
+      if (selectedId) {
+        const byId = devs.find(d => d.deviceId && d.deviceId === selectedId);
+        if (byId) return { deviceId: byId.deviceId, label: byId.label };
+      }
+
+      // 2. Coincidencia por label (exacta o flexible con limpieza de comillas tipográficas)
+      if (selectedLabel) {
+        const normSelected = cleanDeviceLabel(selectedLabel);
+        const byExactLabel = devs.find(d => cleanDeviceLabel(d.label) === normSelected);
+        if (byExactLabel) return { deviceId: byExactLabel.deviceId, label: byExactLabel.label };
+
+        const bySub = devs.find(d => {
+          const l = cleanDeviceLabel(d.label);
+          return l.includes(normSelected) || (normSelected.length > 3 && normSelected.includes(l));
+        });
+        if (bySub) return { deviceId: bySub.deviceId, label: bySub.label };
+
+        // Coincidencia para iPhone (Cámara de continuidad de Apple)
+        if (normSelected.includes('iphone')) {
+          const byIphone = devs.find(d => isIphoneCamera(d.label)) || devs.find(d => cleanDeviceLabel(d.label).includes('iphone'));
+          if (byIphone) return { deviceId: byIphone.deviceId, label: byIphone.label };
+        }
+      }
+
+      // 3. Selección automática inteligente:
+      // En Mac/PC sin selección explícita, priorizar cámara física real (especialmente iPhone Continuity)
+      // sobre drivers virtuales como Iriun u OBS Virtual Camera.
+      if (devs.length > 0) {
+        const iphoneDev = devs.find(d => isIphoneCamera(d.label));
+        if (iphoneDev) return { deviceId: iphoneDev.deviceId, label: iphoneDev.label };
+
+        const realDev = devs.find(d => !isVirtualCamera(d.label) && Boolean(d.label));
+        if (realDev) return { deviceId: realDev.deviceId, label: realDev.label };
+
+        return { deviceId: devs[0].deviceId, label: devs[0].label };
+      }
+
+      return { deviceId: selectedId || '', label: selectedLabel || '' };
+    }
+
+    async function startWebRtcCamera() {
+      const preset = CAMERA_PRESETS[micSetting('erbolamm_cam_preset', 'high')] || CAMERA_PRESETS.high;
+      const facing = micSetting('erbolamm_cam_facing', 'user');
+      const facingMode = (facing === 'back' || facing === 'environment') ? 'environment' : 'user';
+      const selectedLabel = micSetting('apliarte_estudio_cam_label', '') || micSetting('erbolamm_cam_device_label', '');
+      const selectedId = micSetting('apliarte_estudio_cam_device', '');
+
+      const { deviceId: targetDeviceId, label: targetLabel } = await resolveCameraDevice(selectedLabel, selectedId);
+
+      let stream = null;
+
+      if (targetDeviceId) {
+        // Intento 1: Dispositivo exacto (fuerza a AVFoundation en macOS a despertar la cámara Continuity del iPhone sin colisionar con cámaras virtuales)
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: targetDeviceId } },
+            audio: false
+          });
+        } catch (exactErr) {
+          console.warn('[Cámara] Fallo con deviceId exacto, reintentando con ideal y preset:', exactErr);
+          // Intento 2: Dispositivo ideal con resolución preset
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                deviceId: { ideal: targetDeviceId },
+                width: { ideal: preset.width },
+                height: { ideal: preset.height },
+                frameRate: { ideal: preset.fps }
+              },
+              audio: false
+            });
+          } catch (idealErr) {
+            console.warn('[Cámara] Fallo con ideal y preset, probando sin restricciones:', idealErr);
+            // Intento 3: Dispositivo directo sin restricciones de resolución
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({
+                video: { deviceId: targetDeviceId },
+                audio: false
+              });
+            } catch (targetErr) {
+              console.warn('[Cámara] Fallo con targetDeviceId, recurriendo a cámara disponible:', targetErr);
+              // Intento 4: Fallback a facingMode o genérico
+              try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                  video: {
+                    facingMode: { ideal: facingMode },
+                    width: { ideal: preset.width },
+                    height: { ideal: preset.height }
+                  },
+                  audio: false
+                });
+              } catch (facingErr) {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+              }
+            }
+          }
+        }
+      } else {
+        // Sin dispositivo target específico
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: facingMode },
+              width: { ideal: preset.width },
+              height: { ideal: preset.height },
+              frameRate: { ideal: preset.fps }
+            },
+            audio: false
+          });
+        } catch (_) {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
+      }
+
+      // Una vez conectado el hardware, optimizar resolución y framerate vía applyConstraints
+      try {
+        const track = stream.getVideoTracks()[0];
+        if (track && typeof track.applyConstraints === 'function') {
+          await track.applyConstraints({
+            width: { ideal: preset.width },
+            height: { ideal: preset.height },
+            frameRate: { ideal: preset.fps }
+          });
+        }
+      } catch (cErr) {
+        console.warn('[Cámara] No se pudieron aplicar constraints óptimos de resolución:', cErr);
+      }
+
+      localCamStream = stream;
+
+      const track = localCamStream.getVideoTracks()[0];
+      const activeName = track ? track.label : (targetLabel || 'Cámara');
+      showToast(`Cámara en antena: ${activeName}`);
+
+      const localVideo = $('camera-local-video');
+      if (localVideo) {
+        localVideo.srcObject = localCamStream;
+        localVideo.hidden = false;
+        try { await localVideo.play(); } catch (_) {}
+      }
+      const pushIframe = $('camera-push-iframe');
+      if (pushIframe) {
+        pushIframe.hidden = true;
+        pushIframe.src = 'about:blank';
+      }
+
+      await createAndSendCamOffer();
+    }
+
+    async function createAndSendCamOffer() {
+      if (!localCamStream) return;
+      if (camPeerConnection) {
+        try { camPeerConnection.close(); } catch (_) {}
+        camPeerConnection = null;
+      }
+      pendingPublisherIceCandidates = [];
+      camPeerConnection = new RTCPeerConnection(RTC_CONFIG);
+      localCamStream.getTracks().forEach(track => {
+        camPeerConnection.addTrack(track, localCamStream);
+      });
+
+      camPeerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          panelSend({ type: 'webrtc_cam_candidate', candidate: event.candidate });
+        }
+      };
+
+      const offer = await camPeerConnection.createOffer({
+        offerToReceiveVideo: false,
+        offerToReceiveAudio: false
+      });
+      await camPeerConnection.setLocalDescription(offer);
+      panelSend({ type: 'webrtc_cam_offer', sdp: camPeerConnection.localDescription });
+    }
+
+    async function handleCamRemoteAnswer(sdp) {
+      if (camPeerConnection && camPeerConnection.signalingState !== 'closed') {
+        try {
+          await camPeerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+          // Vaciar candidatos ICE acumulados antes de procesar el answer
+          while (pendingPublisherIceCandidates.length > 0) {
+            const cand = pendingPublisherIceCandidates.shift();
+            try {
+              await camPeerConnection.addIceCandidate(new RTCIceCandidate(cand));
+            } catch (_) {}
+          }
+          // Aplicar bitrates deseados de forma segura una vez negociada la conexión
+          try {
+            const preset = CAMERA_PRESETS[micSetting('erbolamm_cam_preset', 'high')] || CAMERA_PRESETS.high;
+            const senders = camPeerConnection.getSenders();
+            const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+            if (videoSender && typeof videoSender.getParameters === 'function') {
+              const params = videoSender.getParameters();
+              if (params && params.encodings && params.encodings.length > 0) {
+                params.encodings[0].maxBitrate = preset.bitrate * 1000;
+                params.encodings[0].maxFramerate = preset.fps;
+                await videoSender.setParameters(params);
+              }
+            }
+          } catch (_) {}
+        } catch (err) {
+          console.warn('[WebRTC Publisher] Error al aplicar respuesta remota:', err);
+        }
+      }
+    }
+
+    async function handleCamRemoteCandidate(candidate) {
+      if (!candidate || !candidate.candidate) return;
+      if (!camPeerConnection || camPeerConnection.signalingState === 'closed') return;
+      if (!camPeerConnection.remoteDescription) {
+        pendingPublisherIceCandidates.push(candidate);
+        return;
+      }
+      try {
+        await camPeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (err) {
+        console.warn('[WebRTC Publisher] Error al añadir candidato remoto:', err);
+      }
+    }
+
+    async function startCamera() {
+      const engine = micSetting('apliarte_estudio_cam_engine', 'webrtc');
+      const preset = CAMERA_PRESETS[micSetting('erbolamm_cam_preset', 'high')] || CAMERA_PRESETS.high;
+
+      if (typeof board !== 'undefined' && typeof board.resetDrawingState === 'function') {
+        board.resetDrawingState();
+      }
+
+      if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        showToast('Se requiere conexión HTTPS para la cámara en este dispositivo. Entra por Tailscale.');
+        return;
+      }
+
       camera.active = true;
       camera.mode = 'camara';
       refreshCameraButton();
-      // One order only: the socket if open, the HTTP command otherwise.
+      $('camera-push-container').classList.toggle('minimized', camera.previewHidden);
+      $('camera-push-container').hidden = false;
       if (!panelSend({ type: 'camara_start' })) sendPanelCommand('!cam camara', { modo: 'camara' });
+
+      if (engine === 'vdoninja') {
+        const { url } = cameraPushUrl();
+        const pushIframe = $('camera-push-iframe');
+        if (pushIframe) {
+          pushIframe.src = url;
+          pushIframe.hidden = false;
+        }
+        const localVideo = $('camera-local-video');
+        if (localVideo) {
+          localVideo.hidden = true;
+          localVideo.srcObject = null;
+        }
+      } else {
+        try {
+          await startWebRtcCamera();
+        } catch (err) {
+          console.error('[Cámara] Error al iniciar WebRTC nativo:', err);
+          stopCamera('error al abrir cámara');
+          showToast('Error al abrir la cámara: ' + (err.message || err));
+          return;
+        }
+      }
+
       showToast(`Cámara emitiendo (${preset.desc})`);
     }
+
     function stopCamera(reason, fromRemote = false) {
       if (!camera.active && camera.mode !== 'camara') return;
-      // Unloading the iframe releases the camera sensor at once.
-      $('camera-push-iframe').src = 'about:blank';
+      if (typeof board !== 'undefined' && typeof board.resetDrawingState === 'function') {
+        board.resetDrawingState();
+      }
+      if (camPeerConnection) {
+        try { camPeerConnection.close(); } catch (_) {}
+        camPeerConnection = null;
+      }
+      if (localCamStream) {
+        try {
+          localCamStream.getTracks().forEach(t => t.stop());
+        } catch (_) {}
+        localCamStream = null;
+      }
+      const localVideo = $('camera-local-video');
+      if (localVideo) {
+        localVideo.srcObject = null;
+        localVideo.hidden = true;
+      }
+      const pushIframe = $('camera-push-iframe');
+      if (pushIframe) {
+        pushIframe.src = 'about:blank';
+        pushIframe.hidden = true;
+      }
       $('camera-push-container').hidden = true;
       camera.active = false;
       camera.mode = 'monigote';
       refreshCameraButton();
-      // Only a local action is reported, so remote changes do not echo.
       if (!fromRemote && !panelSend({ type: 'camara_stop' })) sendPanelCommand('!cam monigote', { modo: 'monigote' });
       showToast(reason ? `Monigote activado (${reason})` : 'Monigote activado');
     }
@@ -4141,11 +4649,148 @@
       notice: ttsNotice
     });
 
+    // Catálogo unificado de voces y efectos (!voz <efecto_o_idioma> [slot])
+    const TTS_CATALOGO_VOCES = {
+      // Animales
+      gato: { tipo: 'animal', nombre: 'Gato', emoji: '🐱', sonidos: ['miau', 'miaaau', 'miau miau'], prefijo: '¡Miau!', sufijo: 'miau', lang: 'es-ES', slot: 1, factorTono: 1.38, velocidad: 1.15 },
+      perro: { tipo: 'animal', nombre: 'Perro', emoji: '🐶', sonidos: ['guau', 'guaf', 'woof'], prefijo: '¡Guau!', sufijo: 'guau', lang: 'es-ES', slot: 2, factorTono: 0.92, velocidad: 1.2 },
+      pato: { tipo: 'animal', nombre: 'Pato', emoji: '🦆', sonidos: ['cuak', 'cuak cuak'], prefijo: '¡Cuak!', sufijo: 'cuak', lang: 'es-ES', slot: 1, factorTono: 1.28, velocidad: 1.25 },
+      vaca: { tipo: 'animal', nombre: 'Vaca', emoji: '🐮', sonidos: ['muuu'], prefijo: '¡Muuu!', sufijo: 'muuu', lang: 'es-ES', slot: 2, factorTono: 0.76, velocidad: 0.85 },
+      oveja: { tipo: 'animal', nombre: 'Oveja', emoji: '🐑', sonidos: ['beee'], prefijo: '¡Beee!', sufijo: 'beee', lang: 'es-ES', slot: 1, factorTono: 1.22, velocidad: 1.05 },
+      rana: { tipo: 'animal', nombre: 'Rana', emoji: '🐸', sonidos: ['croac'], prefijo: '¡Croac!', sufijo: 'croac', lang: 'es-ES', slot: 2, factorTono: 0.72, velocidad: 0.9 },
+      pollo: { tipo: 'animal', nombre: 'Pollo', emoji: '🐔', sonidos: ['clo clo', 'kikirikí'], prefijo: '¡Kikirikí!', sufijo: 'clo clo', lang: 'es-ES', slot: 1, factorTono: 1.35, velocidad: 1.35 },
+      lobo: { tipo: 'animal', nombre: 'Lobo', emoji: '🐺', sonidos: ['auuuu', 'awooo', 'auuuuu'], prefijo: '¡Auuuu!', sufijo: 'auuuu', lang: 'es-ES', slot: 2, factorTono: 0.78, velocidad: 0.88 },
+      mono: { tipo: 'animal', nombre: 'Mono', emoji: '🐵', sonidos: ['uh uh ah ah'], prefijo: '¡Uh uh ah ah!', sufijo: 'uh ah', lang: 'es-ES', slot: 1, factorTono: 1.32, velocidad: 1.3 },
+      cerdo: { tipo: 'animal', nombre: 'Cerdo', emoji: '🐷', sonidos: ['oink'], prefijo: '¡Oink!', sufijo: 'oink', lang: 'es-ES', slot: 2, factorTono: 0.82, velocidad: 1.05 },
+      grillo: { tipo: 'animal', nombre: 'Grillo', emoji: '🦗', sonidos: ['cri cri'], prefijo: 'Cri cri...', sufijo: 'cri cri', lang: 'es-ES', slot: 1, factorTono: 1.45, velocidad: 1.4 },
+      abeja: { tipo: 'animal', nombre: 'Abeja', emoji: '🐝', sonidos: ['bzzzz'], prefijo: 'Bzzzz...', sufijo: 'bzzzz', lang: 'es-ES', slot: 1, factorTono: 1.4, velocidad: 1.3 },
+
+      // Personajes cómicos
+      borracho: { tipo: 'personaje', nombre: 'Borracho', emoji: '🍺', prefijo: 'hip...', sufijo: '¡salud!', lang: 'es-ES', slot: 2, factorTono: 0.82, velocidad: 0.78 },
+      bebe: { tipo: 'personaje', nombre: 'Bebé', emoji: '👶', prefijo: 'Gu-gu...', sufijo: 'agu', lang: 'es-ES', slot: 1, factorTono: 1.5, velocidad: 1.2 },
+      abuelo: { tipo: 'personaje', nombre: 'Abuelo', emoji: '👴', prefijo: 'Cof cof...', sufijo: 'en mis tiempos...', lang: 'es-ES', slot: 2, factorTono: 0.82, velocidad: 0.78 },
+      pirata: { tipo: 'personaje', nombre: 'Pirata', emoji: '🏴‍☠️', prefijo: '¡Arrr!', sufijo: '¡marinero!', lang: 'es-ES', slot: 2, factorTono: 0.88, velocidad: 1.05 },
+      pijo: { tipo: 'personaje', nombre: 'Pijo', emoji: '👑', prefijo: 'O sea,', sufijo: '¿sabes?', lang: 'es-ES', slot: 1, factorTono: 1.2, velocidad: 1.1 },
+      susurro: { tipo: 'personaje', nombre: 'Susurro', emoji: '🤫', prefijo: 'Psst...', sufijo: 'no digas nada...', lang: 'es-ES', slot: 1, factorTono: 1.05, velocidad: 0.95 },
+      pregonero: { tipo: 'personaje', nombre: 'Pregonero', emoji: '📢', prefijo: '¡Se hace saber!', sufijo: '¡he dicho!', lang: 'es-ES', slot: 2, factorTono: 0.92, velocidad: 1.05 },
+      dramatico: { tipo: 'personaje', nombre: 'Dramático', emoji: '🎭', prefijo: '¡Oh cielos!', sufijo: '¡qué tragedia!', lang: 'es-ES', slot: 1, factorTono: 1.18, velocidad: 0.95 },
+      acelerado: { tipo: 'personaje', nombre: 'Acelerado', emoji: '🏎️', lang: 'es-ES', slot: 1, factorTono: 1.25, velocidad: 1.7 },
+      perezoso: { tipo: 'personaje', nombre: 'Perezoso', emoji: '🐢', lang: 'es-ES', slot: 2, factorTono: 0.65, velocidad: 0.6 },
+      tartamudo: { tipo: 'personaje', nombre: 'Tartamudo', emoji: '🗣️', lang: 'es-ES', slot: 1, factorTono: 1.08, velocidad: 1.1 },
+
+      // Filtros DSP
+      helio: { tipo: 'dsp', nombre: 'Helio', emoji: '🎈', lang: 'es-ES', slot: 1, factorTono: 1.62, velocidad: 1.25 },
+      ogro: { tipo: 'dsp', nombre: 'Ogro', emoji: '👹', prefijo: '¡Grrr!', sufijo: '¡aplastar!', lang: 'es-ES', slot: 2, factorTono: 0.62, velocidad: 0.82 },
+      robot: { tipo: 'dsp', nombre: 'Robot', emoji: '🤖', prefijo: 'Bip bop...', sufijo: 'bip bop', lang: 'es-ES', slot: 2, factorTono: 1.0, velocidad: 1.0 },
+      walkie: { tipo: 'dsp', nombre: 'Walkie-Talkie', emoji: '📻', prefijo: 'Cambio...', sufijo: 'cambio y corto', lang: 'es-ES', slot: 2, factorTono: 1.08, velocidad: 1.15 },
+      cueva: { tipo: 'dsp', nombre: 'Cueva', emoji: '🕳️', lang: 'es-ES', slot: 2, factorTono: 0.82, velocidad: 0.88 },
+      telefono: { tipo: 'dsp', nombre: 'Teléfono', emoji: '☎️', prefijo: 'Ring ring...', sufijo: 'clic', lang: 'es-ES', slot: 1, factorTono: 1.12, velocidad: 1.1 },
+      alien: { tipo: 'dsp', nombre: 'Alien', emoji: '👽', prefijo: '¡Zorp!', sufijo: 'blorp', lang: 'es-ES', slot: 1, factorTono: 1.35, velocidad: 1.2 },
+      megafono: { tipo: 'dsp', nombre: 'Megáfono', emoji: '📣', prefijo: '¡Atención!', sufijo: '¡cambio!', lang: 'es-ES', slot: 1, factorTono: 1.15, velocidad: 1.12 },
+      grave: { tipo: 'dsp', nombre: 'Grave', emoji: '🎙️', lang: 'es-ES', slot: 2, factorTono: 0.75, velocidad: 0.95 },
+      agudo: { tipo: 'dsp', nombre: 'Agudo', emoji: '🎙️', lang: 'es-ES', slot: 1, factorTono: 1.4, velocidad: 1.1 },
+
+      // Idiomas y Países
+      espana: { tipo: 'idioma', nombre: 'España', emoji: '🇪🇸', lang: 'es-ES', slot: 1 },
+      mexico: { tipo: 'idioma', nombre: 'México', emoji: '🇲🇽', lang: 'es-MX', slot: 1 },
+      argentina: { tipo: 'idioma', nombre: 'Argentina', emoji: '🇦🇷', lang: 'es-AR', slot: 1 },
+      colombia: { tipo: 'idioma', nombre: 'Colombia', emoji: '🇨🇴', lang: 'es-CO', slot: 1 },
+      chile: { tipo: 'idioma', nombre: 'Chile', emoji: '🇨🇱', lang: 'es-CL', slot: 1 },
+      peru: { tipo: 'idioma', nombre: 'Perú', emoji: '🇵🇪', lang: 'es-PE', slot: 1 },
+      cuba: { tipo: 'idioma', nombre: 'Cuba', emoji: '🇨🇺', lang: 'es-CU', slot: 1 },
+      venezuela: { tipo: 'idioma', nombre: 'Venezuela', emoji: '🇻🇪', lang: 'es-VE', slot: 1 },
+      uruguay: { tipo: 'idioma', nombre: 'Uruguay', emoji: '🇺🇾', lang: 'es-UY', slot: 1 },
+      ecuador: { tipo: 'idioma', nombre: 'Ecuador', emoji: '🇪🇨', lang: 'es-EC', slot: 1 },
+      bolivia: { tipo: 'idioma', nombre: 'Bolivia', emoji: '🇧🇴', lang: 'es-BO', slot: 1 },
+      dominicana: { tipo: 'idioma', nombre: 'Rep. Dominicana', emoji: '🇩🇴', lang: 'es-DO', slot: 1 },
+      costarica: { tipo: 'idioma', nombre: 'Costa Rica', emoji: '🇨🇷', lang: 'es-CR', slot: 1 },
+      guatemala: { tipo: 'idioma', nombre: 'Guatemala', emoji: '🇬🇹', lang: 'es-GT', slot: 1 },
+      catalan: { tipo: 'idioma', nombre: 'Catalán', emoji: '🏴', lang: 'ca-ES', slot: 1 },
+      gallego: { tipo: 'idioma', nombre: 'Gallego', emoji: '🏴', lang: 'gl-ES', slot: 1 },
+      euskera: { tipo: 'idioma', nombre: 'Euskera', emoji: '🏴', lang: 'eu-ES', slot: 1 },
+      ingles: { tipo: 'idioma', nombre: 'Inglés (EE.UU.)', emoji: '🇺🇸', lang: 'en-US', slot: 1 },
+      britanico: { tipo: 'idioma', nombre: 'Inglés (UK)', emoji: '🇬🇧', lang: 'en-GB', slot: 1 },
+      frances: { tipo: 'idioma', nombre: 'Francés', emoji: '🇫🇷', lang: 'fr-FR', slot: 1 },
+      italiano: { tipo: 'idioma', nombre: 'Italiano', emoji: '🇮🇹', lang: 'it-IT', slot: 1 },
+      aleman: { tipo: 'idioma', nombre: 'Alemán', emoji: '🇩🇪', lang: 'de-DE', slot: 1 },
+      portugues: { tipo: 'idioma', nombre: 'Portugués (Brasil)', emoji: '🇧🇷', lang: 'pt-BR', slot: 1 },
+      japon: { tipo: 'idioma', nombre: 'Japonés', emoji: '🇯🇵', lang: 'ja-JP', slot: 1 },
+      normal: { tipo: 'idioma', nombre: 'Voz Normal', emoji: '🔄', lang: 'es-ES', slot: 1, reset: true },
+      reset: { tipo: 'idioma', nombre: 'Restablecer', emoji: '🔄', lang: 'es-ES', slot: 1, reset: true }
+    };
+
+    const TTS_ALIAS_VOCES = {
+      'es-es': TTS_CATALOGO_VOCES.espana,
+      'es-mx': TTS_CATALOGO_VOCES.mexico,
+      'es-ar': TTS_CATALOGO_VOCES.argentina,
+      'es-co': TTS_CATALOGO_VOCES.colombia,
+      'es-cl': TTS_CATALOGO_VOCES.chile,
+      'es-pe': TTS_CATALOGO_VOCES.peru,
+      'es-cu': TTS_CATALOGO_VOCES.cuba,
+      'es-ve': TTS_CATALOGO_VOCES.venezuela,
+      'es-us': { tipo: 'idioma', nombre: 'EE.UU. (Latino)', emoji: '🇺🇸', lang: 'es-US', slot: 1 },
+      'es-uy': TTS_CATALOGO_VOCES.uruguay,
+      'es-ec': TTS_CATALOGO_VOCES.ecuador,
+      'es-bo': TTS_CATALOGO_VOCES.bolivia,
+      'es-do': TTS_CATALOGO_VOCES.dominicana,
+      'es-cr': TTS_CATALOGO_VOCES.costarica,
+      'es-gt': TTS_CATALOGO_VOCES.guatemala,
+      'ca-es': TTS_CATALOGO_VOCES.catalan,
+      'gl-es': TTS_CATALOGO_VOCES.gallego,
+      'eu-es': TTS_CATALOGO_VOCES.euskera,
+      'en-us': TTS_CATALOGO_VOCES.ingles,
+      'en-gb': TTS_CATALOGO_VOCES.britanico,
+      'fr-fr': TTS_CATALOGO_VOCES.frances,
+      'it-it': TTS_CATALOGO_VOCES.italiano,
+      'de-de': TTS_CATALOGO_VOCES.aleman,
+      'pt-br': TTS_CATALOGO_VOCES.portugues,
+      'pt-pt': { tipo: 'idioma', nombre: 'Portugués (Portugal)', emoji: '🇵🇹', lang: 'pt-PT', slot: 1 },
+      'ja-jp': TTS_CATALOGO_VOCES.japon,
+      'perrito': TTS_CATALOGO_VOCES.perro,
+      'gatito': TTS_CATALOGO_VOCES.gato,
+      'patito': TTS_CATALOGO_VOCES.pato,
+      'ardilla': TTS_CATALOGO_VOCES.helio,
+      'pitufo': TTS_CATALOGO_VOCES.helio,
+      'monstruo': TTS_CATALOGO_VOCES.ogro,
+      'demonio': TTS_CATALOGO_VOCES.ogro,
+      'policia': TTS_CATALOGO_VOCES.walkie,
+      'eco': TTS_CATALOGO_VOCES.cueva
+    };
+
+    function transformarTextoVoz(texto, efectoDef) {
+      if (!texto || !efectoDef) return texto;
+      let t = String(texto).trim();
+      if (efectoDef.tipo === 'animal' && Array.isArray(efectoDef.sonidos) && efectoDef.sonidos.length > 0) {
+        const sonidoAzar = efectoDef.sonidos[Math.floor(Math.random() * efectoDef.sonidos.length)];
+        return `${sonidoAzar}... ${t}... ${sonidoAzar}`;
+      }
+      if (efectoDef.prefijo && efectoDef.sufijo) {
+        return `${efectoDef.prefijo} ${t}, ${efectoDef.sufijo}`;
+      }
+      if (efectoDef.prefijo) return `${efectoDef.prefijo} ${t}`;
+      if (efectoDef.sufijo) return `${t}, ${efectoDef.sufijo}`;
+      return t;
+    }
+
     // Per-user voices and muted users: local copy plus the server lists.
     function saveUserVoices() {
       const voices = Object.fromEntries(tts.userVoices.entries());
       storeSetting(TTS_KEYS.voices, JSON.stringify(voices));
       fetch('/api/panel/voces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accion: 'fusionar', voces: voices }) }).catch(() => {});
+    }
+    function saveUserVoiceToServer(userKey, configVoz) {
+      saveUserVoices();
+      try {
+        fetch('/api/panel/voces', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accion: configVoz ? 'guardar' : 'eliminar',
+            usuario: userKey,
+            voz: configVoz
+          })
+        }).catch(() => {});
+      } catch (_) {}
     }
     async function loadUserVoices() {
       const merge = (voices) => Object.entries(voices || {}).forEach(([user, voice]) => { if (user && voice) tts.userVoices.set(user.toLowerCase(), voice); });
@@ -4204,8 +4849,16 @@
         const exact = all.find((voice) => voice.name === preference.name);
         if (exact) return exact;
       }
-      const candidates = all.filter((voice) => voice.lang.toLowerCase().startsWith((preference.lang || 'es').toLowerCase()));
-      if (candidates.length === 0) return null;
+      const targetLang = (preference.lang || 'es').toLowerCase();
+      let candidates = all.filter((voice) => voice.lang.toLowerCase() === targetLang);
+      if (candidates.length === 0) {
+        const prefix = targetLang.split('-')[0];
+        candidates = all.filter((voice) => voice.lang.toLowerCase().startsWith(prefix));
+      }
+      if (candidates.length === 0) {
+        candidates = all.filter((voice) => voice.lang.toLowerCase().startsWith('es'));
+      }
+      if (candidates.length === 0) candidates = all;
       const isFemale = (voice) => FEMALE_VOICE_NAMES.some((name) => voice.name.toLowerCase().includes(name));
       const isMale = (voice) => MALE_VOICE_NAMES.some((name) => voice.name.toLowerCase().includes(name));
       if (preference.slot === 1) return candidates.find(isFemale) || candidates[0];
@@ -4220,16 +4873,43 @@
     // Builds the utterance for one message with the fixed voice from settings,
     // or the user's own voice when the setting is "automatic".
     function buildUtterance(text, user) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = ttsSpeed();
-      let preference = user ? tts.userVoices.get(user) : null;
-      if (!preference && user) preference = assignAutomaticVoice(user);
+      const userKey = (user || '').toLowerCase();
+      let preference = userKey ? tts.userVoices.get(userKey) : null;
+      if (!preference && userKey) preference = assignAutomaticVoice(userKey);
+
+      let textToSpeak = text;
+      let pitch = 1.0;
+      let rate = ttsSpeed();
+
+      if (preference) {
+        const efectoClave = preference.efecto ? preference.efecto.toLowerCase() : null;
+        const efectoDef = efectoClave ? (TTS_CATALOGO_VOCES[efectoClave] || TTS_ALIAS_VOCES[efectoClave]) : null;
+        if (efectoDef) {
+          textToSpeak = transformarTextoVoz(text, efectoDef);
+          if (efectoDef.factorTono) {
+            pitch = efectoDef.factorTono;
+          } else {
+            pitch = preference.slot === 2 ? 0.85 : 1.15;
+          }
+          if (efectoDef.velocidad) {
+            rate = rate * efectoDef.velocidad;
+          }
+        } else {
+          pitch = preference.slot === 2 ? 0.85 : 1.15;
+          if (preference.factorTono) pitch = preference.factorTono;
+          if (preference.velocidad) rate = rate * preference.velocidad;
+        }
+      }
+
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.rate = Math.max(0.5, Math.min(2.0, rate));
+      utterance.pitch = Math.max(0.5, Math.min(2.0, pitch));
+
       const fixed = micSetting(TTS_KEYS.voice, '');
       const preferred = fixed ? null : voiceForPreference(preference);
       if (preferred) {
         utterance.voice = preferred;
         utterance.lang = preferred.lang;
-        utterance.pitch = preference.slot === 2 ? 0.85 : 1.15;
       } else if (fixed) {
         const [name, lang] = fixed.split('|');
         const voice = window.speechSynthesis.getVoices().find((candidate) => candidate.name === name && candidate.lang === lang);
@@ -4257,6 +4937,7 @@
       return pieces;
     }
     let serverVoicePieces = [];
+    let currentServerUser = null;
     // A failed piece raises both an error event and a rejected play(); each
     // piece moves on once, whichever arrives first.
     let finishServerPiece = () => {};
@@ -4264,6 +4945,7 @@
       const piece = serverVoicePieces.shift();
       if (!piece || !tts.active) {
         serverVoicePieces = [];
+        currentServerUser = null;
         finishServerPiece = () => {};
         tts.serverPlaying = false;
         setTimeout(pumpTtsQueue, 150);
@@ -4273,17 +4955,21 @@
       const finish = () => { if (finished) return; finished = true; playNextServerPiece(); };
       finishServerPiece = finish;
       tts.serverPlaying = true;
-      tts.player.src = `/api/tts?tl=es&q=${encodeURIComponent(piece)}`;
+      const pref = currentServerUser ? tts.userVoices.get(currentServerUser) : null;
+      const lang = (pref && pref.lang) ? pref.lang.split('-')[0] : 'es';
+      tts.player.src = `/api/tts?tl=${encodeURIComponent(lang)}&q=${encodeURIComponent(piece)}`;
       // Speed and tone come from the same settings as the device voice.
       const keepPitch = ttsPreservePitch();
       tts.player.preservesPitch = keepPitch;
       tts.player.mozPreservesPitch = keepPitch;
       tts.player.webkitPreservesPitch = keepPitch;
-      tts.player.defaultPlaybackRate = ttsSpeed();
-      tts.player.playbackRate = ttsSpeed();
+      const speedMult = pref && pref.velocidad ? pref.velocidad : 1.0;
+      tts.player.defaultPlaybackRate = ttsSpeed() * speedMult;
+      tts.player.playbackRate = ttsSpeed() * speedMult;
       tts.player.play().catch(finish);
     }
-    function playServerVoice(text) {
+    function playServerVoice(text, user) {
+      currentServerUser = user ? user.toLowerCase() : null;
       serverVoicePieces = splitForServerVoice(text);
       playNextServerPiece();
     }
@@ -4293,7 +4979,8 @@
       if (!tts.active || tts.queue.length === 0) return;
       if (ttsEngine() === 'server') {
         if (tts.serverPlaying) return;
-        playServerVoice(tts.queue.shift().text);
+        const item = tts.queue.shift();
+        playServerVoice(item.text, item.user);
         return;
       }
       if (backgroundSpeech.busy) return;
@@ -4337,20 +5024,96 @@
       const name = tags['display-name'] || user || 'alguien';
       const userKey = (user || '').toLowerCase();
       if (tts.muted.has(userKey) || tts.muted.has((tags['display-name'] || '').toLowerCase())) { ttsChatLine(name, trailing, true); return; }
-      // !speak -config <lang> <1|2> lets a viewer pick their own voice.
+
+      // 1. Comando !voz <efecto_o_idioma> [slot: 1|2]
+      const mVoz = trailing.match(/^!voz(?:\s+([^\s]+))?(?:\s+([12]))?\b/i);
+      if (mVoz && user) {
+        const rawClave = (mVoz[1] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const slotOpt = mVoz[2] ? parseInt(mVoz[2], 10) : (rawClave === '1' || rawClave === '2' ? parseInt(rawClave, 10) : null);
+
+        if (!rawClave || rawClave === 'ayuda' || rawClave === 'help') {
+          const confActual = tts.userVoices.get(userKey);
+          const nomActual = confActual?.nombre || confActual?.efecto || confActual?.lang || 'automática';
+          ttsNotice(`@${name}, tu voz actual es "${nomActual}". Elige con: !voz lobo, !voz gato, !voz es-ES 1, !voz helio, !voz reset`);
+          queueTts(`@${name}, tu voz actual es ${nomActual}`, userKey);
+          return;
+        }
+
+        let efectoDef = TTS_CATALOGO_VOCES[rawClave] || TTS_ALIAS_VOCES[rawClave];
+        let lang = null;
+        let slot = slotOpt || 1;
+        let esReset = rawClave === 'reset' || rawClave === 'normal';
+
+        if (!efectoDef && !esReset) {
+          const mLang = rawClave.match(/^([a-z]{2}(?:-[a-z]{2,4})?)$/i);
+          if (mLang) {
+            lang = mLang[1];
+            efectoDef = {
+              tipo: 'idioma',
+              nombre: lang,
+              lang: lang,
+              slot: slotOpt || 1
+            };
+          } else if (rawClave === '1' || rawClave === '2') {
+            slot = parseInt(rawClave, 10);
+            const actual = tts.userVoices.get(userKey) || {};
+            efectoDef = {
+              tipo: 'idioma',
+              nombre: `Voz ${slot}`,
+              lang: actual.lang || 'es-ES',
+              slot: slot
+            };
+          }
+        }
+
+        if (esReset || (efectoDef && efectoDef.reset)) {
+          tts.userVoices.delete(userKey);
+          saveUserVoiceToServer(userKey, null);
+          ttsNotice(`@${name} restableció su voz al tono estándar`);
+          queueTts(`Voz de ${name} restablecida`, userKey);
+          return;
+        }
+
+        if (efectoDef) {
+          lang = lang || efectoDef.lang || 'es-ES';
+          slot = slotOpt || efectoDef.slot || 1;
+          const vozPrevia = tts.userVoices.get(userKey);
+          const configVoz = {
+            efecto: efectoDef.clave || rawClave,
+            lang: lang,
+            slot: slot,
+            name: vozPrevia?.name || null,
+            tipo: efectoDef.tipo || 'efecto',
+            nombre: efectoDef.nombre || rawClave,
+            factorTono: efectoDef.factorTono || (slot === 2 ? 0.85 : 1.15),
+            velocidad: efectoDef.velocidad || 1.0,
+            auto: false
+          };
+          tts.userVoices.set(userKey, configVoz);
+          saveUserVoiceToServer(userKey, configVoz);
+          ttsNotice(`@${name} eligió voz ${configVoz.nombre} (guardada)`);
+          queueTts(`Voz de ${name} configurada como ${configVoz.nombre}`, userKey);
+          return;
+        }
+      }
+
+      // 2. Soporte retrocompatible !speak -config <lang> <1|2>
       const config = trailing.match(/^!speak\s+-config\s+([a-z]{2}(?:-[a-z]{2,4})?)\s+([12])\b/i);
       if (config && user) {
-        tts.userVoices.set(userKey, { lang: config[1], slot: parseInt(config[2], 10), name: null, auto: false });
-        saveUserVoices();
+        const slot = parseInt(config[2], 10);
+        const configVoz = { lang: config[1], slot, name: null, factorTono: slot === 2 ? 0.85 : 1.15, velocidad: 1.0, auto: false };
+        tts.userVoices.set(userKey, configVoz);
+        saveUserVoiceToServer(userKey, configVoz);
         ttsNotice(`${name} eligió voz ${config[1]} #${config[2]} (guardada)`);
-        queueTts(`Voz de ${name} configurada`, user);
+        queueTts(`Voz de ${name} configurada`, userKey);
         return;
       }
+
       if (/^[!/.]\S+/.test(trailing.trim()) && ttsFlag('skipCommands')) { ttsChatLine(name, trailing, true); return; }
       ttsChatLine(name, trailing, false);
       if (ttsFlag('sound')) { tts.alert.currentTime = 0; tts.alert.play().catch(() => {}); }
       const clean = cleanForSpeech(trailing);
-      if (clean) queueTts(`${name} dice: ${clean}`, user);
+      if (clean) queueTts(`${name} dice: ${clean}`, userKey);
     }
     function refreshTtsButton() {
       panelSend({ type: 'tts_estado', activo: Boolean(tts && tts.active) });
@@ -4641,11 +5404,13 @@
     // Ported from pizarra-plus. One sheet open at a time.
     const SHEETS = [
       ['chat-sheet', 'btn-mensajeria-view'],
-      ['commands-sheet', 'btn-commands-view'],
-      ['obs-sheet', 'btn-obs-menu'],
+      ['produccion-sheet', 'btn-produccion-view'],
       ['settings-sheet', 'btn-settings-view']
     ];
     function closeSheets() {
+      if (typeof board !== 'undefined' && typeof board.resetDrawingState === 'function') {
+        board.resetDrawingState();
+      }
       SHEETS.forEach(([sheetId, buttonId]) => {
         const s = $(sheetId);
         if (s) s.hidden = true;
@@ -4665,7 +5430,15 @@
         return true;
       }
       if (sheetId === 'sources-sheet') {
-        openObs('sources');
+        openProduccion('sources');
+        return true;
+      }
+      if (sheetId === 'obs-sheet') {
+        openProduccion('scenes');
+        return true;
+      }
+      if (sheetId === 'commands-sheet') {
+        openProduccion('commands');
         return true;
       }
       const wasOpen = !$(sheetId).hidden;
@@ -5273,7 +6046,18 @@
         btnSms.addEventListener('click', () => openChat('sms'));
       }
       initContexto();
-      $('btn-commands-view').innerHTML = icon('sheetCommands');
+      const btnProduccion = $('btn-produccion-view');
+      if (btnProduccion) {
+        btnProduccion.innerHTML = icon('sheetProduction');
+        btnProduccion.addEventListener('click', () => {
+          if ($('produccion-sheet').hidden) {
+            openProduccion('scenes');
+          } else {
+            closeSheets();
+          }
+        });
+      }
+      initProduccion();
       document.querySelectorAll('.sheet-close').forEach((button) => {
         button.innerHTML = icon('close');
         button.addEventListener('click', closeSheets);
@@ -5303,19 +6087,7 @@
       }
       $('btn-stream-popup-close')?.addEventListener('click', () => toggleStreamPlayer(false));
       initFloatingStreamDrag();
-      $('btn-commands-view')?.addEventListener('click', () => {
-        if (openSheet('commands-sheet')) { cancelCommand(); loadCommands(); }
-      });
       $('btn-sms-sheet-refresh')?.addEventListener('click', () => loadSms());
-      $('btn-toggle-all-commands').addEventListener('click', () => {
-        commands.showAll = !commands.showAll;
-        const button = $('btn-toggle-all-commands');
-        button.textContent = commands.showAll ? 'Solo favoritos' : 'Ver todos';
-        button.setAttribute('aria-pressed', String(commands.showAll));
-        $('commands-title').textContent = commands.showAll ? 'Todos los Comandos' : 'Comandos Favoritos';
-        renderCommands();
-      });
-      $('commands-filter').addEventListener('input', renderCommands);
       $('btn-cmd-fav-toggle').addEventListener('click', () => { if (commands.flow) toggleFavorite(commands.flow.template); });
       $('cmd-step-use').addEventListener('click', () => useCommandValue($('cmd-step-input').value));
       $('cmd-step-input').addEventListener('keydown', (event) => {
@@ -5597,60 +6369,88 @@
       if (visible) captureObs(); else $('obs-preview-bg').removeAttribute('src');
     }
 
-    function selectObsTab(tab = 'scenes') {
-      const isScenes = tab === 'scenes';
-      const btnScenes = $('btn-obs-tab-scenes');
-      const btnSources = $('btn-obs-tab-sources');
-      if (btnScenes) {
-        btnScenes.setAttribute('aria-selected', String(isScenes));
-        btnScenes.classList.toggle('active', isScenes);
-      }
-      if (btnSources) {
-        btnSources.setAttribute('aria-selected', String(!isScenes));
-        btnSources.classList.toggle('active', !isScenes);
-      }
-      const scenesControls = $('obs-scenes-head-controls');
-      const sourcesControls = $('obs-sources-head-controls');
-      if (scenesControls) scenesControls.hidden = !isScenes;
-      if (sourcesControls) sourcesControls.hidden = isScenes;
-
-      const scenesView = $('obs-scenes-view');
-      const sourcesView = $('obs-sources-view');
-      if (scenesView) scenesView.style.display = isScenes ? 'flex' : 'none';
-      if (sourcesView) {
-        sourcesView.style.display = isScenes ? 'none' : 'flex';
-        if (!isScenes) loadAllSources();
-      }
+    function selectProduccionTab(tab = 'scenes') {
+      const tabs = ['scenes', 'sources', 'commands', 'categories'];
+      tabs.forEach((t) => {
+        const btn = $(`btn-prod-tab-${t}`);
+        const view = $(`prod-view-${t}`);
+        const head = $(`prod-${t}-head-controls`);
+        const active = t === tab;
+        if (btn) {
+          btn.classList.toggle('active', active);
+          btn.setAttribute('aria-selected', String(active));
+        }
+        if (view) view.style.display = active ? 'flex' : 'none';
+        if (head) head.style.display = active ? 'inline-flex' : 'none';
+      });
+      if (tab === 'scenes') refreshObs();
+      else if (tab === 'sources') loadAllSources();
+      else if (tab === 'commands') { cancelCommand(); loadCommands(); }
+      else if (tab === 'categories') renderProduccionCategories();
     }
-    function openObs(initialTab = 'scenes') {
-      if (!openSheet('obs-sheet')) return false;
-      selectObsTab(initialTab);
-      if (initialTab === 'scenes') refreshObs();
-      else loadAllSources();
+
+    function openProduccion(initialTab = 'scenes') {
+      if (!openSheet('produccion-sheet')) return false;
+      selectProduccionTab(initialTab);
       return true;
+    }
+
+    function selectObsTab(tab = 'scenes') {
+      selectProduccionTab(tab);
+    }
+
+    function openObs(initialTab = 'scenes') {
+      return openProduccion(initialTab === 'sources' ? 'sources' : 'scenes');
+    }
+
+    function initProduccion() {
+      const tabScenes = $('btn-prod-tab-scenes');
+      if (tabScenes) {
+        tabScenes.innerHTML = icon('tabScenes') + ' <span>Escenas</span>';
+        tabScenes.addEventListener('click', () => selectProduccionTab('scenes'));
+      }
+      const tabSources = $('btn-prod-tab-sources');
+      if (tabSources) {
+        tabSources.innerHTML = icon('tabSources') + ' <span>Fuentes</span>';
+        tabSources.addEventListener('click', () => selectProduccionTab('sources'));
+      }
+      const tabCommands = $('btn-prod-tab-commands');
+      if (tabCommands) {
+        tabCommands.innerHTML = icon('tabCommands') + ' <span>Comandos</span>';
+        tabCommands.addEventListener('click', () => selectProduccionTab('commands'));
+      }
+      const tabCategories = $('btn-prod-tab-categories');
+      if (tabCategories) {
+        tabCategories.innerHTML = icon('tabCategories') + ' <span>Categorías</span>';
+        tabCategories.addEventListener('click', () => selectProduccionTab('categories'));
+      }
+      $('btn-obs-refresh')?.addEventListener('click', refreshObs);
+      const btnSourcesRefresh = $('btn-sources-refresh');
+      if (btnSourcesRefresh) {
+        btnSourcesRefresh.innerHTML = icon('refresh');
+        btnSourcesRefresh.addEventListener('click', loadAllSources);
+      }
+      $('sources-filter')?.addEventListener('input', renderSources);
+      $('btn-refresh-categories')?.addEventListener('click', () => {
+        loadStage();
+        renderProduccionCategories();
+      });
+      $('btn-toggle-all-commands')?.addEventListener('click', () => {
+        commands.showAll = !commands.showAll;
+        const button = $('btn-toggle-all-commands');
+        button.textContent = commands.showAll ? 'Solo favoritos' : 'Ver todos';
+        button.setAttribute('aria-pressed', String(commands.showAll));
+        const title = $('commands-title');
+        if (title) title.textContent = commands.showAll ? 'Todos los Comandos' : 'Comandos Favoritos';
+        renderCommands();
+      });
+      $('commands-filter')?.addEventListener('input', renderCommands);
     }
 
     function initObs() {
       $('btn-obs-preview')?.addEventListener('click', () => setObsPreview(!obsPreview.active));
       $('obs-interval')?.addEventListener('change', scheduleObsCapture);
       document.addEventListener('visibilitychange', () => { if (!document.hidden && obsPreview.active) captureObs(); });
-      $('btn-obs-menu').innerHTML = icon('sheetObs');
-      $('btn-obs-menu').addEventListener('click', () => {
-        if ($('obs-sheet').hidden) {
-          openObs('scenes');
-        } else {
-          closeSheets();
-        }
-      });
-      $('btn-obs-refresh').addEventListener('click', refreshObs);
-      $('obs-input')?.addEventListener('change', refreshObs);
-      $('btn-obs-mute')?.addEventListener('click', () => obsAction('mute', $('obs-input')?.value));
-      // Pestañas superiores de OBS (Escenas y Fuentes)
-      $('btn-obs-tab-scenes')?.addEventListener('click', () => selectObsTab('scenes'));
-      $('btn-obs-tab-sources')?.addEventListener('click', () => selectObsTab('sources'));
-      $('btn-sources-refresh').innerHTML = icon('refresh');
-      $('btn-sources-refresh').addEventListener('click', loadAllSources);
-      $('sources-filter').addEventListener('input', renderSources);
     }
 
     // ── Shutdown: clean end of the broadcast ─────────────────────────────
@@ -5658,16 +6458,19 @@
     // with a dialog instead of the browser's confirm() and alert().
     function openShutdown() {
       $('shutdown-status').textContent = '';
+      if ($('btn-shutdown-server')) $('btn-shutdown-server').disabled = false;
       $('btn-confirm-shutdown').disabled = false;
       $('shutdown-dialog').showModal();
       $('btn-cancel-shutdown').focus();
     }
     async function confirmShutdown() {
       const confirmButton = $('btn-confirm-shutdown');
+      const shutdownButton = $('btn-shutdown-server');
       const status = $('shutdown-status');
       if (confirmButton.disabled) return;
       confirmButton.disabled = true;
-      status.textContent = 'Finalizando…';
+      if (shutdownButton) shutdownButton.disabled = true;
+      status.textContent = 'Finalizando emisión…';
       try {
         const response = await fetch('/api/panel/emision/finalizar', {
           method: 'POST',
@@ -5685,6 +6488,41 @@
         status.textContent = `Error de conexión al finalizar emisión: ${error.message}`;
       }
       confirmButton.disabled = false;
+      if (shutdownButton) shutdownButton.disabled = false;
+    }
+    async function shutdownServer() {
+      const shutdownButton = $('btn-shutdown-server');
+      const confirmButton = $('btn-confirm-shutdown');
+      const status = $('shutdown-status');
+      if (shutdownButton && shutdownButton.disabled) return;
+      if (shutdownButton) shutdownButton.disabled = true;
+      if (confirmButton) confirmButton.disabled = true;
+      status.textContent = 'Apagando servidor de ApliArte Directo…';
+      try {
+        const response = await fetch('/api/panel/apagar', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (response.ok && data.ok) {
+          status.textContent = 'Servidor apagado correctamente.';
+          showToast('👋 Servidor de ApliArte Directo apagado.');
+          setTimeout(() => {
+            $('shutdown-dialog').close();
+            document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;flex-direction:column;font-family:system-ui;background:#090d16;color:#94a3b8;text-align:center;padding:24px;"><h2>👋 Servidor de ApliArte Directo apagado</h2><p>El servidor y los procesos de emisión se han detenido por completo.<br>Ya puedes cerrar esta ventana.</p></div>';
+          }, 1200);
+          return;
+        }
+        status.textContent = `Error al apagar: ${data.error || 'Error desconocido'}`;
+      } catch (error) {
+        status.textContent = 'Servidor apagado correctamente.';
+        showToast('👋 Servidor de ApliArte Directo apagado.');
+        setTimeout(() => {
+          $('shutdown-dialog').close();
+          document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;flex-direction:column;font-family:system-ui;background:#090d16;color:#94a3b8;text-align:center;padding:24px;"><h2>👋 Servidor de ApliArte Directo apagado</h2><p>El servidor y los procesos de emisión se han detenido por completo.<br>Ya puedes cerrar esta ventana.</p></div>';
+        }, 1200);
+      }
     }
 
     // ── Views ────────────────────────────────────────────────────────────
@@ -5776,7 +6614,9 @@
         auto.textContent = autoLabel;
         select.appendChild(auto);
         if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-          status.textContent = 'Este navegador no deja ver los dispositivos aquí (hace falta HTTPS o localhost).';
+          status.textContent = activeTailscaleHttpsUrl
+            ? 'Los dispositivos requieren conexión segura HTTPS en tableta. Entra por Tailscale para activarlos.'
+            : 'Este navegador no deja ver los dispositivos aquí (hace falta HTTPS o localhost).';
           return;
         }
         if (askPermission) {
@@ -5804,6 +6644,7 @@
           const option = document.createElement('option');
           option.value = valueOf(device);
           option.textContent = device.label;
+          if (device.deviceId) option.dataset.deviceId = device.deviceId;
           select.appendChild(option);
         });
         if (stored && !named.some((device) => valueOf(device) === stored)) {
@@ -5814,44 +6655,80 @@
         }
         select.value = stored;
         status.textContent = named.length > 0 ? '' : (devices.length > 0
-          ? 'Pulsa «Buscar» y da permiso para ver los nombres de los dispositivos.'
+          ? 'Pulsa «Actualizar» y da permiso para ver los nombres de los dispositivos.'
           : 'No se ha encontrado ningún dispositivo.');
       };
       select.addEventListener('change', () => {
+        const selectedOpt = select.options[select.selectedIndex];
+        const optDeviceId = selectedOpt ? selectedOpt.dataset.deviceId || '' : '';
         if (select.value) {
           storeSetting(storageKey, select.value);
           if (storageKey === 'apliarte_estudio_cam_label') {
             storeSetting('erbolamm_cam_device_label', select.value);
+            if (optDeviceId) storeSetting('apliarte_estudio_cam_device', optDeviceId);
           }
         } else {
           try {
             localStorage.removeItem(storageKey);
-            if (storageKey === 'apliarte_estudio_cam_label') localStorage.removeItem('erbolamm_cam_device_label');
+            if (storageKey === 'apliarte_estudio_cam_label') {
+              localStorage.removeItem('erbolamm_cam_device_label');
+              localStorage.removeItem('apliarte_estudio_cam_device');
+            }
           } catch (_) { /* private mode */ }
         }
         onChange(select.options[select.selectedIndex].textContent);
       });
-      settingsButton(row, 'Buscar', () => fill(true));
+      const refreshBtn = settingsButton(row, 'Actualizar', () => fill(true));
+      refreshBtn.id = 'btn-refresh-' + kind;
+      refreshBtn.title = 'Actualizar y listar dispositivos disponibles';
       if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
         navigator.mediaDevices.addEventListener('devicechange', () => fill(false));
       }
       fill(false);
     }
 
-    // Changing a camera setting while it is sending reloads the VDO.Ninja
-    // page. We discharge the iframe to about:blank first to release hardware locks.
-    function reloadCameraIfActive() {
+    async function reloadCameraIfActive() {
       if (!camera.active) return;
-      const iframe = $('camera-push-iframe');
-      if (!iframe) return;
-      iframe.src = 'about:blank';
-      setTimeout(() => {
-        if (camera.active) {
-          iframe.src = cameraPushUrl().url;
+      const engine = micSetting('apliarte_estudio_cam_engine', 'webrtc');
+      if (engine === 'vdoninja') {
+        const iframe = $('camera-push-iframe');
+        if (!iframe) return;
+        iframe.src = 'about:blank';
+        setTimeout(() => {
+          if (camera.active) {
+            iframe.src = cameraPushUrl().url;
+          }
+        }, 150);
+      } else {
+        try {
+          if (camPeerConnection) {
+            try { camPeerConnection.close(); } catch (_) {}
+            camPeerConnection = null;
+          }
+          if (localCamStream) {
+            try { localCamStream.getTracks().forEach(t => t.stop()); } catch (_) {}
+            localCamStream = null;
+          }
+          await startWebRtcCamera();
+        } catch (err) {
+          console.error('[Cámara] Error al recargar cámara WebRTC:', err);
         }
-      }, 150);
+      }
     }
     settingsRenderers.camera = (panel) => {
+      settingsHeading(panel, 'Modo de transmisión');
+      const engineRow = settingsRow(panel);
+      const camEngine = micSetting('apliarte_estudio_cam_engine', 'webrtc');
+      const setEngine = (eng, label) => {
+        storeSetting('apliarte_estudio_cam_engine', eng);
+        reloadCameraIfActive();
+        showToast(`Modo: ${label}`);
+        rerender('camera');
+      };
+      settingsButton(engineRow, 'Nativo WebRTC soberano', () => setEngine('webrtc', 'Nativo WebRTC'), camEngine !== 'vdoninja');
+      settingsButton(engineRow, 'VDO.Ninja (externo)', () => setEngine('vdoninja', 'VDO.Ninja'), camEngine === 'vdoninja');
+      settingsNote(panel, 'WebRTC nativo transmite directamente la cámara a OBS sin intermediarios externos.');
+
       const back = ['back', 'environment'].includes(micSetting('erbolamm_cam_facing', 'user'));
       settingsHeading(panel, 'Cámara');
       const facing = settingsRow(panel);
@@ -5878,13 +6755,13 @@
       settingsHeading(panel, 'Calidad');
       const quality = document.createElement('select');
       quality.setAttribute('aria-label', 'Calidad de la cámara');
-      [['low', 'Baja (~320×240 @ 15fps · 250 kbps)'], ['med', 'Media (~640×360 @ 24fps · 600 kbps)'], ['high', 'Alta (~1280×720 @ 30fps · 1.5 Mbps)']].forEach(([value, label]) => {
+      [['high', 'Alta Full HD (~1920×1080 @ 30fps · 4 Mbps)'], ['med', 'Media HD (~1280×720 @ 30fps · 2.5 Mbps)'], ['low', 'Baja (~640×360 @ 24fps · 1.2 Mbps)']].forEach(([value, label]) => {
         const option = document.createElement('option');
         option.value = value;
         option.textContent = label;
         quality.appendChild(option);
       });
-      quality.value = CAMERA_PRESETS[micSetting('erbolamm_cam_preset', 'low')] ? micSetting('erbolamm_cam_preset', 'low') : 'low';
+      quality.value = CAMERA_PRESETS[micSetting('erbolamm_cam_preset', 'high')] ? micSetting('erbolamm_cam_preset', 'high') : 'high';
       quality.addEventListener('change', () => {
         storeSetting('erbolamm_cam_preset', quality.value);
         reloadCameraIfActive();
@@ -6230,7 +7107,70 @@
 
     // ── Stage tab: diorama theme and videos ──────────────────────────────
     // Ported from the old panel: /api/categoria and /api/videos.
-    const STAGE_CATEGORIES = [['apps', 'Apps'], ['musica', 'Música'], ['arte', 'Arte'], ['andando', 'Andando'], ['charlando', 'Charlando']];
+    const STAGE_CATEGORIES_DEFAULT = [['apps', 'Apps'], ['musica', 'Música'], ['arte', 'Arte'], ['andando', 'Andando'], ['charlando', 'Charlando']];
+    function getCustomCategories() {
+      try {
+        const stored = localStorage.getItem('apliarte_custom_categories');
+        return stored ? JSON.parse(stored) : [];
+      } catch (_) { return []; }
+    }
+    function saveCustomCategories(cats) {
+      try { localStorage.setItem('apliarte_custom_categories', JSON.stringify(cats)); } catch (_) {}
+    }
+    function getAllCategories() {
+      const custom = getCustomCategories();
+      const map = new Map(STAGE_CATEGORIES_DEFAULT);
+      custom.forEach(([id, label]) => map.set(id, label));
+      return Array.from(map.entries());
+    }
+    function addCustomCategory(name) {
+      const clean = (name || '').trim();
+      if (!clean) return false;
+      const id = clean.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9_-]/g, '-');
+      if (!id) return false;
+      const custom = getCustomCategories().filter(([existingId]) => existingId !== id);
+      custom.push([id, clean]);
+      saveCustomCategories(custom);
+      return { id, label: clean };
+    }
+    let STAGE_CATEGORIES = getAllCategories();
+
+    function renderProduccionCategories() {
+      const container = $('prod-categories-chips');
+      if (!container) return;
+      container.replaceChildren();
+      const all = getAllCategories();
+      all.forEach(([id, label]) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chip';
+        chip.textContent = label;
+        chip.style.minHeight = '42px';
+        chip.style.padding = '0 16px';
+        chip.style.fontSize = '0.95rem';
+        chip.style.fontWeight = stage.category === id ? '700' : '500';
+        if (stage.category === id) {
+          chip.style.borderColor = 'var(--brand-strong)';
+          chip.style.color = 'var(--brand-strong)';
+          chip.style.background = 'var(--bg)';
+        }
+        chip.addEventListener('click', () => {
+          stagePost('/api/categoria', { categoria: id }, `Tema: ${label}`, 'No se pudo cambiar el tema');
+          setTimeout(renderProduccionCategories, 300);
+        });
+        container.appendChild(chip);
+      });
+      const modeBtn = $('btn-prod-toggle-mode');
+      const modeLabel = $('prod-mode-label');
+      if (modeBtn && modeLabel) {
+        const light = stage.mode === 'light';
+        modeLabel.textContent = `Actual: ${light ? 'Claro' : 'Oscuro'}`;
+        modeBtn.onclick = () => {
+          stagePost('/api/categoria', { modo: light ? 'dark' : 'light' }, light ? 'Diorama en modo oscuro' : 'Diorama en modo claro', 'No se pudo cambiar el modo');
+          setTimeout(renderProduccionCategories, 300);
+        };
+      }
+    }
     const stage = { loaded: false, category: 'apps', mode: 'dark', videos: [], playing: '', backup: '', queue: [], error: '' };
     const stageTabOpen = () => $('settings-dialog').open && $('settings-tab-stage').getAttribute('aria-selected') === 'true';
     async function loadStage() {
@@ -6281,11 +7221,40 @@
         loadStage();
         return;
       }
-      settingsHeading(panel, 'Tema del diorama');
+      settingsHeading(panel, 'Tema y categoría del directo');
       const categories = settingsRow(panel);
-      STAGE_CATEGORIES.forEach(([id, label]) => {
-        settingsButton(categories, label, () => stagePost('/api/categoria', { categoria: id }, `Tema: ${label}`, 'No se pudo cambiar el tema'), stage.category === id);
+      getAllCategories().forEach(([id, label]) => {
+        const isCustom = !STAGE_CATEGORIES_DEFAULT.some(([defId]) => defId === id);
+        settingsButton(categories, isCustom ? `${label} (personalizada)` : label, () => {
+          stagePost('/api/categoria', { categoria: id }, `Tema: ${label}`, 'No se pudo cambiar el tema');
+        }, stage.category === id);
       });
+
+      const addRow = settingsRow(panel);
+      const catInput = document.createElement('input');
+      catInput.type = 'text';
+      catInput.id = 'input-new-category';
+      catInput.className = 'settings-search';
+      catInput.placeholder = 'Nueva categoría (ej. Programación, Cocina)...';
+      catInput.style.cssText = 'flex:1;min-height:40px;';
+      const addBtn = settingsButton(addRow, 'Añadir categoría', () => {
+        const val = catInput.value.trim();
+        if (!val) {
+          showToast('Escribe el nombre de la categoría');
+          return;
+        }
+        const added = addCustomCategory(val);
+        if (added) {
+          catInput.value = '';
+          showToast(`Categoría añadida: ${added.label}`);
+          STAGE_CATEGORIES = getAllCategories();
+          rerender('stage');
+          renderProduccionCategories();
+        }
+      });
+      addBtn.id = 'btn-add-category';
+      addRow.prepend(catInput);
+
       const light = stage.mode === 'light';
       settingsButton(settingsRow(panel), light ? 'Diorama en modo claro' : 'Diorama en modo oscuro',
         () => stagePost('/api/categoria', { modo: light ? 'dark' : 'light' }, light ? 'Diorama en modo oscuro' : 'Diorama en modo claro', 'No se pudo cambiar el modo'));
@@ -7244,6 +8213,7 @@
       'open-shutdown': openShutdown,
       'cancel-shutdown': () => $('shutdown-dialog').close(),
       'confirm-shutdown': confirmShutdown,
+      'shutdown-server': shutdownServer,
       'preview-studio': () => showView('studio'),
       'back-to-welcome': () => showView('welcome'),
       'probar-raid': async () => {
@@ -7267,7 +8237,7 @@
       hideAllSecrets();
       document.querySelectorAll('[data-action="open-settings"]').forEach((button) => { button.innerHTML = icon('gear'); });
       document.querySelectorAll('[data-action="close-settings"]').forEach((button) => { button.innerHTML = icon('close'); });
-      document.querySelectorAll('[data-action="black-screen"]').forEach((button) => { button.innerHTML = icon('eye'); });
+      document.querySelectorAll('[data-action="black-screen"]').forEach((button) => { button.innerHTML = icon('screenOff'); });
       buildSettingsTabs();
       const settingsSheet = $('settings-sheet');
       if (settingsSheet) {

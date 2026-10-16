@@ -210,8 +210,11 @@ test('Estudio: Excalidraw-style floating board UI, toolbar dynamism (rest macro-
   });
   assert.match(toolbar, /id="btn-draw-menu"[^>]*><\/button>\s*<button[^>]*id="btn-device-camera"/,
     'Tras el pincel no deben quedar botones ni separadores de dibujo');
-  ['btn-device-camera', 'btn-tablet-mic', 'btn-tts', 'btn-mensajeria-view', 'btn-commands-view', 'btn-obs-menu', 'btn-pantalla-negra', 'btn-settings-view'].forEach((id) => {
+  ['btn-device-camera', 'btn-tablet-mic', 'btn-tts', 'btn-mensajeria-view', 'btn-produccion-view', 'btn-pantalla-negra', 'btn-settings-view'].forEach((id) => {
     assert.match(toolbar, new RegExp(`id="${id}"`), `${id} debe mantenerse en la toolbar`);
+  });
+  ['btn-commands-view', 'btn-obs-menu'].forEach((id) => {
+    assert.doesNotMatch(toolbar, new RegExp(`id="${id}"`), `${id} debe haberse unificado en btn-produccion-view`);
   });
 
   // 1b. Ya no hay hoja modal de herramientas: el pincel conmuta la pizarra
@@ -355,36 +358,44 @@ test('Estudio: Rediseño cabecera de chat, popup stream flotante manejable, corr
   assert.match(content, /#chat-view-section #chat-frame\s*\{[^}]*width:\s*100%[^}]*height:\s*100%/, 'chat-frame debe ocupar el 100% de ancho y alto');
 });
 
-test('Estudio: Unificar OBS en botón único con pestañas superiores (Escenas y Fuentes)', () => {
+test('Estudio: Unificar Producción (Escenas, Fuentes, Comandos y Categorías) en botón único con pestañas superiores', () => {
   const content = fs.readFileSync('public/estudio.html', 'utf8');
 
   // 1. Botón unificado en la toolbar sin duplicidades ni saturación
-  assert.match(content, /id="btn-obs-menu"[^>]*aria-label="Abre OBS \(escenas y fuentes\)"[^>]*data-tip="Abre el control de OBS \(escenas, audio y fuentes\)\."/,
-    'btn-obs-menu debe unificar escenas, audio y fuentes en la toolbar');
-  assert.doesNotMatch(content, /id="btn-sources-view"/,
-    'No debe existir un botón separado btn-sources-view en la toolbar para no saturarla');
+  assert.match(content, /id="btn-produccion-view"[^>]*aria-label="Producción y Emisión \(Escenas, Fuentes, Comandos y Categorías\)"[^>]*data-tip="Abre el centro de producción \(Escenas, Fuentes, Comandos y Categorías\)\."/,
+    'btn-produccion-view debe unificar escenas, fuentes, comandos y categorías en la toolbar');
+  assert.doesNotMatch(content, /<button[^>]*id="btn-obs-menu"/,
+    'No debe existir un botón separado btn-obs-menu en la toolbar');
+  assert.doesNotMatch(content, /<button[^>]*id="btn-commands-view"/,
+    'No debe existir un botón separado btn-commands-view en la toolbar');
 
-  // 2. Panel unificado obs-sheet con pestañas superiores
-  assert.match(content, /<aside class="sheet" id="obs-sheet" aria-label="Controles OBS" hidden>/,
-    'Debe existir el panel obs-sheet unificado');
-  assert.match(content, /id="btn-obs-tab-scenes"/, 'Debe existir la pestaña de Escenas');
-  assert.match(content, /id="btn-obs-tab-sources"/, 'Debe existir la pestaña de Fuentes');
+  // 2. Panel unificado produccion-sheet con 4 pestañas superiores
+  assert.match(content, /<aside class="sheet produccion-sheet" id="produccion-sheet" aria-label="Producción y Emisión" hidden>/,
+    'Debe existir el panel produccion-sheet unificado');
+  assert.match(content, /id="btn-prod-tab-scenes"/, 'Debe existir la pestaña de Escenas');
+  assert.match(content, /id="btn-prod-tab-sources"/, 'Debe existir la pestaña de Fuentes');
+  assert.match(content, /id="btn-prod-tab-commands"/, 'Debe existir la pestaña de Comandos');
+  assert.match(content, /id="btn-prod-tab-categories"/, 'Debe existir la pestaña de Categorías');
   assert.match(content, /id="btn-sources-refresh"[^>]*aria-label="Recargar fuentes de OBS"/,
     'Debe existir btn-sources-refresh para refrescar fuentes al instante');
   assert.match(content, /id="sources-filter"/, 'Debe incluir buscador en tiempo real de fuentes');
   assert.match(content, /class="sources-grid" id="sources-grid"/, 'Debe incluir grid para fuentes');
 
   // 3. Vistas internas conmutadas por pestañas y limpieza de controles heredados
-  assert.match(content, /id="obs-scenes-view"/, 'Debe existir la sección de escenas');
-  assert.match(content, /id="obs-sources-view"/, 'Debe existir la sección de fuentes');
-  const obsSheetMatch = content.match(/<aside class="sheet" id="obs-sheet"[^>]*>([\s\S]*?)<\/aside>/);
-  assert.ok(obsSheetMatch, 'obs-sheet debe existir');
-  assert.doesNotMatch(obsSheetMatch[1], /<select id="obs-input"/, 'obs-input heredado debe estar retirado');
-  assert.doesNotMatch(obsSheetMatch[1], /id="btn-obs-mute"/, 'btn-obs-mute heredado debe estar retirado');
-  assert.doesNotMatch(obsSheetMatch[1], /id="btn-obs-preview"/, 'btn-obs-preview debe estar retirado de la pestaña de escenas');
-  assert.doesNotMatch(obsSheetMatch[1], /id="obs-interval"/, 'obs-interval debe estar retirado de la pestaña de escenas');
-  assert.match(content, /function selectObsTab/, 'Debe existir la función selectObsTab');
-  assert.match(content, /function openObs/, 'Debe existir la función openObs');
+  assert.match(content, /id="prod-view-scenes"/, 'Debe existir la sección de escenas');
+  assert.match(content, /id="prod-view-sources"/, 'Debe existir la sección de fuentes');
+  assert.match(content, /id="prod-view-commands"/, 'Debe existir la sección de comandos');
+  assert.match(content, /id="prod-view-categories"/, 'Debe existir la sección de categorías');
+  const prodSheetMatch = content.match(/<aside class="sheet produccion-sheet" id="produccion-sheet"[^>]*>([\s\S]*?)<\/aside>/);
+  assert.ok(prodSheetMatch, 'produccion-sheet debe existir');
+  assert.doesNotMatch(prodSheetMatch[1], /<select id="obs-input"/, 'obs-input heredado debe estar retirado');
+  assert.doesNotMatch(prodSheetMatch[1], /id="btn-obs-mute"/, 'btn-obs-mute heredado debe estar retirado');
+  assert.doesNotMatch(prodSheetMatch[1], /id="btn-obs-preview"/, 'btn-obs-preview debe estar retirado de la pestaña de escenas');
+  assert.doesNotMatch(prodSheetMatch[1], /id="obs-interval"/, 'obs-interval debe estar retirado de la pestaña de escenas');
+  assert.match(content, /function selectProduccionTab/, 'Debe existir la función selectProduccionTab');
+  assert.match(content, /function openProduccion/, 'Debe existir la función openProduccion');
+  assert.match(content, /function selectObsTab/, 'Debe existir selectObsTab por compatibilidad');
+  assert.match(content, /function openObs/, 'Debe existir openObs por compatibilidad');
 
   // 4. Lógica de carga global y soporte conmutable visual/audio
   assert.match(content, /async function loadAllSources\(\)/, 'Debe existir loadAllSources()');
@@ -559,8 +570,8 @@ test('Estudio: Contexto del directo integrado como 3ª pestaña en la vista moda
 
   // 1. NO debe existir un botón extra en la toolbar inferior
   assert.doesNotMatch(toolbar, /id="btn-contexto-view"/, 'btn-contexto-view no debe existir en la barra inferior');
-  assert.match(toolbar, /id="btn-mensajeria-view"[^>]*><\/button>\s*<button[^>]*id="btn-commands-view"/,
-    'La toolbar debe mantener el orden contiguo btn-mensajeria-view seguido de btn-commands-view');
+  assert.match(toolbar, /id="btn-mensajeria-view"[^>]*><\/button>\s*<button[^>]*id="btn-produccion-view"/,
+    'La toolbar debe mantener el orden contiguo btn-mensajeria-view seguido de btn-produccion-view');
 
   // 2. Pestaña de Contexto en .mensajeria-tabs dentro de #chat-sheet
   const chatSheet = sliceBetween(content, '<aside class="sheet chat-sheet" id="chat-sheet"', '</aside>');
@@ -740,11 +751,15 @@ test('Estudio: Rediseño compacto de pizarra para tablet, botones en icono y mod
   assert.match(content, /data-size="12"[^>]*>🖌️<\/button>/, 'Preset grueso debe ser solo 🖌️');
   assert.match(content, /data-size="24"[^>]*>🖍️<\/button>/, 'Preset marcador debe ser solo 🖍️');
 
-  // 3. Botón y modo inmersivo de dibujo (Zen)
+  // 3. Botón y modo inmersivo de dibujo (Zen) y resiliencia táctil
   assert.match(content, /id="btn-toggle-board-tools"/, 'Debe existir el botón btn-toggle-board-tools en el stage');
   assert.match(content, /function toggleBoardZen/, 'Debe existir la función toggleBoardZen');
   assert.match(content, /#view-studio\.board-is-active\.board-zen/, 'Debe existir la regla CSS para el modo board-zen');
   assert.match(content, /\.btn-board-zen/, 'Debe existir el estilo para el botón btn-board-zen');
+  assert.match(content, /function resetDrawingState\(\)/, 'Debe existir resetDrawingState para limpiar trazos huérfanos');
+  assert.match(content, /lostpointercapture/, 'Debe escuchar lostpointercapture para liberar el puntero si el canvas pierde foco');
+  assert.match(content, /\.camera-box\s*\{[^}]*pointer-events:\s*none;/, 'La caja de cámara debe tener pointer-events: none para no interceptar el lienzo');
+  assert.match(content, /board\.resetDrawingState\s*=\s*resetDrawingState/, 'Debe exponer resetDrawingState en board');
 });
 
 test('Estudio: Selector de cámara robusto, normalización VDO.Ninja y recarga limpia', () => {
@@ -784,6 +799,154 @@ test('Estudio: Selector de cámara robusto, normalización VDO.Ninja y recarga l
   assert.match(content, /iframe\.src\s*=\s*'about:blank';[\s\S]*setTimeout\(\(\)\s*=>\s*\{[\s\S]*iframe\.src\s*=\s*cameraPushUrl\(\)\.url;/,
     'reloadCameraIfActive debe descargar el iframe en about:blank antes de recargar');
 });
+
+test('Estudio: Acceso seguro HTTPS, banner de contexto inseguro y asistencia Tailscale para tablet', () => {
+  const content = fs.readFileSync(estudioPath, 'utf8');
+
+  // 1. Elementos HTML del banner de contexto inseguro
+  assert.match(content, /id="insecure-context-banner"/, 'Debe existir el contenedor del banner para contexto inseguro');
+  assert.match(content, /id="btn-insecure-switch-https"/, 'Debe existir el botón/enlace para conmutar a HTTPS Tailscale');
+
+  // 2. Lógica en loadNetwork() para almacenar activeTailscaleHttpsUrl y gestionar el banner
+  assert.match(content, /activeTailscaleHttpsUrl\s*=\s*`\$\{tailscale\.url\}\/estudio`/,
+    'loadNetwork debe construir y retener la URL de Tailscale HTTPS para /estudio');
+  assert.match(content, /isInsecureRemote\s*=\s*!window\.isSecureContext\s*&&\s*location\.hostname\s*!==\s*'localhost'\s*&&\s*location\.hostname\s*!==\s*'127\.0\.0\.1'/,
+    'loadNetwork debe detectar contextos remotos inseguros (!window.isSecureContext)');
+  assert.match(content, /insecureBanner\.hidden\s*=\s*false/,
+    'loadNetwork debe mostrar el banner cuando el contexto es inseguro');
+
+  // 3. Soporte en toggleMicrophone() con asistencia o redirección a Tailscale HTTPS
+  assert.match(content, /activeTailscaleHttpsUrl\s*&&\s*window\.confirm\([\s\S]*activeTailscaleHttpsUrl/,
+    'toggleMicrophone debe ofrecer redirección a la URL segura de Tailscale cuando getUserMedia no está disponible');
+
+  // 4. Soporte en devicePicker() con indicación específica para contexto seguro
+  assert.match(content, /Los dispositivos requieren conexión segura HTTPS en tableta/,
+    'devicePicker debe informar sobre el requisito de HTTPS en tableta cuando enumerateDevices no está disponible');
+});
+
+test('TTS y Voces: Soporte unificado de !voz, efectos en estudio.html, sincronización WebSocket y bocadillos en plano.html', () => {
+  const estudioContent = fs.readFileSync(estudioPath, 'utf8');
+  const planoContent = fs.readFileSync(path.join(__dirname, '..', 'public', 'plano.html'), 'utf8');
+  const serverContent = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const vpsServerContent = fs.readFileSync(path.join(__dirname, '..', 'vps-overlay', 'server.js'), 'utf8');
+  const wsAuthContent = fs.readFileSync(path.join(__dirname, '..', 'src', 'ws-auth.js'), 'utf8');
+  const vpsWsAuthContent = fs.readFileSync(path.join(__dirname, '..', 'vps-overlay', 'src', 'ws-auth.js'), 'utf8');
+
+  // 1. estudio.html cuenta con catálogo de voces, efectos (lobo, gato, helio, etc.) y transformador de texto
+  assert.match(estudioContent, /const TTS_CATALOGO_VOCES = \{/, 'Debe existir TTS_CATALOGO_VOCES en estudio.html');
+  assert.match(estudioContent, /lobo:\s*\{[\s\S]*nombre:\s*['"]Lobo['"][\s\S]*slot:\s*2[\s\S]*factorTono:\s*0\.78/, 'Debe existir voz de lobo en TTS_CATALOGO_VOCES');
+  assert.match(estudioContent, /gato:\s*\{[\s\S]*nombre:\s*['"]Gato['"][\s\S]*slot:\s*1[\s\S]*factorTono:\s*1\.38/, 'Debe existir voz de gato en TTS_CATALOGO_VOCES');
+  assert.match(estudioContent, /helio:\s*\{[\s\S]*nombre:\s*['"]Helio['"][\s\S]*factorTono:\s*1\.62/, 'Debe existir voz de helio en TTS_CATALOGO_VOCES');
+  assert.match(estudioContent, /function transformarTextoVoz\(/, 'Debe existir transformarTextoVoz en estudio.html');
+
+  // 2. estudio.html procesa el comando !voz y persiste la selección del usuario
+  assert.match(estudioContent, /const mVoz = trailing\.match\(\/\^!voz\(\?:\\s\+\(\[\^\\s\]\+\)\)\?\(\?:\\s\+\(\[12\]\)\)\?\\b\/i\);/,
+    'handleChatLine debe analizar el comando !voz <efecto_o_idioma> [slot]');
+  assert.match(estudioContent, /tts\.userVoices\.set\(userKey,\s*configVoz\)/,
+    'Debe actualizar tts.userVoices con la voz configurada');
+  assert.match(estudioContent, /saveUserVoiceToServer\(userKey,\s*configVoz\)/,
+    'Debe persistir la voz al servidor mediante saveUserVoiceToServer');
+
+  // 3. buildUtterance aplica el tono, velocidad y efectos de la voz elegida por el usuario
+  assert.match(estudioContent, /textToSpeak = transformarTextoVoz\(text,\s*efectoDef\)/,
+    'buildUtterance debe aplicar transformarTextoVoz para efectos sonoros');
+  assert.match(estudioContent, /utterance\.pitch = Math\.max\(0\.5,\s*Math\.min\(2\.0,\s*pitch\)\)/,
+    'buildUtterance debe aplicar el factorTono a la utterance');
+  assert.match(estudioContent, /utterance\.rate = Math\.max\(0\.5,\s*Math\.min\(2\.0,\s*rate\)\)/,
+    'buildUtterance debe aplicar la velocidad configurada a la utterance');
+
+  // 4. WebSocket retransmite y sincroniza voz_actualizada en tiempo real
+  assert.match(wsAuthContent, /'voz_actualizada'/, 'src/ws-auth.js debe autorizar voz_actualizada');
+  assert.match(vpsWsAuthContent, /'voz_actualizada'/, 'vps-overlay/src/ws-auth.js debe autorizar voz_actualizada');
+  assert.match(serverContent, /type:\s*'voz_actualizada'/, 'server.js debe emitir voz_actualizada al guardar o eliminar voz');
+  assert.match(vpsServerContent, /type:\s*'voz_actualizada'/, 'vps-overlay/server.js debe emitir voz_actualizada');
+  assert.match(estudioContent, /data\.type === 'voz_actualizada'/, 'estudio.html debe escuchar voz_actualizada por WebSocket');
+  assert.match(planoContent, /data\.type === 'voz_actualizada'/, 'plano.html debe escuchar voz_actualizada por WebSocket');
+
+  // 5. Los agentes en plano.html no tienen velocidades ni tonos independientes; se muestra el bocadillo para todos los usuarios
+  assert.match(planoContent, /const VELOCIDADES_AVATAR = \{[\s\S]*ja:\s*1\.0,[\s\S]*cl:\s*1\.0/,
+    'VELOCIDADES_AVATAR debe ser 1.0 neutral sin velocidades independientes por agente');
+  assert.match(planoContent, /let slot = pref\?\.slot \|\| 1;/,
+    'El slot de voz en hablarAvatar debe provenir de la configuración del usuario y no del agente');
+  assert.match(planoContent, /const avatarRate = 1\.0;/,
+    'avatarRate en hablarAvatar debe ser 1.0 neutral');
+  assert.match(planoContent, /const textoBocadillo = esAdoptado \? text : `@\$\{user\}: \$\{text\}`;/,
+    'plano.html debe formatear el bocadillo para usuarios sin avatar adoptado');
+  assert.match(planoContent, /office\.runtime\.say\(userAgent,\s*textoBocadillo,\s*performance\.now\(\)\)/,
+    'plano.html debe mostrar el bocadillo en un agente para cualquier mensaje de chat');
+});
+
+test('Estudio: Barra de herramientas con 8 botones en 3 secciones, iconos SVG puros sin emojis y gestión de categorías', () => {
+  const content = fs.readFileSync(estudioPath, 'utf8');
+  const toolbar = sliceBetween(content, '<footer class="toolbar" id="studio-toolbar">', '</footer>');
+
+  // 1. Exactamente 8 botones en la toolbar inferior
+  const buttons = toolbar.match(/<button\b/g) || [];
+  assert.equal(buttons.length, 8, 'La toolbar inferior debe contener exactamente 8 botones de control');
+
+  // 2. Dos separadores delimitando 3 secciones
+  const seps = toolbar.match(/class="toolbar-sep"/g) || [];
+  assert.equal(seps.length, 2, 'Deben existir exactamente 2 separadores para delimitar las 3 secciones');
+
+  // 3. Prohibición de emojis en los botones principales de la toolbar
+  const buttonTags = toolbar.match(/<button[^>]*>[\s\S]*?<\/button>/g) || [];
+  buttonTags.forEach((btnHtml) => {
+    assert.doesNotMatch(btnHtml, /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u,
+      'Los botones principales de la toolbar no deben contener emojis');
+  });
+
+  // 4. Gestión de categorías en Ajustes
+  assert.match(content, /input-new-category/, 'Debe existir el input para añadir categorías desde string');
+  assert.match(content, /btn-add-category/, 'Debe existir el botón para añadir categorías');
+  assert.match(content, /function addCustomCategory\(/, 'Debe existir addCustomCategory()');
+  assert.match(content, /function renderProduccionCategories\(/, 'Debe existir renderProduccionCategories()');
+
+  // 5. Botones de refresco de dispositivos en Ajustes
+  assert.match(content, /'btn-refresh-' \+ kind/, 'Debe existir botón de refresco de dispositivos en devicePicker');
+});
+
+test('Estudio y Cámara: Arquitectura soberana nativa de cámara WebRTC sin intermediarios externos', () => {
+  const estudioContent = fs.readFileSync(estudioPath, 'utf8');
+  const camaraContent = fs.readFileSync(camaraPath, 'utf8');
+  const vpsCamaraContent = fs.readFileSync(vpsCamaraPath, 'utf8');
+  const wsAuthContent = fs.readFileSync(wsAuthPath, 'utf8');
+  const vpsWsAuthContent = fs.readFileSync(vpsWsAuthPath, 'utf8');
+  const serverContent = fs.readFileSync(serverPath, 'utf8');
+  const vpsServerContent = fs.readFileSync(vpsServerPath, 'utf8');
+
+  // 1. Autorización de señalización WebRTC en ws-auth
+  ['webrtc_cam_offer', 'webrtc_cam_answer', 'webrtc_cam_candidate', 'webrtc_cam_request'].forEach((type) => {
+    assert.match(wsAuthContent, new RegExp(`'${type}'`), `src/ws-auth.js debe autorizar ${type} en PUBLIC_EVENTS`);
+    assert.match(vpsWsAuthContent, new RegExp(`'${type}'`), `vps-overlay/src/ws-auth.js debe autorizar ${type} en PUBLIC_EVENTS`);
+    assert.match(serverContent, new RegExp(`'${type}'`), `server.js debe permitir ${type} en TIPOS_RETRANS_PERMITIDOS`);
+    assert.match(vpsServerContent, new RegExp(`'${type}'`), `vps-overlay/server.js debe permitir ${type} en TIPOS_RETRANS_PERMITIDOS`);
+  });
+
+  // 2. Elemento <video> nativo y manejadores WebRTC en camara.html y su réplica VPS
+  [camaraContent, vpsCamaraContent].forEach((content) => {
+    assert.match(content, /id="camera-webrtc-video"/, 'camara.html debe incluir <video id="camera-webrtc-video">');
+    assert.match(content, /async function handleWebRtcOffer\(/, 'camara.html debe definir handleWebRtcOffer');
+    assert.match(content, /async function handleWebRtcCandidate\(/, 'camara.html debe definir handleWebRtcCandidate');
+    assert.match(content, /function cerrarWebRtc\(/, 'camara.html debe definir cerrarWebRtc');
+    assert.match(content, /data\.type === 'webrtc_cam_offer'/, 'camara.html debe escuchar webrtc_cam_offer');
+    assert.match(content, /data\.type === 'webrtc_cam_candidate'/, 'camara.html debe escuchar webrtc_cam_candidate');
+  });
+
+  // 3. Emisor WebRTC soberano en estudio.html
+  assert.match(estudioContent, /id="camera-local-video"/, 'estudio.html debe incluir <video id="camera-local-video">');
+  assert.match(estudioContent, /async function startWebRtcCamera\(/, 'estudio.html debe definir startWebRtcCamera()');
+  assert.match(estudioContent, /async function createAndSendCamOffer\(/, 'estudio.html debe definir createAndSendCamOffer()');
+  assert.match(estudioContent, /async function handleCamRemoteAnswer\(/, 'estudio.html debe definir handleCamRemoteAnswer()');
+  assert.match(estudioContent, /async function handleCamRemoteCandidate\(/, 'estudio.html debe definir handleCamRemoteCandidate()');
+  assert.match(estudioContent, /data\.type === 'webrtc_cam_answer'/, 'estudio.html debe escuchar webrtc_cam_answer');
+  assert.match(estudioContent, /data\.type === 'webrtc_cam_request'/, 'estudio.html debe responder a webrtc_cam_request');
+
+  // 4. Conmutador de modo de transmisión en Ajustes
+  assert.match(estudioContent, /Modo de transmisión/, 'Ajustes debe incluir sección de Modo de transmisión');
+  assert.match(estudioContent, /Nativo WebRTC soberano/, 'Ajustes debe ofrecer opción de Nativo WebRTC soberano');
+  assert.match(estudioContent, /VDO\.Ninja \(externo\)/, 'Ajustes debe permitir fallback a VDO.Ninja si se desea');
+});
+
 
 
 
