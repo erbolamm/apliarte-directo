@@ -203,10 +203,41 @@
       background: var(--surface);
       overflow: hidden;
     }
-    .stage-canvas img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
-    .stage-canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-    #drawing-canvas { touch-action: none; cursor: crosshair; }
-    #preview-canvas { pointer-events: none; }
+    .stage-canvas img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      pointer-events: none !important;
+      -webkit-touch-callout: none !important;
+      -webkit-user-drag: none !important;
+      -webkit-user-select: none !important;
+      user-select: none !important;
+      touch-action: none !important;
+      z-index: 1;
+    }
+    .stage-canvas canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #drawing-canvas {
+      touch-action: none;
+      cursor: crosshair;
+      z-index: 2;
+    }
+    #preview-canvas {
+      pointer-events: none !important;
+      touch-action: none;
+      z-index: 3;
+    }
     /* Live state of the one-tap toggles. Amber, because red is reserved. */
     .icon-btn.live { background: var(--warn); border-color: var(--warn); color: var(--black); }
     .camera-box {
@@ -705,26 +736,38 @@
       z-index: 30;
       display: none;
       align-items: center;
-      gap: 6px;
-      min-height: 36px;
-      padding: 6px 12px;
-      border-radius: 20px;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      min-height: 40px;
+      padding: 0;
+      border-radius: 50%;
       border: 1px solid var(--line);
       background: var(--surface);
       background: color-mix(in srgb, var(--surface) 85%, transparent);
       -webkit-backdrop-filter: blur(12px);
       backdrop-filter: blur(12px);
       color: var(--text);
-      font-size: 0.85rem;
-      font-weight: 600;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
       cursor: pointer;
       touch-action: manipulation;
       user-select: none;
       transition: background 0.15s, border-color 0.15s, transform 0.15s;
     }
+    .btn-board-zen svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      display: block;
+      pointer-events: none;
+    }
     .btn-board-zen:active {
-      transform: scale(0.96);
+      transform: scale(0.92);
     }
     #view-studio.board-is-active .btn-board-zen {
       display: inline-flex;
@@ -1378,11 +1421,10 @@
     <p class="notice mock-banner" id="studio-mock-note">Panel nuevo en pruebas: todo lo del panel antiguo está traído, pero aún no se ha probado en un directo real.</p>
     <main class="stage">
       <button type="button" class="btn-board-zen" id="btn-toggle-board-tools" aria-pressed="false" aria-label="Ocultar herramientas de la pizarra (modo inmersivo)" title="Ocultar herramientas para maximizar el área de dibujo">
-        <span class="zen-icon" id="zen-icon">👁️</span>
-        <span class="zen-text" id="zen-text">Ocultar</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>
       </button>
       <div class="stage-canvas" id="canvas-container" hidden>
-        <img id="obs-preview-bg" alt="Captura fija de OBS" hidden>
+        <img id="obs-preview-bg" alt="Captura fija de OBS" hidden draggable="false">
         <canvas id="drawing-canvas"></canvas>
         <canvas id="preview-canvas"></canvas>
       </div>
@@ -3102,7 +3144,8 @@
         if (!board.drawing) return;
         board.drawing = false;
         wipe(previewCtx, preview);
-        if (event && event.type !== 'pointercancel' && event.type !== 'lostpointercapture' && SHAPE_TOOLS.includes(board.tool) && board.start) {
+        // Solo pointercancel genuino aborta una figura; lostpointercapture no debe descartar un trazo con recorrido válido
+        if (event && event.type !== 'pointercancel' && SHAPE_TOOLS.includes(board.tool) && board.start) {
           const end = getNormalizedPos(event) || board.last;
           if (end && Math.hypot(end.x - board.start.x, end.y - board.start.y) > 0.004) {
             const item = {
@@ -3124,6 +3167,12 @@
       canvas.addEventListener('pointerup', endDrawing);
       canvas.addEventListener('pointercancel', endDrawing);
       canvas.addEventListener('lostpointercapture', endDrawing);
+      // Prevenir menús contextuales y arrastre fantasma de imagen en tablet/iPad
+      [canvas, preview, container, $('obs-preview-bg')].forEach((el) => {
+        if (!el) return;
+        el.addEventListener('contextmenu', (e) => e.preventDefault());
+        el.addEventListener('dragstart', (e) => e.preventDefault());
+      });
       window.addEventListener('pointerup', (e) => {
         if (board.drawing || board.draggingLayer) {
           if (!pointerOwner.owns(e)) {
@@ -3756,19 +3805,9 @@
         const btn = $('btn-toggle-board-tools');
         if (!btn) return;
         btn.setAttribute('aria-pressed', String(zenActive));
-        const icon = $('zen-icon');
-        const text = $('zen-text');
-        if (zenActive) {
-          if (icon) icon.textContent = '🎨';
-          if (text) text.textContent = 'Herramientas';
-          btn.title = 'Mostrar herramientas de dibujo';
-          btn.setAttribute('aria-label', 'Mostrar herramientas de dibujo');
-        } else {
-          if (icon) icon.textContent = '👁️';
-          if (text) text.textContent = 'Ocultar';
-          btn.title = 'Ocultar herramientas (Modo inmersivo)';
-          btn.setAttribute('aria-label', 'Ocultar herramientas (Modo inmersivo)');
-        }
+        btn.innerHTML = icon(zenActive ? 'eye' : 'eyeOff');
+        btn.title = zenActive ? 'Mostrar herramientas de dibujo' : 'Ocultar herramientas (modo inmersivo)';
+        btn.setAttribute('aria-label', btn.title);
       }
 
       function toggleBoardZen(force) {
@@ -3787,13 +3826,11 @@
       const zenBtn = $('btn-toggle-board-tools');
       if (zenBtn) {
         zenBtn.addEventListener('click', (e) => {
+          e.preventDefault();
           e.stopPropagation();
           toggleBoardZen();
         });
-        zenBtn.addEventListener('pointerdown', (e) => {
-          e.stopPropagation();
-          if (typeof resetDrawingState === 'function') resetDrawingState();
-        });
+        updateBoardZenButton(false);
       }
 
       // ── WebSocket: /pizarra-plus/ws ──
