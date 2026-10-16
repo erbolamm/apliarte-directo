@@ -3930,16 +3930,21 @@
       previewHidden: micSetting('apliarte_estudio_cam_preview_hidden', 'true') !== 'false',
       config: { room: 'erbolammapliarte', streamId: 'ja_cam_directo', password: '' }
     };
+    function normalizeVdoDeviceParam(label) {
+      if (!label) return '';
+      // Normalización idéntica a normalizeDeviceLabel de VDO.Ninja (lib.js) para match exacto
+      return String(label).replace(/[\W]+/g, '_').toLowerCase();
+    }
     function cameraPushUrl() {
       const preset = CAMERA_PRESETS[micSetting('erbolamm_cam_preset', 'low')] || CAMERA_PRESETS.low;
       const facing = micSetting('erbolamm_cam_facing', 'user');
-      // A chosen camera is passed by its label: VDO.Ninja matches labels,
+      // A chosen camera is passed by its normalized label: VDO.Ninja matches labels,
       // while device ids differ between this page and its iframe.
-      const deviceLabel = micSetting('apliarte_estudio_cam_label', '');
+      const deviceLabel = micSetting('apliarte_estudio_cam_label', '') || micSetting('erbolamm_cam_device_label', '');
       const { room, streamId, password } = camera.config;
       const passParam = password ? `&password=${encodeURIComponent(password)}` : '';
       const facingParam = deviceLabel ? '' : (facing === 'back' || facing === 'environment' ? '&facing=back' : '&facing=user');
-      const deviceParam = deviceLabel ? `&videodevice=${encodeURIComponent(deviceLabel.trim().replace(/\s+/g, '_'))}` : '';
+      const deviceParam = deviceLabel ? `&videodevice=${encodeURIComponent(normalizeVdoDeviceParam(deviceLabel))}` : '';
       return {
         preset,
         url: `https://vdo.ninja/?push=${encodeURIComponent(streamId)}&room=${encodeURIComponent(room)}${passParam}&webcam${facingParam}${deviceParam}&videobitrate=${preset.bitrate}&width=${preset.width}&height=${preset.height}&framerate=${preset.fps}&autostart&cleanoutput&noaudio`
@@ -5776,14 +5781,25 @@
         }
         if (askPermission) {
           try {
-            const probe = await navigator.mediaDevices.getUserMedia(kind === 'videoinput' ? { video: true } : { audio: true });
-            probe.getTracks().forEach((track) => track.stop());
+            let probe;
+            try {
+              probe = await navigator.mediaDevices.getUserMedia(kind === 'videoinput' ? { video: true } : { audio: true });
+            } catch (videoErr) {
+              // Fallback: Si la cámara está bloqueada en uso exclusivo durante el directo (NotReadableError),
+              // sondear audio para conceder permisos al origen sin colisionar con el hardware de vídeo.
+              if (kind === 'videoinput') {
+                probe = await navigator.mediaDevices.getUserMedia({ audio: true });
+              } else {
+                throw videoErr;
+              }
+            }
+            if (probe) probe.getTracks().forEach((track) => track.stop());
           } catch (_) { /* denied: the list stays without names */ }
         }
         let devices = [];
         try { devices = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === kind); } catch (_) { /* none */ }
         const named = devices.filter((device) => device.label);
-        const stored = micSetting(storageKey, '');
+        const stored = micSetting(storageKey, '') || (storageKey === 'apliarte_estudio_cam_label' ? micSetting('erbolamm_cam_device_label', '') : '');
         named.forEach((device) => {
           const option = document.createElement('option');
           option.value = valueOf(device);
@@ -5793,7 +5809,7 @@
         if (stored && !named.some((device) => valueOf(device) === stored)) {
           const missing = document.createElement('option');
           missing.value = stored;
-          missing.textContent = 'Elegido antes (no conectado ahora)';
+          missing.textContent = `${stored} (no conectada ahora)`;
           select.appendChild(missing);
         }
         select.value = stored;
@@ -5802,18 +5818,38 @@
           : 'No se ha encontrado ningún dispositivo.');
       };
       select.addEventListener('change', () => {
-        if (select.value) storeSetting(storageKey, select.value);
-        else { try { localStorage.removeItem(storageKey); } catch (_) { /* private mode */ } }
+        if (select.value) {
+          storeSetting(storageKey, select.value);
+          if (storageKey === 'apliarte_estudio_cam_label') {
+            storeSetting('erbolamm_cam_device_label', select.value);
+          }
+        } else {
+          try {
+            localStorage.removeItem(storageKey);
+            if (storageKey === 'apliarte_estudio_cam_label') localStorage.removeItem('erbolamm_cam_device_label');
+          } catch (_) { /* private mode */ }
+        }
         onChange(select.options[select.selectedIndex].textContent);
       });
       settingsButton(row, 'Buscar', () => fill(true));
+      if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+        navigator.mediaDevices.addEventListener('devicechange', () => fill(false));
+      }
       fill(false);
     }
 
     // Changing a camera setting while it is sending reloads the VDO.Ninja
-    // page, as the old panel does; the picture drops for a moment.
+    // page. We discharge the iframe to about:blank first to release hardware locks.
     function reloadCameraIfActive() {
-      if (camera.active) $('camera-push-iframe').src = cameraPushUrl().url;
+      if (!camera.active) return;
+      const iframe = $('camera-push-iframe');
+      if (!iframe) return;
+      iframe.src = 'about:blank';
+      setTimeout(() => {
+        if (camera.active) {
+          iframe.src = cameraPushUrl().url;
+        }
+      }, 150);
     }
     settingsRenderers.camera = (panel) => {
       const back = ['back', 'environment'].includes(micSetting('erbolamm_cam_facing', 'user'));

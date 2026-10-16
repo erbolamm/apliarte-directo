@@ -747,6 +747,45 @@ test('Estudio: Rediseño compacto de pizarra para tablet, botones en icono y mod
   assert.match(content, /\.btn-board-zen/, 'Debe existir el estilo para el botón btn-board-zen');
 });
 
+test('Estudio: Selector de cámara robusto, normalización VDO.Ninja y recarga limpia', () => {
+  const content = fs.readFileSync(estudioPath, 'utf8');
+
+  // 1. Normalización idéntica a normalizeDeviceLabel de VDO.Ninja
+  assert.match(content, /function normalizeVdoDeviceParam\(label\)/,
+    'Debe existir la función normalizeVdoDeviceParam');
+  assert.match(content, /String\(label\)\.replace\(\/\[\\W\]\+\/g,\s*'_'\)\.toLowerCase\(\)/,
+    'normalizeVdoDeviceParam debe usar la misma expresión regular que VDO.Ninja');
+
+  // Evaluar en contexto vm que normaliza correctamente nombres con caracteres especiales
+  const ctx = vm.createContext({});
+  vm.runInContext(`
+    function normalizeVdoDeviceParam(label) {
+      if (!label) return '';
+      return String(label).replace(/[\\W]+/g, '_').toLowerCase();
+    }
+  `, ctx);
+  const norm = vm.runInContext('normalizeVdoDeviceParam', ctx);
+  assert.equal(norm('FaceTime HD Camera (Built-in)'), 'facetime_hd_camera_built_in_');
+  assert.equal(norm('Iriun Webcam'), 'iriun_webcam');
+  assert.equal(norm('OBS Virtual Camera'), 'obs_virtual_camera');
+  assert.equal(norm('Logitech Brio 4K (046d:085e)'), 'logitech_brio_4k_046d_085e_');
+
+  // 2. cameraPushUrl aplica la normalización a &videodevice
+  assert.match(content, /&videodevice=\$\{encodeURIComponent\(normalizeVdoDeviceParam\(deviceLabel\)\)\}/,
+    'cameraPushUrl debe usar normalizeVdoDeviceParam para construir &videodevice');
+
+  // 3. Fallback de sondeo y evento devicechange en devicePicker
+  assert.match(content, /probe\s*=\s*await navigator\.mediaDevices\.getUserMedia\(\{\s*audio:\s*true\s*\}\)/,
+    'devicePicker debe tener fallback a audio si la cámara está bloqueada en uso exclusivo');
+  assert.match(content, /navigator\.mediaDevices\.addEventListener\('devicechange'/,
+    'devicePicker debe escuchar devicechange para refrescar cámaras conectadas');
+
+  // 4. Recarga limpia con about:blank para liberar el sensor de hardware
+  assert.match(content, /iframe\.src\s*=\s*'about:blank';[\s\S]*setTimeout\(\(\)\s*=>\s*\{[\s\S]*iframe\.src\s*=\s*cameraPushUrl\(\)\.url;/,
+    'reloadCameraIfActive debe descargar el iframe en about:blank antes de recargar');
+});
+
+
 
 
 
