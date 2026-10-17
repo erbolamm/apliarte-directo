@@ -11,6 +11,7 @@ const { createSmsPantalla } = require('./src/sms-pantalla');
 const { crearGestorBienvenida, parsearLineaPrivmsg, parsearLineaRaid, parsearLineaRacha } = require('./src/bienvenida-chat');
 const { ColaAnimaciones, MAX_COLA_ANIMACIONES, DURACIONES_MS } = require('./src/cola-animaciones');
 const { YoutubeLiveChat } = require('./src/youtube-livechat');
+const { ComunidadDb } = require('./src/comunidad-db');
 
 // Local, gitignored launch settings (data/directo.local.json → {"env": {...}}).
 // Applied as defaults so every launcher (npm run directo, erbolamm directo on,
@@ -37,6 +38,12 @@ function resolveDataDir() {
 const DATA_DIR       = resolveDataDir();
 if (!fs.existsSync(DATA_DIR)) {
   try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (_) {}
+}
+let comunidadDb = null;
+try {
+  comunidadDb = new ComunidadDb({ dataDir: DATA_DIR });
+} catch (err) {
+  console.error('[Comunidad] Error inicializando ComunidadDb:', err.message);
 }
 const CONFIG_FILE    = `${DATA_DIR}/config.json`;
 const LAYERS_FILE    = `${DATA_DIR}/layers.json`;
@@ -1050,6 +1057,22 @@ function conectarTwitchSender() {
           agregarAlHistorialChat(payload);
           broadcast(payload);
           renovarActividadAvatar(parsedPrivmsg.usuario);
+          if (comunidadDb) {
+            try {
+              comunidadDb.registrarMensaje({
+                id: payload.id,
+                plataforma: 'twitch',
+                usuario: payload.usuario,
+                nombreVisible: payload.nombreVisible,
+                texto: payload.texto,
+                avatar: payload.avatar,
+                color: payload.color,
+                timestamp: payload.timestamp
+              });
+            } catch (errDb) {
+              console.error('[Comunidad] Error registrando mensaje Twitch:', errDb.message);
+            }
+          }
         }
       }
     });
@@ -1125,6 +1148,22 @@ function iniciarYoutubeLiveChat(canalOVideoId = youtubeCanalConfig) {
     agregarAlHistorialChat(payload);
     broadcast(payload);
     renovarActividadAvatar(item.usuario);
+    if (comunidadDb) {
+      try {
+        comunidadDb.registrarMensaje({
+          id: payload.id,
+          plataforma: 'youtube',
+          usuario: payload.usuario,
+          nombreVisible: payload.nombreVisible,
+          texto: payload.texto,
+          avatar: payload.avatar,
+          color: payload.color,
+          timestamp: payload.timestamp
+        });
+      } catch (errDb) {
+        console.error('[Comunidad] Error registrando mensaje YouTube:', errDb.message);
+      }
+    }
   });
 
   youtubeChatInstancia.on('error', () => {});
@@ -3068,9 +3107,191 @@ const server = http.createServer((req, res) => {
     }
   }
 
-  
-  // ── Listas del panel (usuarios, canales, mensajes) ───────────────────────
+  // ── Comunidad y Fichas Técnicas de Usuarios (ADR: tts-apliarte & Firestore) ─
+  // Rutas REST para consulta de usuarios, histórico de chat estilo WhatsApp y fichas.
+  // Portabilidad: Diseñadas para mapearse directamente a Firebase Functions en tts-apliarte.
   const PANEL_DIR = pathMod.join(DATA_DIR, 'panel');
+
+  if (path === '/api/directo/comunidad/usuarios' && req.method === 'GET') {
+    cors(res);
+    if (!comunidadDb) return responderPanel(res, 503, { ok: false, error: 'bd-no-disponible' });
+    const q = params.get('q') || '';
+    const plataforma = params.get('plataforma') || '';
+    const rol = params.get('rol') || '';
+    const limit = params.get('limit') || 50;
+    const offset = params.get('offset') || 0;
+    const resultado = comunidadDb.listarUsuarios({ q, plataforma, rol, limit, offset });
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify({ ok: true, ...resultado }));
+  }
+
+  if (path === '/api/directo/comunidad/usuario') {
+    cors(res);
+    if (!comunidadDb) return responderPanel(res, 503, { ok: false, error: 'bd-no-disponible' });
+
+    if (req.method === 'GET') {
+      const uId = params.get('id');
+      const nombreUsuario = params.get('usuario');
+      const plat = params.get('plataforma') || 'twitch';
+      const limit = params.get('limit') || 50;
+      const offset = params.get('offset') || 0;
+
+      let usuario = uId ? comunidadDb.obtenerUsuario(uId) : null;
+      if (!usuario && nombreUsuario) {
+        usuario = comunidadDb.obtenerUsuarioPorNombre(nombreUsuario, plat);
+      }
+      if (!usuario) {
+        res.writeHead(404, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        return res.end(JSON.stringify({ ok: false, error: 'usuario-no-encontrado' }));
+      }
+
+      const historial = comunidadDb.obtenerMensajesUsuario(usuario.id, { limit, offset });
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(JSON.stringify({
+        ok: true,
+        usuario,
+        totalMensajes: historial.total,
+        mensajes: historial.mensajes,
+        agrupadosPorDia: historial.agrupadosPorDia,
+        limit: historial.limit,
+        offset: historial.offset
+      }));
+    }
+
+    if (req.method === 'POST') {
+      return leerCuerpoPanel(req, res, (cuerpo) => {
+        try {
+          const uId = cuerpo.id || (cuerpo.usuario && cuerpo.plataforma ? ComunidadDb.normalizarId(cuerpo.plataforma, cuerpo.usuario) : null);
+          if (!uId) {
+            return responderPanel(res, 400, { ok: false, error: 'id-usuario-requerido' });
+          }
+
+          const usuarioActualizado = comunidadDb.actualizarUsuario(uId, cuerpo);
+          if (!usuarioActualizado) {
+            return responderPanel(res, 404, { ok: false, error: 'usuario-no-encontrado' });
+          }
+
+          // Sincronizar voz con voces.json del panel si se modificó
+          if (cuerpo.vozConfig !== undefined) {
+            try {
+              const archivoVoces = pathMod.join(PANEL_DIR, 'voces.json');
+              let mapaVoces = {};
+              if (fs.existsSync(archivoVoces)) {
+                try { mapaVoces = JSON.parse(fs.readFileSync(archivoVoces, 'utf8')); } catch (_) {}
+              }
+              const uKey = usuarioActualizado.usuario.toLowerCase();
+              if (cuerpo.vozConfig) {
+                mapaVoces[uKey] = cuerpo.vozConfig;
+              } else {
+                delete mapaVoces[uKey];
+              }
+              if (!fs.existsSync(PANEL_DIR)) fs.mkdirSync(PANEL_DIR, { recursive: true });
+              fs.writeFileSync(archivoVoces, JSON.stringify(mapaVoces, null, 2));
+
+              broadcast({
+                type: 'voz_actualizada',
+                usuario: uKey,
+                voz: cuerpo.vozConfig || null,
+                voces: mapaVoces
+              });
+            } catch (errVoz) {
+              console.error('[Comunidad] Error sincronizando voz con panel:', errVoz.message);
+            }
+          }
+
+          return responderPanel(res, 200, { ok: true, usuario: usuarioActualizado });
+        } catch (errPost) {
+          return responderPanel(res, 500, { ok: false, error: errPost.message });
+        }
+      });
+    }
+
+    res.writeHead(405, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ ok: false, error: 'Metodo no permitido' }));
+  }
+
+  if (path === '/api/directo/comunidad/buscar' && req.method === 'GET') {
+    cors(res);
+    if (!comunidadDb) return responderPanel(res, 503, { ok: false, error: 'bd-no-disponible' });
+    const q = params.get('q') || '';
+    const limit = params.get('limit') || 30;
+    const offset = params.get('offset') || 0;
+    const resultado = comunidadDb.buscarMensajes(q, { limit, offset });
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify({ ok: true, ...resultado }));
+  }
+
+  if (path === '/api/directo/comunidad/estadisticas' && req.method === 'GET') {
+    cors(res);
+    if (!comunidadDb) return responderPanel(res, 503, { ok: false, error: 'bd-no-disponible' });
+    const estadisticas = comunidadDb.obtenerEstadisticas();
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify({ ok: true, estadisticas }));
+  }
+
+  if (path === '/api/directo/comunidad/enviar-mencion' && req.method === 'POST') {
+    cors(res);
+    return leerCuerpoPanel(req, res, (cuerpo) => {
+      try {
+        const usuario = String(cuerpo.usuario || '').trim();
+        const plataforma = String(cuerpo.plataforma || 'twitch').trim().toLowerCase();
+        const mensaje = String(cuerpo.mensaje || '').trim();
+        const avatar = cuerpo.avatar || null;
+
+        if (!usuario || !mensaje) {
+          return responderPanel(res, 400, { ok: false, error: 'usuario-y-mensaje-requeridos' });
+        }
+
+        // 1. Envío a Twitch IRC si la plataforma es Twitch
+        let twitchEnviado = false;
+        if (plataforma === 'twitch') {
+          twitchEnviado = enviarATwitchChat(`@${usuario} ${mensaje}`);
+        }
+
+        // 2. Proyección en overlay (saludo_chat) para que aparezca en pantalla (YouTube & Twitch)
+        broadcast({
+          type: 'saludo_chat',
+          usuario: usuario,
+          texto: mensaje,
+          avatar: avatar,
+          timestamp: Date.now()
+        });
+
+        // 3. Emisión a feed interactivo de estudio.html
+        const mentionPayload = {
+          id: 'mention_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          type: 'chat_mensaje',
+          plataforma: plataforma,
+          usuario: 'ja',
+          nombreVisible: 'Javier (Directo)',
+          texto: `@${usuario}: ${mensaje}`,
+          avatar: null,
+          color: '#a855f7',
+          timestamp: Date.now()
+        };
+        agregarAlHistorialChat(mentionPayload);
+        broadcast(mentionPayload);
+
+        // 4. Registrar en comunidadDb
+        if (comunidadDb) {
+          try {
+            comunidadDb.registrarMensaje(mentionPayload);
+          } catch (_) {}
+        }
+
+        return responderPanel(res, 200, {
+          ok: true,
+          enviado: true,
+          twitch: twitchEnviado,
+          overlay: true
+        });
+      } catch (errMencion) {
+        return responderPanel(res, 500, { ok: false, error: errMencion.message });
+      }
+    });
+  }
+
+  // ── Listas del panel (usuarios, canales, mensajes) ───────────────────────
   if (path === '/api/panel/lista') {
     cors(res);
     if (!isAuth(req)) return responderPanel(res, 401, { error: 'No autorizado' });
@@ -4094,4 +4315,5 @@ module.exports = {
   smsPantalla,
   activarRachaEnPantalla,
   DURACION_RACHA_OVERLAY_MS,
+  comunidadDb,
 };

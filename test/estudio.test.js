@@ -947,6 +947,49 @@ test('Estudio y Cámara: Arquitectura soberana nativa de cámara WebRTC sin inte
   assert.match(estudioContent, /VDO\.Ninja \(externo\)/, 'Ajustes debe permitir fallback a VDO.Ninja si se desea');
 });
 
+test('Estudio: Pestaña de Comunidad, buscador estilo WhatsApp y Ficha Técnica de usuario', () => {
+  const content = fs.readFileSync(estudioPath, 'utf8');
+
+  // 1. Pestaña de Comunidad en la barra de mensajería
+  assert.match(content, /id="btn-msg-tab-comunidad"/, 'Debe existir la pestaña [👥 Comunidad]');
+  assert.match(content, /id="comunidad-head-controls"/, 'Deben existir los controles de cabecera de comunidad');
+  assert.match(content, /id="btn-comunidad-sheet-refresh"/, 'Debe existir el botón de recarga de comunidad');
+
+  // 2. Sección principal y buscador estilo WhatsApp
+  assert.match(content, /id="comunidad-view-section"/, 'Debe existir la sección #comunidad-view-section');
+  assert.match(content, /id="comunidad-search-input"/, 'Debe existir el buscador de usuarios y mensajes');
+  assert.match(content, /class="comunidad-filter-chips"/, 'Deben existir los chips de filtro rápido');
+  assert.match(content, /id="comunidad-users-scroll"/, 'Debe existir el contenedor con scroll de usuarios');
+
+  // 3. Ficha Técnica de usuario y elementos interactivos
+  assert.match(content, /id="comunidad-col-detail"/, 'Debe existir la columna de detalle de ficha');
+  assert.match(content, /id="ficha-empty-state"/, 'Debe existir el estado vacío inicial');
+  assert.match(content, /id="ficha-content-wrapper"/, 'Debe existir el contenedor de contenido de la ficha');
+  assert.match(content, /id="ficha-select-rol"/, 'Debe existir el selector de rol (normal, vip, mod, admin)');
+  assert.match(content, /id="ficha-check-sub"/, 'Debe existir el checkbox de suscriptor');
+  assert.match(content, /id="ficha-select-voz"/, 'Debe existir el selector de voz TTS personalizada');
+  assert.match(content, /id="btn-ficha-probar-voz"/, 'Debe existir el botón de prueba de voz');
+  assert.match(content, /id="ficha-input-contexto"/, 'Debe existir el textarea de contexto histórico');
+  assert.match(content, /id="ficha-input-saludo"/, 'Debe existir el textarea de sugerencia de saludo');
+  assert.match(content, /id="btn-ficha-usar-saludo"/, 'Debe existir el botón para usar la sugerencia');
+  assert.match(content, /id="ficha-mensajes-container"/, 'Debe existir el contenedor del historial de mensajes');
+  assert.match(content, /id="ficha-mencion-input"/, 'Debe existir el input para enviar mención en directo');
+  assert.match(content, /id="btn-ficha-enviar-mencion"/, 'Debe existir el botón de enviar mención');
+
+  // 4. Funciones JavaScript del controlador
+  assert.match(content, /function initComunidad\(\)/, 'Debe existir initComunidad()');
+  assert.match(content, /function cargarComunidad\(/, 'Debe existir cargarComunidad()');
+  assert.match(content, /function renderizarListaUsuariosComunidad\(\)/, 'Debe existir renderizarListaUsuariosComunidad()');
+  assert.match(content, /function abrirFichaUsuario\(/, 'Debe existir abrirFichaUsuario()');
+  assert.match(content, /function renderizarHistorialMensajes\(/, 'Debe existir renderizarHistorialMensajes()');
+  assert.match(content, /function abrirFichaDesdeChat\(/, 'Debe existir abrirFichaDesdeChat()');
+  assert.match(content, /function guardarFichaUsuario\(\)/, 'Debe existir guardarFichaUsuario()');
+  assert.match(content, /function probarVozFicha\(\)/, 'Debe existir probarVozFicha()');
+  assert.match(content, /function enviarMencionUsuario\(\)/, 'Debe existir enviarMencionUsuario()');
+  assert.match(content, /userStrong\.addEventListener\('click'/, 'Los nombres de usuario en el chat deben abrir la ficha técnica al hacer clic');
+});
+
+
 
 
 

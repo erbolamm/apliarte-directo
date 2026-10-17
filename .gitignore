@@ -16,6 +16,7 @@ data/camara.json
 data/layers.json
 data/categoria.json
 data/*.json
+data/*.sqlite*
 medios/*
 !medios/.gitkeep
 !data/.gitkeep

@@ -529,6 +529,300 @@
       border-color: #38bdf8;
       box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
     }
+    /* ── Comunidad y Fichas Técnicas (Estilo WhatsApp) ──────────────── */
+    .comunidad-layout {
+      display: flex;
+      flex-direction: row;
+      height: 100%;
+      width: 100%;
+      min-height: 0;
+      background: var(--bg);
+      overflow: hidden;
+    }
+    .comunidad-col-list {
+      display: flex;
+      flex-direction: column;
+      width: 320px;
+      min-width: 280px;
+      max-width: 380px;
+      height: 100%;
+      border-right: 1px solid var(--line);
+      background: var(--surface);
+      overflow: hidden;
+    }
+    @media (max-width: 768px) {
+      .comunidad-layout.ficha-activa .comunidad-col-list { display: none !important; }
+      .comunidad-layout:not(.ficha-activa) .comunidad-col-detail { display: none !important; }
+      .comunidad-col-list { width: 100%; max-width: 100%; border-right: none; }
+    }
+    .comunidad-col-detail {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 0%;
+      height: 100%;
+      min-width: 0;
+      overflow: hidden;
+      background: var(--bg);
+    }
+    .comunidad-search-box {
+      padding: 8px var(--gap);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .comunidad-search-box input {
+      width: 100%;
+      min-height: 38px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.92rem;
+      box-sizing: border-box;
+    }
+    .comunidad-filter-chips {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+    }
+    .comunidad-filter-chip {
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 0.76rem;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .comunidad-filter-chip.active {
+      background: var(--brand-strong);
+      color: #fff;
+      border-color: var(--brand-strong);
+    }
+    .comunidad-users-scroll {
+      flex: 1 1 0%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .comunidad-user-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px var(--gap);
+      border-bottom: 1px solid var(--line);
+      cursor: pointer;
+      transition: background 0.15s ease;
+      min-width: 0;
+    }
+    .comunidad-user-card:hover, .comunidad-user-card.selected {
+      background: rgba(2, 132, 199, 0.12);
+    }
+    .comunidad-avatar-box {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+    }
+    .comunidad-avatar-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--line);
+      display: block;
+    }
+    .comunidad-avatar-placeholder {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: #3b82f6;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-transform: uppercase;
+    }
+    .comunidad-badge-plat {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      font-size: 0.72rem;
+      background: var(--bg);
+      border-radius: 50%;
+      padding: 1px;
+      line-height: 1;
+    }
+    .comunidad-user-info {
+      flex: 1 1 0%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .comunidad-user-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+    }
+    .comunidad-user-name {
+      font-weight: 600;
+      font-size: 0.92rem;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .comunidad-user-time {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .comunidad-user-snippet {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .comunidad-tag {
+      font-size: 0.65rem;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+    .comunidad-tag-mod { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
+    .comunidad-tag-vip { background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid #eab308; }
+    .comunidad-tag-sub { background: rgba(6, 182, 212, 0.2); color: #06b6d4; border: 1px solid #06b6d4; }
+
+    /* Ficha técnica */
+    .ficha-empty-state {
+      margin: auto;
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+      max-width: 320px;
+    }
+    .ficha-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px var(--gap);
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .ficha-body {
+      flex: 1 1 0%;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: var(--gap);
+    }
+    .ficha-controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+      background: var(--surface);
+      padding: 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+    }
+    .ficha-field label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .ficha-field select, .ficha-field input[type="text"], .ficha-field textarea {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.88rem;
+      box-sizing: border-box;
+    }
+    .ficha-chat-history {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .ficha-dia-sep {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      background: var(--bg);
+      padding: 2px 10px;
+      border-radius: 10px;
+      margin: 6px auto;
+      display: inline-block;
+      border: 1px solid var(--line);
+    }
+    .ficha-bubble {
+      display: flex;
+      flex-direction: column;
+      max-width: 85%;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      align-self: flex-start;
+      word-break: break-word;
+    }
+    .ficha-bubble.propia {
+      align-self: flex-end;
+      background: rgba(2, 132, 199, 0.2);
+      border-color: rgba(2, 132, 199, 0.4);
+    }
+    .ficha-bubble-time {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-align: right;
+      margin-top: 2px;
+    }
+    .ficha-mencion-bar {
+      padding: 10px var(--gap);
+      border-top: 1px solid var(--line);
+      background: var(--surface);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .ficha-mencion-bar input {
+      flex: 1 1 0%;
+      min-height: 42px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.92rem;
+      box-sizing: border-box;
+    }
+    .chat-msg-user { cursor: pointer; }
+    .chat-msg-user:hover { text-decoration: underline; }
+
     .sheet-head .btn[aria-pressed="true"] { border-color: var(--brand-strong); color: var(--brand-strong); }
     .sheet-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); padding: var(--gap); padding-top: max(var(--gap), env(safe-area-inset-top)); border-bottom: 1px solid var(--line); }
     .sheet-head h2 { font-size: 1rem; margin-right: auto; }
@@ -1570,6 +1864,7 @@
       <div class="sheet-head">
         <div class="mensajeria-tabs" role="tablist" style="display:flex;gap:6px;align-items:center;">
           <button type="button" class="btn active" id="btn-msg-tab-chat" role="tab" aria-selected="true">💬 Chat en Vivo</button>
+          <button type="button" class="btn" id="btn-msg-tab-comunidad" role="tab" aria-selected="false">👥 Comunidad</button>
           <button type="button" class="btn" id="btn-msg-tab-sms" role="tab" aria-selected="false">📱 Buzón SMS</button>
           <button type="button" class="btn" id="btn-msg-tab-contexto" role="tab" aria-selected="false">📌 Contexto</button>
         </div>
@@ -1577,6 +1872,9 @@
           <button type="button" class="icon-btn" id="btn-toggle-stream" aria-pressed="false" title="Ver stream flotante" aria-label="Ver stream flotante"></button>
           <button type="button" class="icon-btn" id="btn-chat-feed-toggle" aria-pressed="false" title="Alternar entre lista interactiva y chat web de Twitch" aria-label="Alternar entre lista interactiva y chat web de Twitch"></button>
           <button type="button" class="icon-btn" id="btn-reload-chat" title="Recargar chat" aria-label="Recargar chat"></button>
+        </div>
+        <div id="comunidad-head-controls" style="display:inline-flex;gap:var(--gap);align-items:center;" hidden>
+          <button type="button" class="btn" id="btn-comunidad-sheet-refresh" title="Recargar lista de comunidad">Actualizar</button>
         </div>
         <div id="sms-head-controls" style="display:inline-flex;gap:var(--gap);align-items:center;" hidden>
           <button type="button" class="btn" id="btn-sms-sheet-refresh">Actualizar</button>
@@ -1608,6 +1906,115 @@
             <p class="hint chat-feed-empty" id="chat-feed-empty">Los mensajes del chat de Twitch y YouTube aparecerán aquí con su ojo 👁️ para ponerlos en pantalla.</p>
           </div>
           <iframe id="chat-frame" title="Chat del directo" hidden></iframe>
+        </div>
+        <div id="comunidad-view-section" style="display:none;flex-direction:column;height:100%;width:100%;overflow:hidden;">
+          <div class="comunidad-layout" id="comunidad-layout">
+            <!-- Columna Izquierda: Buscador y Lista de Usuarios (WhatsApp style) -->
+            <div class="comunidad-col-list">
+              <div class="comunidad-search-box">
+                <input type="search" id="comunidad-search-input" placeholder="🔍 Buscar usuario, mensaje o nota..." autocomplete="off">
+                <div class="comunidad-filter-chips">
+                  <button type="button" class="comunidad-filter-chip active" data-filter="">Todos</button>
+                  <button type="button" class="comunidad-filter-chip" data-filter="twitch">🟣 Twitch</button>
+                  <button type="button" class="comunidad-filter-chip" data-filter="youtube">🔴 YouTube</button>
+                  <button type="button" class="comunidad-filter-chip" data-filter="vip">👑 VIP</button>
+                  <button type="button" class="comunidad-filter-chip" data-filter="mod">🛡️ Mod</button>
+                </div>
+              </div>
+              <div class="comunidad-users-scroll" id="comunidad-users-scroll">
+                <p class="hint" style="text-align:center;padding:2rem 1rem;">Cargando comunidad...</p>
+              </div>
+            </div>
+
+            <!-- Columna Derecha: Ficha Técnica Detallada e Historial -->
+            <div class="comunidad-col-detail" id="comunidad-col-detail">
+              <div class="ficha-empty-state" id="ficha-empty-state">
+                <span style="font-size:2.5rem;display:block;margin-bottom:8px;">👥</span>
+                <h3 style="margin:0 0 6px;color:var(--text);">Ficha Técnica de Usuario</h3>
+                <p style="margin:0;font-size:0.88rem;">Selecciona un usuario de la lista o pulsa en el chat en vivo para ver su ficha, historial y notas de contexto.</p>
+              </div>
+
+              <div class="ficha-content-wrapper" id="ficha-content-wrapper" style="display:none;flex-direction:column;height:100%;overflow:hidden;">
+                <!-- Cabecera de Ficha -->
+                <div class="ficha-header">
+                  <button type="button" class="btn" id="btn-ficha-volver" style="padding:4px 8px;font-size:0.85rem;min-height:36px;">← Lista</button>
+                  <div class="comunidad-avatar-box" style="width:44px;height:44px;">
+                    <img id="ficha-avatar-img" class="comunidad-avatar-img" src="" alt="Avatar" style="display:none;">
+                    <div id="ficha-avatar-placeholder" class="comunidad-avatar-placeholder">U</div>
+                    <span id="ficha-badge-plat" class="comunidad-badge-plat">🟣</span>
+                  </div>
+                  <div style="flex:1 1 0%;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                      <h3 id="ficha-user-name" style="margin:0;font-size:1rem;color:var(--text);font-weight:700;">@usuario</h3>
+                      <span id="ficha-badge-mod" class="comunidad-tag comunidad-tag-mod" style="display:none;">MOD</span>
+                      <span id="ficha-badge-vip" class="comunidad-tag comunidad-tag-vip" style="display:none;">VIP</span>
+                      <span id="ficha-badge-sub" class="comunidad-tag comunidad-tag-sub" style="display:none;">SUB</span>
+                    </div>
+                    <small id="ficha-user-stats" style="color:var(--text-muted);font-size:0.78rem;">0 mensajes</small>
+                  </div>
+                  <button type="button" class="btn" id="btn-ficha-guardar" style="background:var(--brand-strong);color:#fff;font-weight:600;min-height:36px;padding:0 12px;">Guardar</button>
+                </div>
+
+                <!-- Cuerpo de Ficha -->
+                <div class="ficha-body">
+                  <!-- Ajustes y roles -->
+                  <div class="ficha-controls-grid">
+                    <div class="ficha-field">
+                      <label for="ficha-select-rol">Rol en comunidad</label>
+                      <select id="ficha-select-rol">
+                        <option value="normal">Normal</option>
+                        <option value="vip">VIP 👑</option>
+                        <option value="mod">Moderador 🛡️</option>
+                        <option value="admin">Administrador ⚡</option>
+                      </select>
+                    </div>
+                    <div class="ficha-field" style="display:flex;align-items:center;gap:8px;padding-top:18px;">
+                      <label style="margin:0;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:0.88rem;color:var(--text);">
+                        <input type="checkbox" id="ficha-check-sub" style="width:18px;height:18px;"> Suscriptor ⭐
+                      </label>
+                    </div>
+                    <div class="ficha-field" style="grid-column: 1 / -1;">
+                      <label for="ficha-select-voz">Voz TTS personalizada</label>
+                      <div style="display:flex;gap:8px;">
+                        <select id="ficha-select-voz" style="flex:1;"></select>
+                        <button type="button" class="btn" id="btn-ficha-probar-voz" style="min-height:36px;padding:0 10px;">🔊 Probar</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Contexto y sugerencia de saludo -->
+                  <div class="tools-card" style="padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);display:grid;gap:8px;">
+                    <div class="ficha-field">
+                      <label for="ficha-input-contexto">📌 Contexto del espectador (resumen histórico y notas)</label>
+                      <textarea id="ficha-input-contexto" rows="2" placeholder="Notas sobre este usuario (qué suele comentar, proyectos, dudas habituales)..."></textarea>
+                    </div>
+                    <div class="ficha-field">
+                      <label for="ficha-input-saludo">💬 Sugerencia de saludo al entrar al chat</label>
+                      <div style="display:flex;gap:6px;">
+                        <textarea id="ficha-input-saludo" rows="1" placeholder="Pregunta o saludo para cuando entre..." style="flex:1;"></textarea>
+                        <button type="button" class="btn" id="btn-ficha-usar-saludo" style="min-height:36px;padding:0 8px;font-size:0.8rem;white-space:nowrap;" title="Copia la sugerencia a la barra de mención">Usar</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Historial de mensajes -->
+                  <div class="ficha-chat-history">
+                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                      <h4 style="margin:0;font-size:0.88rem;color:var(--text);font-weight:600;">Historial de mensajes</h4>
+                      <button type="button" class="btn btn-sm" id="btn-ficha-cargar-mas" style="display:none;padding:2px 8px;font-size:0.75rem;">Cargar anteriores</button>
+                    </div>
+                    <div id="ficha-mensajes-container" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;padding-right:4px;"></div>
+                  </div>
+                </div>
+
+                <!-- Barra inferior de mención en directo -->
+                <div class="ficha-mencion-bar">
+                  <input type="text" id="ficha-mencion-input" placeholder="Escribe un mensaje mencionando a este usuario en directo...">
+                  <button type="button" class="btn" id="btn-ficha-enviar-mencion" style="background:var(--brand-strong);color:#fff;font-weight:600;min-height:42px;padding:0 14px;">Mencionar 🚀</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div id="sms-view-section" style="display:none;flex-direction:column;height:100%;width:100%;padding:var(--gap);overflow:auto;">
           <p class="hint" id="sms-sheet-message" role="status">Cargando buzón de SMS…</p>
@@ -5600,6 +6007,11 @@
       userStrong.className = 'chat-msg-user';
       if (msg.color) userStrong.style.color = msg.color;
       userStrong.textContent = `@${msg.nombreVisible || msg.usuario}: `;
+      userStrong.title = 'Abrir ficha técnica de comunidad';
+      userStrong.addEventListener('click', (e) => {
+        e.stopPropagation();
+        abrirFichaDesdeChat(msg);
+      });
 
       const textSpan = document.createElement('span');
       textSpan.className = 'chat-msg-text';
@@ -5645,10 +6057,12 @@
       const isChat = tab === 'chat';
       const isSms = tab === 'sms';
       const isContexto = tab === 'contexto';
+      const isComunidad = tab === 'comunidad';
 
       const btnChat = $('btn-msg-tab-chat');
       const btnSms = $('btn-msg-tab-sms');
       const btnContexto = $('btn-msg-tab-contexto');
+      const btnComunidad = $('btn-msg-tab-comunidad');
       if (btnChat) {
         btnChat.setAttribute('aria-selected', String(isChat));
         btnChat.classList.toggle('active', isChat);
@@ -5661,17 +6075,24 @@
         btnContexto.setAttribute('aria-selected', String(isContexto));
         btnContexto.classList.toggle('active', isContexto);
       }
+      if (btnComunidad) {
+        btnComunidad.setAttribute('aria-selected', String(isComunidad));
+        btnComunidad.classList.toggle('active', isComunidad);
+      }
 
       const chatControls = $('chat-head-controls');
       const smsControls = $('sms-head-controls');
       const contextoControls = $('contexto-head-controls');
+      const comunidadControls = $('comunidad-head-controls');
       if (chatControls) chatControls.hidden = !isChat;
       if (smsControls) smsControls.hidden = !isSms;
       if (contextoControls) contextoControls.hidden = !isContexto;
+      if (comunidadControls) comunidadControls.hidden = !isComunidad;
 
       const chatSection = $('chat-view-section');
       const smsSection = $('sms-view-section');
       const contextoSection = $('contexto-view-section');
+      const comunidadSection = $('comunidad-view-section');
       if (chatSection) chatSection.style.display = isChat ? 'flex' : 'none';
       if (smsSection) {
         smsSection.style.display = isSms ? 'flex' : 'none';
@@ -5684,6 +6105,12 @@
         contextoSection.style.display = isContexto ? 'flex' : 'none';
         if (isContexto) {
           refreshContexto();
+        }
+      }
+      if (comunidadSection) {
+        comunidadSection.style.display = isComunidad ? 'flex' : 'none';
+        if (isComunidad) {
+          cargarComunidad();
         }
       }
     }
@@ -6071,6 +6498,619 @@
       });
     }
 
+    /**
+     * =========================================================================
+     * MODULO DE COMUNIDAD Y FICHAS TECNICAS DE USUARIOS (WhatsApp Style)
+     * =========================================================================
+     * 
+     * NOTA ARQUITECTONICA PARA OTROS AGENTES / PROXIMA APP 'tts-apliarte':
+     * Este modulo gestiona el cliente de persistencia y UI para los espectadores
+     * de Twitch y YouTube. En la transicion hacia 'tts-apliarte' (version Flutter /
+     * Firebase comercial para Google Play y App Store), este controlador se mapea
+     * directamente a:
+     * 
+     * 1. Firestore Collection: 'usuarios/{plataforma}_{usuario}'
+     *    - Snapshot en tiempo real: onSnapshot(query(collection(db, 'usuarios'), orderBy('ultimo_visto', 'desc')))
+     * 2. Firestore Subcollection / Collection: 'mensajes'
+     *    - Documentos vinculados con { usuario_id, plataforma, usuario, texto, timestamp }
+     * 3. Cloud Functions:
+     *    - callable 'enviarMencion' -> trigger IRC / overlay
+     *    - trigger onWrite 'generarContextoIa' -> background summarizer
+     * =========================================================================
+     */
+    const comunidadState = {
+      usuarios: [],
+      usuarioActivo: null,
+      filtroPlataforma: '',
+      filtroRol: '',
+      busqueda: '',
+      busquedaTimeout: null,
+      cargando: false
+    };
+
+    /**
+     * Inicializa los listeners y opciones del modulo de comunidad
+     */
+    function initComunidad() {
+      // Poblar selector de voces TTS con catalogo disponible
+      const selectVoz = $('ficha-select-voz');
+      if (selectVoz && selectVoz.options.length <= 1) {
+        selectVoz.replaceChildren();
+        const optDefault = document.createElement('option');
+        optDefault.value = '';
+        optDefault.textContent = 'Predeterminada / Estándar';
+        selectVoz.appendChild(optDefault);
+
+        if (typeof TTS_CATALOGO_VOCES === 'object') {
+          const optGroupAnimales = document.createElement('optgroup');
+          optGroupAnimales.label = 'Efectos & Animales';
+          const optGroupPersonajes = document.createElement('optgroup');
+          optGroupPersonajes.label = 'Personajes & DSP';
+          const optGroupIdiomas = document.createElement('optgroup');
+          optGroupIdiomas.label = 'Idiomas & Acentos';
+
+          Object.entries(TTS_CATALOGO_VOCES).forEach(([clave, def]) => {
+            if (def.reset) return;
+            const opt = document.createElement('option');
+            opt.value = clave;
+            opt.textContent = `${def.emoji || '🎙️'} ${def.nombre || clave}`;
+            if (def.tipo === 'animal') optGroupAnimales.appendChild(opt);
+            else if (def.tipo === 'idioma') optGroupIdiomas.appendChild(opt);
+            else optGroupPersonajes.appendChild(opt);
+          });
+
+          if (optGroupAnimales.children.length) selectVoz.appendChild(optGroupAnimales);
+          if (optGroupPersonajes.children.length) selectVoz.appendChild(optGroupPersonajes);
+          if (optGroupIdiomas.children.length) selectVoz.appendChild(optGroupIdiomas);
+        }
+      }
+
+      // Buscador con debounce 250ms
+      const searchInput = $('comunidad-search-input');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          clearTimeout(comunidadState.busquedaTimeout);
+          comunidadState.busquedaTimeout = setTimeout(() => {
+            comunidadState.busqueda = e.target.value.trim();
+            cargarComunidad();
+          }, 250);
+        });
+      }
+
+      // Chips de filtro
+      document.querySelectorAll('.comunidad-filter-chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+          document.querySelectorAll('.comunidad-filter-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          const filter = chip.dataset.filter || '';
+          if (filter === 'twitch' || filter === 'youtube') {
+            comunidadState.filtroPlataforma = filter;
+            comunidadState.filtroRol = '';
+          } else if (filter === 'vip' || filter === 'mod') {
+            comunidadState.filtroRol = filter;
+            comunidadState.filtroPlataforma = '';
+          } else {
+            comunidadState.filtroPlataforma = '';
+            comunidadState.filtroRol = '';
+          }
+          cargarComunidad();
+        });
+      });
+
+      // Boton volver en movil / pantallas estrechas
+      $('btn-ficha-volver')?.addEventListener('click', () => {
+        $('comunidad-layout')?.classList.remove('ficha-abierta');
+      });
+
+      // Guardar ficha
+      $('btn-ficha-guardar')?.addEventListener('click', guardarFichaUsuario);
+
+      // Probar voz
+      $('btn-ficha-probar-voz')?.addEventListener('click', probarVozFicha);
+
+      // Usar sugerencia de saludo
+      $('btn-ficha-usar-saludo')?.addEventListener('click', () => {
+        const saludo = $('ficha-input-saludo')?.value || '';
+        const mencionInput = $('ficha-mencion-input');
+        if (saludo && mencionInput) {
+          mencionInput.value = saludo;
+          mencionInput.focus();
+        }
+      });
+
+      // Enviar mencion
+      $('btn-ficha-enviar-mencion')?.addEventListener('click', enviarMencionUsuario);
+      $('ficha-mencion-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          enviarMencionUsuario();
+        }
+      });
+    }
+
+    /**
+     * Carga la lista de usuarios desde la API de comunidad
+     */
+    async function cargarComunidad() {
+      const scrollContainer = $('comunidad-users-scroll');
+      if (!scrollContainer) return;
+
+      try {
+        const params = new URLSearchParams();
+        if (comunidadState.busqueda) params.set('q', comunidadState.busqueda);
+        if (comunidadState.filtroPlataforma) params.set('plataforma', comunidadState.filtroPlataforma);
+        if (comunidadState.filtroRol) params.set('rol', comunidadState.filtroRol);
+        params.set('limit', '100');
+
+        const res = await fetch(`/api/directo/comunidad/usuarios?${params.toString()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        comunidadState.usuarios = Array.isArray(data.usuarios) ? data.usuarios : [];
+        renderizarListaUsuariosComunidad();
+      } catch (err) {
+        if (scrollContainer) {
+          scrollContainer.innerHTML = `<p class="hint" style="color:var(--danger);text-align:center;padding:1.5rem 1rem;">Error al cargar comunidad: ${err.message}</p>`;
+        }
+      }
+    }
+
+    /**
+     * Renderiza la lista de usuarios en formato WhatsApp
+     */
+    function renderizarListaUsuariosComunidad() {
+      const container = $('comunidad-users-scroll');
+      if (!container) return;
+
+      container.replaceChildren();
+
+      if (comunidadState.usuarios.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'hint';
+        empty.style.cssText = 'text-align:center;padding:2rem 1rem;';
+        empty.textContent = comunidadState.busqueda 
+          ? `No se encontraron usuarios que coincidan con "${comunidadState.busqueda}".`
+          : 'Aún no hay usuarios registrados. Los mensajes del chat se registrarán aquí automáticamente.';
+        container.appendChild(empty);
+        return;
+      }
+
+      comunidadState.usuarios.forEach((u) => {
+        const item = document.createElement('div');
+        item.className = 'comunidad-user-item';
+        if (comunidadState.usuarioActivo && comunidadState.usuarioActivo.id === u.id) {
+          item.classList.add('active');
+        }
+
+        // Avatar
+        const avatarBox = document.createElement('div');
+        avatarBox.className = 'comunidad-avatar-box';
+
+        if (u.avatar_url) {
+          const img = document.createElement('img');
+          img.className = 'comunidad-avatar-img';
+          img.src = u.avatar_url;
+          img.alt = u.usuario;
+          img.onerror = () => {
+            img.style.display = 'none';
+            placeholder.style.display = 'flex';
+          };
+          avatarBox.appendChild(img);
+        }
+
+        const placeholder = document.createElement('div');
+        placeholder.className = 'comunidad-avatar-placeholder';
+        placeholder.textContent = (u.nombre_visible || u.usuario || '?').charAt(0).toUpperCase();
+        if (u.avatar_url) placeholder.style.display = 'none';
+        avatarBox.appendChild(placeholder);
+
+        const badgePlat = document.createElement('span');
+        badgePlat.className = 'comunidad-badge-plat';
+        badgePlat.textContent = u.plataforma === 'youtube' ? '🔴' : '🟣';
+        badgePlat.title = u.plataforma === 'youtube' ? 'YouTube' : 'Twitch';
+        avatarBox.appendChild(badgePlat);
+
+        // Info
+        const info = document.createElement('div');
+        info.className = 'comunidad-user-info';
+
+        const rowTop = document.createElement('div');
+        rowTop.className = 'comunidad-user-row-top';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'comunidad-user-name';
+        nameSpan.textContent = `@${u.nombre_visible || u.usuario}`;
+        if (u.color) nameSpan.style.color = u.color;
+        rowTop.appendChild(nameSpan);
+
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'comunidad-user-time';
+        timeSpan.textContent = formatearFechaRelativa(u.ultimo_visto);
+        rowTop.appendChild(timeSpan);
+
+        const rowBottom = document.createElement('div');
+        rowBottom.className = 'comunidad-user-row-bottom';
+
+        const previewSpan = document.createElement('span');
+        previewSpan.className = 'comunidad-user-preview';
+        previewSpan.textContent = u.ultimo_mensaje || u.contexto_ia || 'Sin mensajes recientes';
+        rowBottom.appendChild(previewSpan);
+
+        // Tags / Badges
+        if (u.rol && u.rol !== 'normal') {
+          const rolTag = document.createElement('span');
+          rolTag.className = `comunidad-tag comunidad-tag-${u.rol}`;
+          rolTag.textContent = u.rol.toUpperCase();
+          rowBottom.appendChild(rolTag);
+        }
+        if (u.es_subscriptor) {
+          const subTag = document.createElement('span');
+          subTag.className = 'comunidad-tag comunidad-tag-sub';
+          subTag.textContent = 'SUB';
+          rowBottom.appendChild(subTag);
+        }
+
+        const countTag = document.createElement('span');
+        countTag.className = 'comunidad-user-counter';
+        countTag.textContent = String(u.total_mensajes || 1);
+        countTag.title = `${u.total_mensajes || 1} mensajes registrados`;
+        rowBottom.appendChild(countTag);
+
+        info.append(rowTop, rowBottom);
+        item.append(avatarBox, info);
+
+        item.addEventListener('click', () => {
+          abrirFichaUsuario(u.plataforma, u.usuario);
+        });
+
+        container.appendChild(item);
+      });
+    }
+
+    /**
+     * Formatea timestamp ISO a formato conciso relativo
+     */
+    function formatearFechaRelativa(isoString) {
+      if (!isoString) return '';
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return '';
+      const ahora = new Date();
+      const esHoy = d.toDateString() === ahora.toDateString();
+      const horas = String(d.getHours()).padStart(2, '0');
+      const minutos = String(d.getMinutes()).padStart(2, '0');
+      if (esHoy) return `${horas}:${minutos}`;
+      const diffDias = Math.floor((ahora - d) / (1000 * 60 * 60 * 24));
+      if (diffDias === 1) return `ayer ${horas}:${minutos}`;
+      if (diffDias < 7) return `${diffDias}d`;
+      return `${d.getDate()}/${d.getMonth() + 1}`;
+    }
+
+    /**
+     * Abre y muestra la ficha técnica completa de un usuario
+     */
+    async function abrirFichaUsuario(plataforma, usuario) {
+      if (!plataforma || !usuario) return;
+
+      try {
+        const res = await fetch(`/api/directo/comunidad/usuario?plataforma=${encodeURIComponent(plataforma)}&usuario=${encodeURIComponent(usuario)}&limit_mensajes=60`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const u = data.usuario;
+        if (!u) return;
+
+        comunidadState.usuarioActivo = u;
+
+        // Actualizar UI activa en la lista
+        document.querySelectorAll('.comunidad-user-item').forEach((item) => {
+          const isThis = item.querySelector('.comunidad-user-name')?.textContent === `@${u.nombre_visible || u.usuario}`;
+          item.classList.toggle('active', isThis);
+        });
+
+        // Alternar vista de ficha en movil
+        $('comunidad-layout')?.classList.add('ficha-abierta');
+
+        // Mostrar panel de ficha
+        $('ficha-empty-state').style.display = 'none';
+        $('ficha-content-wrapper').style.display = 'flex';
+
+        // Cabecera
+        const avatarImg = $('ficha-avatar-img');
+        const avatarPlaceholder = $('ficha-avatar-placeholder');
+        if (avatarImg && avatarPlaceholder) {
+          if (u.avatar_url) {
+            avatarImg.src = u.avatar_url;
+            avatarImg.style.display = 'block';
+            avatarPlaceholder.style.display = 'none';
+          } else {
+            avatarImg.style.display = 'none';
+            avatarPlaceholder.style.display = 'flex';
+            avatarPlaceholder.textContent = (u.nombre_visible || u.usuario || '?').charAt(0).toUpperCase();
+          }
+        }
+
+        const badgePlat = $('ficha-badge-plat');
+        if (badgePlat) {
+          badgePlat.textContent = u.plataforma === 'youtube' ? '🔴' : '🟣';
+          badgePlat.title = u.plataforma === 'youtube' ? 'YouTube' : 'Twitch';
+        }
+
+        const userName = $('ficha-user-name');
+        if (userName) {
+          userName.textContent = `@${u.nombre_visible || u.usuario}`;
+          if (u.color) userName.style.color = u.color;
+          else userName.style.color = 'var(--text)';
+        }
+
+        // Tags
+        const badgeMod = $('ficha-badge-mod');
+        const badgeVip = $('ficha-badge-vip');
+        const badgeSub = $('ficha-badge-sub');
+        if (badgeMod) badgeMod.style.display = u.rol === 'mod' ? 'inline-block' : 'none';
+        if (badgeVip) badgeVip.style.display = u.rol === 'vip' ? 'inline-block' : 'none';
+        if (badgeSub) badgeSub.style.display = u.es_subscriptor ? 'inline-block' : 'none';
+
+        // Stats
+        const stats = $('ficha-user-stats');
+        if (stats) {
+          const primer = u.primer_visto ? new Date(u.primer_visto).toLocaleDateString() : 'hoy';
+          const ultimo = u.ultimo_visto ? new Date(u.ultimo_visto).toLocaleString() : 'ahora';
+          stats.textContent = `${u.total_mensajes || 1} mensajes | Visto 1ª vez: ${primer} | Último: ${ultimo}`;
+        }
+
+        // Inputs
+        const selectRol = $('ficha-select-rol');
+        if (selectRol) selectRol.value = u.rol || 'normal';
+
+        const checkSub = $('ficha-check-sub');
+        if (checkSub) checkSub.checked = Boolean(u.es_subscriptor);
+
+        const selectVoz = $('ficha-select-voz');
+        if (selectVoz) selectVoz.value = u.voz_personalizada || '';
+
+        const inputContexto = $('ficha-input-contexto');
+        if (inputContexto) inputContexto.value = u.contexto_ia || '';
+
+        const inputSaludo = $('ficha-input-saludo');
+        if (inputSaludo) inputSaludo.value = u.sugerencia_saludo || '';
+
+        const mencionInput = $('ficha-mencion-input');
+        if (mencionInput) {
+          mencionInput.placeholder = `Escribe a @${u.nombre_visible || u.usuario} en directo...`;
+          mencionInput.value = '';
+        }
+
+        // Historial de mensajes
+        renderizarHistorialMensajes(data.mensajes || []);
+
+      } catch (err) {
+        if (typeof showToast === 'function') {
+          showToast(`Error al abrir ficha: ${err.message}`);
+        }
+      }
+    }
+
+    /**
+     * Renderiza el historial de mensajes de la ficha en formato burbujas de WhatsApp
+     */
+    function renderizarHistorialMensajes(mensajes) {
+      const container = $('ficha-mensajes-container');
+      if (!container) return;
+
+      container.replaceChildren();
+
+      if (!mensajes || mensajes.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'hint';
+        empty.style.cssText = 'text-align:center;padding:1.5rem 0.5rem;font-size:0.82rem;';
+        empty.textContent = 'No hay mensajes registrados en el historial de este usuario.';
+        container.appendChild(empty);
+        return;
+      }
+
+      // Orden cronologico ascendente para lectura natural
+      const ordenados = [...mensajes].reverse();
+
+      ordenados.forEach((m) => {
+        const bubble = document.createElement('div');
+        bubble.className = 'ficha-chat-bubble';
+
+        const textSpan = document.createElement('span');
+        textSpan.className = 'ficha-chat-text';
+        textSpan.textContent = m.texto;
+
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'ficha-chat-time';
+        const d = m.timestamp ? new Date(m.timestamp) : new Date();
+        const dateStr = d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        timeSpan.textContent = `${dateStr} ${timeStr}`;
+
+        bubble.append(textSpan, timeSpan);
+        container.appendChild(bubble);
+      });
+
+      container.scrollTop = container.scrollHeight;
+    }
+
+    /**
+     * Abre la ficha de un usuario pulsando directamente en su nombre en el chat feed
+     */
+    function abrirFichaDesdeChat(msg) {
+      if (!msg) return;
+      openChat('comunidad');
+      abrirFichaUsuario(msg.plataforma || 'twitch', msg.usuario);
+    }
+
+    /**
+     * Guarda los cambios de la ficha técnica actual en el backend
+     */
+    async function guardarFichaUsuario() {
+      const u = comunidadState.usuarioActivo;
+      if (!u) return;
+
+      const rol = $('ficha-select-rol')?.value || 'normal';
+      const es_subscriptor = Boolean($('ficha-check-sub')?.checked);
+      const voz_personalizada = $('ficha-select-voz')?.value || null;
+      const contexto_ia = $('ficha-input-contexto')?.value || '';
+      const sugerencia_saludo = $('ficha-input-saludo')?.value || '';
+
+      const btnGuardar = $('btn-ficha-guardar');
+      if (btnGuardar) {
+        btnGuardar.disabled = true;
+        btnGuardar.textContent = 'Guardando...';
+      }
+
+      try {
+        const res = await fetch('/api/directo/comunidad/usuario', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plataforma: u.plataforma,
+            usuario: u.usuario,
+            rol,
+            es_subscriptor,
+            voz_personalizada,
+            contexto_ia,
+            sugerencia_saludo
+          })
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.usuario) {
+          comunidadState.usuarioActivo = data.usuario;
+          
+          // Actualizar tags de cabecera
+          const badgeMod = $('ficha-badge-mod');
+          const badgeVip = $('ficha-badge-vip');
+          const badgeSub = $('ficha-badge-sub');
+          if (badgeMod) badgeMod.style.display = data.usuario.rol === 'mod' ? 'inline-block' : 'none';
+          if (badgeVip) badgeVip.style.display = data.usuario.rol === 'vip' ? 'inline-block' : 'none';
+          if (badgeSub) badgeSub.style.display = data.usuario.es_subscriptor ? 'inline-block' : 'none';
+
+          // Si cambio la voz, registrarla en tts local para sincronizacion inmediata
+          if (typeof tts === 'object' && tts.userVoices) {
+            const userKey = u.usuario.toLowerCase();
+            if (voz_personalizada) {
+              tts.userVoices.set(userKey, { efecto: voz_personalizada, slot: 1 });
+            } else {
+              tts.userVoices.delete(userKey);
+            }
+          }
+
+          // Actualizar en lista en memoria
+          const idx = comunidadState.usuarios.findIndex(item => item.id === data.usuario.id);
+          if (idx !== -1) {
+            comunidadState.usuarios[idx] = data.usuario;
+            renderizarListaUsuariosComunidad();
+          }
+
+          if (typeof showToast === 'function') {
+            showToast(`Ficha de @${data.usuario.nombre_visible || data.usuario.usuario} guardada`);
+          }
+        }
+      } catch (err) {
+        if (typeof showToast === 'function') {
+          showToast(`Error al guardar: ${err.message}`);
+        }
+      } finally {
+        if (btnGuardar) {
+          btnGuardar.disabled = false;
+          btnGuardar.textContent = 'Guardar';
+        }
+      }
+    }
+
+    /**
+     * Prueba la voz seleccionada en la ficha técnica
+     */
+    function probarVozFicha() {
+      const u = comunidadState.usuarioActivo;
+      const voz = $('ficha-select-voz')?.value || '';
+      const nombre = u ? (u.nombre_visible || u.usuario) : 'usuario';
+      const frase = `Hola, soy ${nombre} y esta es mi voz configurada en el directo de ApliArte.`;
+
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        let utterance = new SpeechSynthesisUtterance(frase);
+        utterance.lang = 'es-ES';
+
+        if (voz && typeof TTS_CATALOGO_VOCES === 'object' && TTS_CATALOGO_VOCES[voz]) {
+          const efectoDef = TTS_CATALOGO_VOCES[voz];
+          if (efectoDef.prefijo) utterance.text = `${efectoDef.prefijo} ${frase} ${efectoDef.sufijo || ''}`;
+          if (efectoDef.factorTono) utterance.pitch = efectoDef.factorTono;
+          if (efectoDef.velocidad) utterance.rate = efectoDef.velocidad;
+          if (efectoDef.lang) utterance.lang = efectoDef.lang;
+        }
+
+        window.speechSynthesis.speak(utterance);
+      } else if (typeof showToast === 'function') {
+        showToast('Síntesis de voz no disponible en este navegador');
+      }
+    }
+
+    /**
+     * Envía una mención en directo al usuario activo
+     */
+    async function enviarMencionUsuario() {
+      const u = comunidadState.usuarioActivo;
+      const input = $('ficha-mencion-input');
+      if (!u || !input) return;
+
+      const texto = input.value.trim();
+      if (!texto) return;
+
+      const btn = $('btn-ficha-enviar-mencion');
+      if (btn) btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/directo/comunidad/enviar-mencion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plataforma: u.plataforma,
+            usuario: u.usuario,
+            texto
+          })
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await res.json();
+
+        input.value = '';
+
+        if (typeof showToast === 'function') {
+          showToast(`Mención enviada a @${u.nombre_visible || u.usuario}`);
+        }
+
+        // Agregar de inmediato a la lista visual de mensajes
+        const container = $('ficha-mensajes-container');
+        if (container) {
+          const bubble = document.createElement('div');
+          bubble.className = 'ficha-chat-bubble';
+          bubble.style.borderLeft = '3px solid var(--brand-strong)';
+          
+          const strong = document.createElement('strong');
+          strong.textContent = 'Tú (en directo): ';
+          const spanText = document.createElement('span');
+          spanText.className = 'ficha-chat-text';
+          spanText.textContent = texto;
+          const spanTime = document.createElement('span');
+          spanTime.className = 'ficha-chat-time';
+          spanTime.textContent = 'ahora';
+          
+          bubble.append(strong, spanText, spanTime);
+          container.appendChild(bubble);
+          container.scrollTop = container.scrollHeight;
+        }
+      } catch (err) {
+        if (typeof showToast === 'function') {
+          showToast(`Error al enviar mención: ${err.message}`);
+        }
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
     function initSheets() {
       const btnMensajeria = document.getElementById('btn-mensajeria-view') || document.getElementById('btn-chat-view');
       if (btnMensajeria) {
@@ -6083,6 +7123,7 @@
         btnSms.addEventListener('click', () => openChat('sms'));
       }
       initContexto();
+      initComunidad();
       const btnProduccion = $('btn-produccion-view');
       if (btnProduccion) {
         btnProduccion.innerHTML = icon('sheetProduction');
@@ -6102,7 +7143,9 @@
       $('btn-msg-tab-chat')?.addEventListener('click', () => selectMensajeriaTab('chat'));
       $('btn-msg-tab-sms')?.addEventListener('click', () => selectMensajeriaTab('sms'));
       $('btn-msg-tab-contexto')?.addEventListener('click', () => selectMensajeriaTab('contexto'));
+      $('btn-msg-tab-comunidad')?.addEventListener('click', () => selectMensajeriaTab('comunidad'));
       $('btn-contexto-sheet-refresh')?.addEventListener('click', () => refreshContexto());
+      $('btn-comunidad-sheet-refresh')?.addEventListener('click', () => cargarComunidad());
       const btnFeedToggle = $('btn-chat-feed-toggle');
       if (btnFeedToggle) {
         btnFeedToggle.innerHTML = icon('chatWeb');
