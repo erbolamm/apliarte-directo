@@ -31,6 +31,7 @@ const pathMod        = require('path');
 
 function resolveDataDir() {
   if (process.env.DATA_DIR) return process.env.DATA_DIR;
+  if (process.env.APLIARTE_TEST_DATA_DIR) return process.env.APLIARTE_TEST_DATA_DIR;
   if (fs.existsSync('/app/data')) return '/app/data';
   return pathMod.join(__dirname, 'data');
 }
@@ -3199,6 +3200,25 @@ const server = http.createServer((req, res) => {
             }
           }
 
+          // Sincronizar acciones de moderación en directo (Twitch ban / timeout / WebSocket)
+          if (cuerpo.esBaneado !== undefined && usuarioActualizado.plataforma === 'twitch') {
+            if (usuarioActualizado.esBaneado) {
+              enviarATwitchChat(`/ban ${usuarioActualizado.usuario}`);
+            } else {
+              enviarATwitchChat(`/unban ${usuarioActualizado.usuario}`);
+            }
+          }
+          if (cuerpo.eventoModeracion && cuerpo.eventoModeracion.accion === 'timeout' && usuarioActualizado.plataforma === 'twitch') {
+            const segs = cuerpo.eventoModeracion.duracion || 600;
+            enviarATwitchChat(`/timeout ${usuarioActualizado.usuario} ${segs}`);
+          }
+
+          // Broadcast de actualización de usuario para vistas conectadas
+          broadcast({
+            type: 'usuario_moderado',
+            usuario: usuarioActualizado
+          });
+
           return responderPanel(res, 200, { ok: true, usuario: usuarioActualizado });
         } catch (errPost) {
           return responderPanel(res, 500, { ok: false, error: errPost.message });
@@ -3235,7 +3255,7 @@ const server = http.createServer((req, res) => {
       try {
         const usuario = String(cuerpo.usuario || '').trim();
         const plataforma = String(cuerpo.plataforma || 'twitch').trim().toLowerCase();
-        const mensaje = String(cuerpo.mensaje || '').trim();
+        const mensaje = String(cuerpo.mensaje || cuerpo.texto || '').trim();
         const avatar = cuerpo.avatar || null;
 
         if (!usuario || !mensaje) {

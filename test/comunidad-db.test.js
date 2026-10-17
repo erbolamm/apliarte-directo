@@ -226,3 +226,65 @@ test('ComunidadDb - Historial agrupado por día y búsqueda global de mensajes',
   db.close();
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
+
+test('ComunidadDb - Moderación, silenciamiento, baneo y memoria histórica de auditoría', (t) => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'test-comunidad-mod-'));
+  const db = new ComunidadDb({ dataDir: tmpDir });
+
+  // Ingestar bot kofistreambot con rol de moderador
+  db.registrarMensaje({
+    plataforma: 'twitch',
+    usuario: 'kofistreambot',
+    nombreVisible: 'KoFiStreamBot',
+    rol: 'mod',
+    texto: 'Visit ApliArte\'s Ko-fi page'
+  });
+
+  const uId = 'twitch:kofistreambot';
+  const botInicial = db.obtenerUsuario(uId);
+  assert.equal(botInicial.rol, 'mod');
+  assert.equal(botInicial.esBaneado, false);
+  assert.equal(botInicial.esSilenciado, false);
+  assert.deepEqual(botInicial.historialModeracion, []);
+
+  // 1. Quitar rol MOD (despromover a normal porque es un bot ruidoso)
+  db.actualizarUsuario(uId, { rol: 'normal' });
+  const trasDemocion = db.obtenerUsuario(uId);
+  assert.equal(trasDemocion.rol, 'normal');
+  assert.equal(trasDemocion.historialModeracion.length, 1);
+  assert.equal(trasDemocion.historialModeracion[0].accion, 'cambio_rol');
+  assert.equal(trasDemocion.historialModeracion[0].rolAnterior, 'mod');
+  assert.equal(trasDemocion.historialModeracion[0].rolNuevo, 'normal');
+
+  // 2. Silenciar en voz TTS
+  db.actualizarUsuario(uId, { esSilenciado: true, razon: 'Bot automatizado' });
+  const trasSilencio = db.obtenerUsuario(uId);
+  assert.equal(trasSilencio.esSilenciado, true);
+  assert.equal(trasSilencio.historialModeracion.length, 2);
+  assert.equal(trasSilencio.historialModeracion[1].accion, 'mute');
+
+  // 3. Banear de chat
+  db.actualizarUsuario(uId, { esBaneado: true, razon: 'Spam no solicitado' });
+  const trasBan = db.obtenerUsuario(uId);
+  assert.equal(trasBan.esBaneado, true);
+  assert.equal(trasBan.historialModeracion.length, 3);
+  assert.equal(trasBan.historialModeracion[2].accion, 'ban');
+
+  // 4. Registrar evento de time out
+  db.actualizarUsuario(uId, { eventoModeracion: { accion: 'timeout', duracion: 600 } });
+  const trasTimeout = db.obtenerUsuario(uId);
+  assert.equal(trasTimeout.historialModeracion.length, 4);
+  assert.equal(trasTimeout.historialModeracion[3].accion, 'timeout');
+  assert.equal(trasTimeout.historialModeracion[3].duracion, 600);
+
+  // 5. Restaurar rol MOD y desbanear (un-ban) desde la memoria histórica
+  db.actualizarUsuario(uId, { rol: 'mod', esBaneado: false, esSilenciado: false });
+  const restaurado = db.obtenerUsuario(uId);
+  assert.equal(restaurado.rol, 'mod');
+  assert.equal(restaurado.esBaneado, false);
+  assert.equal(restaurado.esSilenciado, false);
+  assert.equal(restaurado.historialModeracion.length, 7);
+
+  db.close();
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});

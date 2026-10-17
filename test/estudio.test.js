@@ -976,11 +976,22 @@ test('Estudio: Pestaña de Comunidad, buscador estilo WhatsApp y Ficha Técnica 
   assert.match(content, /id="ficha-mencion-input"/, 'Debe existir el input para enviar mención en directo');
   assert.match(content, /id="btn-ficha-enviar-mencion"/, 'Debe existir el botón de enviar mención');
 
-  // 4. Funciones JavaScript del controlador
+  // 4. Controles y badges de moderación y memoria histórica
+  assert.match(content, /id="ficha-badge-banned"/, 'Debe existir la insignia de usuario baneado');
+  assert.match(content, /id="ficha-badge-muted"/, 'Debe existir la insignia de voz silenciada');
+  assert.match(content, /id="btn-ficha-toggle-mute"/, 'Debe existir el botón para silenciar o reactivar voz TTS');
+  assert.match(content, /id="btn-ficha-toggle-ban"/, 'Debe existir el botón para banear o desbanear');
+  assert.match(content, /id="btn-ficha-timeout"/, 'Debe existir el botón de time out');
+  assert.match(content, /id="ficha-moderacion-box"/, 'Debe existir el contenedor de la memoria histórica de moderación');
+
+  // 5. Funciones JavaScript del controlador
   assert.match(content, /function initComunidad\(\)/, 'Debe existir initComunidad()');
   assert.match(content, /function cargarComunidad\(/, 'Debe existir cargarComunidad()');
   assert.match(content, /function renderizarListaUsuariosComunidad\(\)/, 'Debe existir renderizarListaUsuariosComunidad()');
   assert.match(content, /function abrirFichaUsuario\(/, 'Debe existir abrirFichaUsuario()');
+  assert.match(content, /function actualizarVistaFicha\(/, 'Debe existir actualizarVistaFicha()');
+  assert.match(content, /function renderizarHistorialModeracion\(/, 'Debe existir renderizarHistorialModeracion()');
+  assert.match(content, /function aplicarCambioModeracion\(/, 'Debe existir aplicarCambioModeracion()');
   assert.match(content, /function renderizarHistorialMensajes\(/, 'Debe existir renderizarHistorialMensajes()');
   assert.match(content, /function abrirFichaDesdeChat\(/, 'Debe existir abrirFichaDesdeChat()');
   assert.match(content, /function guardarFichaUsuario\(\)/, 'Debe existir guardarFichaUsuario()');
@@ -989,15 +1000,24 @@ test('Estudio: Pestaña de Comunidad, buscador estilo WhatsApp y Ficha Técnica 
   assert.match(content, /userStrong\.addEventListener\('click'/, 'Los nombres de usuario en el chat deben abrir la ficha técnica al hacer clic');
 });
 
+test('Estudio: Captura de micrófono robusta, resolución de dispositivo y fallback limpio', () => {
+  const content = fs.readFileSync(estudioPath, 'utf8');
 
+  // 1. Resolución de dispositivo por deviceId o etiqueta
+  assert.match(content, /async function resolveAudioDevice\(/, 'Debe existir resolveAudioDevice');
+  assert.match(content, /targetDeviceId\s*\?\s*\{\s*\.\.\.audio,\s*deviceId:\s*\{\s*ideal:\s*targetDeviceId\s*\}\s*\}\s*:\s*audio/,
+    'Debe usar ideal en deviceId para evitar OverconstrainedError si el dispositivo Bluetooth cambió de id');
 
+  // 2. Procesamiento limpio sin bucles de cancelación de eco (AEC)
+  assert.match(content, /const audio = \{\s*echoCancellation:\s*echo,\s*noiseSuppression:\s*denoise,\s*autoGainControl:\s*true\s*\};/,
+    'Debe mantener AEC y control de ganancia estándar para que el hardware y CoreAudio no silencien la entrada');
+  assert.match(content, /const muteGain = mic\.context\.createGain\(\);/,
+    'Debe usar muteGain con valor 0 para no realimentar el audio al altavoz ni engañar al cancelador de eco');
 
-
-
-
-
-
-
-
-
+  // 3. Controles en Ajustes > Audio
+  assert.match(content, /settingsHeading\(panel,\s*'Micrófono'\)/, 'Debe existir el selector de micrófono');
+  assert.match(content, /settingsHeading\(panel,\s*'Ganancia de voz'\)/, 'Debe existir el control de ganancia');
+  assert.match(content, /settingsHeading\(panel,\s*'Nivel del micrófono y prueba'\)/, 'Debe existir el vúmetro con botón de prueba rápida');
+  assert.match(content, /Activar micrófono ahora \(probar\)/, 'Debe permitir activar el micrófono directamente desde Ajustes');
+});
 

@@ -550,10 +550,30 @@
       background: var(--surface);
       overflow: hidden;
     }
+    #btn-ficha-volver {
+      display: none;
+    }
     @media (max-width: 768px) {
-      .comunidad-layout.ficha-activa .comunidad-col-list { display: none !important; }
-      .comunidad-layout:not(.ficha-activa) .comunidad-col-detail { display: none !important; }
-      .comunidad-col-list { width: 100%; max-width: 100%; border-right: none; }
+      .comunidad-layout.ficha-activa .comunidad-col-list,
+      .comunidad-layout.ficha-abierta .comunidad-col-list {
+        display: none !important;
+      }
+      .comunidad-layout:not(.ficha-activa):not(.ficha-abierta) .comunidad-col-detail {
+        display: none !important;
+      }
+      .comunidad-col-list {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-right: none !important;
+      }
+      .comunidad-col-detail {
+        width: 100% !important;
+        max-width: 100% !important;
+        display: flex !important;
+      }
+      #btn-ficha-volver {
+        display: inline-flex !important;
+      }
     }
     .comunidad-col-detail {
       display: flex;
@@ -777,28 +797,44 @@
       display: inline-block;
       border: 1px solid var(--line);
     }
-    .ficha-bubble {
+    .ficha-bubble, .ficha-chat-bubble {
       display: flex;
       flex-direction: column;
-      max-width: 85%;
-      padding: 6px 10px;
-      border-radius: 8px;
+      max-width: 88%;
+      padding: 8px 12px;
+      border-radius: 12px;
       font-size: 0.88rem;
       background: var(--bg);
       border: 1px solid var(--line);
       align-self: flex-start;
       word-break: break-word;
+      gap: 4px;
     }
-    .ficha-bubble.propia {
+    .ficha-bubble.propia, .ficha-chat-bubble.propia {
       align-self: flex-end;
-      background: rgba(2, 132, 199, 0.2);
-      border-color: rgba(2, 132, 199, 0.4);
+      background: rgba(2, 132, 199, 0.15);
+      border-color: rgba(56, 189, 248, 0.4);
     }
-    .ficha-bubble-time {
-      font-size: 0.68rem;
+    .ficha-chat-text {
+      font-size: 0.88rem;
+      color: var(--text);
+      line-height: 1.35;
+      word-break: break-word;
+    }
+    .ficha-bubble-time, .ficha-chat-time {
+      font-size: 0.7rem;
       color: var(--text-muted);
       text-align: right;
-      margin-top: 2px;
+    }
+    .mensajeria-tabs {
+      overflow-x: auto;
+      max-width: 100%;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      white-space: nowrap;
+    }
+    .mensajeria-tabs::-webkit-scrollbar {
+      display: none;
     }
     .ficha-mencion-bar {
       padding: 10px var(--gap);
@@ -1949,6 +1985,8 @@
                       <span id="ficha-badge-mod" class="comunidad-tag comunidad-tag-mod" style="display:none;">MOD</span>
                       <span id="ficha-badge-vip" class="comunidad-tag comunidad-tag-vip" style="display:none;">VIP</span>
                       <span id="ficha-badge-sub" class="comunidad-tag comunidad-tag-sub" style="display:none;">SUB</span>
+                      <span id="ficha-badge-banned" class="comunidad-tag" style="display:none;background:#ef4444;color:#fff;">BANEADO</span>
+                      <span id="ficha-badge-muted" class="comunidad-tag" style="display:none;background:#f59e0b;color:#fff;">VOZ MUTED</span>
                     </div>
                     <small id="ficha-user-stats" style="color:var(--text-muted);font-size:0.78rem;">0 mensajes</small>
                   </div>
@@ -1978,6 +2016,26 @@
                       <div style="display:flex;gap:8px;">
                         <select id="ficha-select-voz" style="flex:1;"></select>
                         <button type="button" class="btn" id="btn-ficha-probar-voz" style="min-height:36px;padding:0 10px;">🔊 Probar</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Control de Moderación y Memoria Histórica -->
+                  <div class="tools-card" style="padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);display:grid;gap:8px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+                      <h4 style="margin:0;font-size:0.88rem;color:var(--text);font-weight:600;">Control y Moderación</h4>
+                      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <button type="button" class="btn btn-sm" id="btn-ficha-toggle-mute" style="padding:4px 8px;font-size:0.78rem;">Silenciar voz</button>
+                        <button type="button" class="btn btn-sm btn-danger" id="btn-ficha-toggle-ban" style="padding:4px 8px;font-size:0.78rem;">Banear chat</button>
+                        <button type="button" class="btn btn-sm" id="btn-ficha-timeout" style="padding:4px 8px;font-size:0.78rem;">Time Out 10m</button>
+                      </div>
+                    </div>
+                    <div>
+                      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                        <label style="font-size:0.78rem;color:var(--text-muted);font-weight:600;margin:0;">Memoria Histórica de Moderación (restauración en 1 clic)</label>
+                      </div>
+                      <div id="ficha-moderacion-box" style="display:flex;flex-direction:column;gap:6px;max-height:140px;overflow-y:auto;background:var(--bg);padding:6px 8px;border-radius:var(--radius);border:1px solid var(--line);font-size:0.78rem;">
+                        <span class="hint" style="font-size:0.75rem;">Sin registros de moderación previos.</span>
                       </div>
                     </div>
                   </div>
@@ -4441,10 +4499,42 @@
     // Ported from toggleMicroMobile(): raw PCM in 4096-sample blocks sent
     // as base64 JSON over the panel socket. Gain, noise gate and echo
     // settings are read from the keys the old panel writes.
-    const mic = { active: false, stream: null, context: null, processor: null, analyser: null };
+    const mic = { active: false, stream: null, context: null, processor: null, analyser: null, monitorGain: null };
     const micSetting = (key, fallback) => {
       try { const value = localStorage.getItem(key); return value === null ? fallback : value; } catch (_) { return fallback; }
     };
+
+    /**
+     * Resuelve robustamente un dispositivo de audio por deviceId o etiqueta.
+     */
+    async function resolveAudioDevice(kind, selectedLabel, selectedId) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        return { deviceId: selectedId || '', label: selectedLabel || '' };
+      }
+      let devs = [];
+      try {
+        devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === kind);
+      } catch (_) {}
+
+      // 1. Coincidencia por deviceId guardado
+      if (selectedId) {
+        const byId = devs.find((d) => d.deviceId === selectedId);
+        if (byId) return { deviceId: byId.deviceId, label: byId.label };
+      }
+
+      // 2. Coincidencia por etiqueta
+      if (selectedLabel) {
+        const cleanSaved = selectedLabel.toLowerCase().trim();
+        const byLabel = devs.find((d) => d.label && d.label.toLowerCase().trim() === cleanSaved);
+        if (byLabel) return { deviceId: byLabel.deviceId, label: byLabel.label };
+
+        const byPartial = devs.find((d) => d.label && (d.label.toLowerCase().includes(cleanSaved) || cleanSaved.includes(d.label.toLowerCase())));
+        if (byPartial) return { deviceId: byPartial.deviceId, label: byPartial.label };
+      }
+
+      return { deviceId: selectedId || '', label: selectedLabel || '' };
+    }
+
     async function toggleMicrophone() {
       const button = $('btn-tablet-mic');
       if (!mic.active) {
@@ -4460,15 +4550,22 @@
           const denoise = micSetting('erbolamm_micro_denoise', 'true') !== 'false';
           const echo = micSetting('erbolamm_micro_eco', 'true') !== 'false';
           const audio = { echoCancellation: echo, noiseSuppression: denoise, autoGainControl: true };
-          const chosenMic = micSetting('apliarte_estudio_mic_device', '');
+          const chosenMicId = micSetting('apliarte_estudio_mic_device', '');
+          const chosenMicLabel = micSetting('apliarte_estudio_mic_label', '');
+
+          const resolved = await resolveAudioDevice('audioinput', chosenMicLabel, chosenMicId);
+          const targetDeviceId = resolved.deviceId;
+
           try {
-            mic.stream = await navigator.mediaDevices.getUserMedia({ audio: chosenMic ? { ...audio, deviceId: { exact: chosenMic } } : audio });
+            mic.stream = await navigator.mediaDevices.getUserMedia({
+              audio: targetDeviceId ? { ...audio, deviceId: { ideal: targetDeviceId } } : audio
+            });
           } catch (error) {
-            // The chosen microphone is gone: fall back to the default one.
-            if (!chosenMic || error.name !== 'OverconstrainedError') throw error;
+            console.warn('[Micro] Error con micro seleccionado, usando predeterminado:', error);
             mic.stream = await navigator.mediaDevices.getUserMedia({ audio });
             showToast('El micrófono elegido no está disponible: se usa el predeterminado');
           }
+
           const AudioContextClass = window.AudioContext || window.webkitAudioContext;
           mic.context = new AudioContextClass();
           if (mic.context.state === 'suspended') await mic.context.resume();
@@ -4478,7 +4575,7 @@
           source.connect(mic.analyser);
           mic.processor = mic.context.createScriptProcessor(4096, 1, 1);
           source.connect(mic.processor);
-          // Muted output keeps the processor running without feeding the speaker.
+          // Muted output keeps the processor running without feeding the speaker or causing echo cancellation.
           const muteGain = mic.context.createGain();
           muteGain.gain.value = 0;
           mic.processor.connect(muteGain);
@@ -4495,7 +4592,7 @@
             }
             // Silence is dropped so it does not load the network or OBS.
             const gateOn = micSetting('erbolamm_micro_denoise', 'true') !== 'false';
-            if (peak < 0.001 || (gateOn && peak < 0.005)) return;
+            if (gateOn && peak < 0.002) return;
             const gain = Math.max(0.5, Math.min(3.0, parseFloat(micSetting('erbolamm_micro_gain', '1.5')) || 1.5));
             const samples = new Int16Array(input.length);
             for (let i = 0; i < input.length; i++) {
@@ -4512,7 +4609,8 @@
           mic.active = true;
           panelSend({ type: 'micro_start' });
           setLiveButton(button, true, 'Micrófono de este dispositivo: en directo. Toca para silenciar');
-          showToast('Micrófono en antena');
+          const micDisplay = resolved.label || 'Micrófono';
+          showToast(`Micrófono en antena (${micDisplay})`);
         } catch (error) {
           stopMicrophoneHardware();
           showToast('Error micrófono: ' + (error.message || error));
@@ -6599,11 +6697,44 @@
 
       // Boton volver en movil / pantallas estrechas
       $('btn-ficha-volver')?.addEventListener('click', () => {
-        $('comunidad-layout')?.classList.remove('ficha-abierta');
+        $('comunidad-layout')?.classList.remove('ficha-abierta', 'ficha-activa');
       });
 
       // Guardar ficha
       $('btn-ficha-guardar')?.addEventListener('click', guardarFichaUsuario);
+
+      // Botón Silenciar / Reactivar voz TTS
+      $('btn-ficha-toggle-mute')?.addEventListener('click', async () => {
+        const u = comunidadState.usuarioActivo;
+        if (!u) return;
+        const userKey = (u.usuario || '').toLowerCase();
+        const currentlyMuted = Boolean(u.esSilenciado || u.es_silenciado || (typeof tts !== 'undefined' && tts?.muted?.has(userKey)));
+        await aplicarCambioModeracion({ esSilenciado: !currentlyMuted });
+      });
+
+      // Botón Banear / Desbanear chat
+      $('btn-ficha-toggle-ban')?.addEventListener('click', async () => {
+        const u = comunidadState.usuarioActivo;
+        if (!u) return;
+        const currentlyBanned = Boolean(u.esBaneado || u.es_baneado);
+        await aplicarCambioModeracion({ esBaneado: !currentlyBanned });
+      });
+
+      // Botón Time Out (10 minutos)
+      $('btn-ficha-timeout')?.addEventListener('click', async () => {
+        const u = comunidadState.usuarioActivo;
+        if (!u) return;
+        if (typeof applyUserTimeout === 'function') {
+          applyUserTimeout(u.usuario, 600);
+        }
+        await aplicarCambioModeracion({
+          eventoModeracion: {
+            accion: 'timeout',
+            duracion: 600,
+            detalle: 'Time out aplicado (10 minutos)'
+          }
+        });
+      });
 
       // Probar voz
       $('btn-ficha-probar-voz')?.addEventListener('click', probarVozFicha);
@@ -6806,7 +6937,7 @@
         });
 
         // Alternar vista de ficha en movil
-        $('comunidad-layout')?.classList.add('ficha-abierta');
+        $('comunidad-layout')?.classList.add('ficha-abierta', 'ficha-activa');
 
         // Mostrar panel de ficha
         $('ficha-empty-state').style.display = 'none';
@@ -6840,13 +6971,8 @@
           else userName.style.color = 'var(--text)';
         }
 
-        // Tags
-        const badgeMod = $('ficha-badge-mod');
-        const badgeVip = $('ficha-badge-vip');
-        const badgeSub = $('ficha-badge-sub');
-        if (badgeMod) badgeMod.style.display = u.rol === 'mod' ? 'inline-block' : 'none';
-        if (badgeVip) badgeVip.style.display = u.rol === 'vip' ? 'inline-block' : 'none';
-        if (badgeSub) badgeSub.style.display = u.es_subscriptor ? 'inline-block' : 'none';
+        // Actualizar badges, moderación y memoria histórica
+        actualizarVistaFicha(u);
 
         // Stats
         const stats = $('ficha-user-stats');
@@ -6861,16 +6987,16 @@
         if (selectRol) selectRol.value = u.rol || 'normal';
 
         const checkSub = $('ficha-check-sub');
-        if (checkSub) checkSub.checked = Boolean(u.es_subscriptor);
+        if (checkSub) checkSub.checked = Boolean(u.es_subscriptor || u.esSuscriptor);
 
         const selectVoz = $('ficha-select-voz');
         if (selectVoz) selectVoz.value = u.voz_personalizada || '';
 
         const inputContexto = $('ficha-input-contexto');
-        if (inputContexto) inputContexto.value = u.contexto_ia || '';
+        if (inputContexto) inputContexto.value = u.contexto_ia || u.notasContexto || '';
 
         const inputSaludo = $('ficha-input-saludo');
-        if (inputSaludo) inputSaludo.value = u.sugerencia_saludo || '';
+        if (inputSaludo) inputSaludo.value = u.sugerencia_saludo || u.sugerenciaSaludo || '';
 
         const mencionInput = $('ficha-mencion-input');
         if (mencionInput) {
@@ -6932,6 +7058,198 @@
     }
 
     /**
+     * Actualiza la vista de insignias, estado de moderación y memoria histórica de la ficha
+     */
+    function actualizarVistaFicha(u) {
+      if (!u) return;
+
+      const badgeMod = $('ficha-badge-mod');
+      const badgeVip = $('ficha-badge-vip');
+      const badgeSub = $('ficha-badge-sub');
+      const badgeBanned = $('ficha-badge-banned');
+      const badgeMuted = $('ficha-badge-muted');
+
+      if (badgeMod) badgeMod.style.display = u.rol === 'mod' ? 'inline-block' : 'none';
+      if (badgeVip) badgeVip.style.display = u.rol === 'vip' ? 'inline-block' : 'none';
+      if (badgeSub) badgeSub.style.display = Boolean(u.es_subscriptor || u.esSuscriptor) ? 'inline-block' : 'none';
+
+      const isBanned = Boolean(u.es_baneado || u.esBaneado);
+      if (badgeBanned) badgeBanned.style.display = isBanned ? 'inline-block' : 'none';
+
+      const userKey = (u.usuario || '').toLowerCase();
+      const isMuted = Boolean(u.es_silenciado || u.esSilenciado || (typeof tts !== 'undefined' && tts?.muted?.has(userKey)));
+      if (badgeMuted) badgeMuted.style.display = isMuted ? 'inline-block' : 'none';
+
+      const btnMute = $('btn-ficha-toggle-mute');
+      if (btnMute) btnMute.textContent = isMuted ? 'Reactivar voz' : 'Silenciar voz';
+
+      const btnBan = $('btn-ficha-toggle-ban');
+      if (btnBan) {
+        btnBan.textContent = isBanned ? 'Desbanear' : 'Banear chat';
+        btnBan.classList.toggle('btn-danger', !isBanned);
+      }
+
+      renderizarHistorialModeracion(u);
+    }
+
+    /**
+     * Renderiza el historial de moderación con botones de restauración directa
+     */
+    function renderizarHistorialModeracion(u) {
+      const box = $('ficha-moderacion-box');
+      if (!box) return;
+      box.replaceChildren();
+
+      const historial = u.historial_moderacion || u.historialModeracion || [];
+      if (!Array.isArray(historial) || historial.length === 0) {
+        const hint = document.createElement('span');
+        hint.className = 'hint';
+        hint.style.fontSize = '0.75rem';
+        hint.textContent = 'Sin registros de moderación previos.';
+        box.appendChild(hint);
+        return;
+      }
+
+      // Orden cronológico inverso (el más reciente arriba)
+      const ordenados = [...historial].reverse();
+
+      ordenados.forEach((ev) => {
+        const item = document.createElement('div');
+        item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid var(--line);';
+
+        const info = document.createElement('div');
+        info.style.cssText = 'flex:1;min-width:0;line-height:1.3;';
+
+        const timeSpan = document.createElement('span');
+        timeSpan.style.cssText = 'color:var(--text-muted);font-size:0.72rem;margin-right:6px;';
+        timeSpan.textContent = ev.fechaHora || (ev.timestamp ? new Date(ev.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
+
+        const descSpan = document.createElement('span');
+        descSpan.style.cssText = 'font-weight:500;font-size:0.78rem;color:var(--text);';
+
+        let btnRestaurar = null;
+
+        if (ev.accion === 'cambio_rol') {
+          const rAnt = String(ev.rolAnterior || '').toUpperCase();
+          const rNue = String(ev.rolNuevo || '').toUpperCase();
+          descSpan.textContent = `Cambio de rol: ${rAnt} → ${rNue}`;
+
+          if (ev.rolAnterior && ev.rolAnterior !== u.rol) {
+            btnRestaurar = document.createElement('button');
+            btnRestaurar.type = 'button';
+            btnRestaurar.className = 'btn btn-sm';
+            btnRestaurar.style.cssText = 'padding:2px 6px;font-size:0.72rem;white-space:nowrap;';
+            btnRestaurar.textContent = `Restaurar rol ${rAnt}`;
+            btnRestaurar.addEventListener('click', async () => {
+              await aplicarCambioModeracion({ rol: ev.rolAnterior });
+            });
+          }
+        } else if (ev.accion === 'ban') {
+          descSpan.textContent = `Baneado del chat${ev.razon ? ` (${ev.razon})` : ''}`;
+          if (u.esBaneado || u.es_baneado) {
+            btnRestaurar = document.createElement('button');
+            btnRestaurar.type = 'button';
+            btnRestaurar.className = 'btn btn-sm';
+            btnRestaurar.style.cssText = 'padding:2px 6px;font-size:0.72rem;white-space:nowrap;';
+            btnRestaurar.textContent = 'Desbanear';
+            btnRestaurar.addEventListener('click', async () => {
+              await aplicarCambioModeracion({ esBaneado: false });
+            });
+          }
+        } else if (ev.accion === 'unban') {
+          descSpan.textContent = 'Desbaneado del chat';
+        } else if (ev.accion === 'mute') {
+          descSpan.textContent = `Voz silenciada en TTS${ev.razon ? ` (${ev.razon})` : ''}`;
+          if (u.esSilenciado || u.es_silenciado) {
+            btnRestaurar = document.createElement('button');
+            btnRestaurar.type = 'button';
+            btnRestaurar.className = 'btn btn-sm';
+            btnRestaurar.style.cssText = 'padding:2px 6px;font-size:0.72rem;white-space:nowrap;';
+            btnRestaurar.textContent = 'Reactivar voz';
+            btnRestaurar.addEventListener('click', async () => {
+              await aplicarCambioModeracion({ esSilenciado: false });
+            });
+          }
+        } else if (ev.accion === 'unmute') {
+          descSpan.textContent = 'Voz reactivada en TTS';
+        } else if (ev.accion === 'timeout') {
+          descSpan.textContent = `Time out (${ev.duracion || 600}s)`;
+        } else {
+          descSpan.textContent = `${ev.accion || 'Acción'}${ev.detalle ? `: ${ev.detalle}` : ''}`;
+        }
+
+        info.append(timeSpan, descSpan);
+        item.appendChild(info);
+
+        if (btnRestaurar) {
+          item.appendChild(btnRestaurar);
+        }
+
+        box.appendChild(item);
+      });
+    }
+
+    /**
+     * Aplica cambios de moderación sobre el usuario activo persistiendo en la BD y memoria
+     */
+    async function aplicarCambioModeracion(cambios) {
+      const u = comunidadState.usuarioActivo;
+      if (!u) return;
+
+      try {
+        const payload = {
+          plataforma: u.plataforma,
+          usuario: u.usuario,
+          ...cambios
+        };
+
+        const res = await fetch('/api/directo/comunidad/usuario', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.usuario) {
+          comunidadState.usuarioActivo = data.usuario;
+
+          // Sincronizar tts.muted local si cambió silenciamiento
+          if (typeof cambios.esSilenciado === 'boolean' && typeof tts !== 'undefined' && tts?.muted) {
+            const userKey = u.usuario.toLowerCase();
+            if (cambios.esSilenciado) tts.muted.add(userKey);
+            else tts.muted.delete(userKey);
+            if (typeof saveMutedUsers === 'function') saveMutedUsers();
+          }
+
+          // Sincronizar select rol si se modificó
+          if (cambios.rol) {
+            const selectRol = $('ficha-select-rol');
+            if (selectRol) selectRol.value = cambios.rol;
+          }
+
+          // Actualizar vista completa
+          actualizarVistaFicha(data.usuario);
+
+          // Actualizar en lista en memoria
+          const idx = comunidadState.usuarios.findIndex(item => item.id === data.usuario.id);
+          if (idx !== -1) {
+            comunidadState.usuarios[idx] = data.usuario;
+            renderizarListaUsuariosComunidad();
+          }
+
+          if (typeof showToast === 'function') {
+            showToast(`Moderación actualizada para @${data.usuario.nombre_visible || data.usuario.usuario}`);
+          }
+        }
+      } catch (err) {
+        if (typeof showToast === 'function') {
+          showToast(`Error al aplicar moderación: ${err.message}`);
+        }
+      }
+    }
+
+    /**
      * Abre la ficha de un usuario pulsando directamente en su nombre en el chat feed
      */
     function abrirFichaDesdeChat(msg) {
@@ -6979,13 +7297,8 @@
         if (data.usuario) {
           comunidadState.usuarioActivo = data.usuario;
           
-          // Actualizar tags de cabecera
-          const badgeMod = $('ficha-badge-mod');
-          const badgeVip = $('ficha-badge-vip');
-          const badgeSub = $('ficha-badge-sub');
-          if (badgeMod) badgeMod.style.display = data.usuario.rol === 'mod' ? 'inline-block' : 'none';
-          if (badgeVip) badgeVip.style.display = data.usuario.rol === 'vip' ? 'inline-block' : 'none';
-          if (badgeSub) badgeSub.style.display = data.usuario.es_subscriptor ? 'inline-block' : 'none';
+          // Actualizar badges, moderación y memoria histórica
+          actualizarVistaFicha(data.usuario);
 
           // Si cambio la voz, registrarla en tts local para sincronizacion inmediata
           if (typeof tts === 'object' && tts.userVoices) {
@@ -7069,7 +7382,8 @@
           body: JSON.stringify({
             plataforma: u.plataforma,
             usuario: u.usuario,
-            texto
+            mensaje: texto,
+            texto: texto
           })
         });
 
@@ -7086,7 +7400,7 @@
         const container = $('ficha-mensajes-container');
         if (container) {
           const bubble = document.createElement('div');
-          bubble.className = 'ficha-chat-bubble';
+          bubble.className = 'ficha-chat-bubble propia';
           bubble.style.borderLeft = '3px solid var(--brand-strong)';
           
           const strong = document.createElement('strong');
@@ -7728,9 +8042,13 @@
           select.appendChild(option);
         });
         if (stored && !named.some((device) => valueOf(device) === stored)) {
+          const storedLabel = storageKey === 'apliarte_estudio_mic_device'
+            ? micSetting('apliarte_estudio_mic_label', '')
+            : '';
+          const labelToShow = storedLabel || stored;
           const missing = document.createElement('option');
           missing.value = stored;
-          missing.textContent = `${stored} (no conectada ahora)`;
+          missing.textContent = `${labelToShow} (no conectada ahora)`;
           select.appendChild(missing);
         }
         select.value = stored;
@@ -7741,11 +8059,15 @@
       select.addEventListener('change', () => {
         const selectedOpt = select.options[select.selectedIndex];
         const optDeviceId = selectedOpt ? selectedOpt.dataset.deviceId || '' : '';
+        const optLabel = selectedOpt ? selectedOpt.textContent || '' : '';
         if (select.value) {
           storeSetting(storageKey, select.value);
           if (storageKey === 'apliarte_estudio_cam_label') {
             storeSetting('erbolamm_cam_device_label', select.value);
             if (optDeviceId) storeSetting('apliarte_estudio_cam_device', optDeviceId);
+          }
+          if (storageKey === 'apliarte_estudio_mic_device') {
+            storeSetting('apliarte_estudio_mic_label', optLabel);
           }
         } else {
           try {
@@ -7753,6 +8075,9 @@
             if (storageKey === 'apliarte_estudio_cam_label') {
               localStorage.removeItem('erbolamm_cam_device_label');
               localStorage.removeItem('apliarte_estudio_cam_device');
+            }
+            if (storageKey === 'apliarte_estudio_mic_device') {
+              localStorage.removeItem('apliarte_estudio_mic_label');
             }
           } catch (_) { /* private mode */ }
         }
@@ -7940,7 +8265,7 @@
           rerender('audio');
         }, Math.abs(value - gain) < 0.05);
       });
-      settingsHeading(panel, 'Nivel del micrófono');
+      settingsHeading(panel, 'Nivel del micrófono y prueba');
       const meterRow = settingsRow(panel);
       const meter = document.createElement('div');
       meter.className = 'meter';
@@ -7950,6 +8275,14 @@
       const level = document.createElement('output');
       level.textContent = '-∞ dB';
       meterRow.append(meter, level);
+
+      const quickMicRow = settingsRow(panel);
+      settingsButton(quickMicRow, mic.active ? 'Silenciar micrófono' : 'Activar micrófono ahora (probar)', async () => {
+        await toggleMicrophone();
+        rerender('audio');
+      }, mic.active);
+      settingsNote(panel, 'Activa el micro aquí mismo para ver la barra de nivel moverse mientras hablas.');
+
       // Same RMS-to-decibel scale as the old panel; stops when the tab changes.
       const drawMeter = () => {
         if (!meter.isConnected) return;

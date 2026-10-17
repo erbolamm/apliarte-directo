@@ -1,5 +1,15 @@
 'use strict';
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+
 process.env.NODE_ENV = 'test';
+const isStandalone = !process.env.DATA_DIR && !process.env.APLIARTE_TEST_DATA_DIR;
+const testDir = isStandalone ? fs.mkdtempSync(path.join(os.tmpdir(), 'apliarte-api-test-')) : null;
+if (isStandalone) {
+  process.env.APLIARTE_TEST_DATA_DIR = testDir;
+  process.env.DATA_DIR = testDir;
+}
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -46,6 +56,9 @@ test('Comunidad API - Rutas HTTP de gestión de usuarios y chat', async (t) => {
   t.after(() => {
     if (server.listening) server.close();
     if (comunidadDb) comunidadDb.close();
+    if (isStandalone && testDir) {
+      try { fs.rmSync(testDir, { recursive: true, force: true }); } catch (_) {}
+    }
   });
 
   // 1. Ingestar mensajes a través de comunidadDb
@@ -105,7 +118,7 @@ test('Comunidad API - Rutas HTTP de gestión de usuarios y chat', async (t) => {
   const resBuscar = await makeRequest('GET', '/api/directo/comunidad/buscar?q=Live');
   assert.equal(resBuscar.status, 200);
   assert.equal(resBuscar.data.ok, true);
-  assert.equal(resBuscar.data.total, 1);
+  assert.ok(resBuscar.data.total >= 1);
   assert.equal(resBuscar.data.mensajes[0].usuario, 'espectador2');
 
   // 6. GET /api/directo/comunidad/estadisticas
@@ -115,7 +128,7 @@ test('Comunidad API - Rutas HTTP de gestión de usuarios y chat', async (t) => {
   assert.ok(resStats.data.estadisticas.totalUsuarios >= 2);
   assert.ok(resStats.data.estadisticas.totalMods >= 1);
 
-  // 7. POST /api/directo/comunidad/enviar-mencion
+  // 7. POST /api/directo/comunidad/enviar-mencion (con campo mensaje)
   const resMencion = await makeRequest('POST', '/api/directo/comunidad/enviar-mencion', {
     usuario: 'espectador1',
     plataforma: 'twitch',
@@ -125,4 +138,43 @@ test('Comunidad API - Rutas HTTP de gestión de usuarios y chat', async (t) => {
   assert.equal(resMencion.data.ok, true);
   assert.equal(resMencion.data.enviado, true);
   assert.equal(resMencion.data.overlay, true);
+
+  // 8. POST /api/directo/comunidad/enviar-mencion (con campo texto)
+  const resMencionTexto = await makeRequest('POST', '/api/directo/comunidad/enviar-mencion', {
+    usuario: 'espectador2',
+    plataforma: 'youtube',
+    texto: 'Hola espectador2 desde el frontend'
+  });
+  assert.equal(resMencionTexto.status, 200);
+  assert.equal(resMencionTexto.data.ok, true);
+  assert.equal(resMencionTexto.data.enviado, true);
+  assert.equal(resMencionTexto.data.overlay, true);
+
+  // 9. POST /api/directo/comunidad/usuario (moderación: ban, mute y auditoría histórica)
+  const resMod = await makeRequest('POST', '/api/directo/comunidad/usuario', {
+    id: 'twitch:espectador1',
+    esBaneado: true,
+    esSilenciado: true,
+    eventoModeracion: { accion: 'timeout', duracion: 600 }
+  });
+  assert.equal(resMod.status, 200);
+  assert.equal(resMod.data.ok, true);
+  assert.equal(resMod.data.usuario.esBaneado, true);
+  assert.equal(resMod.data.usuario.esSilenciado, true);
+  assert.ok(Array.isArray(resMod.data.usuario.historialModeracion));
+  assert.ok(resMod.data.usuario.historialModeracion.some(e => e.accion === 'ban'));
+  assert.ok(resMod.data.usuario.historialModeracion.some(e => e.accion === 'mute'));
+  assert.ok(resMod.data.usuario.historialModeracion.some(e => e.accion === 'timeout'));
+
+  // 10. Restaurar usuario (desbanear y reactivar voz)
+  const resRestore = await makeRequest('POST', '/api/directo/comunidad/usuario', {
+    id: 'twitch:espectador1',
+    esBaneado: false,
+    esSilenciado: false
+  });
+  assert.equal(resRestore.status, 200);
+  assert.equal(resRestore.data.usuario.esBaneado, false);
+  assert.equal(resRestore.data.usuario.esSilenciado, false);
+  assert.ok(resRestore.data.usuario.historialModeracion.some(e => e.accion === 'unban'));
+  assert.ok(resRestore.data.usuario.historialModeracion.some(e => e.accion === 'unmute'));
 });

@@ -32,6 +32,9 @@
  *      * primerMensajeEn: Timestamp
  *      * ultimoMensajeEn: Timestamp
  *      * actualizadoEn: Timestamp
+ *      * esBaneado: boolean
+ *      * esSilenciado: boolean
+ *      * historialModeracion: array<map> [ { accion, rolAnterior, rolNuevo, razon, fechaHora, timestamp } ]
  * 
  * 2. Subcolección `usuarios/{usuarioId}/mensajes` (o colección raíz `mensajes` con índice compuesto):
  *    - Documento ID: ID único del mensaje o pushId.
@@ -135,7 +138,10 @@ class ComunidadDb {
         total_mensajes INTEGER NOT NULL DEFAULT 0,
         primer_mensaje_en INTEGER NOT NULL,
         ultimo_mensaje_en INTEGER NOT NULL,
-        actualizado_en INTEGER NOT NULL
+        actualizado_en INTEGER NOT NULL,
+        es_baneado INTEGER NOT NULL DEFAULT 0,
+        es_silenciado INTEGER NOT NULL DEFAULT 0,
+        historial_moderacion TEXT NOT NULL DEFAULT '[]'
       );
 
       CREATE TABLE IF NOT EXISTS mensajes (
@@ -157,6 +163,11 @@ class ComunidadDb {
       CREATE INDEX IF NOT EXISTS idx_usuarios_ultimo_msg ON usuarios (ultimo_mensaje_en DESC);
       CREATE INDEX IF NOT EXISTS idx_usuarios_busqueda ON usuarios (usuario, nombre_visible);
     `);
+
+    // Migración transparente para bases de datos existentes sin recrear tabla
+    try { this.db.exec('ALTER TABLE usuarios ADD COLUMN es_baneado INTEGER NOT NULL DEFAULT 0;'); } catch (_) {}
+    try { this.db.exec('ALTER TABLE usuarios ADD COLUMN es_silenciado INTEGER NOT NULL DEFAULT 0;'); } catch (_) {}
+    try { this.db.exec("ALTER TABLE usuarios ADD COLUMN historial_moderacion TEXT NOT NULL DEFAULT '[]';"); } catch (_) {}
   }
 
   /**
@@ -182,8 +193,9 @@ class ComunidadDb {
       INSERT INTO usuarios (
         id, plataforma, usuario, nombre_visible, avatar_url, rol, es_suscriptor,
         voz_config, notas_contexto, sugerencia_saludo, total_mensajes,
-        primer_mensaje_en, ultimo_mensaje_en, actualizado_en
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        primer_mensaje_en, ultimo_mensaje_en, actualizado_en,
+        es_baneado, es_silenciado, historial_moderacion
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     this.stmtUpdateUsuarioEnMensaje = this.db.prepare(`
@@ -204,6 +216,9 @@ class ComunidadDb {
         sugerencia_saludo = ?,
         voz_config = ?,
         avatar_url = COALESCE(?, avatar_url),
+        es_baneado = ?,
+        es_silenciado = ?,
+        historial_moderacion = ?,
         actualizado_en = ?
       WHERE id = ?
     `);
@@ -238,7 +253,15 @@ class ComunidadDb {
    * @param {string} [payload.rol] - 'normal' | 'vip' | 'mod' si se detecta de los badges.
    * @param {boolean} [payload.esSuscriptor] - true si es suscriptor.
    * @returns {Object} { usuario, mensaje }
+  /**
+   * Alias de compatibilidad hacia registrarMensaje.
+   * @param {Object} payload
+   * @returns {Object|null}
    */
+  ingestarMensaje(payload) {
+    return this.registrarMensaje(payload);
+  }
+
   registrarMensaje(payload) {
     if (!payload || !payload.texto) return null;
 
@@ -277,7 +300,10 @@ class ComunidadDb {
         1,    // total_mensajes inicial
         ts,   // primer_mensaje_en
         ts,   // ultimo_mensaje_en
-        ahora // actualizado_en
+        ahora, // actualizado_en
+        0,    // es_baneado
+        0,    // es_silenciado
+        '[]'  // historial_moderacion
       );
     } else {
       this.stmtUpdateUsuarioEnMensaje.run(
@@ -345,16 +371,43 @@ class ComunidadDb {
    * @param {string} [cambios.sugerenciaSaludo] - Mensaje sugerido al entrar.
    * @param {Object|string} [cambios.vozConfig] - Configuración de voz TTS.
    * @param {string} [cambios.avatarUrl] - Nueva URL de avatar opcional.
+   * @param {boolean} [cambios.esBaneado] - Estado de ban en chat.
+   * @param {boolean} [cambios.esSilenciado] - Estado de mute en voz TTS.
+   * @param {Object} [cambios.eventoModeracion] - Evento explícito para auditoría histórica.
+   * @param {Array} [cambios.historialModeracion] - Lista explícita de eventos históricos.
    * @returns {Object|null} Usuario actualizado.
    */
   actualizarUsuario(usuarioId, cambios = {}) {
     const actual = this.obtenerUsuario(usuarioId);
     if (!actual) return null;
 
-    const rol = ['normal', 'vip', 'mod', 'admin'].includes(cambios.rol) ? cambios.rol : actual.rol;
+    const ahora = Date.now();
+    const fechaHora = formatearFechaHora(ahora);
+
+    // Copia segura del historial existente de auditoría
+    const historial = Array.isArray(actual.historialModeracion) ? [...actual.historialModeracion] : [];
+
+    // 1. Rol y detección de cambio para auditoría
+    let nuevoRol = actual.rol;
+    if (['normal', 'vip', 'mod', 'admin'].includes(cambios.rol)) {
+      nuevoRol = cambios.rol;
+      if (nuevoRol !== actual.rol) {
+        historial.push({
+          accion: 'cambio_rol',
+          rolAnterior: actual.rol,
+          rolNuevo: nuevoRol,
+          fechaHora,
+          timestamp: ahora
+        });
+      }
+    }
+
+    // 2. Suscripción
     const esSuscriptor = typeof cambios.esSuscriptor === 'boolean'
       ? (cambios.esSuscriptor ? 1 : 0)
       : (typeof cambios.es_suscriptor === 'number' ? cambios.es_suscriptor : (actual.esSuscriptor ? 1 : 0));
+
+    // 3. Contexto y saludo
     const notasContexto = typeof cambios.notasContexto === 'string'
       ? cambios.notasContexto
       : (typeof cambios.notas_contexto === 'string' ? cambios.notas_contexto : actual.notasContexto);
@@ -362,6 +415,7 @@ class ComunidadDb {
       ? cambios.sugerenciaSaludo
       : (typeof cambios.sugerencia_saludo === 'string' ? cambios.sugerencia_saludo : actual.sugerenciaSaludo);
 
+    // 4. Voz
     let vozConfigStr = actual.vozConfig ? JSON.stringify(actual.vozConfig) : null;
     if (cambios.vozConfig !== undefined) {
       if (cambios.vozConfig === null) {
@@ -373,16 +427,74 @@ class ComunidadDb {
       }
     }
 
+    // 5. Avatar
     const avatarUrl = cambios.avatarUrl || cambios.avatar_url || actual.avatarUrl || null;
-    const ahora = Date.now();
+
+    // 6. Ban de chat
+    let esBaneado = actual.esBaneado ? 1 : 0;
+    if (typeof cambios.esBaneado === 'boolean') {
+      esBaneado = cambios.esBaneado ? 1 : 0;
+    } else if (typeof cambios.es_baneado === 'boolean') {
+      esBaneado = cambios.es_baneado ? 1 : 0;
+    } else if (typeof cambios.esBaneado === 'number') {
+      esBaneado = cambios.esBaneado ? 1 : 0;
+    }
+
+    if (esBaneado !== (actual.esBaneado ? 1 : 0)) {
+      historial.push({
+        accion: esBaneado ? 'ban' : 'unban',
+        razon: cambios.razon || '',
+        fechaHora,
+        timestamp: ahora
+      });
+    }
+
+    // 7. Mute de voz TTS
+    let esSilenciado = actual.esSilenciado ? 1 : 0;
+    if (typeof cambios.esSilenciado === 'boolean') {
+      esSilenciado = cambios.esSilenciado ? 1 : 0;
+    } else if (typeof cambios.es_silenciado === 'boolean') {
+      esSilenciado = cambios.es_silenciado ? 1 : 0;
+    } else if (typeof cambios.esSilenciado === 'number') {
+      esSilenciado = cambios.esSilenciado ? 1 : 0;
+    }
+
+    if (esSilenciado !== (actual.esSilenciado ? 1 : 0)) {
+      historial.push({
+        accion: esSilenciado ? 'mute' : 'unmute',
+        razon: cambios.razon || '',
+        fechaHora,
+        timestamp: ahora
+      });
+    }
+
+    // 8. Evento explícito adicional (por ejemplo time out)
+    if (cambios.eventoModeracion && typeof cambios.eventoModeracion === 'object') {
+      historial.push({
+        ...cambios.eventoModeracion,
+        fechaHora: cambios.eventoModeracion.fechaHora || fechaHora,
+        timestamp: cambios.eventoModeracion.timestamp || ahora
+      });
+    }
+
+    // 9. Reemplazo directo de historial (por ejemplo al revertir/restaurar)
+    if (Array.isArray(cambios.historialModeracion)) {
+      historial.length = 0;
+      historial.push(...cambios.historialModeracion);
+    }
+
+    const historialJson = JSON.stringify(historial);
 
     this.stmtUpdateFichaUsuario.run(
-      rol,
+      nuevoRol,
       esSuscriptor,
       notasContexto,
       sugerenciaSaludo,
       vozConfigStr,
       avatarUrl,
+      esBaneado,
+      esSilenciado,
+      historialJson,
       ahora,
       usuarioId
     );
@@ -590,6 +702,14 @@ class ComunidadDb {
       } catch (_) {}
     }
 
+    let historialModeracion = [];
+    if (row.historial_moderacion) {
+      try {
+        historialModeracion = JSON.parse(row.historial_moderacion);
+        if (!Array.isArray(historialModeracion)) historialModeracion = [];
+      } catch (_) {}
+    }
+
     return {
       id: row.id,
       plataforma: row.plataforma,
@@ -604,7 +724,22 @@ class ComunidadDb {
       totalMensajes: row.total_mensajes || 0,
       primerMensajeEn: row.primer_mensaje_en,
       ultimoMensajeEn: row.ultimo_mensaje_en,
-      actualizadoEn: row.actualizado_en
+      actualizadoEn: row.actualizado_en,
+      esBaneado: Boolean(row.es_baneado),
+      esSilenciado: Boolean(row.es_silenciado),
+      historialModeracion,
+      // Alias snake_case para retrocompatibilidad total con vistas y tests
+      nombre_visible: row.nombre_visible,
+      avatar_url: row.avatar_url || null,
+      es_subscriptor: Boolean(row.es_suscriptor),
+      contexto_ia: row.notas_contexto || '',
+      sugerencia_saludo: row.sugerencia_saludo || '',
+      total_mensajes: row.total_mensajes || 0,
+      primer_visto: row.primer_mensaje_en,
+      ultimo_visto: row.ultimo_mensaje_en,
+      es_baneado: Boolean(row.es_baneado),
+      es_silenciado: Boolean(row.es_silenciado),
+      historial_moderacion: historialModeracion
     };
   }
 
