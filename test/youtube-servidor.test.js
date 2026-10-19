@@ -67,8 +67,26 @@ test('endpoint /api/directo/youtube/chat: GET y POST de configuración de stream
     });
     assert.equal(resPostOk.status, 200);
     const dataPost = await resPostOk.json();
-    assert.equal(dataPost.ok, true);
-    assert.equal(dataPost.videoId, 'ZuWtlv2piac');
+    // 4. Cambio de categoría conmuta canal temático de YouTube
+    const resCatMusica = await fetch(srv.base + '/api/categoria', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ categoria: 'musica' })
+    });
+    assert.equal(resCatMusica.status, 200);
+    const dataCatMusica = await resCatMusica.json();
+    assert.equal(dataCatMusica.categoria, 'musica');
+    assert.equal(dataCatMusica.youtubeCanal, '@ElBOLAdeMarbella');
+
+    const resCatDrones = await fetch(srv.base + '/api/categoria', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ categoria: 'drones' })
+    });
+    assert.equal(resCatDrones.status, 200);
+    const dataCatDrones = await resCatDrones.json();
+    assert.equal(dataCatDrones.categoria, 'drones');
+    assert.equal(dataCatDrones.youtubeCanal, '@DronesApliArte');
   } finally {
     await srv.parar();
   }

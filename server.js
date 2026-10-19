@@ -1504,7 +1504,8 @@ const CATEGORIAS_TWITCH_GAME = {
   arte: { id: '509660', nombre: 'Art' },
   musica: { id: '26936', nombre: 'Music' },
   charlando: { id: '509658', nombre: 'Just Chatting' },
-  andando: { id: '509672', nombre: 'IRL' }
+  andando: { id: '509672', nombre: 'IRL' },
+  drones: { id: '509672', nombre: 'Science & Technology' }
 };
 
 const CATEGORIAS_OBS_ESCENAS = {
@@ -1512,8 +1513,23 @@ const CATEGORIAS_OBS_ESCENAS = {
   arte: 'Solo_Calca',
   charlando: 'CON_CAMARA',
   andando: 'CAM',
-  musica: 'PLANO-INTERACTIVO'
+  musica: 'PLANO-INTERACTIVO',
+  drones: 'PLANO-INTERACTIVO'
 };
+
+const CANALES_YOUTUBE_POR_CATEGORIA = {
+  apps: process.env.DIRECTO_YOUTUBE_CANAL_APPS || '@erbolammApliArte',
+  musica: process.env.DIRECTO_YOUTUBE_CANAL_MUSICA || '@ElBOLAdeMarbella',
+  arte: process.env.DIRECTO_YOUTUBE_CANAL_ARTE || '@CalcaApp',
+  drones: process.env.DIRECTO_YOUTUBE_CANAL_DRONES || '@DronesApliArte'
+};
+
+function conmutarYoutubePorCategoria(cat) {
+  const canal = CANALES_YOUTUBE_POR_CATEGORIA[cat];
+  if (canal && (!youtubeChatInstancia || youtubeChatInstancia.channel !== canal)) {
+    iniciarYoutubeLiveChat(canal);
+  }
+}
 
 async function actualizarCategoriaTwitch(cat) {
   const game = CATEGORIAS_TWITCH_GAME[cat];
@@ -2543,12 +2559,14 @@ const server = http.createServer((req, res) => {
           broadcast({ type: 'categoria', ...estado });
 
           actualizarCategoriaTwitch(cat);
+          conmutarYoutubePorCategoria(cat);
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
             ok: true,
             ...estado,
-            twitchJuego: CATEGORIAS_TWITCH_GAME[cat]?.nombre
+            twitchJuego: CATEGORIAS_TWITCH_GAME[cat]?.nombre,
+            youtubeCanal: CANALES_YOUTUBE_POR_CATEGORIA[cat] || null
           }));
         } catch (e) {
           res.writeHead(400, { 'Content-Type': 'application/json' });

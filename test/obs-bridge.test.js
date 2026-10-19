@@ -14,6 +14,7 @@ test('MAPA_CATEGORIAS_ESCENAS mapea todas las categorias principales a escenas d
   assert.equal(MAPA_CATEGORIAS_ESCENAS.charlando, 'CON_CAMARA');
   assert.equal(MAPA_CATEGORIAS_ESCENAS.andando, 'CAM');
   assert.equal(MAPA_CATEGORIAS_ESCENAS.musica, 'PLANO-INTERACTIVO');
+  assert.equal(MAPA_CATEGORIAS_ESCENAS.drones, 'PLANO-INTERACTIVO');
 });
 
 test('obtenerConfiguracionObsLocal devuelve un objeto con puerto y password', () => {

@@ -54,3 +54,39 @@ test('OBS bridge defaults to local overlay and can be disabled', () => {
   assert.equal(bridgeOptions({ OBS_BRIDGE_WS_URL: 'ws://127.0.0.1:12345/ws' }).url, 'ws://127.0.0.1:12345/ws');
   assert.throws(() => bridgeOptions({ OBS_BRIDGE_WS_URL: 'wss://directo.apliarte.com/ws' }), /local|loopback/i);
 });
+
+test('conmutación de clave RTMP de YouTube según categoría activa y variables de entorno', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'centro-cat-keys-'));
+  try {
+    saveStreamingConfig(dir, {
+      youtubeStreamKey: 'general-key',
+      youtubeKeyApps: 'apps-specific-key',
+      youtubeKeyMusica: 'musica-specific-key',
+      youtubeKeyArte: 'arte-specific-key',
+      youtubeKeyDrones: 'drones-specific-key'
+    });
+
+    const dest = { nombre: 'youtube', variableClave: 'CLAVE_YOUTUBE' };
+
+    // Claves específicas por categoría desde config
+    assert.equal(resolveDestinationKey(dest, dir, {}, 'musica'), 'musica-specific-key');
+    assert.equal(resolveDestinationKey(dest, dir, {}, 'arte'), 'arte-specific-key');
+    assert.equal(resolveDestinationKey(dest, dir, {}, 'apps'), 'apps-specific-key');
+    assert.equal(resolveDestinationKey(dest, dir, {}, 'drones'), 'drones-specific-key');
+
+    // Categoría sin clave específica configurada cae a general
+    assert.equal(resolveDestinationKey(dest, dir, {}, 'andando'), 'general-key');
+
+    // Variables de entorno por categoría
+    assert.equal(resolveDestinationKey(dest, dir, { YOUTUBE_KEY_DRONES: 'env-drone-key' }, 'drones'), 'drones-specific-key');
+    const emptyDir = mkdtempSync(join(tmpdir(), 'empty-cat-keys-'));
+    try {
+      assert.equal(resolveDestinationKey(dest, emptyDir, { YOUTUBE_KEY_DRONES: 'env-drone-key' }, 'drones'), 'env-drone-key');
+      assert.equal(resolveDestinationKey(dest, emptyDir, { YOUTUBE_KEY_MUSICA: 'env-musica-key' }, 'musica'), 'env-musica-key');
+    } finally {
+      rmSync(emptyDir, { recursive: true, force: true });
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

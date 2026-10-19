@@ -18,6 +18,7 @@ export const MAPA_CATEGORIAS_ESCENAS = Object.freeze({
   charlando: 'CON_CAMARA',
   andando: 'CAM',
   musica: 'PLANO-INTERACTIVO',
+  drones: 'PLANO-INTERACTIVO',
 });
 
 export function obtenerConfiguracionObsLocal() {

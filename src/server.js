@@ -66,7 +66,14 @@ try {
 } catch (_) { /* no local settings: public defaults */ }
 
 const DATA_DIR = process.env.DATA_DIR || join(RAIZ, "data");
-const destinationKey = (destination) => resolveDestinationKey(destination, DATA_DIR, process.env);
+const destinationKey = (destination) =>
+  resolveDestinationKey(
+    destination,
+    DATA_DIR,
+    process.env,
+    typeof categoriaActual !== "undefined" ? categoriaActual : null,
+  );
+let flujoEntradaActual = null;
 
 // GAME_HUB_START — pure state machine, kept here because this task owns server.js only.
 function createGameHub({ randomIndex = randomInt, now = Date.now } = {}) {
@@ -574,6 +581,7 @@ nms.on("postPublish", (sesion) => {
   revisionEntrada++;
   relevoPendiente = false;
   centro.obsPublica();
+  flujoEntradaActual = flujo;
   arrancarRelays(flujo).catch((error) =>
     anotar(`No se pudo iniciar reenvío: ${error.message}`),
   );
@@ -581,6 +589,7 @@ nms.on("postPublish", (sesion) => {
 
 nms.on("donePublish", (sesion) => {
   revisionEntrada++;
+  flujoEntradaActual = null;
   anotar(
     `OBS dejó de publicar en ${rutaDeSesion(sesion) || "(ruta desconocida)"}`,
   );
@@ -995,6 +1004,30 @@ app.options("/api/categoria", (_req, res) => {
   res.sendStatus(204);
 });
 
+async function conmutarRelayYoutube(nuevaCategoria) {
+  const destinoYoutube = configuracion.destinos.find(
+    (d) => esDestinoYoutube(d) || d.nombre === "youtube",
+  );
+  if (!destinoYoutube) return;
+  refreshDestination(destinoYoutube);
+  if (
+    procesos.propios.has(destinoYoutube.nombre) &&
+    centro.obsActivo &&
+    flujoEntradaActual
+  ) {
+    anotar(`[youtube] Conmutando reenvío hacia categoría «${nuevaCategoria}»...`);
+    try {
+      await procesos.detener(destinoYoutube.nombre);
+      const entrada = `rtmp://127.0.0.1:${configuracion.puertoRtmp}/${configuracion.rutaEntrada}/${flujoEntradaActual}`;
+      await lanzarRelay(destinoYoutube, entrada, revisionEntrada);
+      anotar(`[youtube] Reenvío conmutado con éxito a categoría «${nuevaCategoria}».`);
+      difundir();
+    } catch (e) {
+      anotar(`[youtube] Error al conmutar reenvío: ${e.message}`);
+    }
+  }
+}
+
 app.post("/api/categoria", (req, res) => {
   const { categoria } = req.body ?? {};
   if (!esCategoriaValida(categoria)) {
@@ -1017,6 +1050,7 @@ app.post("/api/categoria", (req, res) => {
     anotar(`No se pudo guardar la categoría en disco: ${e.message}`);
   }
   anotar(`Categoría del directo → ${categoriaActual}`);
+  conmutarRelayYoutube(categoriaActual).catch(() => {});
   res.json({ categoria: categoriaActual, paleta: paletaDe(categoriaActual) });
 });
 

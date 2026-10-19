@@ -8,8 +8,8 @@ import { CATEGORIAS, esCategoriaValida, paletaDe, CATEGORIA_POR_DEFECTO } from '
 // - apps (ApliArte): azul claro #5ecef5 y azul oscuro #00467b, Kit de Marca (Javier, 2026-09-19).
 // - andando (modo paseo): verdes #00e676/#00c853, fondo #0a3d1c (Javier, 2026-09-19).
 
-test('hay exactamente cinco categorias: andando, apps, arte, charlando y musica', () => {
-  assert.deepEqual(Object.keys(CATEGORIAS).sort(), ['andando', 'apps', 'arte', 'charlando', 'musica']);
+test('hay exactamente seis categorias: andando, apps, arte, charlando, drones y musica', () => {
+  assert.deepEqual(Object.keys(CATEGORIAS).sort(), ['andando', 'apps', 'arte', 'charlando', 'drones', 'musica']);
 });
 
 test('arte usa color carne y marrón oscuro', () => {
@@ -43,18 +43,25 @@ test('charlando usa tonos cálidos del Kit de Marca ApliArte', () => {
   assert.equal(CATEGORIAS.charlando.oscuro, '#1c1208');
 });
 
+test('drones usa tonos de naranja aeroespacial', () => {
+  assert.equal(CATEGORIAS.drones.primario, '#ff6f00');
+  assert.equal(CATEGORIAS.drones.secundario, '#b23c00');
+  assert.equal(CATEGORIAS.drones.oscuro, '#1a0800');
+});
+
 test('cada categoria declara un fondo oscuro propio', () => {
   for (const nombre of Object.keys(CATEGORIAS)) {
     assert.ok(/^#[0-9a-f]{6}$/i.test(CATEGORIAS[nombre].oscuro), nombre);
   }
 });
 
-test('esCategoriaValida acepta las cinco y rechaza el resto', () => {
+test('esCategoriaValida acepta las seis y rechaza el resto', () => {
   assert.equal(esCategoriaValida('arte'), true);
   assert.equal(esCategoriaValida('musica'), true);
   assert.equal(esCategoriaValida('apps'), true);
   assert.equal(esCategoriaValida('andando'), true);
   assert.equal(esCategoriaValida('charlando'), true);
+  assert.equal(esCategoriaValida('drones'), true);
   assert.equal(esCategoriaValida('cine'), false);
   assert.equal(esCategoriaValida(''), false);
   assert.equal(esCategoriaValida(undefined), false);

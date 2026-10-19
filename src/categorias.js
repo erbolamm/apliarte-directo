@@ -21,6 +21,7 @@ export const CATEGORIAS = Object.freeze({
   apps: Object.freeze({ primario: '#5ecef5', secundario: '#00467b', oscuro: '#030a16' }),
   andando: Object.freeze({ primario: '#00e676', secundario: '#00c853', oscuro: '#0a3d1c' }),
   charlando: Object.freeze({ primario: '#e8955e', secundario: '#b46734', oscuro: '#1c1208' }),
+  drones: Object.freeze({ primario: '#ff6f00', secundario: '#b23c00', oscuro: '#1a0800' }),
 });
 
 export const CATEGORIA_POR_DEFECTO = 'apps';

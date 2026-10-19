@@ -1,11 +1,12 @@
 {
   "version": 1,
   "descripcion": "Configuración editable de escenas del directo (fase del stream) cruzadas con categoría de actividad. No es la colección nativa de OBS: es la fuente que consumen los overlays HTML de OBS/webhtml/ vía /api/categoria y, cuando exista, /api/escena.",
-  "categorias_validas": ["arte", "musica", "apps", "andando", "charlando"],
+  "categorias_validas": ["arte", "musica", "apps", "andando", "charlando", "drones"],
   "notas_categorias": {
     "apps": "Nombre actual en directo/src/categorias.js. Pendiente de renombrar a 'desarrollo-de-software' junto con el resto del sistema (ver co--directo--tema-compartido-overlays-obs-webhtml, decisión de Javier 2026-09-15, aún no ejecutada).",
     "andando": "Categoría del modo paseo motivador: verde claro #00e676 y verde intenso #00c853, fondo oscuro #0a3d1c (Javier, 2026-09-19).",
-    "charlando": "Categoría de tertulia / Just Chatting: ámbar #e8955e y canela #b46734, fondo oscuro #1c1208 (Javier, 2026-09-25)."
+    "charlando": "Categoría de tertulia / Just Chatting: ámbar #e8955e y canela #b46734, fondo oscuro #1c1208 (Javier, 2026-09-25).",
+    "drones": "Categoría de vuelos y tecnología de drones: naranja aeroespacial #ff6f00 y #b23c00, fondo oscuro #1a0800 (Javier, 2026-10-19)."
   },
   "escenas": {
     "inicio": {
@@ -19,7 +20,8 @@
         "musica": { "primario": "#ff1493", "secundario": "#e91e63", "oscuro": "#260519" },
         "apps": { "primario": "#5ecef5", "secundario": "#00467b", "oscuro": "#030a16" },
         "andando": { "primario": "#00e676", "secundario": "#00c853", "oscuro": "#0a3d1c" },
-        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" }
+        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" },
+        "drones": { "primario": "#ff6f00", "secundario": "#b23c00", "oscuro": "#1a0800" }
       }
     },
     "trabajando": {
@@ -33,7 +35,8 @@
         "musica": { "primario": "#ff1493", "secundario": "#e91e63", "oscuro": "#260519" },
         "apps": { "primario": "#5ecef5", "secundario": "#00467b", "oscuro": "#030a16" },
         "andando": { "primario": "#00e676", "secundario": "#00c853", "oscuro": "#0a3d1c" },
-        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" }
+        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" },
+        "drones": { "primario": "#ff6f00", "secundario": "#b23c00", "oscuro": "#1a0800" }
       }
     },
     "hablando": {
@@ -47,7 +50,8 @@
         "musica": { "primario": "#ff1493", "secundario": "#e91e63", "oscuro": "#260519" },
         "apps": { "primario": "#5ecef5", "secundario": "#00467b", "oscuro": "#030a16" },
         "andando": { "primario": "#00e676", "secundario": "#00c853", "oscuro": "#0a3d1c" },
-        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" }
+        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" },
+        "drones": { "primario": "#ff6f00", "secundario": "#b23c00", "oscuro": "#1a0800" }
       }
     },
     "espera": {
@@ -61,7 +65,8 @@
         "musica": { "primario": "#ff1493", "secundario": "#e91e63", "oscuro": "#260519" },
         "apps": { "primario": "#5ecef5", "secundario": "#00467b", "oscuro": "#030a16" },
         "andando": { "primario": "#00e676", "secundario": "#00c853", "oscuro": "#0a3d1c" },
-        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" }
+        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" },
+        "drones": { "primario": "#ff6f00", "secundario": "#b23c00", "oscuro": "#1a0800" }
       }
     },
     "final": {
@@ -75,7 +80,8 @@
         "musica": { "primario": "#ff1493", "secundario": "#e91e63", "oscuro": "#260519" },
         "apps": { "primario": "#5ecef5", "secundario": "#00467b", "oscuro": "#030a16" },
         "andando": { "primario": "#00e676", "secundario": "#00c853", "oscuro": "#0a3d1c" },
-        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" }
+        "charlando": { "primario": "#e8955e", "secundario": "#b46734", "oscuro": "#1c1208" },
+        "drones": { "primario": "#ff6f00", "secundario": "#b23c00", "oscuro": "#1a0800" }
       }
     }
   }
