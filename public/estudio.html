@@ -1776,7 +1776,7 @@
            que sean botones contiguos. El borde del pincel toma el color de
            trazo actual (variable CSS edge, la pone selectColor). -->
       <button type="button" class="icon-btn" id="btn-draw-menu" aria-pressed="false" aria-label="Pizarra: activar o poner en reposo" data-tip="Activa la pizarra con sus herramientas. Otro toque la pone en reposo."></button>
-      <button type="button" class="icon-btn" id="btn-device-camera" aria-pressed="false" aria-label="Cámara de este dispositivo: apagada" data-tip="Emite la cámara de este dispositivo a OBS. Otro toque vuelve al monigote."></button>
+      <button type="button" class="icon-btn" id="btn-device-camera" aria-pressed="false" aria-label="Cámara y micrófono: desactivados" data-tip="Emisión móvil (Cámara/Micro): 1 toque Solo Micro · 2 toques Cámara y Micro · 3 toques Apagar."></button>
       <button type="button" class="icon-btn" id="btn-tablet-mic" aria-pressed="false" aria-label="Micrófono de este dispositivo: silenciado" data-tip="Envía el micrófono de este dispositivo a OBS. Otro toque lo silencia."></button>
       <button type="button" class="icon-btn" id="btn-tts" aria-pressed="false" aria-label="Voz del chat (TTS) apagada: pulsa para activarla" data-tip="Lee en voz alta los mensajes del chat. Otro toque la detiene."></button>
       <span class="toolbar-sep" aria-hidden="true"></span>
@@ -4611,9 +4611,11 @@
           setLiveButton(button, true, 'Micrófono de este dispositivo: en directo. Toca para silenciar');
           const micDisplay = resolved.label || 'Micrófono';
           showToast(`Micrófono en antena (${micDisplay})`);
+          if (typeof actualizarBotonesEmision === 'function') actualizarBotonesEmision();
         } catch (error) {
           stopMicrophoneHardware();
           showToast('Error micrófono: ' + (error.message || error));
+          if (typeof actualizarBotonesEmision === 'function') actualizarBotonesEmision();
         }
         return;
       }
@@ -4622,6 +4624,7 @@
       stopMicrophoneHardware();
       setLiveButton(button, false, 'Micrófono de este dispositivo: silenciado');
       showToast('Micrófono silenciado');
+      if (typeof actualizarBotonesEmision === 'function') actualizarBotonesEmision();
     }
     function stopMicrophoneHardware() {
       if (mic.processor) { try { mic.processor.disconnect(); } catch (_) { /* gone */ } mic.processor = null; }
@@ -4686,11 +4689,34 @@
         url: `https://vdo.ninja/?push=${encodeURIComponent(streamId)}&room=${encodeURIComponent(room)}${passParam}&webcam${facingParam}${deviceParam}&videobitrate=${preset.bitrate}&width=${preset.width}&height=${preset.height}&framerate=${preset.fps}&autostart&cleanoutput&noaudio`
       };
     }
+    function actualizarBotonesEmision() {
+      const btnCam = $('btn-device-camera');
+      const btnMic = $('btn-tablet-mic');
+      if (!btnCam || !btnMic) return;
+
+      const esCamara = Boolean(camera.active || camera.mode === 'camara');
+      const esMicro = Boolean(mic.active);
+
+      if (esCamara) {
+        btnCam.innerHTML = icon('liveCamera');
+        setLiveButton(btnCam, true, 'Cámara y micrófono en directo (pulsa para apagar)');
+        btnCam.setAttribute('data-tip', 'Cámara y micrófono en antena. Toca para apagar la emisión.');
+        setLiveButton(btnMic, esMicro, esMicro ? 'Micrófono en directo: toca para silenciar' : 'Micrófono silenciado: toca para activar');
+      } else if (esMicro) {
+        btnCam.innerHTML = icon('liveMic');
+        setLiveButton(btnCam, true, 'Solo Micro en antena (avatar activo). Pulsa para pasar a Cámara');
+        btnCam.setAttribute('data-tip', 'Solo Micro activo (monigote en pantalla). Toca para pasar a Cámara.');
+        setLiveButton(btnMic, true, 'Micrófono de este dispositivo: en directo (solo voz)');
+      } else {
+        btnCam.innerHTML = icon('liveCamera');
+        setLiveButton(btnCam, false, 'Cámara/Micro: Desactivado (pulsa para activar Solo Micro)');
+        btnCam.setAttribute('data-tip', 'Emisión móvil (Cámara/Micro): 1 toque Solo Micro · 2 toques Cámara y Micro · 3 toques Apagar.');
+        setLiveButton(btnMic, false, 'Micrófono de este dispositivo: silenciado');
+      }
+    }
+
     function refreshCameraButton() {
-      const on = camera.active || camera.mode === 'camara';
-      setLiveButton($('btn-device-camera'), on, on
-        ? 'Cámara de este dispositivo: emitiendo. Toca para volver al monigote'
-        : 'Cámara de este dispositivo: apagada');
+      actualizarBotonesEmision();
     }
 
     function cleanDeviceLabel(label) {
@@ -5029,6 +5055,30 @@
       refreshCameraButton();
       if (!fromRemote && !panelSend({ type: 'camara_stop' })) sendPanelCommand('!cam monigote', { modo: 'monigote' });
       showToast(reason ? `Monigote activado (${reason})` : 'Monigote activado');
+    }
+    async function ciclarEmisionCamaraMicro() {
+      const esCamara = Boolean(camera.active || camera.mode === 'camara');
+      const esMicro = Boolean(mic.active);
+
+      if (!esCamara && !esMicro) {
+        await toggleMicrophone();
+        actualizarBotonesEmision();
+        showToast('🎙️ Solo Micrófono activado (avatar en pantalla)');
+      } else if (!esCamara && esMicro) {
+        await startCamera();
+        if (!mic.active) {
+          try { await toggleMicrophone(); } catch (_) {}
+        }
+        actualizarBotonesEmision();
+        showToast('📹 Cámara y micrófono en directo');
+      } else {
+        stopCamera('emisión apagada');
+        if (mic.active) {
+          await toggleMicrophone();
+        }
+        actualizarBotonesEmision();
+        showToast('⭕ Emisión móvil apagada (modo reposo)');
+      }
     }
     async function loadCameraConfig() {
       try {
@@ -5932,12 +5982,13 @@
       $('btn-device-camera').innerHTML = icon('liveCamera');
       $('btn-tablet-mic').innerHTML = icon('liveMic');
       $('btn-tts').innerHTML = icon('liveTts');
-      $('btn-device-camera').addEventListener('click', () => {
-        if (camera.active || camera.mode === 'camara') stopCamera('apagada desde el estudio');
-        else startCamera();
+      $('btn-device-camera').addEventListener('click', ciclarEmisionCamaraMicro);
+      $('btn-tablet-mic').addEventListener('click', async () => {
+        await toggleMicrophone();
+        actualizarBotonesEmision();
       });
-      $('btn-tablet-mic').addEventListener('click', toggleMicrophone);
       $('btn-tts').addEventListener('click', toggleTts);
+      actualizarBotonesEmision();
       loadUserVoices();
       loadMutedUsers();
     }

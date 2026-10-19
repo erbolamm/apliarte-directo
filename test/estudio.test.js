@@ -216,6 +216,9 @@ test('Estudio: Excalidraw-style floating board UI, toolbar dynamism (rest macro-
   ['btn-commands-view', 'btn-obs-menu'].forEach((id) => {
     assert.doesNotMatch(toolbar, new RegExp(`id="${id}"`), `${id} debe haberse unificado en btn-produccion-view`);
   });
+  assert.match(content, /function ciclarEmisionCamaraMicro\(\)/, 'Debe incluir la función ciclarEmisionCamaraMicro para el toggle unificado');
+  assert.match(content, /function actualizarBotonesEmision\(\)/, 'Debe incluir actualizarBotonesEmision para sincronizar cámara y micro');
+  assert.match(content, /\$\('btn-device-camera'\)\.addEventListener\('click',\s*ciclarEmisionCamaraMicro\)/, 'btn-device-camera debe invocar ciclarEmisionCamaraMicro');
 
   // 1b. Ya no hay hoja modal de herramientas: el pincel conmuta la pizarra
   assert.doesNotMatch(content, /id="tools-sheet"/, 'tools-sheet no debe existir como hoja modal');
