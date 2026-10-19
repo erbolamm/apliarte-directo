@@ -1024,3 +1024,54 @@ test('Estudio: Captura de micrófono robusta, resolución de dispositivo y fallb
   assert.match(content, /Activar micrófono ahora \(probar\)/, 'Debe permitir activar el micrófono directamente desde Ajustes');
 });
 
+test('Estudio: Apartados rápidos por botón (Cámara, Micrófono, TTS) y correspondencia 1:1 con Ajustes', () => {
+  const content = fs.readFileSync(estudioPath, 'utf8');
+
+  // 1. Barra de apartados rápidos y paneles de Cámara, Micro y TTS
+  assert.match(content, /id="quick-panels-bar"/, 'Debe existir la barra de apartados rápidos #quick-panels-bar');
+  assert.match(content, /id="quick-panel-cam"/, 'Debe existir el panel rápido de cámara #quick-panel-cam');
+  assert.match(content, /id="quick-panel-mic"/, 'Debe existir el panel rápido de micrófono #quick-panel-mic');
+  assert.match(content, /id="quick-panel-tts"/, 'Debe existir el panel rápido de voz TTS #quick-panel-tts');
+
+  // 2. Controles de Cámara rápida
+  assert.match(content, /id="btn-quick-cam-flip"/, 'Debe incluir botón de conmutación frontal/trasera');
+  assert.match(content, /id="btn-quick-cam-aspect"/, 'Debe incluir botón de relación de aspecto 16:9 / 1:1');
+  assert.match(content, /id="btn-quick-cam-quality"/, 'Debe incluir botón de selección de calidad rápida');
+  assert.match(content, /id="btn-quick-cam-to-mic"/, 'Debe incluir botón de salto rápido a audio');
+  assert.match(content, /id="btn-quick-cam-settings"/, 'Debe incluir botón de acceso directo a Ajustes de Cámara');
+
+  // 3. Controles de Micrófono rápido y vúmetro
+  assert.match(content, /id="quick-mic-meter"/, 'Debe incluir vúmetro de voz');
+  assert.match(content, /id="quick-mic-bar"/, 'Debe incluir barra de nivel');
+  assert.match(content, /id="quick-mic-db"/, 'Debe incluir indicador en dB');
+  assert.match(content, /id="btn-quick-mic-mute"/, 'Debe incluir botón de mute rápido');
+  assert.match(content, /id="btn-quick-gain-low"[^>]*data-gain="0\.8"/, 'Debe incluir preset ganancia 0.8x');
+  assert.match(content, /id="btn-quick-gain-med"[^>]*data-gain="1\.5"/, 'Debe incluir preset ganancia 1.5x');
+  assert.match(content, /id="btn-quick-gain-high"[^>]*data-gain="2\.2"/, 'Debe incluir preset ganancia 2\.2x');
+  assert.match(content, /id="btn-quick-mic-to-cam"/, 'Debe incluir botón de salto rápido a cámara');
+  assert.match(content, /id="btn-quick-mic-settings"/, 'Debe incluir botón de acceso directo a Ajustes de Audio');
+
+  // 4. Controles de TTS rápido
+  assert.match(content, /id="btn-quick-tts-pause"/, 'Debe incluir botón de pausar/reanudar voz');
+  assert.match(content, /id="btn-quick-tts-skip"/, 'Debe incluir botón de saltar mensaje en cola');
+  assert.match(content, /id="btn-quick-speed-1"[^>]*data-speed="1\.0"/, 'Debe incluir preset velocidad 1x');
+  assert.match(content, /id="btn-quick-speed-12"[^>]*data-speed="1\.2"/, 'Debe incluir preset velocidad 1.2x');
+  assert.match(content, /id="btn-quick-speed-15"[^>]*data-speed="1\.5"/, 'Debe incluir preset velocidad 1.5x');
+  assert.match(content, /id="btn-quick-tts-settings"/, 'Debe incluir botón de acceso directo a Ajustes de TTS');
+
+  // 5. Funciones JavaScript de control
+  assert.match(content, /function mostrarApartadoRapido\(tipo\)/, 'Debe existir mostrarApartadoRapido(tipo)');
+  assert.match(content, /async function flipCamera\(\)/, 'Debe existir flipCamera()');
+  assert.match(content, /function toggleCameraAspect\(\)/, 'Debe existir toggleCameraAspect()');
+  assert.match(content, /function cycleCameraQuality\(\)/, 'Debe existir cycleCameraQuality()');
+  assert.match(content, /function bindQuickPanels\(\)/, 'Debe existir bindQuickPanels()');
+
+  // 6. Correspondencia 1:1 con Ajustes (open-settings con targetTab)
+  assert.match(content, /'open-settings':\s*\(targetTab\)\s*=>/, 'open-settings debe aceptar pestaña destino');
+
+  // 7. Campos de claves de emisión por categoría en Credenciales
+  assert.match(content, /id:\s*'youtube-key-musica'/, 'Debe incluir campo para clave de YouTube Música');
+  assert.match(content, /id:\s*'youtube-key-arte'/, 'Debe incluir campo para clave de YouTube Arte');
+  assert.match(content, /id:\s*'youtube-key-drones'/, 'Debe incluir campo para clave de YouTube Drones');
+});
+

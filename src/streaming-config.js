@@ -15,17 +15,31 @@ function readConfig(dataDir, strict = false) {
 
 function safeState(config) {
   const streaming = config.streaming || {};
-  return {
+  const state = {
     vdoRoom: typeof streaming.vdoRoom === 'string' ? streaming.vdoRoom : '',
     hasTwitchStreamKey: Boolean(streaming.twitchStreamKey),
     hasYoutubeStreamKey: Boolean(streaming.youtubeStreamKey),
     hasVdoPassword: Boolean(streaming.vdoPassword)
   };
+  if (streaming.youtubeKeyApps) state.hasYoutubeKeyApps = true;
+  if (streaming.youtubeKeyMusica) state.hasYoutubeKeyMusica = true;
+  if (streaming.youtubeKeyArte) state.hasYoutubeKeyArte = true;
+  if (streaming.youtubeKeyDrones) state.hasYoutubeKeyDrones = true;
+  return state;
 }
 
 function saveStreamingConfig(dataDir, updates) {
   if (!updates || typeof updates !== 'object' || Array.isArray(updates)) throw new Error('Invalid configuration');
-  const allowed = { vdoRoom: 128, twitchStreamKey: 512, youtubeStreamKey: 512, vdoPassword: 512 };
+  const allowed = {
+    vdoRoom: 128,
+    twitchStreamKey: 512,
+    youtubeStreamKey: 512,
+    youtubeKeyApps: 512,
+    youtubeKeyMusica: 512,
+    youtubeKeyArte: 512,
+    youtubeKeyDrones: 512,
+    vdoPassword: 512
+  };
   const config = readConfig(dataDir, true);
   const streaming = { ...(config.streaming || {}) };
   for (const [key, maxLength] of Object.entries(allowed)) {

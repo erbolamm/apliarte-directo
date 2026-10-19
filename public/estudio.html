@@ -1559,6 +1559,87 @@
       background: var(--surface);
     }
 
+    /* ── Quick panels (apartados rápidos por botón) ─────────────────────── */
+    .quick-panels-bar {
+      position: relative;
+      z-index: 26;
+      display: flex;
+      justify-content: center;
+      padding: 0.35rem 0.5rem;
+      background: var(--surface);
+      border-top: 1px solid var(--line);
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.15);
+    }
+    .quick-panel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      width: 100%;
+      max-width: 820px;
+    }
+    .quick-panel-title {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--brand-strong);
+      white-space: nowrap;
+      margin-right: 0.25rem;
+    }
+    .quick-panel .btn-sm {
+      min-height: 32px;
+      padding: 0 0.65rem;
+      font-size: 0.85rem;
+      border-radius: var(--radius);
+    }
+    .quick-panel .icon-btn.btn-sm {
+      width: 32px;
+      height: 32px;
+      min-height: 0;
+      padding: 0;
+    }
+    .quick-meter {
+      width: 80px;
+      height: 10px;
+      background: var(--line);
+      border-radius: 5px;
+      overflow: hidden;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .quick-meter-bar {
+      width: 0%;
+      height: 100%;
+      background: var(--brand-strong);
+      transition: width 0.05s linear;
+    }
+    .quick-meter-db {
+      font-size: 0.75rem;
+      font-family: var(--font-mono, monospace);
+      color: var(--text-muted);
+      min-width: 44px;
+    }
+    .quick-btn-group {
+      display: flex;
+      gap: 2px;
+    }
+    .quick-btn-group .btn-sm {
+      border-radius: 0;
+    }
+    .quick-btn-group .btn-sm:first-child {
+      border-top-left-radius: var(--radius);
+      border-bottom-left-radius: var(--radius);
+    }
+    .quick-btn-group .btn-sm:last-child {
+      border-top-right-radius: var(--radius);
+      border-bottom-right-radius: var(--radius);
+    }
+    .quick-btn-group .btn-sm.active {
+      background: var(--brand-strong);
+      color: var(--black);
+      border-color: var(--brand-strong);
+    }
+
 
     /* ── Settings: full sheet matching chat, commands, sms and obs ─────── */
     .settings-sheet .sheet-body {
@@ -1760,6 +1841,50 @@
       </div>
       <p class="hint" id="board-rest-note">Pizarra en reposo. Toca el botón de dibujo para activar.</p>
     </main>
+    <div class="quick-panels-bar" id="quick-panels-bar" hidden>
+      <!-- Apartado rápido de Cámara -->
+      <div class="quick-panel" id="quick-panel-cam" hidden>
+        <span class="quick-panel-title">📹 Cámara</span>
+        <button type="button" class="btn btn-sm" id="btn-quick-cam-flip">🔄 Frontal / Trasera</button>
+        <button type="button" class="btn btn-sm" id="btn-quick-cam-aspect">📐 16:9 / 1:1</button>
+        <button type="button" class="btn btn-sm" id="btn-quick-cam-quality">⚡ Calidad</button>
+        <button type="button" class="btn btn-sm" id="btn-quick-cam-to-mic">🎙️ Audio</button>
+        <button type="button" class="btn btn-sm" id="btn-quick-cam-settings">⚙️ Ajustes</button>
+        <button type="button" class="icon-btn btn-sm" id="btn-quick-cam-close" aria-label="Cerrar panel rápido de cámara">✕</button>
+      </div>
+
+      <!-- Apartado rápido de Micrófono -->
+      <div class="quick-panel" id="quick-panel-mic" hidden>
+        <span class="quick-panel-title">🎙️ Audio</span>
+        <div class="quick-meter" id="quick-mic-meter" title="Nivel de voz">
+          <div class="quick-meter-bar" id="quick-mic-bar"></div>
+        </div>
+        <span class="quick-meter-db" id="quick-mic-db">-∞ dB</span>
+        <button type="button" class="btn btn-sm" id="btn-quick-mic-mute">Mute</button>
+        <div class="quick-btn-group">
+          <button type="button" class="btn btn-sm" id="btn-quick-gain-low" data-gain="0.8">0.8x</button>
+          <button type="button" class="btn btn-sm" id="btn-quick-gain-med" data-gain="1.5">1.5x</button>
+          <button type="button" class="btn btn-sm" id="btn-quick-gain-high" data-gain="2.2">2.2x</button>
+        </div>
+        <button type="button" class="btn btn-sm" id="btn-quick-mic-to-cam">📹 Cámara</button>
+        <button type="button" class="btn btn-sm" id="btn-quick-mic-settings">⚙️ Ajustes</button>
+        <button type="button" class="icon-btn btn-sm" id="btn-quick-mic-close" aria-label="Cerrar panel rápido de micro">✕</button>
+      </div>
+
+      <!-- Apartado rápido de TTS (Voz del chat) -->
+      <div class="quick-panel" id="quick-panel-tts" hidden>
+        <span class="quick-panel-title">🔊 Voz Chat</span>
+        <button type="button" class="btn btn-sm" id="btn-quick-tts-pause">⏸️ Pausar</button>
+        <button type="button" class="btn btn-sm" id="btn-quick-tts-skip">⏭️ Saltar</button>
+        <div class="quick-btn-group">
+          <button type="button" class="btn btn-sm" id="btn-quick-speed-1" data-speed="1.0">1x</button>
+          <button type="button" class="btn btn-sm" id="btn-quick-speed-12" data-speed="1.2">1.2x</button>
+          <button type="button" class="btn btn-sm" id="btn-quick-speed-15" data-speed="1.5">1.5x</button>
+        </div>
+        <button type="button" class="btn btn-sm" id="btn-quick-tts-settings">⚙️ Ajustes</button>
+        <button type="button" class="icon-btn btn-sm" id="btn-quick-tts-close" aria-label="Cerrar panel rápido de voz">✕</button>
+      </div>
+    </div>
     <footer class="toolbar" id="studio-toolbar">
       <!-- #btn-draw-menu (pincel) es el ÚNICO control de dibujo de la botonera:
            conmuta la pizarra entre activa y en reposo.
@@ -2445,8 +2570,11 @@
         { id: 'twitch-nick', label: 'Nick de Twitch', config: 'twitch.nick' },
         { id: 'twitch-token', label: 'Token de Twitch', secret: true, config: 'twitch.token', flag: 'config.twitch.hasToken' }
       ] },
-      { id: 'youtube', title: 'Emisión en YouTube', enabled: false, fields: [
-        { id: 'youtube-stream-key', label: 'Clave de emisión de YouTube', secret: true, streaming: 'youtubeStreamKey', flag: 'streaming.hasYoutubeStreamKey' }
+      { id: 'youtube', title: 'Emisión en YouTube (Claves por Categoría)', enabled: false, fields: [
+        { id: 'youtube-stream-key', label: 'Clave general de YouTube (Apps / ApliArte)', secret: true, streaming: 'youtubeStreamKey', flag: 'streaming.hasYoutubeStreamKey' },
+        { id: 'youtube-key-musica', label: 'Clave YouTube Música (El BOLA de Marbella)', secret: true, streaming: 'youtubeKeyMusica', flag: 'streaming.hasYoutubeKeyMusica' },
+        { id: 'youtube-key-arte', label: 'Clave YouTube Arte (CalcaApp)', secret: true, streaming: 'youtubeKeyArte', flag: 'streaming.hasYoutubeKeyArte' },
+        { id: 'youtube-key-drones', label: 'Clave YouTube Drones', secret: true, streaming: 'youtubeKeyDrones', flag: 'streaming.hasYoutubeKeyDrones' }
       ] },
       { id: 'vdo', title: 'Cámara por VDO.Ninja', enabled: true, fields: [
         { id: 'vdo-room', label: 'Sala de VDO.Ninja', config: 'vdo.room', streaming: 'vdoRoom' },
@@ -5063,6 +5191,7 @@
       if (!esCamara && !esMicro) {
         await toggleMicrophone();
         actualizarBotonesEmision();
+        if (typeof mostrarApartadoRapido === 'function') mostrarApartadoRapido('mic');
         showToast('🎙️ Solo Micrófono activado (avatar en pantalla)');
       } else if (!esCamara && esMicro) {
         await startCamera();
@@ -5070,6 +5199,7 @@
           try { await toggleMicrophone(); } catch (_) {}
         }
         actualizarBotonesEmision();
+        if (typeof mostrarApartadoRapido === 'function') mostrarApartadoRapido('cam');
         showToast('📹 Cámara y micrófono en directo');
       } else {
         stopCamera('emisión apagada');
@@ -5077,6 +5207,7 @@
           await toggleMicrophone();
         }
         actualizarBotonesEmision();
+        if (typeof mostrarApartadoRapido === 'function') mostrarApartadoRapido(null);
         showToast('⭕ Emisión móvil apagada (modo reposo)');
       }
     }
@@ -5978,16 +6109,228 @@
       tts.onLog();
     }
 
+    // ── Quick Panels: Cámara, Micrófono y TTS ────────────────────────────
+    let quickPanelActivo = null;
+    let quickMeterFrame = null;
+
+    function mostrarApartadoRapido(tipo) {
+      const bar = $('quick-panels-bar');
+      const cam = $('quick-panel-cam');
+      const micPanel = $('quick-panel-mic');
+      const ttsPanel = $('quick-panel-tts');
+      if (!bar || !cam || !micPanel || !ttsPanel) return;
+
+      quickPanelActivo = tipo;
+      if (!tipo) {
+        bar.hidden = true;
+        cam.hidden = true;
+        micPanel.hidden = true;
+        ttsPanel.hidden = true;
+        if (quickMeterFrame) {
+          cancelAnimationFrame(quickMeterFrame);
+          quickMeterFrame = null;
+        }
+        return;
+      }
+
+      bar.hidden = false;
+      cam.hidden = (tipo !== 'cam');
+      micPanel.hidden = (tipo !== 'mic');
+      ttsPanel.hidden = (tipo !== 'tts');
+
+      if (tipo === 'cam') {
+        const btnAspect = $('btn-quick-cam-aspect');
+        if (btnAspect) btnAspect.textContent = camera.aspect === 'cuadrado' ? '📐 Cuadrado 1:1' : '📐 Panorámico 16:9';
+        const preset = micSetting('erbolamm_cam_preset', 'high');
+        const btnQ = $('btn-quick-cam-quality');
+        if (btnQ) btnQ.textContent = `⚡ ${preset.toUpperCase()}`;
+      } else if (tipo === 'mic') {
+        actualizarEstadoQuickMic();
+        const currentGain = parseFloat(micSetting('erbolamm_micro_gain', '1.5')) || 1.5;
+        actualizarBotonesGanancia(currentGain);
+        if (!quickMeterFrame) updateQuickMicMeter();
+      } else if (tipo === 'tts') {
+        actualizarEstadoQuickTts();
+        const currentSpeed = parseFloat(micSetting(TTS_KEYS.speed, '1.0')) || 1.0;
+        actualizarBotonesTtsSpeed(currentSpeed);
+      }
+    }
+
+    async function flipCamera() {
+      const currentFacing = micSetting('erbolamm_cam_facing', 'user');
+      const newFacing = (currentFacing === 'user') ? 'environment' : 'user';
+      storeSetting('erbolamm_cam_facing', newFacing);
+      showToast(newFacing === 'environment' ? '📹 Cambiando a cámara trasera' : '📹 Cambiando a cámara frontal');
+      if (camera.active) {
+        stopCamera('conmutación frontal/trasera');
+        await startWebRtcCamera();
+        actualizarBotonesEmision();
+      }
+    }
+
+    function toggleCameraAspect() {
+      const nuevoAspecto = (camera.aspect === 'cuadrado') ? 'horizontal' : 'cuadrado';
+      camera.aspect = nuevoAspecto;
+      fetch('/api/directo/comando', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aspecto: nuevoAspecto })
+      }).catch(() => {});
+      showToast(nuevoAspecto === 'cuadrado' ? '📐 Aspecto cámara: Cuadrado 1:1' : '📐 Aspecto cámara: Panorámico 16:9');
+      const btn = $('btn-quick-cam-aspect');
+      if (btn) btn.textContent = nuevoAspecto === 'cuadrado' ? '📐 Cuadrado 1:1' : '📐 Panorámico 16:9';
+    }
+
+    const PRESET_CYCLE = ['high', 'med', 'low'];
+    function cycleCameraQuality() {
+      const current = micSetting('erbolamm_cam_preset', 'high');
+      const idx = PRESET_CYCLE.indexOf(current);
+      const nextPreset = PRESET_CYCLE[(idx + 1) % PRESET_CYCLE.length];
+      storeSetting('erbolamm_cam_preset', nextPreset);
+      showToast(`⚡ Calidad cámara: ${CAMERA_PRESETS[nextPreset].desc}`);
+      const btn = $('btn-quick-cam-quality');
+      if (btn) btn.textContent = `⚡ ${nextPreset.toUpperCase()}`;
+      if (camera.active) {
+        reloadCameraIfActive();
+      }
+    }
+
+    function actualizarEstadoQuickMic() {
+      const btnMute = $('btn-quick-mic-mute');
+      if (btnMute) {
+        btnMute.textContent = mic.active ? 'Mute' : 'Activar';
+        btnMute.classList.toggle('btn-danger', mic.active);
+      }
+    }
+
+    function actualizarBotonesGanancia(gainVal) {
+      document.querySelectorAll('#quick-panel-mic [data-gain]').forEach(btn => {
+        const g = parseFloat(btn.dataset.gain);
+        btn.classList.toggle('active', Math.abs(g - gainVal) < 0.15);
+      });
+    }
+
+    function updateQuickMicMeter() {
+      const bar = $('quick-mic-bar');
+      const level = $('quick-mic-db');
+      if (!bar || !level) return;
+      const panel = $('quick-panel-mic');
+      if (panel && panel.hidden) {
+        if (quickMeterFrame) cancelAnimationFrame(quickMeterFrame);
+        quickMeterFrame = null;
+        return;
+      }
+      if (mic.active && mic.analyser) {
+        const data = new Uint8Array(mic.analyser.frequencyBinCount);
+        mic.analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) {
+          const val = (data[i] - 128) / 128;
+          sum += val * val;
+        }
+        const decibels = Math.round(20 * Math.log10(Math.max(Math.sqrt(sum / data.length), 0.0001)));
+        bar.style.width = Math.max(0, Math.min(100, Math.round(((decibels + 50) / 50) * 100))) + '%';
+        level.textContent = decibels <= -48 ? '-∞ dB' : `${decibels} dB`;
+      } else {
+        bar.style.width = '0%';
+        level.textContent = mic.active ? '-∞ dB' : 'Apagado';
+      }
+      quickMeterFrame = requestAnimationFrame(updateQuickMicMeter);
+    }
+
+    function actualizarEstadoQuickTts() {
+      const btnPause = $('btn-quick-tts-pause');
+      if (btnPause) {
+        btnPause.textContent = tts.active ? '⏸️ Pausar' : '▶️ Reanudar';
+      }
+    }
+
+    function actualizarBotonesTtsSpeed(speedVal) {
+      document.querySelectorAll('#quick-panel-tts [data-speed]').forEach(btn => {
+        const s = parseFloat(btn.dataset.speed);
+        btn.classList.toggle('active', Math.abs(s - speedVal) < 0.1);
+      });
+    }
+
+    function bindQuickPanels() {
+      // Cámara
+      $('btn-quick-cam-flip')?.addEventListener('click', flipCamera);
+      $('btn-quick-cam-aspect')?.addEventListener('click', toggleCameraAspect);
+      $('btn-quick-cam-quality')?.addEventListener('click', cycleCameraQuality);
+      $('btn-quick-cam-to-mic')?.addEventListener('click', () => mostrarApartadoRapido('mic'));
+      $('btn-quick-cam-settings')?.addEventListener('click', () => ACTIONS['open-settings']('camera'));
+      $('btn-quick-cam-close')?.addEventListener('click', () => mostrarApartadoRapido(null));
+
+      // Micrófono
+      $('btn-quick-mic-mute')?.addEventListener('click', async () => {
+        await toggleMicrophone();
+        actualizarBotonesEmision();
+        actualizarEstadoQuickMic();
+      });
+      document.querySelectorAll('#quick-panel-mic [data-gain]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const gain = parseFloat(btn.dataset.gain) || 1.5;
+          storeSetting('erbolamm_micro_gain', String(gain));
+          const decibels = 20 * Math.log10(gain);
+          showToast(`🎙️ Ganancia: ${gain.toFixed(1)}x (${decibels >= 0 ? '+' : ''}${decibels.toFixed(1)} dB)`);
+          actualizarBotonesGanancia(gain);
+        });
+      });
+      $('btn-quick-mic-to-cam')?.addEventListener('click', () => mostrarApartadoRapido('cam'));
+      $('btn-quick-mic-settings')?.addEventListener('click', () => ACTIONS['open-settings']('audio'));
+      $('btn-quick-mic-close')?.addEventListener('click', () => mostrarApartadoRapido(null));
+
+      // TTS
+      $('btn-quick-tts-pause')?.addEventListener('click', () => {
+        toggleTts();
+        actualizarEstadoQuickTts();
+      });
+      $('btn-quick-tts-skip')?.addEventListener('click', () => {
+        tts.queue = [];
+        if (tts.serverPlaying) {
+          tts.serverPlaying = false;
+          try { tts.player.pause(); tts.player.removeAttribute('src'); } catch (_) {}
+        }
+        if (hasSpeech) {
+          try { window.speechSynthesis.cancel(); } catch (_) {}
+        }
+        showToast('⏭️ Mensaje TTS omitido');
+      });
+      document.querySelectorAll('#quick-panel-tts [data-speed]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const speed = parseFloat(btn.dataset.speed) || 1.0;
+          storeSetting(TTS_KEYS.speed, String(speed));
+          showToast(`🔊 Velocidad TTS: ${speed.toFixed(1)}x`);
+          actualizarBotonesTtsSpeed(speed);
+        });
+      });
+      $('btn-quick-tts-settings')?.addEventListener('click', () => ACTIONS['open-settings']('tts'));
+      $('btn-quick-tts-close')?.addEventListener('click', () => mostrarApartadoRapido(null));
+    }
+
     function initLiveControls() {
       $('btn-device-camera').innerHTML = icon('liveCamera');
       $('btn-tablet-mic').innerHTML = icon('liveMic');
       $('btn-tts').innerHTML = icon('liveTts');
+      bindQuickPanels();
       $('btn-device-camera').addEventListener('click', ciclarEmisionCamaraMicro);
       $('btn-tablet-mic').addEventListener('click', async () => {
         await toggleMicrophone();
         actualizarBotonesEmision();
+        if (mic.active) {
+          mostrarApartadoRapido('mic');
+        } else if (quickPanelActivo === 'mic') {
+          mostrarApartadoRapido(null);
+        }
       });
-      $('btn-tts').addEventListener('click', toggleTts);
+      $('btn-tts').addEventListener('click', () => {
+        toggleTts();
+        if (tts.active) {
+          mostrarApartadoRapido('tts');
+        } else if (quickPanelActivo === 'tts') {
+          mostrarApartadoRapido(null);
+        }
+      });
       actualizarBotonesEmision();
       loadUserVoices();
       loadMutedUsers();
@@ -9663,9 +10006,10 @@
       'copy': handleCopy,
       'toggle-theme': toggleTheme,
       'toggle-secret': (button) => setSecretVisible(button, button.getAttribute('aria-pressed') !== 'true'),
-      'open-settings': () => {
+      'open-settings': (targetTab) => {
         commandsTabLoaded = false; stage.loaded = false; sms.loaded = false; game.loaded = false; broadcast.loaded = false; usersModeration.loaded = false;
-        if (openSheet('settings-sheet')) selectSettingsTab(SETTINGS_TABS[0].id);
+        const requestedId = typeof targetTab === 'string' ? targetTab : (targetTab?.target?.dataset?.tab || null);
+        if (openSheet('settings-sheet')) selectSettingsTab(requestedId || SETTINGS_TABS[0].id);
       },
       'close-settings': () => closeSheets(),
       'toggle-group': (button) => {
