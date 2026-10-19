@@ -1902,7 +1902,6 @@
            trazo actual (variable CSS edge, la pone selectColor). -->
       <button type="button" class="icon-btn" id="btn-draw-menu" aria-pressed="false" aria-label="Pizarra: activar o poner en reposo" data-tip="Activa la pizarra con sus herramientas. Otro toque la pone en reposo."></button>
       <button type="button" class="icon-btn" id="btn-device-camera" aria-pressed="false" aria-label="Cámara y micrófono: desactivados" data-tip="Emisión móvil (Cámara/Micro): 1 toque Solo Micro · 2 toques Cámara y Micro · 3 toques Apagar."></button>
-      <button type="button" class="icon-btn" id="btn-tablet-mic" aria-pressed="false" aria-label="Micrófono de este dispositivo: silenciado" data-tip="Envía el micrófono de este dispositivo a OBS. Otro toque lo silencia."></button>
       <button type="button" class="icon-btn" id="btn-tts" aria-pressed="false" aria-label="Voz del chat (TTS) apagada: pulsa para activarla" data-tip="Lee en voz alta los mensajes del chat. Otro toque la detiene."></button>
       <span class="toolbar-sep" aria-hidden="true"></span>
       <button type="button" class="icon-btn" id="btn-mensajeria-view" aria-expanded="false" aria-label="Mensajería (Chat y SMS)" data-tip="Abre la mensajería del directo (Chat en vivo de Twitch/YouTube y Buzón SMS)."></button>
@@ -4618,6 +4617,7 @@
     }
 
     function setLiveButton(button, live, label) {
+      if (!button) return;
       button.classList.toggle('live', live);
       button.setAttribute('aria-pressed', String(live));
       button.setAttribute('aria-label', label);
@@ -4819,8 +4819,8 @@
     }
     function actualizarBotonesEmision() {
       const btnCam = $('btn-device-camera');
+      if (!btnCam) return;
       const btnMic = $('btn-tablet-mic');
-      if (!btnCam || !btnMic) return;
 
       const esCamara = Boolean(camera.active || camera.mode === 'camara');
       const esMicro = Boolean(mic.active);
@@ -4829,17 +4829,17 @@
         btnCam.innerHTML = icon('liveCamera');
         setLiveButton(btnCam, true, 'Cámara y micrófono en directo (pulsa para apagar)');
         btnCam.setAttribute('data-tip', 'Cámara y micrófono en antena. Toca para apagar la emisión.');
-        setLiveButton(btnMic, esMicro, esMicro ? 'Micrófono en directo: toca para silenciar' : 'Micrófono silenciado: toca para activar');
+        if (btnMic) setLiveButton(btnMic, esMicro, esMicro ? 'Micrófono en directo: toca para silenciar' : 'Micrófono silenciado: toca para activar');
       } else if (esMicro) {
         btnCam.innerHTML = icon('liveMic');
         setLiveButton(btnCam, true, 'Solo Micro en antena (avatar activo). Pulsa para pasar a Cámara');
         btnCam.setAttribute('data-tip', 'Solo Micro activo (monigote en pantalla). Toca para pasar a Cámara.');
-        setLiveButton(btnMic, true, 'Micrófono de este dispositivo: en directo (solo voz)');
+        if (btnMic) setLiveButton(btnMic, true, 'Micrófono de este dispositivo: en directo (solo voz)');
       } else {
         btnCam.innerHTML = icon('liveCamera');
         setLiveButton(btnCam, false, 'Cámara/Micro: Desactivado (pulsa para activar Solo Micro)');
         btnCam.setAttribute('data-tip', 'Emisión móvil (Cámara/Micro): 1 toque Solo Micro · 2 toques Cámara y Micro · 3 toques Apagar.');
-        setLiveButton(btnMic, false, 'Micrófono de este dispositivo: silenciado');
+        if (btnMic) setLiveButton(btnMic, false, 'Micrófono de este dispositivo: silenciado');
       }
     }
 
@@ -6310,11 +6310,11 @@
 
     function initLiveControls() {
       $('btn-device-camera').innerHTML = icon('liveCamera');
-      $('btn-tablet-mic').innerHTML = icon('liveMic');
+      if ($('btn-tablet-mic')) $('btn-tablet-mic').innerHTML = icon('liveMic');
       $('btn-tts').innerHTML = icon('liveTts');
       bindQuickPanels();
       $('btn-device-camera').addEventListener('click', ciclarEmisionCamaraMicro);
-      $('btn-tablet-mic').addEventListener('click', async () => {
+      $('btn-tablet-mic')?.addEventListener('click', async () => {
         await toggleMicrophone();
         actualizarBotonesEmision();
         if (mic.active) {

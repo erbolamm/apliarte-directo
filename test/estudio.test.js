@@ -210,9 +210,10 @@ test('Estudio: Excalidraw-style floating board UI, toolbar dynamism (rest macro-
   });
   assert.match(toolbar, /id="btn-draw-menu"[^>]*><\/button>\s*<button[^>]*id="btn-device-camera"/,
     'Tras el pincel no deben quedar botones ni separadores de dibujo');
-  ['btn-device-camera', 'btn-tablet-mic', 'btn-tts', 'btn-mensajeria-view', 'btn-produccion-view', 'btn-pantalla-negra', 'btn-settings-view'].forEach((id) => {
+  ['btn-device-camera', 'btn-tts', 'btn-mensajeria-view', 'btn-produccion-view', 'btn-pantalla-negra', 'btn-settings-view'].forEach((id) => {
     assert.match(toolbar, new RegExp(`id="${id}"`), `${id} debe mantenerse en la toolbar`);
   });
+  assert.doesNotMatch(toolbar, /id="btn-tablet-mic"/, 'btn-tablet-mic debe desaparecer de la toolbar inferior al unificarse');
   ['btn-commands-view', 'btn-obs-menu'].forEach((id) => {
     assert.doesNotMatch(toolbar, new RegExp(`id="${id}"`), `${id} debe haberse unificado en btn-produccion-view`);
   });
@@ -879,13 +880,13 @@ test('TTS y Voces: Soporte unificado de !voz, efectos en estudio.html, sincroniz
     'plano.html debe mostrar el bocadillo en un agente para cualquier mensaje de chat');
 });
 
-test('Estudio: Barra de herramientas con 8 botones en 3 secciones, iconos SVG puros sin emojis y gestión de categorías', () => {
+test('Estudio: Barra de herramientas con 7 botones en 3 secciones, iconos SVG puros sin emojis y gestión de categorías', () => {
   const content = fs.readFileSync(estudioPath, 'utf8');
   const toolbar = sliceBetween(content, '<footer class="toolbar" id="studio-toolbar">', '</footer>');
 
-  // 1. Exactamente 8 botones en la toolbar inferior
+  // 1. Exactamente 7 botones en la toolbar inferior (cámara y micro unificados en un solo botón)
   const buttons = toolbar.match(/<button\b/g) || [];
-  assert.equal(buttons.length, 8, 'La toolbar inferior debe contener exactamente 8 botones de control');
+  assert.equal(buttons.length, 7, 'La toolbar inferior debe contener exactamente 7 botones de control');
 
   // 2. Dos separadores delimitando 3 secciones
   const seps = toolbar.match(/class="toolbar-sep"/g) || [];
