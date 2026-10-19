@@ -962,6 +962,7 @@
        completamente visible y sin botones flotando en el medio. */
     #view-studio.board-at-rest:has(.sheet:not([hidden])) .toolbar,
     #view-studio.board-at-rest.has-sheet-open .toolbar,
+    #view-studio.board-at-rest.has-quick-panel .toolbar,
     body:has(#settings-sheet:not([hidden])) #view-studio.board-at-rest .toolbar {
       position: fixed;
       left: 0;
@@ -984,6 +985,7 @@
     }
     #view-studio.board-at-rest:has(.sheet:not([hidden])) .toolbar .icon-btn,
     #view-studio.board-at-rest.has-sheet-open .toolbar .icon-btn,
+    #view-studio.board-at-rest.has-quick-panel .toolbar .icon-btn,
     body:has(#settings-sheet:not([hidden])) #view-studio.board-at-rest .toolbar .icon-btn {
       flex: 1 1 0;
       min-width: 0;
@@ -998,6 +1000,7 @@
     }
     #view-studio.board-at-rest:has(.sheet:not([hidden])) .toolbar .icon-btn:hover,
     #view-studio.board-at-rest.has-sheet-open .toolbar .icon-btn:hover,
+    #view-studio.board-at-rest.has-quick-panel .toolbar .icon-btn:hover,
     body:has(#settings-sheet:not([hidden])) #view-studio.board-at-rest .toolbar .icon-btn:hover {
       transform: none;
       box-shadow: inset 0 -4px 0 var(--edge);
@@ -1008,6 +1011,9 @@
     #view-studio.board-at-rest.has-sheet-open .toolbar .icon-btn:active,
     #view-studio.board-at-rest.has-sheet-open .toolbar .icon-btn[aria-pressed="true"],
     #view-studio.board-at-rest.has-sheet-open .toolbar .icon-btn[aria-expanded="true"],
+    #view-studio.board-at-rest.has-quick-panel .toolbar .icon-btn:active,
+    #view-studio.board-at-rest.has-quick-panel .toolbar .icon-btn[aria-pressed="true"],
+    #view-studio.board-at-rest.has-quick-panel .toolbar .icon-btn[aria-expanded="true"],
     body:has(#settings-sheet:not([hidden])) #view-studio.board-at-rest .toolbar .icon-btn:active,
     body:has(#settings-sheet:not([hidden])) #view-studio.board-at-rest .toolbar .icon-btn[aria-pressed="true"],
     body:has(#settings-sheet:not([hidden])) #view-studio.board-at-rest .toolbar .icon-btn[aria-expanded="true"] {
@@ -1016,6 +1022,7 @@
     }
     #view-studio.board-at-rest:has(.sheet:not([hidden])) .toolbar .toolbar-sep,
     #view-studio.board-at-rest.has-sheet-open .toolbar .toolbar-sep,
+    #view-studio.board-at-rest.has-quick-panel .toolbar .toolbar-sep,
     body:has(#settings-sheet:not([hidden])) #view-studio.board-at-rest .toolbar .toolbar-sep {
       display: block;
       width: 1px;
@@ -1561,14 +1568,26 @@
 
     /* ── Quick panels (apartados rápidos por botón) ─────────────────────── */
     .quick-panels-bar {
-      position: relative;
-      z-index: 26;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: calc(var(--touch) + 2 * var(--gap) + env(safe-area-inset-bottom));
+      z-index: 24;
       display: flex;
       justify-content: center;
       padding: 0.35rem 0.5rem;
       background: var(--surface);
       border-top: 1px solid var(--line);
-      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.15);
+      border-bottom: 1px solid var(--line);
+      box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.25);
+    }
+    #view-studio.board-at-rest.has-quick-panel .quick-panels-bar {
+      bottom: calc(42px + 8px + max(4px, env(safe-area-inset-bottom)) + 1px);
+    }
+    #view-studio:has(.sheet:not([hidden])) .quick-panels-bar,
+    #view-studio.has-sheet-open .quick-panels-bar,
+    body:has(.sheet:not([hidden])) .quick-panels-bar {
+      display: none !important;
     }
     .quick-panel {
       display: flex;
@@ -6120,12 +6139,14 @@
       const ttsPanel = $('quick-panel-tts');
       if (!bar || !cam || !micPanel || !ttsPanel) return;
 
+      const studioView = $('view-studio');
       quickPanelActivo = tipo;
       if (!tipo) {
         bar.hidden = true;
         cam.hidden = true;
         micPanel.hidden = true;
         ttsPanel.hidden = true;
+        studioView?.classList.remove('has-quick-panel');
         if (quickMeterFrame) {
           cancelAnimationFrame(quickMeterFrame);
           quickMeterFrame = null;
@@ -6133,6 +6154,8 @@
         return;
       }
 
+      closeSheets();
+      studioView?.classList.add('has-quick-panel');
       bar.hidden = false;
       cam.hidden = (tipo !== 'cam');
       micPanel.hidden = (tipo !== 'mic');
@@ -6357,6 +6380,7 @@
     }
     // Returns true when the sheet ends up open.
     function openSheet(sheetId) {
+      if (typeof mostrarApartadoRapido === 'function') mostrarApartadoRapido(null);
       if (sheetId === 'sms-sheet') {
         openChat('sms');
         return true;
