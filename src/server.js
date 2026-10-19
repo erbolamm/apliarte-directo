@@ -66,12 +66,19 @@ try {
 } catch (_) { /* no local settings: public defaults */ }
 
 const DATA_DIR = process.env.DATA_DIR || join(RAIZ, "data");
+const archivoCategoria = join(DATA_DIR, "categoria.json");
+let categoriaActual =
+  analizarCategoriaGuardada(
+    existsSync(archivoCategoria)
+      ? readFileSync(archivoCategoria, "utf8")
+      : null,
+  ) ?? CATEGORIA_POR_DEFECTO;
 const destinationKey = (destination) =>
   resolveDestinationKey(
     destination,
     DATA_DIR,
     process.env,
-    typeof categoriaActual !== "undefined" ? categoriaActual : null,
+    categoriaActual,
   );
 let flujoEntradaActual = null;
 
@@ -984,14 +991,6 @@ app.get("/api/twitch/ultimo-vod", async (_req, res) => {
 // Los overlays de OBS (file://) y el panel de la oficina (otro puerto) llaman
 // a esto desde otro origen: sin CORS abierto aquí, ninguno de los dos podría
 // leer ni cambiar la categoría.
-const archivoCategoria = join(RAIZ, "data", "categoria.json");
-let categoriaActual =
-  analizarCategoriaGuardada(
-    existsSync(archivoCategoria)
-      ? readFileSync(archivoCategoria, "utf8")
-      : null,
-  ) ?? CATEGORIA_POR_DEFECTO;
-
 app.get("/api/categoria", (_req, res) => {
   res.json({
     categoria: categoriaActual,
