@@ -1504,14 +1504,16 @@ const CATEGORIAS_TWITCH_GAME = {
   arte: { id: '509660', nombre: 'Art' },
   musica: { id: '26936', nombre: 'Music' },
   charlando: { id: '509658', nombre: 'Just Chatting' },
+  podcast: { id: '417752', nombre: 'Talk Shows & Podcasts' },
   andando: { id: '509672', nombre: 'IRL' },
-  drones: { id: '509672', nombre: 'Science & Technology' }
+  drones: { id: '509670', nombre: 'Science & Technology' }
 };
 
 const CATEGORIAS_OBS_ESCENAS = {
   apps: 'PLANO-INTERACTIVO',
   arte: 'Solo_Calca',
   charlando: 'CON_CAMARA',
+  podcast: 'CON_CAMARA',
   andando: 'CAM',
   musica: 'PLANO-INTERACTIVO',
   drones: 'PLANO-INTERACTIVO'

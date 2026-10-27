@@ -1027,6 +1027,46 @@ async function conmutarRelayYoutube(nuevaCategoria) {
   }
 }
 
+const CATEGORIAS_TWITCH_GAME = {
+  apps: { id: '1469308723', nombre: 'Software and Game Development' },
+  arte: { id: '509660', nombre: 'Art' },
+  musica: { id: '26936', nombre: 'Music' },
+  charlando: { id: '509658', nombre: 'Just Chatting' },
+  podcast: { id: '417752', nombre: 'Talk Shows & Podcasts' },
+  andando: { id: '509672', nombre: 'IRL' },
+  drones: { id: '509670', nombre: 'Science & Technology' }
+};
+
+async function actualizarCategoriaTwitch(cat) {
+  const game = CATEGORIAS_TWITCH_GAME[cat];
+  if (!game) return;
+  try {
+    const authFile = join(RAIZ, 'data', 'twitch-auth.json');
+    if (!existsSync(authFile)) return;
+    const auth = JSON.parse(readFileSync(authFile, 'utf8'));
+    const token = auth && auth.token ? String(auth.token).replace(/^oauth:/, '').trim() : '';
+    if (!token) return;
+
+    const res = await fetch('https://api.twitch.tv/helix/channels?broadcaster_id=666785367', {
+      method: 'PATCH',
+      headers: {
+        'Client-Id': 'gp762nuuoqcoxypju8c569th9wz7q5',
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ game_id: game.id })
+    });
+    if (res.ok) {
+      anotar(`[TwitchHelix] Categoría de Twitch actualizada a: ${game.nombre} (${game.id})`);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      anotar(`[TwitchHelix] Error al cambiar categoría en Twitch: ${JSON.stringify(err)}`);
+    }
+  } catch (e) {
+    anotar(`[TwitchHelix] Excepción al cambiar categoría en Twitch: ${e.message}`);
+  }
+}
+
 app.post("/api/categoria", (req, res) => {
   const { categoria } = req.body ?? {};
   if (!esCategoriaValida(categoria)) {
@@ -1050,7 +1090,12 @@ app.post("/api/categoria", (req, res) => {
   }
   anotar(`Categoría del directo → ${categoriaActual}`);
   conmutarRelayYoutube(categoriaActual).catch(() => {});
-  res.json({ categoria: categoriaActual, paleta: paletaDe(categoriaActual) });
+  actualizarCategoriaTwitch(categoriaActual).catch(() => {});
+  res.json({
+    categoria: categoriaActual,
+    paleta: paletaDe(categoriaActual),
+    twitchJuego: CATEGORIAS_TWITCH_GAME[categoriaActual]?.nombre,
+  });
 });
 
 // ─── Buzón SMS del directo ────────────────────────────────────────────────

@@ -8,8 +8,8 @@ import { CATEGORIAS, esCategoriaValida, paletaDe, CATEGORIA_POR_DEFECTO } from '
 // - apps (ApliArte): azul claro #5ecef5 y azul oscuro #00467b, Kit de Marca (Javier, 2026-09-19).
 // - andando (modo paseo): verdes #00e676/#00c853, fondo #0a3d1c (Javier, 2026-09-19).
 
-test('hay exactamente seis categorias: andando, apps, arte, charlando, drones y musica', () => {
-  assert.deepEqual(Object.keys(CATEGORIAS).sort(), ['andando', 'apps', 'arte', 'charlando', 'drones', 'musica']);
+test('hay exactamente siete categorias: andando, apps, arte, charlando, drones, musica y podcast', () => {
+  assert.deepEqual(Object.keys(CATEGORIAS).sort(), ['andando', 'apps', 'arte', 'charlando', 'drones', 'musica', 'podcast']);
 });
 
 test('arte usa color carne y marrón oscuro', () => {
@@ -55,12 +55,13 @@ test('cada categoria declara un fondo oscuro propio', () => {
   }
 });
 
-test('esCategoriaValida acepta las seis y rechaza el resto', () => {
+test('esCategoriaValida acepta las siete y rechaza el resto', () => {
   assert.equal(esCategoriaValida('arte'), true);
   assert.equal(esCategoriaValida('musica'), true);
   assert.equal(esCategoriaValida('apps'), true);
   assert.equal(esCategoriaValida('andando'), true);
   assert.equal(esCategoriaValida('charlando'), true);
+  assert.equal(esCategoriaValida('podcast'), true);
   assert.equal(esCategoriaValida('drones'), true);
   assert.equal(esCategoriaValida('cine'), false);
   assert.equal(esCategoriaValida(''), false);
