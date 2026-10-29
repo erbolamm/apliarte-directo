@@ -2005,6 +2005,7 @@
   <!-- Lógica interactiva: Paleta de colores, Twitch IRC, adopción y fondo transparente -->
   <script type="module">
     import { parsearComandoChat, parsearIrcTwitch, AGENTES_OFICINA, filtrarMensajeDuranteVotacion } from '/js/tts-fuentes.js?v=20261003-conga';
+    import { puedeIniciarJuego, mensajeExplicativoNoSub, mensajeJuegoEnCurso, crearPartidaFlota, dispararFlota } from '/js/juego-flota.js?v=20261029';
 
     const PALETAS = {
       apps: { primario: '#5ecef5', secundario: '#00467b', oscuro: '#030a16' },
@@ -2350,6 +2351,104 @@
       },
     });
     const avatarTiers = { ja: 3 };
+    // ─── Estado del Minijuego Hundir la Flota (!flota) ───────────────
+    let partidaFlota = null;
+    let timerOcultarFlota = null;
+    let rankingFlotaElem = null;
+
+    function asegurarHudRankingFlota() {
+      if (!rankingFlotaElem) {
+        rankingFlotaElem = document.createElement('div');
+        rankingFlotaElem.id = 'hud-flota-ranking';
+        rankingFlotaElem.style.cssText = 'position:fixed;bottom:24px;left:24px;background:rgba(12,24,48,0.85);backdrop-filter:blur(8px);border:1px solid #5ecef5;border-radius:8px;padding:12px 18px;color:#fff;font-family:sans-serif;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:none;';
+        document.body.appendChild(rankingFlotaElem);
+      }
+      return rankingFlotaElem;
+    }
+
+    function actualizarHudRankingFlota() {
+      if (!partidaFlota || !partidaFlota.activa) {
+        if (rankingFlotaElem) rankingFlotaElem.style.display = 'none';
+        return;
+      }
+      const el = asegurarHudRankingFlota();
+      el.style.display = 'block';
+      const items = Object.entries(partidaFlota.marcador).sort((a,b) => b[1] - a[1]);
+      let html = '<div style="font-weight:bold;color:#5ecef5;margin-bottom:6px;font-size:14px;">🚢 HUNDIR LA FLOTA (12x8)</div>';
+      if (items.length === 0) {
+        html += '<div style="font-size:12px;opacity:0.8;">Dispara con !a1 a !l8</div>';
+      } else {
+        html += '<div style="font-size:12px;max-height:120px;overflow-y:auto;">';
+        items.forEach(([u, pts], idx) => {
+          html += `<div style="display:flex;justify-content:space-between;gap:12px;"><span>${idx + 1}. @${u}</span><b>${pts} pts</b></div>`;
+        });
+        html += '</div>';
+      }
+      el.innerHTML = html;
+    }
+
+    function pintarTableroFlota(mostrarBarcos = false) {
+      const board = document.querySelector('.damas-board');
+      if (!board || !partidaFlota) return;
+
+      const squares = board.querySelectorAll('.damas-square');
+      if (!squares || squares.length !== 96) return;
+
+      squares.forEach((sq, idx) => {
+        // En damas-board: 8 filas (0..7), 12 cols (0..11)
+        const rIdx = Math.floor(idx / 12);
+        const col = idx % 12;
+        const row0 = 7 - rIdx; // 0..7 (0 = fila 1)
+
+        const clave = `${col},${row0}`;
+        const disparo = partidaFlota.disparos.get(clave);
+
+        let bg = (col + (8 - rIdx)) % 2 === 0 ? '#b58863' : '#f0d9b5';
+        let txt = '';
+
+        if (disparo) {
+          if (disparo.resultado === 'agua') {
+            bg = '#0284c7';
+            txt = '💦';
+          } else if (disparo.resultado === 'golpe' || disparo.resultado === 'hundido') {
+            bg = '#dc2626';
+            txt = disparo.resultado === 'hundido' ? '🔥' : '💥';
+          }
+        }
+
+        if (mostrarBarcos && partidaFlota.barcos) {
+          for (const b of partidaFlota.barcos) {
+            if (b.casillas.some(c => c.col === col && c.row === row0)) {
+              bg = '#10b981';
+              if (!txt) txt = '🚢';
+              break;
+            }
+          }
+        }
+
+        sq.style.backgroundColor = bg;
+        sq.style.display = 'flex';
+        sq.style.alignItems = 'center';
+        sq.style.justifyContent = 'center';
+        sq.style.fontSize = '24px';
+        sq.textContent = txt;
+      });
+    }
+
+    function mostrarDestelloFlota(duracionMs = 1000) {
+      const office = window.Oficina3D;
+      if (!office) return;
+      office.setBoard?.(true);
+      pintarTableroFlota(true);
+
+      if (timerOcultarFlota) clearTimeout(timerOcultarFlota);
+      timerOcultarFlota = setTimeout(() => {
+        if (partidaFlota && partidaFlota.activa) {
+          pintarTableroFlota(false);
+        }
+      }, duracionMs);
+    }
+
 
     // Avatar controlled by a chat user: Javier drives 'ja', viewers their adopted one.
     function avatarDeUsuario(user, isJavier) {
@@ -3479,6 +3578,65 @@
 
           // Board squares (!a1 … !l8, chess-style): moves the writer's avatar there.
           const mCasilla = text.trim().match(/^!([a-l][1-8])$/i);
+          // ─── Comando !flota: Hundir la Flota sobre el tablero 12x8 ────────
+          if (/^!flotas?$/i.test(text.trim())) {
+            const puede = puedeIniciarJuego(user, { badges: tags?.badges });
+            if (!puede) {
+              const msgNoSub = mensajeExplicativoNoSub(user, '!flota');
+              hubSay(msgNoSub);
+              return;
+            }
+
+            // Exclusión mutua con otros juegos en curso
+            const rt = window.Oficina3D?.runtime;
+            const hayOtroJuego = (rt?.hub && rt.hub.fase !== 'idle') || (partidaFlota && partidaFlota.activa);
+            if (hayOtroJuego) {
+              hubSay(mensajeJuegoEnCurso('!flota', partidaFlota?.activa ? 'Hundir la Flota' : 'otro juego'));
+              return;
+            }
+
+            // Iniciar nueva partida
+            partidaFlota = crearPartidaFlota();
+            hubSay(`🚢 ¡@${user} ha iniciado HUNDIR LA FLOTA! Disparad con !a1 a !l8. Impacto = 1 punto, Hundido = 2 puntos, Agua = 0. ¡Mostrando barcos 1 segundo!`);
+            actualizarHudRankingFlota();
+            mostrarDestelloFlota(1000);
+            return;
+          }
+
+          // Si hay partida de flota activa, interceptar disparos !a1..l8 antes del movimiento de damas
+          if (partidaFlota && partidaFlota.activa && mCasilla) {
+            const casillaTarget = mCasilla[1].toLowerCase();
+            const res = dispararFlota(partidaFlota, user, casillaTarget);
+
+            if (res.resultado === 'repetido') {
+              hubSay(`⚠️ @${user}, la casilla ${casillaTarget.toUpperCase()} ya fue bombardeada.`);
+            } else if (res.resultado === 'agua') {
+              hubSay(`💦 ¡Agua en ${casillaTarget.toUpperCase()}! (@${user})`);
+              mostrarDestelloFlota(1000);
+            } else if (res.resultado === 'golpe') {
+              hubSay(`💥 ¡TOCADO en ${casillaTarget.toUpperCase()} por @${user}! (+1 pto)`);
+              mostrarDestelloFlota(1000);
+            } else if (res.resultado === 'hundido') {
+              hubSay(`🔥 ¡BARCO HUNDIDO en ${casillaTarget.toUpperCase()} por @${user}! (+2 ptos)`);
+              mostrarDestelloFlota(1000);
+              if (res.todosHundidos) {
+                const ganador = Object.entries(partidaFlota.marcador).sort((a,b) => b[1] - a[1])[0];
+                const winUser = ganador ? ganador[0] : user;
+                const winPts = ganador ? ganador[1] : 0;
+                setTimeout(() => {
+                  hubSay(`🏆 ¡FLOTA TOTALMENTE HUNDIDA! Ganador: @${winUser} con ${winPts} puntos.`);
+                  window.dispatchEvent(new CustomEvent('erbolamm:fiesta'));
+                  if (rankingFlotaElem) {
+                    setTimeout(() => { rankingFlotaElem.style.display = 'none'; }, 8000);
+                  }
+                  window.Oficina3D?.setBoard?.(false);
+                }, 1200);
+              }
+            }
+            actualizarHudRankingFlota();
+            return;
+          }
+
           if (mCasilla) {
             if (!office?.isBoard?.()) return;
             const avatar = avatarDeUsuario(user, isJavier);
