@@ -53,3 +53,5 @@ data/pizarra/
 
 # Contenedor local soberano de control ErBolamm (ADR-0013)
 control-erbolamm/
+
+config.json
